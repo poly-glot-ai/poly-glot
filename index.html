@@ -96,6 +96,45 @@
             </div>
         </div>
 
+        <div class="ai-settings-panel" id="aiSettingsPanel" style="display: none;">
+            <div class="ai-settings-container">
+                <div class="ai-settings-header">
+                    <h3>⚙️ AI Settings</h3>
+                    <button id="closeAiSettings" class="close-btn">✕</button>
+                </div>
+                <div class="ai-settings-body">
+                    <div class="setting-group">
+                        <label for="aiProvider">AI Provider</label>
+                        <select id="aiProvider">
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="aiModel">Model</label>
+                        <select id="aiModel">
+                            <option value="gpt-4o-mini">GPT-4o Mini (Recommended - Cheapest)</option>
+                            <option value="gpt-4o">GPT-4o (Best Quality)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="apiKey">API Key</label>
+                        <div class="api-key-input">
+                            <input type="password" id="apiKey" placeholder="sk-... or sk-ant-...">
+                            <button id="toggleApiKey" class="toggle-btn">👁</button>
+                        </div>
+                        <small>Your key is stored locally in your browser only. <a href="https://platform.openai.com/api-keys" target="_blank">Get OpenAI key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank">Get Anthropic key</a></small>
+                    </div>
+                    <div class="setting-actions">
+                        <button id="testConnection" class="test-btn">🔍 Test Connection</button>
+                        <button id="saveSettings" class="save-btn">💾 Save Settings</button>
+                    </div>
+                    <div id="connectionStatus" class="connection-status"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="main-content">
             <div class="sidebar">
                 <div class="search-box">
