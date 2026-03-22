@@ -1433,17 +1433,35 @@ function calculateAge(birthDate) {
             });
         }
         
+        // Get badge containers
+        const beforeIssues = demoPanels[0].querySelector('.demo-issues');
+        const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
+        
+        // Hide badges initially
+        beforeIssues.style.opacity = '0';
+        afterBenefits.style.opacity = '0';
+        
         // Step 1: Activate "Before" panel and type code
         demoPanels[0].classList.add('active');
         const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
         await typeCode(beforeCodeElement, beforeCode, 20);
-        await sleep(1000);
+        
+        // Show red warning badges after code completes
+        await sleep(300);
+        beforeIssues.style.transition = 'opacity 0.5s ease-in';
+        beforeIssues.style.opacity = '1';
+        await sleep(1500);
         
         // Step 2: Activate "After" panel and type improved code
         demoPanels[1].classList.add('active');
         const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
         await typeCode(afterCodeElement, afterCode, 15);
-        await sleep(1000);
+        
+        // Show green success badges after code completes
+        await sleep(300);
+        afterBenefits.style.transition = 'opacity 0.5s ease-in';
+        afterBenefits.style.opacity = '1';
+        await sleep(1500);
         
         // Step 3: Show stats
         demoStats.style.display = 'flex';
@@ -1468,6 +1486,12 @@ function calculateAge(birthDate) {
         const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
         beforeCodeElement.textContent = beforeCode;
         afterCodeElement.textContent = afterCode;
+        
+        // Reset badge visibility
+        const beforeIssues = demoPanels[0].querySelector('.demo-issues');
+        const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
+        beforeIssues.style.opacity = '1';
+        afterBenefits.style.opacity = '1';
         
         // Track demo reset
         if (window.polyglotAnalytics) {
