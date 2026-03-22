@@ -1135,12 +1135,18 @@ function highlightCode(code) {
 function copyCode(button) {
     const codeBlock = button.closest('.code-block');
     const code = codeBlock.querySelector('pre code').textContent;
+    const title = codeBlock.querySelector('.code-block-title')?.textContent || 'unknown';
     
     navigator.clipboard.writeText(code).then(() => {
         button.textContent = 'Copied!';
         setTimeout(() => {
             button.textContent = 'Copy';
         }, 2000);
+        
+        // Track code copy
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackCodeCopy(title);
+        }
     });
 }
 
@@ -1219,12 +1225,22 @@ function analyzeCode() {
     }
     
     suggestions.innerHTML = html;
+    
+    // Track code analysis
+    if (window.polyglotAnalytics) {
+        window.polyglotAnalytics.trackCodeAnalysis(code.length, ratio);
+    }
 }
 
 function removeFavorite(index) {
     favorites.splice(index, 1);
     localStorage.setItem('codeFavorites', JSON.stringify(favorites));
     renderTemplateContent();
+    
+    // Track favorite removal
+    if (window.polyglotAnalytics) {
+        window.polyglotAnalytics.trackFavorite('remove', 'item_' + index);
+    }
 }
 
 function exportTemplates() {
@@ -1253,12 +1269,22 @@ ${lang.bestPractices.map((p, i) => `${i + 1}. ${p}`).join('\n')}
     a.download = `${currentLanguage}-comments.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    
+    // Track template export
+    if (window.polyglotAnalytics) {
+        window.polyglotAnalytics.trackExport(currentLanguage);
+    }
 }
 
 function setupEventListeners() {
     document.getElementById('language').addEventListener('change', (e) => {
         currentLanguage = e.target.value;
         renderTemplateContent();
+        
+        // Track language change
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackLanguageChange(currentLanguage);
+        }
     });
 
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -1267,6 +1293,11 @@ function setupEventListeners() {
             item.classList.add('active');
             currentCategory = item.dataset.category;
             renderTemplateContent();
+            
+            // Track category view
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackCategoryView(currentCategory);
+            }
         });
     });
 
@@ -1285,5 +1316,10 @@ function setupEventListeners() {
             const text = item.textContent.toLowerCase();
             item.style.display = text.includes(query) ? 'block' : 'none';
         });
+        
+        // Track search
+        if (query && window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackSearch(query);
+        }
     });
 }
