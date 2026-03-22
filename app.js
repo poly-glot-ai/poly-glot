@@ -1481,17 +1481,17 @@ function calculateAge(birthDate) {
         playBtn.disabled = false;
         isPlaying = false;
         
-        // Restore original code content
+        // Clear code content (back to empty state)
         const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
         const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
-        beforeCodeElement.textContent = beforeCode;
-        afterCodeElement.textContent = afterCode;
+        beforeCodeElement.textContent = '';
+        afterCodeElement.textContent = '';
         
         // Reset badge visibility
         const beforeIssues = demoPanels[0].querySelector('.demo-issues');
         const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
-        beforeIssues.style.opacity = '1';
-        afterBenefits.style.opacity = '1';
+        beforeIssues.style.opacity = '0';
+        afterBenefits.style.opacity = '0';
         
         // Track demo reset
         if (window.polyglotAnalytics) {

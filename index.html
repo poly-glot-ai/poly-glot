@@ -92,23 +92,10 @@
                             <h3>Before: Inconsistent AI Comments</h3>
                         </div>
                         <div class="demo-code" id="demoCodeBefore">
-<pre><code class="language-javascript">// calculates user age
-function calculateAge(birthDate) {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    // check if birthday happened this year
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-}</code></pre>
+<pre><code class="language-javascript"></code></pre>
                         </div>
                         <div class="demo-issues" id="demoIssues">
-                            <div class="issue-badge">❌ Inconsistent style</div>
-                            <div class="issue-badge">❌ Missing @param tags</div>
-                            <div class="issue-badge">❌ No return documentation</div>
+                            <div class="issue-badge">🤖 AI Generated Comments</div>
                         </div>
                     </div>
 
@@ -120,43 +107,10 @@ function calculateAge(birthDate) {
                             <h3>After: JSDoc Standard</h3>
                         </div>
                         <div class="demo-code" id="demoCodeAfter">
-<pre><code class="language-javascript">/**
- * Calculates a person's age based on their birth date
- * 
- * @param {string} birthDate - The birth date in ISO format (YYYY-MM-DD)
- * @returns {number} The calculated age in years
- * @throws {Error} If birthDate is invalid or in the future
- * 
- * @example
- * const age = calculateAge('1990-05-15');
- * console.log(age); // 35 (in 2025)
- */
-function calculateAge(birthDate) {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    
-    if (isNaN(birth.getTime())) {
-        throw new Error('Invalid birth date format');
-    }
-    
-    if (birth > today) {
-        throw new Error('Birth date cannot be in the future');
-    }
-    
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    
-    return age;
-}</code></pre>
+<pre><code class="language-javascript"></code></pre>
                         </div>
                         <div class="demo-benefits" id="demoBenefits">
-                            <div class="benefit-badge">✅ JSDoc compliant</div>
-                            <div class="benefit-badge">✅ Complete documentation</div>
-                            <div class="benefit-badge">✅ Team consistency</div>
+                            <div class="benefit-badge">✨ Poly-Glot Generated Comments</div>
                         </div>
                     </div>
                 </div>
