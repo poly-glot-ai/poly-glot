@@ -1322,4 +1322,19 @@ function setupEventListeners() {
             window.polyglotAnalytics.trackSearch(query);
         }
     });
+
+    // Support button handler
+    document.getElementById('supportBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Track support button click
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('support_clicked', {
+                source: 'header_button'
+            });
+        }
+        
+        // Show message for now (will be replaced with actual payment link)
+        alert('Thank you for your interest in supporting Poly-Glot! ☕\n\nPayment integration coming soon. In the meantime, you can:\n\n• Star the repo on GitHub\n• Share with fellow developers\n• Contribute code or ideas\n\nYour support means everything! 💙');
+    });
 }
