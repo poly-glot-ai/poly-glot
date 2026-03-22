@@ -187,6 +187,151 @@ class AICommentGenerator {
     }
 
     /**
+     * Explain and deeply analyse code using AI
+     */
+    async explainCode(code, language) {
+        if (!this.isConfigured()) {
+            throw new Error('API key not configured. Please add your API key in settings.');
+        }
+
+        const prompt = this.buildExplainPrompt(code, language);
+
+        try {
+            if (this.provider === 'openai') {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are a senior software engineer and code reviewer. Provide deep, structured analysis of code. Be concise but thorough. Always respond with valid JSON.'
+                            },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0.2,
+                        max_tokens: 2000
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'OpenAI API request failed');
+                }
+
+                const data = await response.json();
+                const inputTokens  = data.usage?.prompt_tokens || 0;
+                const outputTokens = data.usage?.completion_tokens || 0;
+                this.costEstimate  = this.calculateOpenAICost(inputTokens, outputTokens);
+
+                return {
+                    analysis: JSON.parse(data.choices[0].message.content.trim()),
+                    provider: 'openai',
+                    model: this.model,
+                    usage: data.usage,
+                    cost: this.costEstimate
+                };
+
+            } else if (this.provider === 'anthropic') {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': this.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        max_tokens: 2000,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: `You are a senior software engineer and code reviewer. Provide deep, structured analysis of code. Be concise but thorough. Always respond with valid JSON.\n\n${prompt}`
+                            }
+                        ],
+                        temperature: 0.2
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'Anthropic API request failed');
+                }
+
+                const data = await response.json();
+                const inputTokens  = data.usage?.input_tokens || 0;
+                const outputTokens = data.usage?.output_tokens || 0;
+                this.costEstimate  = this.calculateAnthropicCost(inputTokens, outputTokens);
+
+                return {
+                    analysis: JSON.parse(data.content[0].text.trim()),
+                    provider: 'anthropic',
+                    model: this.model,
+                    usage: data.usage,
+                    cost: this.costEstimate
+                };
+
+            } else {
+                throw new Error('Invalid provider selected');
+            }
+        } catch (error) {
+            // If JSON parse fails, return a graceful fallback
+            if (error instanceof SyntaxError) {
+                throw new Error('AI returned an unexpected response format. Please try again.');
+            }
+            console.error('AI Explain Error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Build the deep-analysis prompt — returns structured JSON
+     */
+    buildExplainPrompt(code, language) {
+        return `Analyse this ${language} code and return a JSON object with exactly this structure:
+
+{
+  "summary": "One sentence describing what this code does overall.",
+  "purpose": "2-3 sentences explaining the intent and use case.",
+  "how_it_works": [
+    "Step-by-step explanation as array of strings, one per logical step"
+  ],
+  "functions": [
+    {
+      "name": "functionOrMethodName",
+      "role": "What it does in one sentence",
+      "params": "Inputs and their meaning",
+      "returns": "What it returns or produces"
+    }
+  ],
+  "complexity": {
+    "time": "Big-O time complexity (e.g. O(n))",
+    "space": "Big-O space complexity (e.g. O(1))",
+    "notes": "Brief explanation"
+  },
+  "strengths": ["Things the code does well"],
+  "improvements": ["Concrete suggestions to improve quality, performance, or readability"],
+  "bugs_or_risks": ["Any bugs, edge cases, or risks spotted — empty array if none"],
+  "doc_quality": {
+    "score": 7,
+    "label": "Good",
+    "comment": "Brief note on current documentation coverage"
+  }
+}
+
+Return ONLY the JSON object, no markdown fences, no explanation outside the JSON.
+
+Code to analyse:
+\`\`\`${language}
+${code}
+\`\`\``;
+    }
+
+    /**
      * Build prompt for AI generation
      */
     buildPrompt(code, language, commentStyle) {

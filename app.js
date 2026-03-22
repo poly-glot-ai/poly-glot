@@ -1551,6 +1551,7 @@ function initializeAISettings() {
     const saveBtn = document.getElementById('saveAiSettings');
     const testBtn = document.getElementById('testApiKey');
     const generateBtn = document.getElementById('generateBtn');
+    const explainBtn  = document.getElementById('explainBtn');
     
     const providerSelect = document.getElementById('aiProvider');
     const modelSelect = document.getElementById('aiModel');
@@ -1793,6 +1794,209 @@ function initializeAISettings() {
         }
     });
     
+    // ── Explain Code button ──────────────────────────────────────────
+    explainBtn.addEventListener('click', async () => {
+        if (!window.aiGenerator.isConfigured()) {
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            aiSettingsBtn.click();
+            return;
+        }
+
+        const code = document.getElementById('codeEditor').value.trim();
+        if (!code) {
+            alert('📝 Please paste some code into the editor first.');
+            return;
+        }
+
+        if (code.length < 10) {
+            alert('📝 Please paste more code — at least a function or a few lines.');
+            return;
+        }
+
+        const language = document.getElementById('language').value;
+
+        explainBtn.classList.add('loading');
+        explainBtn.disabled = true;
+        explainBtn.textContent = '🔍 Analysing...';
+
+        // Remove any previous results
+        const prev = document.querySelector('.ai-explain-results');
+        if (prev) prev.remove();
+
+        try {
+            const result = await window.aiGenerator.explainCode(code, language);
+            displayExplanation(result);
+
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('code_explained', {
+                    language,
+                    provider: result.provider,
+                    cost: result.cost
+                });
+            }
+        } catch (error) {
+            alert(`❌ Analysis failed: ${error.message}\n\nPlease check your API key and try again.`);
+
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('code_explain_failed', {
+                    language,
+                    error: error.message
+                });
+            }
+        } finally {
+            explainBtn.classList.remove('loading');
+            explainBtn.disabled = false;
+            explainBtn.textContent = '🔍 Explain Code';
+        }
+    });
+
+    // ── Render the explanation panel ────────────────────────────────
+    function displayExplanation(result) {
+        const a = result.analysis;
+
+        // Doc quality badge colour
+        const score = a.doc_quality?.score ?? 0;
+        const scoreColor = score >= 8 ? '#10b981' : score >= 5 ? '#f59e0b' : '#ef4444';
+
+        // Build functions table rows
+        const funcRows = (a.functions || []).map(f => `
+            <tr>
+                <td class="explain-fn-name"><code>${escapeHtml(f.name)}</code></td>
+                <td>${escapeHtml(f.role)}</td>
+                <td class="explain-fn-meta">${escapeHtml(f.params || '—')}</td>
+                <td class="explain-fn-meta">${escapeHtml(f.returns || '—')}</td>
+            </tr>`).join('');
+
+        // Build list items helper
+        const listItems = arr => (arr || []).map(i => `<li>${escapeHtml(i)}</li>`).join('');
+
+        const panel = document.createElement('div');
+        panel.className = 'ai-explain-results';
+        panel.innerHTML = `
+            <div class="explain-header">
+                <div class="explain-title-row">
+                    <h3>🔍 Code Analysis</h3>
+                    <div class="explain-meta">
+                        <span class="explain-badge explain-badge-provider">${escapeHtml(result.provider)} · ${escapeHtml(result.model)}</span>
+                        <span class="explain-badge explain-badge-cost">Cost: $${result.cost.toFixed(4)}</span>
+                        <button class="explain-close" id="closeExplain" title="Close">✕</button>
+                    </div>
+                </div>
+                <p class="explain-summary">${escapeHtml(a.summary || '')}</p>
+            </div>
+
+            <div class="explain-body">
+
+                <!-- Purpose -->
+                <div class="explain-section">
+                    <h4>📌 Purpose</h4>
+                    <p>${escapeHtml(a.purpose || '')}</p>
+                </div>
+
+                <!-- How it works -->
+                <div class="explain-section">
+                    <h4>⚙️ How It Works</h4>
+                    <ol class="explain-steps">${listItems(a.how_it_works)}</ol>
+                </div>
+
+                ${funcRows ? `
+                <!-- Functions breakdown -->
+                <div class="explain-section">
+                    <h4>🧩 Functions &amp; Methods</h4>
+                    <div class="explain-table-wrap">
+                        <table class="explain-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Parameters</th>
+                                    <th>Returns</th>
+                                </tr>
+                            </thead>
+                            <tbody>${funcRows}</tbody>
+                        </table>
+                    </div>
+                </div>` : ''}
+
+                <!-- Complexity -->
+                ${a.complexity ? `
+                <div class="explain-section">
+                    <h4>📊 Complexity</h4>
+                    <div class="explain-complexity-row">
+                        <div class="explain-complexity-card">
+                            <span class="complexity-label">Time</span>
+                            <span class="complexity-value">${escapeHtml(a.complexity.time || '—')}</span>
+                        </div>
+                        <div class="explain-complexity-card">
+                            <span class="complexity-label">Space</span>
+                            <span class="complexity-value">${escapeHtml(a.complexity.space || '—')}</span>
+                        </div>
+                        <p class="complexity-notes">${escapeHtml(a.complexity.notes || '')}</p>
+                    </div>
+                </div>` : ''}
+
+                <!-- Two-column: strengths + improvements -->
+                <div class="explain-two-col">
+                    <div class="explain-section explain-section-good">
+                        <h4>✅ Strengths</h4>
+                        <ul>${listItems(a.strengths)}</ul>
+                    </div>
+                    <div class="explain-section explain-section-improve">
+                        <h4>💡 Improvements</h4>
+                        <ul>${listItems(a.improvements)}</ul>
+                    </div>
+                </div>
+
+                <!-- Bugs / risks -->
+                ${(a.bugs_or_risks || []).length > 0 ? `
+                <div class="explain-section explain-section-risk">
+                    <h4>⚠️ Bugs &amp; Risks</h4>
+                    <ul>${listItems(a.bugs_or_risks)}</ul>
+                </div>` : `
+                <div class="explain-section explain-section-good">
+                    <h4>✅ No Bugs or Risks Detected</h4>
+                    <p>The code looks clean — no obvious bugs or edge-case risks found.</p>
+                </div>`}
+
+                <!-- Doc quality score -->
+                <div class="explain-section explain-doc-quality">
+                    <h4>📝 Documentation Quality</h4>
+                    <div class="doc-quality-row">
+                        <div class="doc-quality-score" style="--score-color: ${scoreColor}">
+                            <span class="doc-score-number">${score}</span>
+                            <span class="doc-score-max">/10</span>
+                        </div>
+                        <div class="doc-quality-info">
+                            <span class="doc-quality-label" style="color: ${scoreColor}">${escapeHtml(a.doc_quality?.label || '')}</span>
+                            <p>${escapeHtml(a.doc_quality?.comment || '')}</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /explain-body -->
+
+            <div class="explain-footer">
+                <button class="btn-primary" id="generateFromExplain">🤖 Generate Comments Now</button>
+                <button class="btn-secondary" id="closeExplainFooter">Close Analysis</button>
+            </div>
+        `;
+
+        // Insert after suggestions
+        const suggestions = document.getElementById('suggestions');
+        suggestions.parentNode.insertBefore(panel, suggestions.nextSibling);
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Close buttons
+        document.getElementById('closeExplain').addEventListener('click', () => panel.remove());
+        document.getElementById('closeExplainFooter').addEventListener('click', () => panel.remove());
+
+        // "Generate Comments Now" — triggers the generateBtn flow
+        document.getElementById('generateFromExplain').addEventListener('click', () => {
+            panel.remove();
+            generateBtn.click();
+        });
+    }
+
     // Display AI generation results
     function displayAIResults(result) {
         // Remove any existing results

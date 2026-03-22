@@ -1788,6 +1788,345 @@ textarea:focus {
     to { transform: rotate(360deg); }
 }
 
+/* ── Explain Code button loading state ──────────────────────────── */
+#explainBtn.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+#explainBtn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+/* ── Explanation results panel ──────────────────────────────────── */
+.ai-explain-results {
+    margin-top: 20px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #2a2a44 100%);
+    border: 2px solid #7dd3fc;
+    border-radius: 10px;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+}
+
+.explain-header {
+    background: rgba(125, 211, 252, 0.08);
+    border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+    padding: 18px 20px 14px;
+}
+
+.explain-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.explain-title-row h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #7dd3fc;
+}
+
+.explain-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.explain-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.explain-badge-provider {
+    background: rgba(125, 211, 252, 0.15);
+    color: #7dd3fc;
+}
+
+.explain-badge-cost {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+
+.explain-close {
+    background: none;
+    border: none;
+    color: #b4b4c8;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.2s, background 0.2s;
+}
+.explain-close:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+}
+
+.explain-summary {
+    margin: 0;
+    font-size: 14px;
+    color: #e0e0e0;
+    line-height: 1.5;
+}
+
+.explain-body {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.explain-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.explain-section h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #b4b4c8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.explain-section p {
+    margin: 0;
+    font-size: 13px;
+    color: #d0d0e0;
+    line-height: 1.6;
+}
+
+.explain-section ul,
+.explain-section ol {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.explain-section li {
+    font-size: 13px;
+    color: #d0d0e0;
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.explain-steps li {
+    padding-left: 4px;
+}
+
+/* Section colour variants */
+.explain-section-good {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.04);
+}
+.explain-section-good h4 { color: #10b981; }
+
+.explain-section-improve {
+    border-color: rgba(251, 191, 36, 0.25);
+    background: rgba(251, 191, 36, 0.04);
+}
+.explain-section-improve h4 { color: #fbbf24; }
+
+.explain-section-risk {
+    border-color: rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.04);
+}
+.explain-section-risk h4 { color: #ef4444; }
+
+/* Two-column layout for strengths/improvements */
+.explain-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Functions table */
+.explain-table-wrap {
+    overflow-x: auto;
+}
+
+.explain-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.explain-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: #7dd3fc;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(125, 211, 252, 0.2);
+    white-space: nowrap;
+}
+
+.explain-table td {
+    padding: 8px 12px;
+    color: #d0d0e0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+.explain-table tr:last-child td { border-bottom: none; }
+.explain-table tr:hover td { background: rgba(125, 211, 252, 0.04); }
+
+.explain-fn-name code {
+    color: #7dd3fc;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+}
+
+.explain-fn-meta {
+    color: #9090a8 !important;
+    font-size: 12px !important;
+}
+
+/* Complexity */
+.explain-complexity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.explain-complexity-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(125, 211, 252, 0.08);
+    border: 1px solid rgba(125, 211, 252, 0.2);
+    border-radius: 8px;
+    padding: 10px 18px;
+    min-width: 80px;
+}
+
+.complexity-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7dd3fc;
+    font-weight: 600;
+}
+
+.complexity-value {
+    font-family: 'Fira Code', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-top: 4px;
+}
+
+.complexity-notes {
+    flex: 1;
+    font-size: 13px;
+    color: #9090a8;
+    margin: 0;
+}
+
+/* Documentation quality score */
+.explain-doc-quality {
+    border-color: rgba(125, 211, 252, 0.2);
+}
+
+.doc-quality-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.doc-quality-score {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    min-width: 60px;
+}
+
+.doc-score-number {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--score-color, #7dd3fc);
+    line-height: 1;
+}
+
+.doc-score-max {
+    font-size: 16px;
+    color: #6060788;
+    color: #606078;
+}
+
+.doc-quality-info {
+    flex: 1;
+}
+
+.doc-quality-label {
+    font-size: 14px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.doc-quality-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #9090a8;
+}
+
+/* Footer actions */
+.explain-footer {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    background: rgba(0,0,0,0.15);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .explain-two-col {
+        grid-template-columns: 1fr;
+    }
+    .explain-complexity-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .doc-quality-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .explain-footer {
+        flex-direction: column;
+    }
+    .explain-footer .btn-primary,
+    .explain-footer .btn-secondary {
+        width: 100%;
+    }
+    .explain-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 /* AI Generation Results */
 .ai-results {
     margin-top: 20px;
