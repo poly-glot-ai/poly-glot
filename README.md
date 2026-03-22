@@ -25,6 +25,15 @@ The app features an interactive demo showing how Poly-Glot transforms inconsiste
 
 ## ✨ Features
 
+### 🤖 **AI-Powered Comment Generation** ⚡ NEW!
+- **Generate professional comments instantly** using GPT-4o, Claude 3.5, or other AI models
+- **Bring your own API key** - Works with OpenAI and Anthropic APIs
+- **Privacy-first**: Your API key stays in your browser (localStorage), never sent to our servers
+- **Cost-effective**: Most requests cost less than $0.01 (as low as $0.001 with GPT-4o-mini)
+- **Smart formatting**: Automatically applies language-specific documentation standards
+- **Real-time cost tracking**: See estimated cost before and after each generation
+- **One-click integration**: Copy or replace your code with AI-generated comments
+
 ### 📚 **Comprehensive Language Support**
 - **12 Programming Languages**: Python, JavaScript, Java, C++, C#, Go, Rust, Ruby, PHP, TypeScript, Swift, and Kotlin
 - Language-specific documentation standards (JSDoc, Javadoc, PyDoc, Doxygen, etc.)
@@ -94,10 +103,28 @@ Then navigate to `http://localhost:8000` in your browser.
 
 ## 📋 Usage Guide
 
-### 1. **Select Your Language**
+### 1. **Configure AI Settings** 🤖 (Optional but Recommended)
+1. Click the "⚙️ AI Settings" button in the header
+2. Choose your AI provider (OpenAI or Anthropic)
+3. Select your preferred model (GPT-4o-mini recommended for cost)
+4. Enter your API key from [OpenAI](https://platform.openai.com/api-keys) or [Anthropic](https://console.anthropic.com/settings/keys)
+5. Click "Test Connection" to verify your key works
+6. Click "Save Settings" - your key is stored locally in your browser only
+
+**Privacy Note:** Your API key never leaves your browser and is stored in localStorage. All AI calls go directly from your browser to OpenAI/Anthropic.
+
+### 2. **Generate AI Comments** ⚡
+1. Select your programming language from the dropdown
+2. Paste your undocumented code into the editor
+3. Click "🤖 Generate Comments"
+4. Review the AI-generated comments with proper documentation format
+5. Click "📋 Copy to Clipboard" or "✅ Replace Code" to use the generated comments
+6. Cost is displayed for each generation (typically $0.001-$0.01)
+
+### 3. **Select Your Language**
 Choose from the dropdown menu in the header to switch between programming languages.
 
-### 2. **Browse Templates**
+### 4. **Browse Templates**
 Navigate through different categories:
 - **Comment Syntax**: Basic single-line, multi-line, and doc comments
 - **Function Examples**: Well-documented function templates
@@ -106,16 +133,16 @@ Navigate through different categories:
 - **Code Examples**: Real-world use cases
 - **Interactive Editor**: Test and analyze your own code
 
-### 3. **Copy and Use**
+### 5. **Copy and Use**
 Click the "Copy" button on any template to copy it to your clipboard, then paste it into your project.
 
-### 4. **Analyze Your Code**
+### 6. **Analyze Your Code**
 1. Paste your code into the Interactive Editor
 2. Click "Analyze Code"
 3. Review suggestions and metrics
 4. Improve your documentation based on feedback
 
-### 5. **Export Templates**
+### 7. **Export Templates**
 Click "Export Templates" to download language-specific templates as a text file for offline reference.
 
 ## 🎨 Screenshots
@@ -143,9 +170,12 @@ poly-glot/
 ├── index.html          # Main HTML structure
 ├── styles.css          # All styling and theming
 ├── app.js              # Application logic and templates
+├── ai-generator.js     # AI comment generation (OpenAI/Anthropic)
+├── analytics.js        # Privacy-first analytics system
 ├── README.md           # This file
+├── ANALYTICS.md        # Analytics documentation
 ├── LICENSE             # MIT License
-└── screenshots/        # Application screenshots (optional)
+└── .gitignore          # Git ignore rules
 ```
 
 ### Browser Compatibility
@@ -220,13 +250,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [ ] Add syntax highlighting
-- [ ] More language support (SQL, R, Scala, etc.)
+- [x] **AI-powered comment generation** ✅ (GPT-4o, Claude 3.5 - LIVE!)
+- [ ] Add syntax highlighting to code editor
+- [ ] More language support (SQL, R, Scala, Dart, etc.)
 - [ ] Dark/light theme toggle
 - [ ] Export to various formats (Markdown, JSON)
-- [ ] AI-powered comment generation
+- [ ] Backend API for premium features
+- [ ] GitHub Sponsors integration
 - [ ] VS Code extension
 - [ ] Mobile app version
+- [ ] Team collaboration features
+- [ ] CI/CD integration plugins
 
 ---
 
