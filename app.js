@@ -1334,3 +1334,103 @@ function setupEventListeners() {
         // Link now opens Buy Me a Coffee page in new tab
     });
 }
+
+// ============================================
+// DEMO SECTION FUNCTIONALITY
+// ============================================
+
+function initializeDemo() {
+    const playBtn = document.getElementById('playDemoBtn');
+    const resetBtn = document.getElementById('resetDemoBtn');
+    const tryItBtn = document.getElementById('tryItNowBtn');
+    const demoStats = document.getElementById('demoStats');
+    const demoPanels = document.querySelectorAll('.demo-panel');
+    
+    let isPlaying = false;
+    
+    // Play demo animation
+    playBtn.addEventListener('click', async () => {
+        if (isPlaying) return;
+        isPlaying = true;
+        playBtn.disabled = true;
+        playBtn.textContent = '⏸️ Playing...';
+        
+        // Track demo play
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('demo_played', {
+                source: 'demo_section'
+            });
+        }
+        
+        // Step 1: Highlight "Before" panel
+        demoPanels[0].classList.add('active');
+        await sleep(1500);
+        
+        // Step 2: Highlight "After" panel
+        demoPanels[1].classList.add('active');
+        await sleep(1500);
+        
+        // Step 3: Show stats
+        demoStats.style.display = 'flex';
+        await sleep(2000);
+        
+        // Reset button
+        playBtn.textContent = '✓ Demo Complete';
+        playBtn.disabled = false;
+        isPlaying = false;
+    });
+    
+    // Reset demo
+    resetBtn.addEventListener('click', () => {
+        demoPanels.forEach(panel => panel.classList.remove('active'));
+        demoStats.style.display = 'none';
+        playBtn.textContent = '▶️ Play Demo';
+        playBtn.disabled = false;
+        isPlaying = false;
+        
+        // Track demo reset
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('demo_reset', {
+                source: 'demo_section'
+            });
+        }
+    });
+    
+    // Try it now - scroll to main content
+    tryItBtn.addEventListener('click', () => {
+        const mainContent = document.querySelector('.main-content');
+        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Auto-select JavaScript and show functions
+        const languageSelect = document.getElementById('language');
+        languageSelect.value = 'javascript';
+        languageSelect.dispatchEvent(new Event('change'));
+        
+        // Highlight the function examples category
+        setTimeout(() => {
+            const functionNav = document.querySelector('[data-category="functions"]');
+            if (functionNav) {
+                functionNav.click();
+            }
+        }, 500);
+        
+        // Track CTA click
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('demo_cta_clicked', {
+                source: 'demo_section',
+                action: 'try_it_now'
+            });
+        }
+    });
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Initialize demo when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeDemo);
+} else {
+    initializeDemo();
+}
