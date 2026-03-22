@@ -1555,9 +1555,36 @@ function initializeAISettings() {
     
     const providerSelect = document.getElementById('aiProvider');
     const modelSelect = document.getElementById('aiModel');
+    const customModelRow   = document.getElementById('customModelRow');
+    const customModelInput = document.getElementById('customModelInput');
     const apiKeyInput = document.getElementById('apiKey');
     const toggleVisibilityBtn = document.getElementById('toggleApiKeyVisibility');
     const apiStatus = document.getElementById('apiStatus');
+
+    const CUSTOM_MODEL_KEY   = 'polyglot_custom_model';
+    const CUSTOM_OPTION_VALUE = '__custom__';
+
+    /** Show/hide the free-text custom model input row. */
+    function toggleCustomModelRow(show) {
+        customModelRow.style.display = show ? 'block' : 'none';
+        if (show) {
+            const saved = localStorage.getItem(CUSTOM_MODEL_KEY) || '';
+            customModelInput.value = saved;
+            customModelInput.focus();
+        }
+    }
+
+    /**
+     * Returns the model string to actually use for API calls.
+     * If the user selected the "custom" option, reads the free-text input.
+     */
+    function resolveModel() {
+        if (modelSelect.value === CUSTOM_OPTION_VALUE) {
+            const custom = customModelInput.value.trim();
+            return custom || window.aiGenerator.model; // fallback to last valid
+        }
+        return modelSelect.value;
+    }
     
     // Load saved settings
     function loadSettings() {
@@ -1570,16 +1597,33 @@ function initializeAISettings() {
     // Update model options based on provider
     function updateModelOptions() {
         const models = window.aiGenerator.getAvailableModels();
+        const currentModel = window.aiGenerator.model;
+        const isCustomActive = currentModel && !models.find(m => m.value === currentModel);
+
         modelSelect.innerHTML = '';
-        
+
         models.forEach(model => {
             const option = document.createElement('option');
             option.value = model.value;
-            option.textContent = `${model.label} - ${model.cost} cost`;
+            option.textContent = `${model.label} — ${model.cost} cost`;
             modelSelect.appendChild(option);
         });
-        
-        modelSelect.value = window.aiGenerator.model;
+
+        // Always append the "custom" sentinel option at the bottom
+        const customOption = document.createElement('option');
+        customOption.value = CUSTOM_OPTION_VALUE;
+        customOption.textContent = '✏️ Enter custom model name…';
+        modelSelect.appendChild(customOption);
+
+        if (isCustomActive) {
+            // The saved model isn't in the preset list — restore it in the custom input
+            modelSelect.value = CUSTOM_OPTION_VALUE;
+            customModelInput.value = currentModel;
+            toggleCustomModelRow(true);
+        } else {
+            modelSelect.value = currentModel;
+            toggleCustomModelRow(false);
+        }
     }
     
     // Update API status indicator
@@ -1628,7 +1672,25 @@ function initializeAISettings() {
     
     // Model change
     modelSelect.addEventListener('change', () => {
-        window.aiGenerator.saveModel(modelSelect.value);
+        const isCustom = modelSelect.value === CUSTOM_OPTION_VALUE;
+        toggleCustomModelRow(isCustom);
+        if (!isCustom) {
+            window.aiGenerator.saveModel(modelSelect.value);
+        }
+        updateApiStatus();
+    });
+
+    // Custom model text input — save on change/blur
+    customModelInput.addEventListener('input', () => {
+        const val = customModelInput.value.trim();
+        if (val) localStorage.setItem(CUSTOM_MODEL_KEY, val);
+    });
+    customModelInput.addEventListener('change', () => {
+        const val = customModelInput.value.trim();
+        if (val) {
+            localStorage.setItem(CUSTOM_MODEL_KEY, val);
+            window.aiGenerator.saveModel(val);
+        }
     });
     
     // Toggle API key visibility
@@ -1653,7 +1715,7 @@ function initializeAISettings() {
         
         window.aiGenerator.saveAPIKey(apiKey);
         window.aiGenerator.saveProvider(providerSelect.value);
-        window.aiGenerator.saveModel(modelSelect.value);
+        window.aiGenerator.saveModel(resolveModel());
         
         updateApiStatus();
         modal.style.display = 'none';
@@ -1684,7 +1746,7 @@ function initializeAISettings() {
         const originalKey = window.aiGenerator.apiKey;
         window.aiGenerator.apiKey = apiKey;
         window.aiGenerator.provider = providerSelect.value;
-        window.aiGenerator.model = modelSelect.value;
+        window.aiGenerator.model = resolveModel();
         
         try {
             const testCode = 'function add(a, b) { return a + b; }';

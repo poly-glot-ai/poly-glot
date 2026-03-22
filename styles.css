@@ -1771,6 +1771,37 @@ textarea:focus {
     text-decoration: underline;
 }
 
+/* ── Custom model input row ─────────────────────────────────── */
+.custom-model-row {
+    margin-top: 0;
+    animation: fadeIn 0.18s ease;
+}
+
+.custom-model-input {
+    width: 100%;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+}
+
+.custom-model-hint {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: #8888aa;
+    line-height: 1.5;
+}
+
+.custom-model-hint a {
+    color: #7dd3fc;
+    text-decoration: none;
+}
+
+.custom-model-hint a:hover {
+    text-decoration: underline;
+}
+
+/* ─────────────────────────────────────────────────────────── */
+
 .api-status {
     display: flex;
     align-items: center;

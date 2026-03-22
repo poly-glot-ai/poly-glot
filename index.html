@@ -229,6 +229,19 @@
                             </select>
                         </div>
 
+                        <div class="form-group custom-model-row" id="customModelRow" style="display:none;">
+                            <label for="customModelInput">Custom model name:</label>
+                            <input type="text" id="customModelInput" class="settings-input custom-model-input"
+                                   placeholder="e.g. gpt-4o-2024-11-20, claude-3-7-sonnet-20250219"
+                                   autocomplete="off" spellcheck="false">
+                            <small class="help-text custom-model-hint">
+                                Enter any model ID supported by your provider. Find model names at
+                                <a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI docs</a> or
+                                <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener noreferrer">Anthropic docs</a>.
+                                Pricing will fall back to the closest known model.
+                            </small>
+                        </div>
+
                         <div class="form-group">
                             <label for="apiKey">API Key:</label>
                             <div class="api-key-input-wrapper">
