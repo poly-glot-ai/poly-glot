@@ -116,6 +116,133 @@ body {
     font-size: 24px;
 }
 
+/* ── Overview sections ─────────────────────────────────────────── */
+.overview-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(125, 211, 252, 0.1);
+}
+
+.overview-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.overview-heading {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #7dd3fc;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.overview-text {
+    font-size: 13px;
+    color: #c0c0d8;
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
+
+.overview-text:last-child { margin-bottom: 0; }
+.overview-text strong { color: #e0e0f0; }
+
+/* ── RAG / GEO section ─────────────────────────────────────────── */
+.overview-section-rag {
+    background: rgba(125, 211, 252, 0.04);
+    border: 1px solid rgba(125, 211, 252, 0.15);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-top: 4px;
+}
+
+.rag-icon { font-size: 16px; }
+
+.rag-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.rag-card {
+    display: flex;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(125, 211, 252, 0.12);
+    border-radius: 8px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.rag-card:hover {
+    border-color: rgba(125, 211, 252, 0.3);
+    background: rgba(125, 211, 252, 0.05);
+}
+
+.rag-card-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.rag-card-body h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e0e0f0;
+    margin-bottom: 4px;
+}
+
+.rag-card-body p {
+    font-size: 12px;
+    color: #9090b0;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.rag-card-body p em {
+    color: #7dd3fc;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.rag-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 4px;
+}
+
+.rag-callout-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.rag-callout p {
+    font-size: 12px;
+    color: #a0d0b8;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.rag-callout p strong { color: #10b981; }
+
+@media (max-width: 900px) {
+    .rag-grid { grid-template-columns: 1fr; }
+}
+
+/* ── (legacy kept for any remaining references) ── */
 .header-description {
     font-size: 15px;
     color: #b4b4c8;
