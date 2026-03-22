@@ -15,7 +15,8 @@ body {
 .container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
+    height: auto;
 }
 
 .header {
@@ -1110,41 +1111,169 @@ textarea:focus {
     .demo-arrow {
         transform: rotate(90deg);
         font-size: 36px;
+        padding: 10px 0;
+    }
+
+    .demo-panel {
+        max-width: 100%;
     }
 }
 
 @media (max-width: 768px) {
     .demo-section {
-        padding: 40px 20px;
+        padding: 30px 15px;
     }
 
     .demo-title {
-        font-size: 28px;
+        font-size: 24px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .demo-icon {
+        font-size: 32px;
     }
 
     .demo-subtitle {
-        font-size: 16px;
+        font-size: 14px;
+        padding: 0 10px;
     }
 
     .demo-controls {
         flex-direction: column;
         gap: 10px;
+        width: 100%;
     }
 
     .demo-btn {
         width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+    }
+
+    .demo-panel {
+        padding: 18px;
+    }
+
+    .demo-panel-header h3 {
+        font-size: 18px;
+    }
+
+    .demo-step {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+
+    .demo-code {
+        padding: 15px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .demo-code pre {
+        font-size: 10px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+    }
+
+    .issue-badge,
+    .benefit-badge {
         font-size: 11px;
+        padding: 6px 12px;
     }
 
     .demo-stats {
         flex-direction: column;
         gap: 15px;
+        padding: 20px 15px;
+    }
+
+    .stat-card {
+        width: 100%;
+        padding: 15px 20px;
+        min-width: unset;
+    }
+
+    .stat-value {
+        font-size: 32px;
+    }
+
+    .stat-label {
+        font-size: 12px;
     }
 
     .stat-arrow {
         transform: rotate(90deg);
+        font-size: 24px;
+    }
+
+    .demo-cta {
+        padding: 20px 15px;
+    }
+
+    .demo-cta p {
+        font-size: 16px;
+    }
+
+    .cta-btn {
+        width: 100%;
+        padding: 14px 30px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .demo-section {
+        padding: 25px 12px;
+    }
+
+    .demo-title {
+        font-size: 20px;
+    }
+
+    .demo-subtitle {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .demo-panel {
+        padding: 15px;
+    }
+
+    .demo-panel-header h3 {
+        font-size: 16px;
+    }
+
+    .demo-code {
+        padding: 12px;
+    }
+
+    .demo-code pre {
+        font-size: 9px;
+        line-height: 1.4;
+    }
+
+    .issue-badge,
+    .benefit-badge {
+        font-size: 10px;
+        padding: 5px 10px;
+    }
+
+    .stat-value {
+        font-size: 28px;
+    }
+
+    .demo-arrow {
+        font-size: 28px;
+    }
+
+    .demo-cta p {
+        font-size: 14px;
+    }
+
+    .cta-btn {
+        padding: 12px 25px;
+        font-size: 15px;
     }
 }
