@@ -1348,6 +1348,77 @@ function initializeDemo() {
     
     let isPlaying = false;
     
+    // Code snippets for typing animation
+    const beforeCode = `// calculates user age
+function calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    // check if birthday happened this year
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}`;
+
+    const afterCode = `/**
+ * Calculates a person's age based on their birth date
+ * 
+ * @param {string} birthDate - The birth date in ISO format (YYYY-MM-DD)
+ * @returns {number} The calculated age in years
+ * @throws {Error} If birthDate is invalid or in the future
+ * 
+ * @example
+ * const age = calculateAge('1990-05-15');
+ * console.log(age); // 35 (in 2025)
+ */
+function calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    
+    if (isNaN(birth.getTime())) {
+        throw new Error('Invalid birth date format');
+    }
+    
+    if (birth > today) {
+        throw new Error('Birth date cannot be in the future');
+    }
+    
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    
+    return age;
+}`;
+
+    // Function to type code line by line
+    async function typeCode(codeElement, code, speed = 30) {
+        codeElement.textContent = '';
+        const lines = code.split('\n');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let currentLine = '';
+            
+            // Type each character in the line
+            for (let char of line) {
+                currentLine += char;
+                codeElement.textContent = lines.slice(0, i).join('\n') + 
+                    (i > 0 ? '\n' : '') + currentLine;
+                await sleep(speed);
+            }
+            
+            // Add newline if not last line
+            if (i < lines.length - 1) {
+                codeElement.textContent += '\n';
+            }
+        }
+    }
+    
     // Play demo animation
     playBtn.addEventListener('click', async () => {
         if (isPlaying) return;
@@ -1362,13 +1433,17 @@ function initializeDemo() {
             });
         }
         
-        // Step 1: Highlight "Before" panel
+        // Step 1: Activate "Before" panel and type code
         demoPanels[0].classList.add('active');
-        await sleep(1500);
+        const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
+        await typeCode(beforeCodeElement, beforeCode, 20);
+        await sleep(1000);
         
-        // Step 2: Highlight "After" panel
+        // Step 2: Activate "After" panel and type improved code
         demoPanels[1].classList.add('active');
-        await sleep(1500);
+        const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
+        await typeCode(afterCodeElement, afterCode, 15);
+        await sleep(1000);
         
         // Step 3: Show stats
         demoStats.style.display = 'flex';
@@ -1387,6 +1462,12 @@ function initializeDemo() {
         playBtn.textContent = '▶️ Play Demo';
         playBtn.disabled = false;
         isPlaying = false;
+        
+        // Restore original code content
+        const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
+        const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
+        beforeCodeElement.textContent = beforeCode;
+        afterCodeElement.textContent = afterCode;
         
         // Track demo reset
         if (window.polyglotAnalytics) {
