@@ -2180,20 +2180,26 @@ textarea:focus {
     right: 8px;
     z-index: 10;
     background: rgba(45, 45, 68, 0.92);
-    border: 1px solid rgba(125, 211, 252, 0.3);
+    border: 1px solid rgba(125, 211, 252, 0.4);
     border-radius: 6px;
     color: #7dd3fc;
-    font-size: 14px;
-    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 10px;
     cursor: pointer;
     line-height: 1;
     transition: all 0.2s;
-    opacity: 0;
-    /* shown on wrapper hover via CSS below */
+    opacity: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.ai-code-wrapper:hover .ai-copy-inline {
-    opacity: 1;
+.ai-copy-inline::after {
+    content: 'Copy';
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.02em;
 }
 
 .ai-copy-inline:hover {
