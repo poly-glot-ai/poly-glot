@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poly-Glot - Code Comment Library</title>
+    <meta name="description" content="A comprehensive library of coding comment patterns and best practices for 12+ programming languages">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Poly-Glot Code Comment Library</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="php">PHP</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="swift">Swift</option>
+                        <option value="kotlin">Kotlin</option>
+                    </select>
+                </div>
+                <button class="primary" id="analyzeBtn">Analyze Code</button>
+                <button id="exportBtn">Export Templates</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search templates...">
+                </div>
+                <h3>Categories</h3>
+                <div class="nav-item active" data-category="syntax">Comment Syntax</div>
+                <div class="nav-item" data-category="functions">Function Examples</div>
+                <div class="nav-item" data-category="classes">Class Examples</div>
+                <div class="nav-item" data-category="best-practices">Best Practices</div>
+                <div class="nav-item" data-category="examples">Code Examples</div>
+                <div class="nav-item" data-category="editor">Interactive Editor</div>
+                <div class="nav-item" data-category="favorites">⭐ Favorites</div>
+            </div>
+
+            <div class="content-area">
+                <div class="panel" id="leftPanel">
+                    <div class="panel-title">
+                        <span>Templates & Reference</span>
+                    </div>
+                    <div id="templateContent"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="panel" id="rightPanel">
+                    <div class="panel-title">
+                        <span>Your Code</span>
+                        <button id="clearBtn">Clear</button>
+                    </div>
+                    <div id="editorContent">
+                        <textarea id="codeEditor" placeholder="Paste or write your code here for analysis..."></textarea>
+                        <div id="suggestions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
