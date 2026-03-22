@@ -2013,7 +2013,10 @@ function initializeAISettings() {
                 <h3>✨ AI-Generated Comments</h3>
                 <span class="ai-cost">Cost: $${result.cost.toFixed(4)}</span>
             </div>
-            <div class="ai-code-output">${escapeHtml(result.code)}</div>
+            <div class="ai-code-wrapper">
+                <button class="ai-copy-inline" id="copyAiCodeInline" title="Copy code">📋</button>
+                <div class="ai-code-output">${escapeHtml(result.code)}</div>
+            </div>
             <div class="ai-actions">
                 <button class="btn-primary" id="copyAiCode">📋 Copy to Clipboard</button>
                 <button class="btn-primary" id="replaceCode">✅ Replace Code</button>
@@ -2025,31 +2028,53 @@ function initializeAISettings() {
         const suggestions = document.getElementById('suggestions');
         suggestions.parentNode.insertBefore(resultsDiv, suggestions.nextSibling);
         
-        // Copy to clipboard
-        document.getElementById('copyAiCode').addEventListener('click', () => {
+        // Shared helper — animate a button to "Copied!" then restore
+        function flashCopied(btn, originalHTML) {
+            btn.innerHTML = '✅ Copied!';
+            btn.classList.add('copied');
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('copied');
+                btn.disabled = false;
+            }, 2000);
+        }
+
+        // Inline copy icon on the code block
+        document.getElementById('copyAiCodeInline').addEventListener('click', function() {
             navigator.clipboard.writeText(result.code).then(() => {
-                alert('✅ Code copied to clipboard!');
-                
+                flashCopied(this, '📋');
                 if (window.polyglotAnalytics) {
-                    window.polyglotAnalytics.trackEvent('ai_code_copied', {
-                        provider: result.provider
-                    });
+                    window.polyglotAnalytics.trackEvent('ai_code_copied', { provider: result.provider, source: 'inline' });
                 }
+            }).catch(() => {
+                this.innerHTML = '❌';
+                setTimeout(() => { this.innerHTML = '📋'; }, 2000);
             });
         });
-        
+
+        // Copy to clipboard (bottom action bar)
+        document.getElementById('copyAiCode').addEventListener('click', function() {
+            navigator.clipboard.writeText(result.code).then(() => {
+                flashCopied(this, '📋 Copy to Clipboard');
+                if (window.polyglotAnalytics) {
+                    window.polyglotAnalytics.trackEvent('ai_code_copied', { provider: result.provider, source: 'button' });
+                }
+            }).catch(() => {
+                this.innerHTML = '❌ Copy failed';
+                setTimeout(() => { this.innerHTML = '📋 Copy to Clipboard'; }, 2000);
+            });
+        });
+
         // Replace code in editor
-        document.getElementById('replaceCode').addEventListener('click', () => {
+        document.getElementById('replaceCode').addEventListener('click', function() {
             const codeEditor = document.getElementById('codeEditor');
             codeEditor.value = result.code;
-            resultsDiv.remove();
-            
-            alert('✅ Code replaced in editor!');
-            
+            flashCopied(this, '✅ Replace Code');
+            setTimeout(() => resultsDiv.remove(), 1200);
+
             if (window.polyglotAnalytics) {
-                window.polyglotAnalytics.trackEvent('ai_code_replaced', {
-                    provider: result.provider
-                });
+                window.polyglotAnalytics.trackEvent('ai_code_replaced', { provider: result.provider });
             }
         });
         
