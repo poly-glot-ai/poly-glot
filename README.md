@@ -1,12 +1,27 @@
 # Poly-Glot 🌐
 
-> A comprehensive code comment library and interactive learning tool for 12+ programming languages
+> **AI generates comments. Poly-Glot ensures they're consistent.**  
+> A comprehensive code comment library and standardization tool for 12+ programming languages
 
-![Poly-Glot Banner](https://img.shields.io/badge/Languages-12%2B-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Status](https://img.shields.io/badge/status-active-success)
+![Poly-Glot Banner](https://img.shields.io/badge/Languages-12%2B-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Status](https://img.shields.io/badge/status-active-success) ![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)
+
+**🌐 Live App:** [https://hmoses.github.io/poly-glot/](https://hmoses.github.io/poly-glot/)
+
+<!-- Demo GIF placeholder - will be added -->
+<!-- ![Poly-Glot Demo](./assets/demo.gif) -->
 
 ## 🎯 Overview
 
-**Poly-Glot** is an interactive web application that helps developers learn and apply proper code commenting conventions across multiple programming languages. Whether you're a beginner learning to document your code or an experienced developer switching between languages, Poly-Glot provides instant access to language-specific commenting patterns, best practices, and real-world examples.
+**Poly-Glot** is an interactive web application designed for the AI coding era. While tools like GitHub Copilot and ChatGPT generate documentation instantly, they create inconsistent styles across your team. Poly-Glot provides standardized templates and best practices (JSDoc, Javadoc, PyDoc, Doxygen, and more) to ensure your team's documentation is professional, consistent, and maintainable—whether written by humans or AI.
+
+### 🎬 See It In Action
+
+The app features an interactive demo showing how Poly-Glot transforms inconsistent AI-generated comments into standardized documentation:
+
+**Before:** Inconsistent AI comments → **After:** Professional JSDoc standard  
+**Result:** 12% comment coverage → 85% coverage (+73% improvement)
+
+[Try the live demo](https://hmoses.github.io/poly-glot/) and click "▶️ Play Demo" to see the transformation!
 
 ## ✨ Features
 
