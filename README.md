@@ -167,15 +167,17 @@ Click "Export Templates" to download language-specific templates as a text file 
 ### File Structure
 ```
 poly-glot/
-├── index.html          # Main HTML structure
-├── styles.css          # All styling and theming
-├── app.js              # Application logic and templates
-├── ai-generator.js     # AI comment generation (OpenAI/Anthropic)
-├── analytics.js        # Privacy-first analytics system
-├── README.md           # This file
-├── ANALYTICS.md        # Analytics documentation
-├── LICENSE             # MIT License
-└── .gitignore          # Git ignore rules
+├── index.html                    # Main HTML structure
+├── styles.css                    # All styling and theming
+├── app.js                        # Application logic and templates
+├── ai-generator.js               # AI comment generation (OpenAI/Anthropic)
+├── analytics.js                  # Privacy-first analytics system
+├── README.md                     # This file
+├── ANALYTICS.md                  # Analytics documentation
+├── CHANGELOG.md                  # Version history
+├── GOOGLE_ANALYTICS_SETUP.md     # GA4 setup guide
+├── LICENSE                       # MIT License
+└── .gitignore                    # Git ignore rules
 ```
 
 ### Browser Compatibility
