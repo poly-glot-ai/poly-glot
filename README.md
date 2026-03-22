@@ -51,7 +51,7 @@ Simply open `index.html` in your web browser - no installation required!
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/poly-glot.git
+git clone https://github.com/hmoses/poly-glot.git
 
 # Navigate to the directory
 cd poly-glot
@@ -200,8 +200,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📬 Contact
 
-- **GitHub**: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
-- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/poly-glot/issues)
+- **GitHub**: [@hmoses](https://github.com/hmoses)
+- **Issues**: [GitHub Issues](https://github.com/hmoses/poly-glot/issues)
 
 ## 🗺️ Roadmap
 
