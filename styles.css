@@ -717,6 +717,27 @@ textarea:focus {
         max-width: 100%;
     }
 
+    .how-it-works {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        padding: 15px 10px;
+        gap: 12px;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+    }
+
+    .how-step {
+        flex-shrink: 0;
+        scroll-snap-align: center;
+        min-width: 200px;
+    }
+
+    .how-arrow {
+        flex-shrink: 0;
+    }
+
     .header-value-props {
         grid-template-columns: 1fr;
         gap: 10px;
