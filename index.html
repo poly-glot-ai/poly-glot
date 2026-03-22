@@ -30,8 +30,69 @@
                     </a>
                 </div>
             </div>
-            <p>A comprehensive library of coding comment patterns and best practices</p>
+            <div class="header-description">
+                <p>A comprehensive library of coding comment patterns and best practices</p>
+                <div class="header-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Select Language</span>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Browse Templates</span>
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Generate Comments</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="aiSettingsBtn" title="Configure AI API settings">⚙️ AI Settings</button>
+            </div>
             <div class="language-tabs" id="languageTabs"></div>
+        </div>
+
+        <!-- AI Settings Modal -->
+        <div id="aiSettingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>⚙️ AI Settings</h3>
+                    <button id="closeModal" class="close-btn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="aiProvider">AI Provider</label>
+                        <select id="aiProvider">
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="aiModel">Model</label>
+                        <select id="aiModel">
+                            <option value="gpt-4o-mini">GPT-4o Mini (Recommended - Cheapest)</option>
+                            <option value="gpt-4o">GPT-4o (Best Quality)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="apiKey">API Key</label>
+                        <div class="api-key-input">
+                            <input type="password" id="apiKey" placeholder="sk-... or sk-ant-...">
+                            <button id="toggleApiKey" class="toggle-btn">👁</button>
+                        </div>
+                        <small>Your key is stored locally in your browser only. <a href="https://platform.openai.com/api-keys" target="_blank">Get OpenAI key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank">Get Anthropic key</a></small>
+                    </div>
+                    <div class="setting-actions">
+                        <button id="testConnection" class="test-btn">🔍 Test Connection</button>
+                        <button id="saveSettings" class="save-btn">💾 Save Settings</button>
+                    </div>
+                    <div id="connectionStatus" class="connection-status"></div>
+                </div>
+            </div>
         </div>
 
         <div class="demo-section">
@@ -92,45 +153,6 @@
                 <div class="demo-cta">
                     <p>Ready to standardize your team's documentation?</p>
                     <button id="tryItNowBtn" class="cta-btn">Try It Now Below ↓</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="ai-settings-panel" id="aiSettingsPanel" style="display: none;">
-            <div class="ai-settings-container">
-                <div class="ai-settings-header">
-                    <h3>⚙️ AI Settings</h3>
-                    <button id="closeAiSettings" class="close-btn">✕</button>
-                </div>
-                <div class="ai-settings-body">
-                    <div class="setting-group">
-                        <label for="aiProvider">AI Provider</label>
-                        <select id="aiProvider">
-                            <option value="openai">OpenAI (GPT)</option>
-                            <option value="anthropic">Anthropic (Claude)</option>
-                        </select>
-                    </div>
-                    <div class="setting-group">
-                        <label for="aiModel">Model</label>
-                        <select id="aiModel">
-                            <option value="gpt-4o-mini">GPT-4o Mini (Recommended - Cheapest)</option>
-                            <option value="gpt-4o">GPT-4o (Best Quality)</option>
-                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
-                        </select>
-                    </div>
-                    <div class="setting-group">
-                        <label for="apiKey">API Key</label>
-                        <div class="api-key-input">
-                            <input type="password" id="apiKey" placeholder="sk-... or sk-ant-...">
-                            <button id="toggleApiKey" class="toggle-btn">👁</button>
-                        </div>
-                        <small>Your key is stored locally in your browser only. <a href="https://platform.openai.com/api-keys" target="_blank">Get OpenAI key</a> | <a href="https://console.anthropic.com/settings/keys" target="_blank">Get Anthropic key</a></small>
-                    </div>
-                    <div class="setting-actions">
-                        <button id="testConnection" class="test-btn">🔍 Test Connection</button>
-                        <button id="saveSettings" class="save-btn">💾 Save Settings</button>
-                    </div>
-                    <div id="connectionStatus" class="connection-status"></div>
                 </div>
             </div>
         </div>
