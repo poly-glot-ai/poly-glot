@@ -1539,3 +1539,339 @@ if (document.readyState === 'loading') {
 } else {
     initializeDemo();
 }
+
+// ===================================
+// AI SETTINGS & GENERATION
+// ===================================
+
+function initializeAISettings() {
+    const modal = document.getElementById('aiSettingsModal');
+    const aiSettingsBtn = document.getElementById('aiSettingsBtn');
+    const closeBtn = document.getElementById('closeAiSettings');
+    const saveBtn = document.getElementById('saveAiSettings');
+    const testBtn = document.getElementById('testApiKey');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    const providerSelect = document.getElementById('aiProvider');
+    const modelSelect = document.getElementById('aiModel');
+    const apiKeyInput = document.getElementById('apiKey');
+    const toggleVisibilityBtn = document.getElementById('toggleApiKeyVisibility');
+    const apiStatus = document.getElementById('apiStatus');
+    
+    // Load saved settings
+    function loadSettings() {
+        providerSelect.value = window.aiGenerator.provider;
+        apiKeyInput.value = window.aiGenerator.apiKey;
+        updateModelOptions();
+        updateApiStatus();
+    }
+    
+    // Update model options based on provider
+    function updateModelOptions() {
+        const models = window.aiGenerator.getAvailableModels();
+        modelSelect.innerHTML = '';
+        
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = `${model.label} - ${model.cost} cost`;
+            modelSelect.appendChild(option);
+        });
+        
+        modelSelect.value = window.aiGenerator.model;
+    }
+    
+    // Update API status indicator
+    function updateApiStatus() {
+        const statusText = apiStatus.querySelector('.status-text');
+        
+        if (window.aiGenerator.isConfigured()) {
+            apiStatus.classList.remove('error');
+            apiStatus.classList.add('configured');
+            statusText.textContent = `✓ ${window.aiGenerator.provider} configured`;
+        } else {
+            apiStatus.classList.remove('configured', 'error');
+            statusText.textContent = 'Not configured';
+        }
+    }
+    
+    // Open modal
+    aiSettingsBtn.addEventListener('click', () => {
+        loadSettings();
+        modal.style.display = 'block';
+        
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('ai_settings_opened', {
+                has_key: window.aiGenerator.isConfigured()
+            });
+        }
+    });
+    
+    // Close modal
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Provider change
+    providerSelect.addEventListener('change', () => {
+        window.aiGenerator.saveProvider(providerSelect.value);
+        updateModelOptions();
+    });
+    
+    // Model change
+    modelSelect.addEventListener('change', () => {
+        window.aiGenerator.saveModel(modelSelect.value);
+    });
+    
+    // Toggle API key visibility
+    toggleVisibilityBtn.addEventListener('click', () => {
+        if (apiKeyInput.type === 'password') {
+            apiKeyInput.type = 'text';
+            toggleVisibilityBtn.textContent = '🙈';
+        } else {
+            apiKeyInput.type = 'password';
+            toggleVisibilityBtn.textContent = '👁️';
+        }
+    });
+    
+    // Save settings
+    saveBtn.addEventListener('click', () => {
+        const apiKey = apiKeyInput.value.trim();
+        
+        if (!apiKey) {
+            alert('⚠️ Please enter an API key');
+            return;
+        }
+        
+        window.aiGenerator.saveAPIKey(apiKey);
+        window.aiGenerator.saveProvider(providerSelect.value);
+        window.aiGenerator.saveModel(modelSelect.value);
+        
+        updateApiStatus();
+        modal.style.display = 'none';
+        
+        alert('✅ AI settings saved successfully!');
+        
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('ai_settings_saved', {
+                provider: providerSelect.value,
+                model: modelSelect.value
+            });
+        }
+    });
+    
+    // Test API connection
+    testBtn.addEventListener('click', async () => {
+        const apiKey = apiKeyInput.value.trim();
+        
+        if (!apiKey) {
+            alert('⚠️ Please enter an API key first');
+            return;
+        }
+        
+        testBtn.disabled = true;
+        testBtn.textContent = 'Testing...';
+        
+        // Temporarily save the key to test
+        const originalKey = window.aiGenerator.apiKey;
+        window.aiGenerator.apiKey = apiKey;
+        window.aiGenerator.provider = providerSelect.value;
+        window.aiGenerator.model = modelSelect.value;
+        
+        try {
+            const testCode = 'function add(a, b) { return a + b; }';
+            await window.aiGenerator.generateComments(testCode, 'javascript', 'jsdoc');
+            
+            apiStatus.classList.remove('error');
+            apiStatus.classList.add('configured');
+            apiStatus.querySelector('.status-text').textContent = '✓ Connection successful!';
+            
+            alert('✅ API connection successful! Your key is working.');
+            
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('api_test_success', {
+                    provider: providerSelect.value
+                });
+            }
+        } catch (error) {
+            apiStatus.classList.remove('configured');
+            apiStatus.classList.add('error');
+            apiStatus.querySelector('.status-text').textContent = `✗ ${error.message}`;
+            
+            alert(`❌ Connection failed: ${error.message}\n\nPlease check your API key and try again.`);
+            
+            // Restore original key
+            window.aiGenerator.apiKey = originalKey;
+            
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('api_test_failed', {
+                    provider: providerSelect.value,
+                    error: error.message
+                });
+            }
+        } finally {
+            testBtn.disabled = false;
+            testBtn.textContent = 'Test Connection';
+        }
+    });
+    
+    // Generate AI comments button
+    generateBtn.addEventListener('click', async () => {
+        if (!window.aiGenerator.isConfigured()) {
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            aiSettingsBtn.click();
+            return;
+        }
+        
+        const codeEditor = document.getElementById('codeEditor');
+        const code = codeEditor.value.trim();
+        
+        if (!code) {
+            alert('📝 Please paste some code in the editor first.');
+            return;
+        }
+        
+        const languageSelect = document.getElementById('language');
+        const language = languageSelect.value;
+        
+        // Determine comment style based on language
+        const commentStyles = {
+            javascript: 'jsdoc',
+            typescript: 'jsdoc',
+            java: 'javadoc',
+            python: 'pydoc',
+            cpp: 'doxygen',
+            csharp: 'xmldoc',
+            go: 'godoc',
+            rust: 'rustdoc',
+            ruby: 'rdoc',
+            php: 'phpdoc',
+            swift: 'swift',
+            kotlin: 'kotlin'
+        };
+        
+        const commentStyle = commentStyles[language] || 'jsdoc';
+        
+        // Show loading state
+        generateBtn.classList.add('loading');
+        generateBtn.disabled = true;
+        
+        try {
+            const result = await window.aiGenerator.generateComments(code, language, commentStyle);
+            
+            // Display results
+            displayAIResults(result);
+            
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('ai_generation_success', {
+                    language: language,
+                    provider: result.provider,
+                    model: result.model,
+                    code_length: code.length,
+                    cost: result.cost
+                });
+            }
+        } catch (error) {
+            alert(`❌ Generation failed: ${error.message}\n\nPlease check your API key and try again.`);
+            
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('ai_generation_failed', {
+                    language: language,
+                    error: error.message
+                });
+            }
+        } finally {
+            generateBtn.classList.remove('loading');
+            generateBtn.disabled = false;
+        }
+    });
+    
+    // Display AI generation results
+    function displayAIResults(result) {
+        // Remove any existing results
+        const existingResults = document.querySelector('.ai-results');
+        if (existingResults) {
+            existingResults.remove();
+        }
+        
+        // Create results container
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'ai-results';
+        resultsDiv.innerHTML = `
+            <div class="ai-results-header">
+                <h3>✨ AI-Generated Comments</h3>
+                <span class="ai-cost">Cost: $${result.cost.toFixed(4)}</span>
+            </div>
+            <div class="ai-code-output">${escapeHtml(result.code)}</div>
+            <div class="ai-actions">
+                <button class="btn-primary" id="copyAiCode">📋 Copy to Clipboard</button>
+                <button class="btn-primary" id="replaceCode">✅ Replace Code</button>
+                <button class="btn-secondary" id="closeAiResults">✗ Close</button>
+            </div>
+        `;
+        
+        // Insert after suggestions div
+        const suggestions = document.getElementById('suggestions');
+        suggestions.parentNode.insertBefore(resultsDiv, suggestions.nextSibling);
+        
+        // Copy to clipboard
+        document.getElementById('copyAiCode').addEventListener('click', () => {
+            navigator.clipboard.writeText(result.code).then(() => {
+                alert('✅ Code copied to clipboard!');
+                
+                if (window.polyglotAnalytics) {
+                    window.polyglotAnalytics.trackEvent('ai_code_copied', {
+                        provider: result.provider
+                    });
+                }
+            });
+        });
+        
+        // Replace code in editor
+        document.getElementById('replaceCode').addEventListener('click', () => {
+            const codeEditor = document.getElementById('codeEditor');
+            codeEditor.value = result.code;
+            resultsDiv.remove();
+            
+            alert('✅ Code replaced in editor!');
+            
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('ai_code_replaced', {
+                    provider: result.provider
+                });
+            }
+        });
+        
+        // Close results
+        document.getElementById('closeAiResults').addEventListener('click', () => {
+            resultsDiv.remove();
+        });
+        
+        // Scroll results into view
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    // Helper to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Initialize on load
+    updateApiStatus();
+}
+
+// Initialize AI settings when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAISettings);
+} else {
+    initializeAISettings();
+}

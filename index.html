@@ -79,11 +79,97 @@
                     </select>
                 </div>
                 <button class="primary" id="analyzeBtn">Analyze Code</button>
+                <button class="primary" id="generateBtn" title="Generate AI-powered comments">🤖 Generate Comments</button>
                 <button id="exportBtn">Export Templates</button>
+                <button id="aiSettingsBtn" title="Configure AI API settings">⚙️ AI Settings</button>
                 <a href="https://buymeacoffee.com/hmoses" target="_blank" rel="noopener noreferrer" id="supportBtn" class="support-btn" title="Support Poly-Glot development">
                     <span class="support-icon">☕</span>
                     <span class="support-text">Buy Me a Coffee</span>
                 </a>
+            </div>
+        </div>
+
+        <!-- AI Settings Modal -->
+        <div id="aiSettingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🤖 AI Comment Generation Settings</h2>
+                    <button class="modal-close" id="closeAiSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>API Configuration</h3>
+                        <p class="settings-description">
+                            Poly-Glot uses your own API key to generate comments. Your key is stored locally in your browser and never sent to our servers.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label for="aiProvider">AI Provider:</label>
+                            <select id="aiProvider" class="settings-select">
+                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aiModel">Model:</label>
+                            <select id="aiModel" class="settings-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key:</label>
+                            <div class="api-key-input-wrapper">
+                                <input type="password" id="apiKey" class="settings-input" placeholder="sk-..." autocomplete="off">
+                                <button type="button" id="toggleApiKeyVisibility" class="toggle-visibility">👁️</button>
+                            </div>
+                            <small class="help-text">
+                                Get your API key from:
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> or
+                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>
+                            </small>
+                        </div>
+
+                        <div class="api-status" id="apiStatus">
+                            <span class="status-indicator"></span>
+                            <span class="status-text">Not configured</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>💰 Cost Information</h3>
+                        <div class="cost-info">
+                            <div class="cost-card">
+                                <h4>GPT-4o Mini (Recommended)</h4>
+                                <p class="cost-price">~$0.001 per request</p>
+                                <p class="cost-desc">Best balance of quality and cost</p>
+                            </div>
+                            <div class="cost-card">
+                                <h4>Claude 3.5 Sonnet</h4>
+                                <p class="cost-price">~$0.01 per request</p>
+                                <p class="cost-desc">Excellent for complex code</p>
+                            </div>
+                        </div>
+                        <p class="cost-note">
+                            💡 Actual costs depend on code size. Most requests cost less than $0.01.
+                        </p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔒 Privacy & Security</h3>
+                        <ul class="privacy-list">
+                            <li>✅ API key stored locally in your browser only</li>
+                            <li>✅ Direct connection from your browser to AI provider</li>
+                            <li>✅ No data sent to Poly-Glot servers</li>
+                            <li>✅ You control your API usage and costs</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="testApiKey" class="btn-secondary">Test Connection</button>
+                    <button id="saveAiSettings" class="btn-primary">Save Settings</button>
+                </div>
             </div>
         </div>
 
@@ -194,6 +280,7 @@
     </div>
 
     <script src="analytics.js"></script>
+    <script src="ai-generator.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
