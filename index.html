@@ -14,3 +14,129 @@
         gtag('js', new Date());
         gtag('config', 'G-ECY2XSHS9F');
     </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>Poly-Glot Code Comment Library</h1>
+                <div class="header-badges">
+                    <span class="version-badge">v1.0.0</span>
+                    <a href="https://github.com/hmoses/poly-glot/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="changelog-btn" title="View changelog">
+                        📝 What's New
+                    </a>
+                </div>
+            </div>
+            <p>A comprehensive library of coding comment patterns and best practices</p>
+            <div class="language-tabs" id="languageTabs"></div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-container">
+                <div class="demo-header">
+                    <h2>✨ See Poly-Glot in Action</h2>
+                    <p>Watch how Poly-Glot transforms inconsistent AI comments into professional documentation standards</p>
+                    <button id="runDemoBtn" class="demo-btn primary">▶ Run Demo</button>
+                    <button id="resetDemoBtn" class="demo-btn">↻ Reset</button>
+                </div>
+
+                <div class="demo-panels">
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 1</span>
+                            <h3>Before: Inconsistent AI Comments</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeBefore">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-issues" id="demoIssues">
+                            <div class="issue-badge">🤖 AI Generated Comments</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-arrow">→</div>
+
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 2</span>
+                            <h3>After: JSDoc Standard</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeAfter">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-benefits" id="demoBenefits">
+                            <div class="benefit-badge">✨ Poly-Glot Generated Comments</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-stats" id="demoStats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value">12%</div>
+                        <div class="stat-label">Comment Coverage Before</div>
+                    </div>
+                    <div class="stat-arrow">→</div>
+                    <div class="stat-card highlight">
+                        <div class="stat-value">85%</div>
+                        <div class="stat-label">Comment Coverage After</div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-value">+73%</div>
+                        <div class="stat-label">Improvement</div>
+                    </div>
+                </div>
+
+                <div class="demo-cta">
+                    <p>Ready to standardize your team's documentation?</p>
+                    <button id="tryItNowBtn" class="cta-btn">Try It Now Below ↓</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search templates...">
+                </div>
+                <h3>Categories</h3>
+                <div class="nav-item active" data-category="syntax">Comment Syntax</div>
+                <div class="nav-item" data-category="functions">Function Examples</div>
+                <div class="nav-item" data-category="classes">Class Examples</div>
+                <div class="nav-item" data-category="best-practices">Best Practices</div>
+                <div class="nav-item" data-category="examples">Code Examples</div>
+                <div class="nav-item" data-category="editor">Interactive Editor</div>
+                <div class="nav-item" data-category="favorites">⭐ Favorites</div>
+            </div>
+
+            <div class="content-area">
+                <div class="panel" id="leftPanel">
+                    <div class="panel-title">
+                        <span>Templates & Reference</span>
+                    </div>
+                    <div id="templateContent"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="panel" id="rightPanel">
+                    <div class="panel-title">
+                        <span>Your Code</span>
+                        <button id="clearBtn">Clear</button>
+                    </div>
+                    <div id="editorContent">
+                        <textarea id="codeEditor" placeholder="Paste or write your code here for analysis..."></textarea>
+                        <div id="suggestions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="analytics.js"></script>
+    <script src="ai-generator.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
