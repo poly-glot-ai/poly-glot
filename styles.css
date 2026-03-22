@@ -27,7 +27,7 @@ body {
 
 .header h1 {
     font-size: 28px;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     color: #fff;
     display: flex;
     align-items: center;
@@ -39,6 +39,14 @@ body {
     font-family: 'Fira Code', monospace;
     color: #7dd3fc;
     font-size: 24px;
+}
+
+.header-description {
+    font-size: 15px;
+    color: #b4b4c8;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    max-width: 800px;
 }
 
 .controls {
