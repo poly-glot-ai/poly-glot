@@ -67,6 +67,60 @@ body {
     font-weight: 600;
 }
 
+.how-it-works {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.how-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: #2d2d44;
+    border-radius: 8px;
+    border: 1px solid #4a4a6a;
+    transition: all 0.2s;
+}
+
+.how-step:hover {
+    transform: translateY(-2px);
+    border-color: #7dd3fc;
+    box-shadow: 0 4px 12px rgba(125, 211, 252, 0.2);
+}
+
+.step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.step-text {
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.how-arrow {
+    color: #7dd3fc;
+    font-size: 24px;
+    font-weight: bold;
+}
+
 .header-value-props {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
