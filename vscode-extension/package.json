@@ -1,0 +1,137 @@
+{
+  "name": "poly-glot",
+  "displayName": "Poly-Glot — AI Code Comments",
+  "description": "Generate intelligent, language-aware code comments and deep code analysis using OpenAI or Anthropic AI — 100% client-side, your API key, your privacy.",
+  "version": "1.0.0",
+  "publisher": "PLACEHOLDER_PUBLISHER_ID",
+  "icon": "images/icon.png",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other", "Machine Learning", "Education"],
+  "keywords": [
+    "comments", "documentation", "AI", "OpenAI", "Anthropic", "Claude",
+    "GPT-4", "code analysis", "jsdoc", "docstring", "poly-glot"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hmoses/poly-glot"
+  },
+  "homepage": "https://hmoses.github.io/poly-glot/",
+  "license": "MIT",
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "polyglot.generateComments",
+        "title": "Poly-Glot: Generate AI Comments",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "polyglot.explainCode",
+        "title": "Poly-Glot: Explain Code",
+        "icon": "$(search)"
+      },
+      {
+        "command": "polyglot.configureApiKey",
+        "title": "Poly-Glot: Configure API Key",
+        "icon": "$(key)"
+      },
+      {
+        "command": "polyglot.openTemplates",
+        "title": "Poly-Glot: Open Templates Sidebar",
+        "icon": "$(book)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "polyglot.generateComments",
+          "when": "editorHasSelection",
+          "group": "polyglot@1"
+        },
+        {
+          "command": "polyglot.explainCode",
+          "when": "editorHasSelection",
+          "group": "polyglot@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "polyglot.generateComments",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "polyglot.generateComments",
+        "key": "ctrl+shift+/",
+        "mac": "cmd+shift+/",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "polyglot.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "polyglot-sidebar",
+          "title": "Poly-Glot",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "polyglot-sidebar": [
+        {
+          "type": "webview",
+          "id": "polyglot.templatesView",
+          "name": "Comment Templates"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Poly-Glot",
+      "properties": {
+        "polyglot.provider": {
+          "type": "string",
+          "default": "openai",
+          "enum": ["openai", "anthropic"],
+          "enumDescriptions": [
+            "Use OpenAI (GPT-4o, GPT-4o-mini)",
+            "Use Anthropic (Claude 3.5 Sonnet)"
+          ],
+          "description": "AI provider for comment generation"
+        },
+        "polyglot.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Model to use. Set to any valid model ID from your provider."
+        },
+        "polyglot.insertInline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Insert generated comments directly into the editor (replaces selection). If false, shows comments in a side panel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.24.0"
+  }
+}
