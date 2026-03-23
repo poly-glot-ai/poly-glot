@@ -1,2 +1,417 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poly-Glot - Code Comment Library</title>
+    <meta name="description" content="A comprehensive library of coding comment patterns and best practices for 12+ programming languages">
+    
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ECY2XSHS9F"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-ECY2XSHS9F');
+    </script>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>Poly-Glot Code Comment Library</h1>
+                <div class="header-badges">
+                    <span class="version-badge">v1.0.0</span>
+                    <a href="https://github.com/hmoses/poly-glot/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="changelog-btn" title="View changelog">
+                        📝 What's New
+                    </a>
+                </div>
+            </div>
+            <!-- ── Section 1: What is Poly-Glot ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">What is Poly-Glot?</h2>
+                <p class="overview-text">
+                    <strong>Poly-Glot transforms inconsistent, AI-generated code comments into standardized professional documentation — instantly.</strong>
+                    Paste any undocumented code and Poly-Glot generates JSDoc, Javadoc, PyDoc, Doxygen, and more, tailored to your language and your team's standards.
+                </p>
+                <p class="overview-text">
+                    Works with <strong>12+ programming languages</strong>, supports both <strong>OpenAI and Anthropic</strong> API keys,
+                    and runs entirely in your browser — your code and API keys never leave your machine.
+                </p>
+                <p class="overview-text"><strong>Well-documented code is:</strong></p>
+                <ul class="overview-list">
+                    <li>📚 <strong>Searchable</strong> — better RAG retrieval</li>
+                    <li>🧠 <strong>Understandable</strong> — AI grasps intent</li>
+                    <li>🎯 <strong>Discoverable</strong> — GEO optimized</li>
+                    <li>🛡️ <strong>Safer</strong> — preserves critical context</li>
+                </ul>
+            </div>
+
+            <!-- ── Section 2: How It Works ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">How It Works</h2>
+                <div class="how-it-works">
+                    <div class="how-step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Paste your code</span>
+                    </div>
+                    <div class="how-arrow">→</div>
+                    <div class="how-step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Click "Generate Comments"</span>
+                    </div>
+                    <div class="how-arrow">→</div>
+                    <div class="how-step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Get standardized docs instantly</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 3: Key Benefits ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">Key Benefits</h2>
+                <div class="header-value-props">
+                    <div class="value-prop">
+                        <span class="value-icon">🤖</span>
+                        <div class="value-text">
+                            <strong>Team Consistency</strong>
+                            <span>Standardize AI-generated comments across your entire codebase</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">⚡</span>
+                        <div class="value-text">
+                            <strong>Quick Reference</strong>
+                            <span>12+ languages and all documentation styles in one place</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">✅</span>
+                        <div class="value-text">
+                            <strong>Style Enforcement</strong>
+                            <span>Define your standard, analyze compliance, copy templates</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">🔍</span>
+                        <div class="value-text">
+                            <strong>Deep Code Analysis</strong>
+                            <span>Explain any code — complexity, bugs, strengths, and doc quality score</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-features">
+                    <span class="feature-badge">📚 12+ Languages</span>
+                    <span class="feature-badge">📋 Copy Templates</span>
+                    <span class="feature-badge">🔍 Code Analysis</span>
+                    <span class="feature-badge">💾 Save Favorites</span>
+                    <span class="feature-badge">🔒 Privacy-First</span>
+                    <span class="feature-badge">🪿 Built with Goose</span>
+                </div>
+            </div>
+
+            <!-- ── Section 4: RAG & GEO ── -->
+            <div class="overview-section overview-section-rag">
+                <h2 class="overview-heading">
+                    <span class="rag-icon">🧠</span>
+                    Why Comments Matter for AI — RAG &amp; GEO
+                </h2>
+                <p class="overview-text">
+                    AI coding assistants like <strong>GitHub Copilot, ChatGPT, and Claude</strong> actively read and interpret
+                    your code comments to understand developer intent, context, and business logic. Well-written comments
+                    are no longer just for humans — they are <strong>instructions for AI</strong>.
+                </p>
+                <p class="overview-text">
+                    Standardized comments help AI assistants <strong>identify bugs 4× faster</strong>, generate more accurate code,
+                    and produce better PR summaries and documentation — making Poly-Glot a direct multiplier on your
+                    team's AI-assisted productivity.
+                </p>
+
+                <div class="rag-grid">
+                    <div class="rag-card">
+                        <div class="rag-card-icon">💬</div>
+                        <div class="rag-card-body">
+                            <h3>Contextual Understanding</h3>
+                            <p>AI uses comments to understand the <em>"why"</em> behind your code, not just the <em>"what"</em> — enabling far more accurate suggestions and completions.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">⚡</div>
+                        <div class="rag-card-body">
+                            <h3>Code Generation</h3>
+                            <p>When you write a clear comment, AI uses it to prompt the generation of corresponding implementation code — turning your intent directly into working code.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">🐛</div>
+                        <div class="rag-card-body">
+                            <h3>Refactoring &amp; Debugging</h3>
+                            <p>Comments help AI understand intended functionality, making it significantly better at spotting bugs, edge cases, and suggesting targeted improvements.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">📄</div>
+                        <div class="rag-card-body">
+                            <h3>Documentation &amp; PR Summaries</h3>
+                            <p>AI analyses code and comments together to auto-generate accurate documentation, pull request summaries, and onboarding guides for new team members.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rag-callout">
+                    <span class="rag-callout-icon">💡</span>
+                    <p><strong>The bottom line:</strong> Clean, standardized comments are the highest-leverage investment you can make in your AI-assisted workflow. Poly-Glot makes it effortless.</p>
+                </div>
+            </div>
+        </div>
+        <!-- Sticky toolbar — always visible below header -->
+        <div class="toolbar">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="php">PHP</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="swift">Swift</option>
+                        <option value="kotlin">Kotlin</option>
+                    </select>
+                </div>
+                <button class="primary" id="analyzeBtn">Analyze Code</button>
+                <button class="primary" id="generateBtn" title="Generate AI-powered comments">🤖 Generate Comments</button>
+                <button class="primary" id="explainBtn" title="Get a deep analysis of your code">🔍 Explain Code</button>
+                <button id="exportBtn">Export Templates</button>
+                <button id="aiSettingsBtn" title="Configure AI API settings">⚙️ AI Settings</button>
+                <a href="https://buymeacoffee.com/hmoses" target="_blank" rel="noopener noreferrer" id="supportBtn" class="support-btn" title="Support Poly-Glot development">
+                    <span class="support-icon">☕</span>
+                    <span class="support-text">Buy Me a Coffee</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- AI Settings Modal -->
+        <div id="aiSettingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🤖 AI Comment Generation Settings</h2>
+                    <button class="modal-close" id="closeAiSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>API Configuration</h3>
+                        <p class="settings-description">
+                            Poly-Glot uses your own API key to generate comments. Your key is stored locally in your browser and never sent to our servers.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label for="aiProvider">AI Provider:</label>
+                            <select id="aiProvider" class="settings-select">
+                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aiModel">Model:</label>
+                            <select id="aiModel" class="settings-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group custom-model-row" id="customModelRow" style="display:none;">
+                            <label for="customModelInput">Custom model name:</label>
+                            <input type="text" id="customModelInput" class="settings-input custom-model-input"
+                                   placeholder="e.g. gpt-4o-2024-11-20, claude-3-7-sonnet-20250219"
+                                   autocomplete="off" spellcheck="false">
+                            <small class="help-text custom-model-hint">
+                                Enter any model ID supported by your provider. Find model names at
+                                <a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI docs</a> or
+                                <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener noreferrer">Anthropic docs</a>.
+                                Pricing will fall back to the closest known model.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key:</label>
+                            <div class="api-key-input-wrapper">
+                                <input type="password" id="apiKey" class="settings-input" placeholder="sk-..." autocomplete="off">
+                                <button type="button" id="toggleApiKeyVisibility" class="toggle-visibility">👁️</button>
+                            </div>
+                            <small class="help-text">
+                                Get your API key from:
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> or
+                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>
+                            </small>
+                        </div>
+
+                        <div class="api-status" id="apiStatus">
+                            <span class="status-indicator"></span>
+                            <span class="status-text">Not configured</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>💰 Cost Information</h3>
+                        <div class="cost-info">
+                            <div class="cost-card">
+                                <h4>GPT-4o Mini (Recommended)</h4>
+                                <p class="cost-price">~$0.001 per request</p>
+                                <p class="cost-desc">Best balance of quality and cost</p>
+                            </div>
+                            <div class="cost-card">
+                                <h4>Claude 3.5 Sonnet</h4>
+                                <p class="cost-price">~$0.01 per request</p>
+                                <p class="cost-desc">Excellent for complex code</p>
+                            </div>
+                        </div>
+                        <p class="cost-note">
+                            💡 Actual costs depend on code size. Most requests cost less than $0.01.
+                        </p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔒 Privacy & Security</h3>
+                        <ul class="privacy-list">
+                            <li>✅ API key stored locally in your browser only</li>
+                            <li>✅ Direct connection from your browser to AI provider</li>
+                            <li>✅ No data sent to Poly-Glot servers</li>
+                            <li>✅ You control your API usage and costs</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="testApiKey" class="btn-secondary">Test Connection</button>
+                    <button id="saveAiSettings" class="btn-primary">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Section -->
+        <div class="demo-section" id="demoSection">
+            <div class="demo-container">
+                <h2 class="demo-title">
+                    <span class="demo-icon">🎬</span>
+                    See It In Action
+                </h2>
+                <p class="demo-subtitle">Watch how Poly-Glot transforms inconsistent AI-generated comments into standardized documentation</p>
+                
+                <div class="demo-controls">
+                    <button id="playDemoBtn" class="demo-btn primary">▶️ Play Demo</button>
+                    <button id="resetDemoBtn" class="demo-btn">↻ Reset</button>
+                </div>
+
+                <div class="demo-panels">
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 1</span>
+                            <h3>Before: Inconsistent AI Comments</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeBefore">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-issues" id="demoIssues">
+                            <div class="issue-badge">🤖 AI Generated Comments</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-arrow">→</div>
+
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 2</span>
+                            <h3>After: JSDoc Standard</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeAfter">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-benefits" id="demoBenefits">
+                            <div class="benefit-badge">✨ Poly-Glot Generated Comments</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-stats" id="demoStats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value">12%</div>
+                        <div class="stat-label">Comment Coverage Before</div>
+                    </div>
+                    <div class="stat-arrow">→</div>
+                    <div class="stat-card highlight">
+                        <div class="stat-value">85%</div>
+                        <div class="stat-label">Comment Coverage After</div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-value">+73%</div>
+                        <div class="stat-label">Improvement</div>
+                    </div>
+                </div>
+
+                <div class="demo-cta">
+                    <p>Ready to standardize your team's documentation?</p>
+                    <button id="tryItNowBtn" class="cta-btn">Try It Now Below ↓</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search templates...">
+                </div>
+                <h3>Categories</h3>
+                <div class="nav-item active" data-category="syntax">Comment Syntax</div>
+                <div class="nav-item" data-category="functions">Function Examples</div>
+                <div class="nav-item" data-category="classes">Class Examples</div>
+                <div class="nav-item" data-category="best-practices">Best Practices</div>
+                <div class="nav-item" data-category="examples">Code Examples</div>
+                <div class="nav-item" data-category="editor">Interactive Editor</div>
+                <div class="nav-item" data-category="favorites">⭐ Favorites</div>
+            </div>
+
+            <div class="content-area">
+                <div class="panel" id="leftPanel">
+                    <div class="panel-title">
+                        <span>Templates & Reference</span>
+                    </div>
+                    <div id="templateContent"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="panel" id="rightPanel">
+                    <div class="panel-title">
+                        <span>Your Code</span>
+                        <button id="clearBtn">Clear</button>
+                    </div>
+                    <div id="editorContent">
+                        <textarea id="codeEditor" placeholder="Paste or write your code here for analysis..."></textarea>
+                        <div id="suggestions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="analytics.js"></script>
+    <script src="ai-generator.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
