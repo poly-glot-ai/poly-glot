@@ -2273,6 +2273,297 @@ if (document.readyState === 'loading') {
     initializeAISettings();
 }
 
+/* ═══════════════════════════════════════════════════
+   Comment Generator — two-panel feature
+   ═══════════════════════════════════════════════════ */
+function initCommentGenerator() {
+    const cgLanguage    = document.getElementById('cgLanguage');
+    const cgStyle       = document.getElementById('cgStyle');
+    const cgProvider    = document.getElementById('cgProvider');
+    const cgModel       = document.getElementById('cgModel');
+    const cgApiKey      = document.getElementById('cgApiKey');
+    const cgToggleKey   = document.getElementById('cgToggleKey');
+    const cgSaveKey     = document.getElementById('cgSaveKey');
+    const cgKeyStatus   = document.getElementById('cgKeyStatus');
+    const cgFileUpload  = document.getElementById('cgFileUpload');
+    const cgInput       = document.getElementById('cgInput');
+    const cgInputStats  = document.getElementById('cgInputStats');
+    const cgClearInput  = document.getElementById('cgClearInput');
+    const cgGenerateBtn = document.getElementById('cgGenerateBtn');
+    const cgCopyBtn     = document.getElementById('cgCopyBtn');
+    const cgDownloadBtn = document.getElementById('cgDownloadBtn');
+    const cgPlaceholder = document.getElementById('cgPlaceholder');
+    const cgOutput      = document.getElementById('cgOutput');
+    const cgOutputFooter= document.getElementById('cgOutputFooter');
+    const cgOutputStats = document.getElementById('cgOutputStats');
+    const cgOutputCost  = document.getElementById('cgOutputCost');
+    const cgLoading     = document.getElementById('cgLoading');
+    const cgScoreBtn    = document.getElementById('cgScoreBtn');
+
+    // Separate localStorage keys so CG settings don't conflict with legacy settings
+    const LS = {
+        key:      'cg_api_key',
+        provider: 'cg_provider',
+        model:    'cg_model'
+    };
+
+    // Model lists per provider
+    const MODELS = {
+        openai: [
+            { value: 'gpt-4o-mini', label: 'GPT-4o Mini (fast)' },
+            { value: 'gpt-4o',      label: 'GPT-4o (best)' }
+        ],
+        anthropic: [
+            { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (recommended)' },
+            { value: 'claude-3-5-sonnet-20241022',  label: 'Claude 3.5 Sonnet' },
+            { value: 'claude-3-5-haiku-20241022',   label: 'Claude 3.5 Haiku (fast)' }
+        ]
+    };
+
+    // Language → comment style defaults
+    const STYLE_MAP = {
+        javascript: 'jsdoc', typescript: 'jsdoc', java: 'javadoc',
+        python: 'pydoc', cpp: 'doxygen', csharp: 'xmldoc',
+        go: 'godoc', rust: 'rustdoc', ruby: 'rdoc',
+        php: 'phpdoc', swift: 'swift', kotlin: 'kotlin'
+    };
+
+    // File extension → language map
+    const EXT_MAP = {
+        js: 'javascript', ts: 'typescript', jsx: 'javascript', tsx: 'typescript',
+        py: 'python', java: 'java', cpp: 'cpp', c: 'cpp', cs: 'csharp',
+        go: 'go', rs: 'rust', rb: 'ruby', php: 'php',
+        swift: 'swift', kt: 'kotlin'
+    };
+
+    let lastInputText  = '';
+    let lastOutputText = '';
+    let lastFilename   = 'commented-code.txt';
+
+    // ── Restore saved settings ──
+    function restoreSettings() {
+        const savedKey      = localStorage.getItem(LS.key)      || '';
+        const savedProvider = localStorage.getItem(LS.provider)  || 'openai';
+        const savedModel    = localStorage.getItem(LS.model)     || 'gpt-4o-mini';
+
+        if (savedKey) {
+            cgApiKey.value = savedKey;
+            cgKeyStatus.textContent = '✅ Key saved';
+            cgKeyStatus.className   = 'cg-key-status ok';
+        }
+        cgProvider.value = savedProvider;
+        updateModelDropdown(savedProvider, savedModel);
+    }
+
+    function updateModelDropdown(provider, selectedModel) {
+        const list = MODELS[provider] || MODELS.openai;
+        cgModel.innerHTML = list.map(m =>
+            `<option value="${m.value}"${m.value === selectedModel ? ' selected' : ''}>${m.label}</option>`
+        ).join('');
+    }
+
+    // ── Provider change → update model list ──
+    cgProvider.addEventListener('change', () => {
+        const prov = cgProvider.value;
+        const defaultModel = prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini';
+        updateModelDropdown(prov, defaultModel);
+    });
+
+    // ── Language change → auto-update comment style ──
+    cgLanguage.addEventListener('change', () => {
+        const style = STYLE_MAP[cgLanguage.value];
+        if (style) cgStyle.value = style;
+    });
+
+    // ── Toggle API key visibility ──
+    cgToggleKey.addEventListener('click', () => {
+        cgApiKey.type = cgApiKey.type === 'password' ? 'text' : 'password';
+    });
+
+    // ── Save API key ──
+    cgSaveKey.addEventListener('click', () => {
+        const key = cgApiKey.value.trim();
+        if (!key) {
+            cgKeyStatus.textContent = '❌ Please enter an API key';
+            cgKeyStatus.className   = 'cg-key-status err';
+            return;
+        }
+        localStorage.setItem(LS.key,      key);
+        localStorage.setItem(LS.provider, cgProvider.value);
+        localStorage.setItem(LS.model,    cgModel.value);
+        cgKeyStatus.textContent = '✅ Settings saved';
+        cgKeyStatus.className   = 'cg-key-status ok';
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value, model: cgModel.value });
+    });
+
+    // ── File upload ──
+    cgFileUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        const lang = EXT_MAP[ext];
+        if (lang) {
+            cgLanguage.value = lang;
+            const style = STYLE_MAP[lang];
+            if (style) cgStyle.value = style;
+        }
+        lastFilename = file.name.replace(/\.[^.]+$/, '') + '-commented.' + (file.name.split('.').pop());
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            cgInput.value = ev.target.result;
+            updateInputStats();
+        };
+        reader.readAsText(file);
+        cgFileUpload.value = '';
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_file_uploaded', { ext, lang: lang || 'unknown', size: file.size });
+    });
+
+    // ── Input stats ──
+    function updateInputStats() {
+        const text = cgInput.value;
+        if (!text.trim()) { cgInputStats.textContent = ''; return; }
+        const lines = text.split('\n').length;
+        const chars = text.length;
+        cgInputStats.textContent = `${lines} lines · ${chars} chars`;
+    }
+    cgInput.addEventListener('input', updateInputStats);
+
+    // ── Clear input ──
+    cgClearInput.addEventListener('click', () => {
+        cgInput.value = '';
+        updateInputStats();
+        resetOutput();
+    });
+
+    function resetOutput() {
+        cgPlaceholder.style.display = 'flex';
+        cgOutput.style.display      = 'none';
+        cgOutput.textContent        = '';
+        cgOutputFooter.style.display= 'none';
+        cgCopyBtn.disabled          = true;
+        cgDownloadBtn.disabled      = true;
+        lastOutputText              = '';
+        lastInputText               = '';
+        document.getElementById('cgScorePanel').innerHTML = '';
+        cgScoreBtn.classList.remove('active');
+    }
+
+    // ── Generate Comments ──
+    cgGenerateBtn.addEventListener('click', async () => {
+        const code = cgInput.value.trim();
+        if (!code) {
+            alert('Please paste or upload some code first.');
+            return;
+        }
+        const key = localStorage.getItem(LS.key) || '';
+        if (!key || key.length < 10) {
+            alert('Please enter and save your API key in the settings above.');
+            return;
+        }
+
+        // Temporarily configure the shared aiGenerator with CG settings
+        const origKey      = window.aiGenerator.apiKey;
+        const origProvider = window.aiGenerator.provider;
+        const origModel    = window.aiGenerator.model;
+
+        window.aiGenerator.apiKey   = key;
+        window.aiGenerator.provider = cgProvider.value;
+        window.aiGenerator.model    = cgModel.value;
+
+        cgLoading.style.display    = 'flex';
+        cgGenerateBtn.disabled     = true;
+        cgGenerateBtn.classList.add('loading');
+
+        try {
+            lastInputText  = code;
+            const result   = await window.aiGenerator.generateComments(code, cgLanguage.value, cgStyle.value);
+            lastOutputText = result.code;
+
+            // Show output
+            cgPlaceholder.style.display  = 'none';
+            cgOutput.style.display       = 'block';
+            cgOutput.textContent         = result.code;
+            cgOutputFooter.style.display = 'flex';
+
+            // Stats
+            const lines = result.code.split('\n').length;
+            cgOutputStats.textContent = `${lines} lines · ${result.code.length} chars`;
+            cgOutputCost.textContent  = result.cost > 0 ? `Cost: $${result.cost.toFixed(4)}` : '';
+
+            cgCopyBtn.disabled     = false;
+            cgDownloadBtn.disabled = false;
+
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
+                provider: result.provider, model: result.model,
+                language: cgLanguage.value, style: cgStyle.value
+            });
+
+        } catch (err) {
+            cgPlaceholder.style.display = 'none';
+            cgOutput.style.display      = 'block';
+            cgOutput.textContent        = '❌ Error: ' + err.message;
+            cgOutputFooter.style.display= 'none';
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_error', { error: err.message });
+        } finally {
+            // Restore original aiGenerator state
+            window.aiGenerator.apiKey   = origKey;
+            window.aiGenerator.provider = origProvider;
+            window.aiGenerator.model    = origModel;
+
+            cgLoading.style.display  = 'none';
+            cgGenerateBtn.disabled   = false;
+            cgGenerateBtn.classList.remove('loading');
+        }
+    });
+
+    // ── Copy ──
+    cgCopyBtn.addEventListener('click', () => {
+        if (!lastOutputText) return;
+        navigator.clipboard.writeText(lastOutputText).then(() => {
+            const orig = cgCopyBtn.innerHTML;
+            cgCopyBtn.innerHTML = '✅ Copied!';
+            cgCopyBtn.classList.add('copied');
+            setTimeout(() => { cgCopyBtn.innerHTML = orig; cgCopyBtn.classList.remove('copied'); }, 2000);
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_output_copied', { language: cgLanguage.value });
+        }).catch(() => {
+            cgCopyBtn.innerHTML = '❌ Failed';
+            setTimeout(() => { cgCopyBtn.innerHTML = '📋 Copy'; }, 2000);
+        });
+    });
+
+    // ── Download ──
+    cgDownloadBtn.addEventListener('click', () => {
+        if (!lastOutputText) return;
+        const blob = new Blob([lastOutputText], { type: 'text/plain' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = lastFilename;
+        a.click();
+        URL.revokeObjectURL(url);
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_output_downloaded', { language: cgLanguage.value });
+    });
+
+    // ── Score Improvement ──
+    cgScoreBtn.addEventListener('click', () => {
+        if (!lastOutputText) return;
+        cgScoreBtn.classList.toggle('active');
+        if (typeof PolyGlotScorer !== 'undefined') {
+            PolyGlotScorer.renderInline('cgScorePanel', lastInputText, lastOutputText, true);
+        }
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_score_clicked', { language: cgLanguage.value });
+    });
+
+    restoreSettings();
+}
+
+// Boot the Comment Generator
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCommentGenerator);
+} else {
+    initCommentGenerator();
+}
+
 
 
 
