@@ -1498,16 +1498,15 @@ function calculateAge(birthDate) {
         afterBenefits.style.opacity = '0';
 
         // Reset all score elements
-        ['coverageAfter','ragAfter','geoAfter'].forEach(id => {
+        ['ragAfter','geoAfter'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '0';
         });
-        ['coverageDelta','ragDelta','geoDelta'].forEach(id => {
+        ['ragDelta','geoDelta'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.opacity = '0';
         });
-        ['coverageBarBefore','coverageBarAfter',
-         'ragBarBefore','ragBarAfter',
+        ['ragBarBefore','ragBarAfter',
          'geoBarBefore','geoBarAfter'].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.style.transition = 'none'; el.style.width = '0%'; }
@@ -1591,35 +1590,25 @@ function fadeInEl(elementId, delay = 0) {
     }, delay);
 }
 
-// Animate all score sections sequentially
+// Animate all score sections sequentially — matches markdown.poly-glot.ai pattern
 async function animateDemoScores() {
-    // Coverage: 12 → 85 (+608%)
-    animateBar('coverageBarBefore', 12, 600);
+    // RAG: 11 → 91 (+727%)
+    animateBar('ragBarBefore', 11, 600);
     await sleep(400);
-    animateBar('coverageBarAfter', 85, 1200);
-    countUp('coverageAfter', 0, 85, 1200);
-    fadeInEl('coverageDelta', 900);
-    setTimeout(() => countUp('coverageDeltaNum', 0, 608, 1000), 400);
-
-    await sleep(700);
-
-    // RAG: 14 → 89 (+536%)
-    animateBar('ragBarBefore', 14, 600);
-    await sleep(400);
-    animateBar('ragBarAfter', 89, 1200);
-    countUp('ragAfter', 0, 89, 1200);
+    animateBar('ragBarAfter', 91, 1200);
+    countUp('ragAfter', 0, 91, 1200);
     fadeInEl('ragDelta', 900);
-    setTimeout(() => countUp('ragDeltaNum', 0, 536, 1000), 400);
+    setTimeout(() => countUp('ragDeltaNum', 0, 727, 1200), 400);
 
     await sleep(700);
 
-    // GEO: 9 → 82 (+811%)
+    // GEO: 9 → 84 (+833%)
     animateBar('geoBarBefore', 9, 600);
     await sleep(400);
-    animateBar('geoBarAfter', 82, 1200);
-    countUp('geoAfter', 0, 82, 1200);
+    animateBar('geoBarAfter', 84, 1200);
+    countUp('geoAfter', 0, 84, 1200);
     fadeInEl('geoDelta', 900);
-    setTimeout(() => countUp('geoDeltaNum', 0, 811, 1000), 400);
+    setTimeout(() => countUp('geoDeltaNum', 0, 833, 1200), 400);
 
     await sleep(800);
 
@@ -2262,6 +2251,7 @@ if (document.readyState === 'loading') {
 } else {
     initializeAISettings();
 }
+
 
 
 
