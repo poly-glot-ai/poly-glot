@@ -1308,6 +1308,14 @@ function setupEventListeners() {
         document.getElementById('suggestions').innerHTML = '';
     });
 
+    // ── Score Input button (Your Code panel) ──
+    document.getElementById('scoreInputBtn').addEventListener('click', () => {
+        const code = document.getElementById('codeEditor').value.trim();
+        if (!code) { alert('Paste some code first.'); return; }
+        PolyGlotScorer.show(code, null, true);
+        if (typeof gtag !== 'undefined') gtag('event', 'score_input_clicked', { site: 'poly-glot' });
+    });
+
     document.getElementById('exportBtn').addEventListener('click', exportTemplates);
 
     document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -2165,6 +2173,7 @@ function initializeAISettings() {
                 <div class="ai-code-output">${escapeHtml(result.code)}</div>
             </div>
             <div class="ai-actions">
+                <button class="score-btn" id="scoreOutputBtn" title="Compare RAG & GEO scores before vs. after">📊 Score Improvement</button>
                 <button class="btn-primary" id="copyAiCode">📋 Copy to Clipboard</button>
                 <button class="btn-primary" id="replaceCode">✅ Replace Code</button>
                 <button class="btn-secondary" id="closeAiResults">✗ Close</button>
@@ -2186,6 +2195,13 @@ function initializeAISettings() {
                 btn.disabled = false;
             }, 2000);
         }
+
+        // ── Score Improvement button ──
+        document.getElementById('scoreOutputBtn').addEventListener('click', () => {
+            const inputCode = document.getElementById('codeEditor').value.trim();
+            PolyGlotScorer.show(inputCode || null, result.code, true);
+            if (typeof gtag !== 'undefined') gtag('event', 'score_output_clicked', { site: 'poly-glot' });
+        });
 
         // Inline copy icon on the code block
         document.getElementById('copyAiCodeInline').addEventListener('click', function() {
@@ -2251,6 +2267,7 @@ if (document.readyState === 'loading') {
 } else {
     initializeAISettings();
 }
+
 
 
 
