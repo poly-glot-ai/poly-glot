@@ -2710,383 +2710,434 @@ textarea:focus {
 }
 
 
-/* ═══════════════════════════════════════════════════
-   Comment Generator — design tokens matching markdown site
-   ═══════════════════════════════════════════════════ */
-
-/* Design tokens (mirrors markdown.poly-glot.ai) */
-.cg-section {
-    --cg-bg:      #0f1117;
-    --cg-bg2:     #1a1d27;
-    --cg-bg3:     #22263a;
-    --cg-border:  rgba(125,211,252,0.12);
-    --cg-accent:  #7dd3fc;
-    --cg-accent2: #a78bfa;
-    --cg-green:   #10b981;
-    --cg-text:    #e2e8f0;
-    --cg-muted:   #8892a4;
-    --cg-mono:    'Fira Code', monospace;
-    --cg-font:    'Inter', sans-serif;
-    --cg-radius:  10px;
-
-    background: var(--cg-bg2);
-    border: 1px solid var(--cg-border);
-    border-radius: var(--cg-radius);
-    padding: 24px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
-}
-.cg-section::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--cg-accent), var(--cg-accent2), var(--cg-green));
-    border-radius: var(--cg-radius) var(--cg-radius) 0 0;
+/* ═══════════════════════════════════════════════════════════
+   Poly-Glot Design Tokens — matches markdown.poly-glot.ai
+   ═══════════════════════════════════════════════════════════ */
+:root {
+    --pg-bg:      #0f1117;
+    --pg-bg2:     #1a1d27;
+    --pg-bg3:     #22263a;
+    --pg-border:  rgba(125,211,252,0.12);
+    --pg-accent:  #7dd3fc;
+    --pg-accent2: #a78bfa;
+    --pg-green:   #10b981;
+    --pg-text:    #e2e8f0;
+    --pg-muted:   #8892a4;
+    --pg-mono:    'Fira Code', monospace;
+    --pg-font:    'Inter', sans-serif;
+    --pg-radius:  10px;
 }
 
-/* Section header */
-.cg-section-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
+/* ── Settings bar ── */
+.pg-tool-settings {
+    background: var(--pg-bg2);
+    border: 1px solid var(--pg-border);
+    border-radius: var(--pg-radius);
+    padding: 16px 20px 14px;
+    margin-bottom: 12px;
 }
-.cg-section-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 4px;
-}
-.cg-section-sub {
-    font-size: 13px;
-    color: var(--cg-muted);
-    margin: 0;
-}
-
-/* Settings overview box — matches .overview-section in markdown site */
-.cg-overview-box {
-    background: var(--cg-bg3);
-    border: 1px solid var(--cg-border);
-    border-radius: 8px;
-    padding: 16px 20px;
-    margin-bottom: 20px;
-}
-.cg-overview-heading {
+.pg-settings-heading {
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--cg-accent);
+    color: var(--pg-accent);
     margin-bottom: 12px;
 }
-.cg-settings-row {
+.pg-settings-row {
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
     align-items: flex-end;
 }
-.cg-field {
+.pg-field {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
-.cg-field-key {
+.pg-field-key {
     flex: 1;
-    min-width: 260px;
+    min-width: 240px;
 }
-.cg-label {
+.pg-label {
     font-size: 11px;
     font-weight: 600;
-    color: var(--cg-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    color: var(--pg-muted);
 }
-
-/* Selects — exact match to markdown .setting-select */
-.cg-select {
-    background: var(--cg-bg);
-    border: 1px solid var(--cg-border);
+.pg-select {
+    background: var(--pg-bg);
+    border: 1px solid var(--pg-border);
     border-radius: 6px;
-    color: var(--cg-text);
+    color: var(--pg-text);
     padding: 7px 10px;
     font-size: 13px;
-    font-family: var(--cg-font);
+    font-family: var(--pg-font);
     outline: none;
     transition: border 0.2s;
     cursor: pointer;
     min-width: 140px;
 }
-.cg-select:focus { border-color: var(--cg-accent); }
-
-/* API key row */
-.cg-key-row {
+.pg-select:focus { border-color: var(--pg-accent); }
+.pg-key-row {
     display: flex;
     gap: 6px;
     align-items: center;
 }
-.cg-key-input {
+.pg-key-input {
     flex: 1;
-    background: var(--cg-bg);
-    border: 1px solid var(--cg-border);
+    background: var(--pg-bg);
+    border: 1px solid var(--pg-border);
     border-radius: 6px;
-    color: var(--cg-text);
+    color: var(--pg-text);
     padding: 7px 10px;
     font-size: 12px;
-    font-family: var(--cg-mono);
+    font-family: var(--pg-mono);
     outline: none;
     transition: border 0.2s;
     min-width: 0;
 }
-.cg-key-input:focus { border-color: var(--cg-accent); }
-.cg-toggle-btn {
-    background: var(--cg-bg3);
-    border: 1px solid var(--cg-border);
+.pg-key-input:focus { border-color: var(--pg-accent); }
+.pg-icon-btn {
+    background: var(--pg-bg3);
+    border: 1px solid var(--pg-border);
     border-radius: 6px;
-    color: var(--cg-muted);
+    color: var(--pg-muted);
     padding: 6px 9px;
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
     transition: all 0.2s;
 }
-.cg-toggle-btn:hover { border-color: var(--cg-accent); color: var(--cg-accent); }
-.cg-save-btn {
-    background: linear-gradient(135deg, var(--cg-accent), var(--cg-accent2));
+.pg-icon-btn:hover { border-color: var(--pg-accent); color: var(--pg-accent); }
+.pg-save-btn {
+    background: linear-gradient(135deg, var(--pg-accent), var(--pg-accent2));
     border: none;
     border-radius: 6px;
     color: #0d1117;
     font-size: 12px;
     font-weight: 700;
-    font-family: var(--cg-font);
+    font-family: var(--pg-font);
     padding: 7px 14px;
     cursor: pointer;
     transition: opacity 0.2s;
     white-space: nowrap;
 }
-.cg-save-btn:hover { opacity: 0.85; }
-.cg-key-status {
+.pg-save-btn:hover { opacity: 0.85; }
+.pg-key-status {
     font-size: 12px;
     min-height: 16px;
     display: block;
     margin-top: 4px;
 }
-.cg-key-status.ok  { color: var(--cg-green); }
-.cg-key-status.err { color: #f87171; }
+.pg-key-status.ok  { color: var(--pg-green); }
+.pg-key-status.err { color: #f87171; }
 
-/* ── Two-panel layout — mirrors markdown .main-content ── */
-.cg-tool-panels {
+/* ── Main tool layout: sidebar + panels ── */
+.pg-main-tool {
     display: flex;
-    gap: 0;
-    min-height: 400px;
-    align-items: stretch;
+    flex: 1;
+    min-height: 580px;
+    overflow: hidden;
+    border: 1px solid var(--pg-border);
+    border-radius: var(--pg-radius);
+    background: var(--pg-bg2);
 }
-.cg-panel {
+
+/* Panels wrap: reference + divider + input + divider + output */
+.pg-panels-wrap {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    background: var(--cg-bg2);
-    border: 1px solid var(--cg-border);
-    border-radius: 8px;
     overflow: hidden;
     min-width: 0;
 }
 
-/* Panel header — exact match to markdown .panel-header */
-.cg-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--cg-border);
-    background: var(--cg-bg3);
+/* Reference panel */
+.pg-ref-panel {
+    width: 260px;
+    min-width: 180px;
+    max-width: 320px;
     flex-shrink: 0;
+    background: var(--pg-bg2);
+    overflow-y: auto;
+    border: none;
+    padding: 0;
 }
-.cg-panel-title {
+.pg-panel-header-legacy {
+    background: var(--pg-bg3);
+    border-bottom: 1px solid var(--pg-border);
+    padding: 12px 16px;
+}
+.panel-title-legacy {
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    color: var(--cg-accent);
+    color: var(--pg-accent);
 }
-.cg-panel-actions {
+.pg-template-content {
+    padding: 12px;
+    overflow-y: auto;
+}
+
+/* Thin divider between reference and tool panels */
+.pg-ref-divider {
+    width: 1px;
+    background: var(--pg-border);
+    flex-shrink: 0;
+}
+
+/* Tool panels — override legacy .panel inside .pg-panels-wrap */
+.pg-tool-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--pg-bg2);
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Panel header — exact match to markdown site */
+.pg-tool-panel .panel-header,
+.pg-ref-panel .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--pg-border);
+    background: var(--pg-bg3);
+    flex-shrink: 0;
+}
+.pg-tool-panel .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--pg-accent);
+}
+.pg-tool-panel .panel-actions {
     display: flex;
     gap: 6px;
     align-items: center;
 }
 
 /* Action buttons — exact match to markdown .action-btn */
-.cg-action-btn {
+.pg-tool-panel .action-btn,
+.pg-tool-panel .upload-btn {
     padding: 5px 11px;
     border-radius: 6px;
-    border: 1px solid var(--cg-border);
-    background: var(--cg-bg2);
-    color: var(--cg-muted);
+    border: 1px solid var(--pg-border);
+    background: var(--pg-bg2);
+    color: var(--pg-muted);
     font-size: 12px;
     font-weight: 500;
-    font-family: var(--cg-font);
+    font-family: var(--pg-font);
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
 }
-.cg-action-btn:hover:not(:disabled) {
-    background: var(--cg-bg3);
-    color: var(--cg-text);
-    border-color: var(--cg-accent);
+.pg-tool-panel .action-btn:hover:not(:disabled),
+.pg-tool-panel .upload-btn:hover {
+    background: var(--pg-bg3);
+    color: var(--pg-text);
+    border-color: var(--pg-accent);
 }
-.cg-action-btn:disabled {
+.pg-tool-panel .action-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
 }
-.cg-action-btn.copied {
-    border-color: var(--cg-green);
-    color: var(--cg-green);
+.pg-tool-panel .action-btn.copied {
+    border-color: var(--pg-green);
+    color: var(--pg-green);
 }
 
-/* Upload label — exact match to markdown .upload-btn */
-.cg-upload-label {
+/* Score button inside tool panel */
+.pg-tool-panel .score-btn {
     display: inline-flex;
     align-items: center;
+    gap: 5px;
     padding: 5px 11px;
     border-radius: 6px;
-    border: 1px solid var(--cg-border);
-    background: var(--cg-bg2);
-    color: var(--cg-muted);
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+    border: 1px solid rgba(125,211,252,0.35);
+    background: rgba(125,211,252,0.08);
+    color: var(--pg-accent);
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
-    user-select: none;
+    font-family: var(--pg-font);
 }
-.cg-upload-label:hover {
-    background: var(--cg-bg3);
-    color: var(--cg-text);
-    border-color: var(--cg-accent);
+.pg-tool-panel .score-btn:hover:not(:disabled) {
+    background: rgba(125,211,252,0.18);
+    border-color: rgba(125,211,252,0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(125,211,252,0.2);
+}
+.pg-tool-panel .score-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+}
+.pg-tool-panel .score-btn.active {
+    background: rgba(125,211,252,0.2);
+    border-color: rgba(125,211,252,0.7);
+    box-shadow: 0 0 0 2px rgba(125,211,252,0.15);
 }
 
-/* Textarea — exact match to markdown textarea */
-.cg-editor {
+/* Textarea — exact match to markdown #inputEditor */
+.pg-editor {
     flex: 1;
     width: 100%;
-    min-height: 320px;
-    background: var(--cg-bg);
-    color: var(--cg-text);
+    min-height: 300px;
+    background: var(--pg-bg);
+    color: var(--pg-text);
     border: none;
-    border-radius: 0;
-    padding: 14px;
-    font-family: var(--cg-mono);
+    padding: 16px;
+    font-family: var(--pg-mono);
     font-size: 13px;
-    line-height: 1.65;
-    resize: vertical;
-    box-sizing: border-box;
+    line-height: 1.7;
+    resize: none;
     outline: none;
+    box-sizing: border-box;
 }
-.cg-editor::placeholder { color: #3a4055; }
+.pg-editor::placeholder { color: var(--pg-muted); font-family: var(--pg-font); }
 
-/* Panel footer — matches markdown .panel-footer */
-.cg-panel-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-top: 1px solid var(--cg-border);
-    background: var(--cg-bg3);
-    flex-shrink: 0;
-    gap: 10px;
-}
-.cg-stats { font-size: 12px; color: var(--cg-muted); }
-.cg-cost  { font-size: 12px; color: var(--cg-accent2); margin-left: auto; }
-
-/* Format/Generate button — exact match to markdown .format-btn */
-.cg-format-btn {
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    background: linear-gradient(135deg, var(--cg-accent), var(--cg-accent2));
-    color: #fff;
+/* Output area — exact match to markdown #outputArea */
+.pg-output-area {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--pg-bg);
+    font-family: var(--pg-mono);
     font-size: 13px;
-    font-weight: 700;
-    font-family: var(--cg-font);
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 4px 14px rgba(125,211,252,0.2);
-    white-space: nowrap;
+    line-height: 1.7;
+    color: var(--pg-text);
+    min-height: 300px;
 }
-.cg-format-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(125,211,252,0.3);
-}
-.cg-format-btn:active { transform: translateY(0); }
-.cg-format-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-/* Divider — exact match to markdown .divider */
-.cg-divider {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    flex-shrink: 0;
-    background: var(--cg-bg3);
-    border-top: 1px solid var(--cg-border);
-    border-bottom: 1px solid var(--cg-border);
-    gap: 8px;
-}
-.cg-divider-line {
-    flex: 1;
-    width: 1px;
-    background: var(--cg-border);
-}
-.cg-divider-icon {
-    font-size: 16px;
-    color: var(--cg-accent);
-    font-weight: 700;
+.pg-output-pre {
+    margin: 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--pg-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--pg-text);
 }
 
-/* Output area */
-#cgOutputArea {
-    flex: 1;
-    overflow: auto;
-    position: relative;
-    background: var(--cg-bg);
-    min-height: 320px;
-}
-.cg-output-placeholder {
+/* Output placeholder — exact match to markdown .output-placeholder */
+.output-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: 320px;
+    min-height: 300px;
+    gap: 10px;
+    color: var(--pg-muted);
     text-align: center;
     padding: 24px;
+}
+.placeholder-icon { font-size: 40px; }
+.output-placeholder p { font-size: 14px; }
+.placeholder-sub { font-size: 12px; color: var(--pg-accent); opacity: 0.7; }
+
+/* Panel footer — exact match to markdown .panel-footer */
+.pg-tool-panel .panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--pg-border);
+    background: var(--pg-bg3);
+    flex-shrink: 0;
+    flex-wrap: wrap;
     gap: 8px;
-    color: #3a4055;
 }
-.cg-placeholder-icon { font-size: 32px; margin-bottom: 4px; }
-.cg-output-placeholder p { margin: 0; font-size: 14px; color: #4a5568; }
-.cg-placeholder-sub { font-size: 12px !important; color: #374151 !important; }
+.pg-tool-panel .stats-text {
+    font-size: 11px;
+    color: var(--pg-muted);
+    font-family: var(--pg-mono);
+}
+.pg-cost {
+    font-size: 11px;
+    color: var(--pg-accent2);
+}
+.improvement-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.imp-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--pg-green);
+}
 
-.cg-output-pre {
-    margin: 0;
-    padding: 14px;
-    font-family: var(--cg-mono);
+/* Generate button — exact match to markdown .format-btn */
+.pg-tool-panel .format-btn {
+    padding: 9px 22px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, var(--pg-accent), var(--pg-accent2));
+    color: #fff;
     font-size: 13px;
-    line-height: 1.65;
-    color: var(--cg-text);
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-x: auto;
+    font-weight: 700;
+    font-family: var(--pg-font);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(125,211,252,0.25);
+    white-space: nowrap;
+}
+.pg-tool-panel .format-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(125,211,252,0.35);
+}
+.pg-tool-panel .format-btn:active { transform: translateY(0); }
+.pg-tool-panel .format-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Divider inside pg-panels-wrap — exact match to markdown .divider */
+.pg-panels-wrap > .divider {
+    width: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--pg-bg3);
+    border-left: 1px solid var(--pg-border);
+    border-right: 1px solid var(--pg-border);
+    gap: 8px;
+    flex-shrink: 0;
+}
+.pg-panels-wrap > .divider .divider-line {
+    flex: 1;
+    width: 1px;
+    background: var(--pg-border);
+}
+.pg-panels-wrap > .divider .divider-icon {
+    font-size: 16px;
+    color: var(--pg-accent);
+    font-weight: 700;
 }
 
-/* Score panel */
-#cgScorePanel { padding: 0 14px 14px; }
+/* Score panels */
+#cgInputScorePanel,
+#cgScorePanel {
+    background: var(--pg-bg);
+}
 
 /* Loading overlay */
-.cg-loading {
-    position: absolute;
+.pg-loading {
+    position: fixed;
     inset: 0;
     background: rgba(10,12,20,0.88);
     display: flex;
@@ -3094,26 +3145,39 @@ textarea:focus {
     align-items: center;
     justify-content: center;
     gap: 14px;
-    border-radius: var(--cg-radius);
-    z-index: 20;
+    z-index: 999;
 }
-.cg-loading p { color: var(--cg-muted); font-size: 14px; margin: 0; }
-.cg-spinner {
-    width: 36px;
-    height: 36px;
+.pg-loading p { color: var(--pg-muted); font-size: 15px; margin: 0; }
+.pg-spinner {
+    width: 40px;
+    height: 40px;
     border: 3px solid rgba(125,211,252,0.12);
-    border-top-color: var(--cg-accent);
+    border-top-color: var(--pg-accent);
     border-radius: 50%;
-    animation: cg-spin 0.75s linear infinite;
+    animation: pg-spin 0.75s linear infinite;
 }
-@keyframes cg-spin { to { transform: rotate(360deg); } }
+@keyframes pg-spin { to { transform: rotate(360deg); } }
 
 /* Responsive */
-@media (max-width: 768px) {
-    .cg-tool-panels { flex-direction: column; }
-    .cg-divider { flex-direction: row; width: 100%; height: 36px; }
-    .cg-divider-line { flex: 1; height: 1px; width: auto; }
-    .cg-settings-row { gap: 10px; }
-    .cg-field-key { min-width: 100%; }
-    .cg-section { padding: 16px; }
+@media (max-width: 900px) {
+    .pg-main-tool { flex-direction: column; }
+    .pg-panels-wrap { flex-direction: column; }
+    .pg-ref-panel { width: 100%; max-width: 100%; }
+    .pg-ref-divider { width: 100%; height: 1px; }
+    .pg-panels-wrap > .divider {
+        flex-direction: row; width: 100%; height: 36px;
+        border-left: none; border-right: none;
+        border-top: 1px solid var(--pg-border);
+        border-bottom: 1px solid var(--pg-border);
+    }
+    .pg-panels-wrap > .divider .divider-line { flex: 1; height: 1px; width: auto; }
+    .pg-settings-row { gap: 10px; }
+    .pg-field-key { min-width: 100%; }
+}
+
+/* ISP panels already defined above via .isp-* */
+@media (max-width: 600px) {
+    .isp-scores-row { flex-direction: column; gap: 12px; }
+    .isp-divider-v  { display: none; }
+    .isp-score-section { padding: 0; }
 }
