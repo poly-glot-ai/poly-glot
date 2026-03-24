@@ -2597,6 +2597,14 @@ textarea:focus {
     display: flex; align-items: center; justify-content: center;
 }
 .isp-close:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
+.isp-lang-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 700; padding: 1px 7px;
+    border-radius: 10px; margin-left: 6px;
+    background: rgba(167,139,250,0.15);
+    border: 1px solid rgba(167,139,250,0.3);
+    color: #a78bfa; text-transform: none; letter-spacing: 0;
+}
 
 /* ── Body ── */
 .isp-body { padding: 14px 16px 12px; }
