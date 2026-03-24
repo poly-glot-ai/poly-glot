@@ -2432,7 +2432,9 @@ function initCommentGenerator() {
         updateInputStats();
         resetOutput();
         cgScoreInputBtn.classList.remove('active');
-        document.getElementById('cgInputScorePanel').innerHTML = '';
+        // Remove ISP from input panel
+        const inPanel = document.getElementById('inputPanel');
+        if (inPanel) { const isp = inPanel.querySelector('.isp-panel'); if (isp) isp.remove(); }
     });
 
     // ── Reset output ──
@@ -2444,8 +2446,12 @@ function initCommentGenerator() {
         cgCopyBtn.disabled           = true;
         cgDownloadBtn.disabled       = true;
         cgScoreBtn.disabled          = true;
-        document.getElementById('cgScorePanel').innerHTML = '';
         cgScoreBtn.classList.remove('active');
+        // Remove any ISP panels from both tool panels
+        ['inputPanel','outputPanel'].forEach(id => {
+            const p = document.getElementById(id);
+            if (p) { const isp = p.querySelector('.isp-panel'); if (isp) isp.remove(); }
+        });
         lastOutputText = '';
         lastInputText  = '';
         if (cgImpBadges) cgImpBadges.innerHTML = '';
@@ -2543,14 +2549,16 @@ function initCommentGenerator() {
     cgScoreInputBtn.addEventListener('click', () => {
         const code = cgInput.value.trim();
         if (!code) { alert('Paste or upload some code first.'); return; }
-        // Collapse output score if open
+        // Collapse output score panel if open (remove any existing ispPanel in outputPanel)
         if (cgScoreBtn.classList.contains('active')) {
             cgScoreBtn.classList.remove('active');
-            document.getElementById('cgScorePanel').innerHTML = '';
+            const outPanel = document.getElementById('outputPanel');
+            if (outPanel) { const isp = outPanel.querySelector('.isp-panel'); if (isp) isp.remove(); }
         }
         cgScoreInputBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
-            PolyGlotScorer.renderInline('cgInputScorePanel', code, null, true);
+            // Mirror markdown exactly: pass the panel container id
+            PolyGlotScorer.renderInline('inputPanel', code, null, true);
         }
         if (typeof gtag !== 'undefined') gtag('event', 'cg_score_input_clicked', { language: cgLanguage.value });
     });
@@ -2558,14 +2566,16 @@ function initCommentGenerator() {
     // ── Score Output (before → after) — identical to markdown scoreOutputBtn ──
     cgScoreBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
-        // Collapse input score if open
+        // Collapse input score panel if open
         if (cgScoreInputBtn.classList.contains('active')) {
             cgScoreInputBtn.classList.remove('active');
-            document.getElementById('cgInputScorePanel').innerHTML = '';
+            const inPanel = document.getElementById('inputPanel');
+            if (inPanel) { const isp = inPanel.querySelector('.isp-panel'); if (isp) isp.remove(); }
         }
         cgScoreBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
-            PolyGlotScorer.renderInline('cgScorePanel', lastInputText, lastOutputText, true);
+            // Mirror markdown exactly: pass the panel container id
+            PolyGlotScorer.renderInline('outputPanel', lastInputText, lastOutputText, true);
         }
         if (typeof gtag !== 'undefined') gtag('event', 'cg_score_output_clicked', { language: cgLanguage.value });
     });
