@@ -2297,8 +2297,9 @@ function initCommentGenerator() {
     const cgOutputFooter= document.getElementById('cgOutputFooter');
     const cgOutputStats = document.getElementById('cgOutputStats');
     const cgOutputCost  = document.getElementById('cgOutputCost');
-    const cgLoading     = document.getElementById('cgLoading');
-    const cgScoreBtn    = document.getElementById('cgScoreBtn');
+    const cgLoading          = document.getElementById('cgLoading');
+    const cgScoreBtn         = document.getElementById('cgScoreBtn');
+    const cgScoreInputBtn    = document.getElementById('cgScoreInputBtn');
 
     // Separate localStorage keys so CG settings don't conflict with legacy settings
     const LS = {
@@ -2444,8 +2445,10 @@ function initCommentGenerator() {
         cgDownloadBtn.disabled      = true;
         lastOutputText              = '';
         lastInputText               = '';
-        document.getElementById('cgScorePanel').innerHTML = '';
+        document.getElementById('cgScorePanel').innerHTML    = '';
+        document.getElementById('cgInputScorePanel').innerHTML = '';
         cgScoreBtn.classList.remove('active');
+        cgScoreInputBtn.classList.remove('active');
     }
 
     // ── Generate Comments ──
@@ -2544,14 +2547,35 @@ function initCommentGenerator() {
         if (typeof gtag !== 'undefined') gtag('event', 'cg_output_downloaded', { language: cgLanguage.value });
     });
 
-    // ── Score Improvement ──
+    // ── Score Input (Your Code panel) ──
+    cgScoreInputBtn.addEventListener('click', () => {
+        const code = cgInput.value.trim();
+        if (!code) { alert('Paste or upload some code first.'); return; }
+        cgScoreInputBtn.classList.toggle('active');
+        // collapse output score panel to avoid confusion
+        if (cgScoreInputBtn.classList.contains('active')) {
+            cgScoreBtn.classList.remove('active');
+            document.getElementById('cgScorePanel').innerHTML = '';
+        }
+        if (typeof PolyGlotScorer !== 'undefined') {
+            PolyGlotScorer.renderInline('cgInputScorePanel', code, null, true);
+        }
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_score_input_clicked', { language: cgLanguage.value });
+    });
+
+    // ── Score Output (Commented Code panel — before vs. after) ──
     cgScoreBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
         cgScoreBtn.classList.toggle('active');
+        // collapse input score panel to avoid confusion
+        if (cgScoreBtn.classList.contains('active')) {
+            cgScoreInputBtn.classList.remove('active');
+            document.getElementById('cgInputScorePanel').innerHTML = '';
+        }
         if (typeof PolyGlotScorer !== 'undefined') {
             PolyGlotScorer.renderInline('cgScorePanel', lastInputText, lastOutputText, true);
         }
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_score_clicked', { language: cgLanguage.value });
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_score_output_clicked', { language: cgLanguage.value });
     });
 
     restoreSettings();
