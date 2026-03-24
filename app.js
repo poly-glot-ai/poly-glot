@@ -1,3 +1,4 @@
+/* v7 */
 // Comment patterns and templates for all supported languages
 const commentPatterns = {
     python: {
