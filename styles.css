@@ -1317,14 +1317,83 @@ textarea:focus {
 
 .demo-stats {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+    flex-direction: column;
+    gap: 0;
     margin-bottom: 40px;
-    padding: 30px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(125, 211, 252, 0.15);
+    border-radius: 16px;
+    overflow: hidden;
     animation: fadeIn 0.5s ease-in;
+}
+
+/* ── Score section label ── */
+.score-section-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: #7dd3fc;
+    padding: 16px 28px 0; text-align: center;
+}
+
+/* ── Score blocks ── */
+.score-block { padding: 22px 28px; }
+.metrics-block { padding: 18px 28px; }
+.score-divider { height: 1px; background: rgba(125,211,252,0.1); }
+
+.score-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: #7dd3fc; margin-bottom: 14px;
+}
+
+.score-meter-row {
+    display: flex; align-items: center; gap: 16px;
+}
+
+.score-before-wrap, .score-after-wrap {
+    flex: 1; display: flex; flex-direction: column; gap: 5px;
+}
+
+.score-num {
+    font-size: 40px; font-weight: 800; line-height: 1;
+    font-family: 'Fira Code', monospace;
+}
+.score-num.before { color: #f87171; }
+.score-num.after  { color: #34d399; }
+
+.score-sublabel {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #64748b;
+}
+
+.score-bar-track {
+    height: 8px; background: rgba(255,255,255,0.06);
+    border-radius: 99px; overflow: hidden; margin-top: 4px;
+}
+.score-bar {
+    height: 100%; border-radius: 99px; width: 0%;
+    transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.score-bar.before { background: linear-gradient(90deg, #f87171, #fb923c); }
+.score-bar.after  { background: linear-gradient(90deg, #34d399, #10b981); }
+
+.score-arrow-big {
+    font-size: 22px; color: #7dd3fc; flex-shrink: 0; padding-bottom: 22px;
+}
+
+.score-delta {
+    margin-top: 10px; font-size: 13px; font-weight: 600;
+    color: #34d399; display: flex; align-items: center; gap: 5px;
+    transition: opacity 0.6s ease;
+}
+.score-delta::before { content: '▲'; font-size: 10px; }
+
+/* ── Metric pills ── */
+.metrics-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.metric-pill {
+    font-size: 12px; font-weight: 600;
+    padding: 5px 12px; border-radius: 20px;
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.25);
+    color: #34d399; transition: opacity 0.4s ease;
 }
 
 @keyframes fadeIn {
@@ -2476,3 +2545,4 @@ textarea:focus {
     font-family: 'Fira Code', monospace;
     font-weight: 600;
 }
+
