@@ -450,7 +450,10 @@
                 <div class="panel" id="rightPanel">
                     <div class="panel-title">
                         <span>Your Code</span>
-                        <button id="clearBtn">Clear</button>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button id="scoreInputBtn" class="score-btn" title="Score this code for RAG & GEO quality">📊 Score</button>
+                            <button id="clearBtn">Clear</button>
+                        </div>
                     </div>
                     <div id="editorContent">
                         <textarea id="codeEditor" placeholder="Paste or write your code here for analysis..."></textarea>
@@ -463,6 +466,7 @@
 
     <script src="analytics.js"></script>
     <script src="ai-generator.js"></script>
+    <script src="scorer.js"></script>
     <script src="app.js"></script>
 
     <!-- ── Footer ── -->
@@ -471,6 +475,7 @@
     </div>
 </body>
 </html>
+
 
 
 
