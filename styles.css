@@ -2839,7 +2839,7 @@ textarea:focus {
     display: flex;
     flex: 1;
     min-height: 580px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--pg-border);
     border-radius: var(--pg-radius);
     background: var(--pg-bg2);
@@ -2849,7 +2849,7 @@ textarea:focus {
 .pg-panels-wrap {
     flex: 1;
     display: flex;
-    overflow: hidden;
+    overflow: visible;
     min-width: 0;
 }
 
@@ -2893,7 +2893,8 @@ textarea:focus {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: var(--pg-bg2);
     border: none !important;
     padding: 0 !important;
@@ -3002,16 +3003,17 @@ textarea:focus {
     font-family: var(--pg-mono);
     font-size: 13px;
     line-height: 1.7;
-    resize: none;
+    resize: vertical;
     outline: none;
     box-sizing: border-box;
+    display: block;
 }
 .pg-editor::placeholder { color: var(--pg-muted); font-family: var(--pg-font); }
 
 /* Output area — exact match to markdown #outputArea */
 .pg-output-area {
     flex: 1;
-    overflow-y: auto;
+    overflow: visible;
     background: var(--pg-bg);
     font-family: var(--pg-mono);
     font-size: 13px;
