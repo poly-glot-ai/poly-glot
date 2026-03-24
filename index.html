@@ -422,146 +422,79 @@
             </div>
         </div>
 
-        <!-- ══════════════════════════════════════════
-             Comment Generator — two-panel tool
-             ══════════════════════════════════════════ -->
-        <div class="cg-section" id="commentGenerator">
 
-            <!-- Section header -->
-            <div class="cg-section-header">
-                <div>
-                    <h2 class="cg-section-title">🤖 Comment Generator</h2>
-                    <p class="cg-section-sub">Paste or upload any code file — get fully documented, RAG &amp; GEO optimized comments instantly.</p>
+        <!-- ══════════════════════════════════════════════════════
+             Comment Generator — primary tool, parallel design
+             matching markdown.poly-glot.ai exactly
+             ══════════════════════════════════════════════════════ -->
+
+        <!-- ⚙️ Settings (overview-box style matching markdown site) -->
+        <div class="pg-tool-settings" id="commentGenerator">
+            <div class="pg-settings-heading">⚙️ API Settings</div>
+            <div class="pg-settings-row">
+                <div class="pg-field">
+                    <label class="pg-label" for="cgLanguage">Language</label>
+                    <select id="cgLanguage" class="pg-select">
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="php">PHP</option>
+                        <option value="swift">Swift</option>
+                        <option value="kotlin">Kotlin</option>
+                    </select>
                 </div>
-            </div>
-
-            <!-- ⚙️ Settings bar (matches markdown site overview layout) -->
-            <div class="cg-overview-box">
-                <div class="cg-overview-heading">⚙️ Settings</div>
-                <div class="cg-settings-row">
-                    <div class="cg-field">
-                        <label class="cg-label" for="cgLanguage">Language</label>
-                        <select id="cgLanguage" class="cg-select">
-                            <option value="javascript">JavaScript</option>
-                            <option value="typescript">TypeScript</option>
-                            <option value="python">Python</option>
-                            <option value="java">Java</option>
-                            <option value="cpp">C++</option>
-                            <option value="csharp">C#</option>
-                            <option value="go">Go</option>
-                            <option value="rust">Rust</option>
-                            <option value="ruby">Ruby</option>
-                            <option value="php">PHP</option>
-                            <option value="swift">Swift</option>
-                            <option value="kotlin">Kotlin</option>
-                        </select>
-                    </div>
-                    <div class="cg-field">
-                        <label class="cg-label" for="cgStyle">Comment Style</label>
-                        <select id="cgStyle" class="cg-select">
-                            <option value="jsdoc">JSDoc</option>
-                            <option value="javadoc">Javadoc</option>
-                            <option value="pydoc">PyDoc</option>
-                            <option value="doxygen">Doxygen</option>
-                            <option value="xmldoc">XMLDoc (C#)</option>
-                            <option value="godoc">GoDoc</option>
-                            <option value="rustdoc">RustDoc</option>
-                            <option value="rdoc">RDoc (Ruby)</option>
-                            <option value="phpdoc">PHPDoc</option>
-                            <option value="swift">Swift Doc</option>
-                            <option value="kotlin">KDoc</option>
-                        </select>
-                    </div>
-                    <div class="cg-field">
-                        <label class="cg-label" for="cgProvider">Provider</label>
-                        <select id="cgProvider" class="cg-select">
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic</option>
-                        </select>
-                    </div>
-                    <div class="cg-field">
-                        <label class="cg-label" for="cgModel">Model</label>
-                        <select id="cgModel" class="cg-select">
-                            <option value="gpt-4o-mini">GPT-4o Mini (fast)</option>
-                            <option value="gpt-4o">GPT-4o (best)</option>
-                        </select>
-                    </div>
-                    <div class="cg-field cg-field-key">
-                        <label class="cg-label" for="cgApiKey">API Key</label>
-                        <div class="cg-key-row">
-                            <input type="password" id="cgApiKey" class="cg-key-input" placeholder="sk-… or sk-ant-…" autocomplete="off">
-                            <button id="cgToggleKey" class="cg-toggle-btn" title="Show/hide key">👁</button>
-                            <button id="cgSaveKey" class="cg-save-btn">Save</button>
-                        </div>
-                        <span id="cgKeyStatus" class="cg-key-status"></span>
-                    </div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgStyle">Comment Style</label>
+                    <select id="cgStyle" class="pg-select">
+                        <option value="jsdoc">JSDoc</option>
+                        <option value="javadoc">Javadoc</option>
+                        <option value="pydoc">PyDoc</option>
+                        <option value="doxygen">Doxygen</option>
+                        <option value="xmldoc">XMLDoc (C#)</option>
+                        <option value="godoc">GoDoc</option>
+                        <option value="rustdoc">RustDoc</option>
+                        <option value="rdoc">RDoc (Ruby)</option>
+                        <option value="phpdoc">PHPDoc</option>
+                        <option value="swift">Swift Doc</option>
+                        <option value="kotlin">KDoc</option>
+                    </select>
                 </div>
-            </div>
-
-            <!-- Two-panel layout — identical structure to markdown site -->
-            <div class="cg-tool-panels">
-
-                <!-- Left: Input -->
-                <!-- Left: Input -->
-                <div class="cg-panel" id="cgInputPanel">
-                    <div class="cg-panel-header">
-                        <span class="cg-panel-title">Your Code</span>
-                        <div class="cg-panel-actions">
-                            <label class="cg-upload-label" for="cgFileUpload">📁 Upload</label>
-                            <input type="file" id="cgFileUpload" accept=".js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.cs,.go,.rs,.rb,.php,.swift,.kt" style="display:none">
-                            <button id="cgScoreInputBtn" class="cg-action-btn score-btn" title="Score this code for RAG &amp; GEO quality">📊 Score</button>
-                            <button id="cgClearInput" class="cg-action-btn">✕ Clear</button>
-                        </div>
-                    </div>
-                    <textarea id="cgInput" class="cg-editor" placeholder="Paste your code here or upload a file…&#10;&#10;Language &amp; comment style auto-detect from file extension."></textarea>
-                    <div id="cgInputScorePanel"></div>
-                    <div class="cg-panel-footer">
-                        <span id="cgInputStats" class="cg-stats"></span>
-                        <button id="cgGenerateBtn" class="cg-format-btn">🤖 Generate Comments</button>
-                    </div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgProvider">Provider</label>
+                    <select id="cgProvider" class="pg-select">
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                    </select>
                 </div>
-
-                <!-- Divider -->
-                <div class="cg-divider">
-                    <div class="cg-divider-line"></div>
-                    <span class="cg-divider-icon">→</span>
-                    <div class="cg-divider-line"></div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgModel">Model</label>
+                    <select id="cgModel" class="pg-select">
+                        <option value="gpt-4o-mini">GPT-4o Mini (fast)</option>
+                        <option value="gpt-4o">GPT-4o (best)</option>
+                    </select>
                 </div>
-
-                <!-- Right: Output -->
-                <div class="cg-panel" id="cgOutputPanel">
-                    <div class="cg-panel-header">
-                        <span class="cg-panel-title">Commented Code</span>
-                        <div class="cg-panel-actions">
-                            <button id="cgScoreBtn" class="cg-action-btn score-btn" disabled title="Compare RAG &amp; GEO scores before vs. after">📊 Score</button>
-                            <button id="cgCopyBtn" class="cg-action-btn" disabled>📋 Copy</button>
-                            <button id="cgDownloadBtn" class="cg-action-btn" disabled>⬇️ Download</button>
-                        </div>
+                <div class="pg-field pg-field-key">
+                    <label class="pg-label" for="cgApiKey">API Key</label>
+                    <div class="pg-key-row">
+                        <input type="password" id="cgApiKey" class="pg-key-input" placeholder="sk-… or sk-ant-…" autocomplete="off">
+                        <button id="cgToggleKey" class="pg-icon-btn" title="Show/hide key">👁</button>
+                        <button id="cgSaveKey" class="pg-save-btn">Save</button>
                     </div>
-                    <div id="cgOutputArea">
-                        <div class="cg-output-placeholder" id="cgPlaceholder">
-                            <span class="cg-placeholder-icon">💬</span>
-                            <p>Your documented code will appear here</p>
-                            <p class="cg-placeholder-sub">RAG-ready · GEO-optimized · Documented</p>
-                        </div>
-                        <pre id="cgOutput" class="cg-output-pre" style="display:none"></pre>
-                    </div>
-                    <div class="cg-panel-footer" id="cgOutputFooter" style="display:none">
-                        <span id="cgOutputStats" class="cg-stats"></span>
-                        <span id="cgOutputCost" class="cg-cost"></span>
-                    </div>
-                    <div id="cgScorePanel"></div>
+                    <span id="cgKeyStatus" class="pg-key-status"></span>
                 </div>
-            </div>
-
-            <!-- Loading overlay -->
-            <div class="cg-loading" id="cgLoading" style="display:none">
-                <div class="cg-spinner"></div>
-                <p>Generating comments…</p>
             </div>
         </div>
 
-        <div class="main-content">
+        <!-- ── Main Tool: two-panel, sidebar + panels ── -->
+        <div class="pg-main-tool">
+
+            <!-- Sidebar: Categories (kept as-is) -->
             <div class="sidebar">
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search templates...">
@@ -576,37 +509,87 @@
                 <div class="nav-item" data-category="favorites">⭐ Favorites</div>
             </div>
 
-            <div class="content-area">
-                <div class="panel" id="leftPanel">
-                    <div class="panel-title">
-                        <span>Templates & Reference</span>
+            <!-- Tool panels container -->
+            <div class="pg-panels-wrap">
+
+                <!-- Reference panel (left, collapsible by category click) -->
+                <div class="panel pg-ref-panel" id="leftPanel">
+                    <div class="panel-header pg-panel-header-legacy">
+                        <span class="panel-title-legacy">Templates &amp; Reference</span>
                     </div>
-                    <div id="templateContent"></div>
+                    <div id="templateContent" class="pg-template-content"></div>
                 </div>
 
-                <div class="divider"></div>
+                <!-- Divider between reference and tool -->
+                <div class="pg-ref-divider" id="refDivider"></div>
 
-                <div class="panel" id="rightPanel">
-                    <div class="panel-title">
-                        <span>Your Code</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
-                            <button id="scoreInputBtn" class="score-btn" title="Score this code for RAG & GEO quality">📊 Score</button>
-                            <button id="clearBtn">Clear</button>
+                <!-- Input panel — matches markdown site .panel#inputPanel exactly -->
+                <div class="panel pg-tool-panel" id="inputPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">Your Code</span>
+                        <div class="panel-actions">
+                            <label class="upload-btn" for="cgFileUpload">📁 Upload</label>
+                            <input type="file" id="cgFileUpload" accept=".js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.cs,.go,.rs,.rb,.php,.swift,.kt" style="display:none">
+                            <button id="cgScoreInputBtn" class="action-btn score-btn" title="Score this code for RAG &amp; GEO quality">📊 Score</button>
+                            <button id="cgClearInput" class="action-btn">✕ Clear</button>
                         </div>
                     </div>
-                    <div id="editorContent">
-                        <textarea id="codeEditor" placeholder="Paste or write your code here for analysis..."></textarea>
-                        <div id="suggestions"></div>
+                    <textarea id="cgInput" class="pg-editor" placeholder="Paste your code here or upload a file…&#10;&#10;Language &amp; comment style auto-detect from file extension."></textarea>
+                    <div id="cgInputScorePanel"></div>
+                    <div class="panel-footer">
+                        <span id="cgInputStats" class="stats-text"></span>
+                        <button id="cgGenerateBtn" class="format-btn">🤖 Generate Comments</button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <script src="analytics.js?v=4"></script>
-    <script src="ai-generator.js?v=4"></script>
-    <script src="scorer.js?v=4"></script>
-    <script src="app.js?v=4"></script>
+                <!-- Divider — identical to markdown site -->
+                <div class="divider">
+                    <div class="divider-line"></div>
+                    <span class="divider-icon">→</span>
+                    <div class="divider-line"></div>
+                </div>
+
+                <!-- Output panel — matches markdown site .panel#outputPanel exactly -->
+                <div class="panel pg-tool-panel" id="outputPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">Commented Code</span>
+                        <div class="panel-actions">
+                            <button id="cgScoreBtn" class="action-btn score-btn" disabled title="Compare RAG &amp; GEO scores before vs. after">📊 Score</button>
+                            <button id="cgCopyBtn" class="action-btn" disabled>📋 Copy</button>
+                            <button id="cgDownloadBtn" class="action-btn" disabled>⬇️ Download</button>
+                        </div>
+                    </div>
+                    <div id="cgOutputArea" class="pg-output-area">
+                        <div class="output-placeholder" id="cgPlaceholder">
+                            <span class="placeholder-icon">💬</span>
+                            <p>Your documented code will appear here</p>
+                            <p class="placeholder-sub">RAG-ready · GEO-optimized · Documented</p>
+                        </div>
+                        <pre id="cgOutput" class="pg-output-pre" style="display:none"></pre>
+                    </div>
+                    <div id="cgScorePanel"></div>
+                    <div class="panel-footer" id="cgOutputFooter" style="display:none">
+                        <span id="cgOutputStats" class="stats-text"></span>
+                        <span id="cgOutputCost" class="pg-cost"></span>
+                        <div id="cgImpBadges" class="improvement-badges"></div>
+                    </div>
+                </div>
+
+            </div><!-- /pg-panels-wrap -->
+        </div><!-- /pg-main-tool -->
+
+        <!-- Loading overlay -->
+        <div class="pg-loading" id="cgLoading" style="display:none">
+            <div class="pg-spinner"></div>
+            <p>Generating comments…</p>
+        </div>
+
+    </div><!-- /container -->
+
+    <script src="analytics.js?v=5"></script>
+    <script src="ai-generator.js?v=5"></script>
+    <script src="scorer.js?v=5"></script>
+    <script src="app.js?v=5"></script>
 
     <!-- ── Footer ── -->
     <div class="site-footer">
@@ -614,7 +597,3 @@
     </div>
 </body>
 </html>
-
-
-
-
