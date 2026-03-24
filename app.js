@@ -1463,13 +1463,16 @@ function calculateAge(birthDate) {
         afterBenefits.style.opacity = '1';
         await sleep(1500);
         
-        // Step 3: Show stats
+        // Step 3: Show animated scores
         demoStats.style.display = 'flex';
-        await sleep(2000);
+        await sleep(200);
+        await animateDemoScores();
+        await sleep(1500);
         
         // Reset button
         playBtn.textContent = '✓ Demo Complete';
         playBtn.disabled = false;
+        resetBtn.style.display = 'inline-block';
         isPlaying = false;
     });
     
@@ -1477,21 +1480,43 @@ function calculateAge(birthDate) {
     resetBtn.addEventListener('click', () => {
         demoPanels.forEach(panel => panel.classList.remove('active'));
         demoStats.style.display = 'none';
+        resetBtn.style.display  = 'none';
         playBtn.textContent = '▶️ Play Demo';
         playBtn.disabled = false;
         isPlaying = false;
         
-        // Clear code content (back to empty state)
+        // Clear code content
         const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
-        const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
+        const afterCodeElement  = demoPanels[1].querySelector('.demo-code code');
         beforeCodeElement.textContent = '';
-        afterCodeElement.textContent = '';
+        afterCodeElement.textContent  = '';
         
         // Reset badge visibility
-        const beforeIssues = demoPanels[0].querySelector('.demo-issues');
+        const beforeIssues  = demoPanels[0].querySelector('.demo-issues');
         const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
-        beforeIssues.style.opacity = '0';
+        beforeIssues.style.opacity  = '0';
         afterBenefits.style.opacity = '0';
+
+        // Reset all score elements
+        ['coverageAfter','ragAfter','geoAfter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '0';
+        });
+        ['coverageDelta','ragDelta','geoDelta'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.opacity = '0';
+        });
+        ['coverageBarBefore','coverageBarAfter',
+         'ragBarBefore','ragBarAfter',
+         'geoBarBefore','geoBarAfter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.transition = 'none'; el.style.width = '0%'; }
+        });
+        ['metricJSDoc','metricParams','metricReturns',
+         'metricExamples','metricThrows','metricCoverage'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.opacity = '0';
+        });
         
         // Track demo reset
         if (window.polyglotAnalytics) {
@@ -1531,6 +1556,77 @@ function calculateAge(birthDate) {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Count up a number from start→end over duration ms
+function countUp(elementId, from, to, duration = 1200, suffix = '') {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const startTime = performance.now();
+    function update(now) {
+        const elapsed  = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased    = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = Math.round(from + (to - from) * eased) + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+// Animate a bar to a percentage width
+function animateBar(elementId, toPercent, duration = 1200) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.style.transition = `width ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+    setTimeout(() => { el.style.width = toPercent + '%'; }, 50);
+}
+
+// Fade in an element after delay ms
+function fadeInEl(elementId, delay = 0) {
+    setTimeout(() => {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.style.transition = 'opacity 0.6s ease';
+        el.style.opacity = '1';
+    }, delay);
+}
+
+// Animate all score sections sequentially
+async function animateDemoScores() {
+    // Coverage: 12 → 85 (+608%)
+    animateBar('coverageBarBefore', 12, 600);
+    await sleep(400);
+    animateBar('coverageBarAfter', 85, 1200);
+    countUp('coverageAfter', 0, 85, 1200);
+    fadeInEl('coverageDelta', 900);
+    setTimeout(() => countUp('coverageDeltaNum', 0, 608, 1000), 400);
+
+    await sleep(700);
+
+    // RAG: 14 → 89 (+536%)
+    animateBar('ragBarBefore', 14, 600);
+    await sleep(400);
+    animateBar('ragBarAfter', 89, 1200);
+    countUp('ragAfter', 0, 89, 1200);
+    fadeInEl('ragDelta', 900);
+    setTimeout(() => countUp('ragDeltaNum', 0, 536, 1000), 400);
+
+    await sleep(700);
+
+    // GEO: 9 → 82 (+811%)
+    animateBar('geoBarBefore', 9, 600);
+    await sleep(400);
+    animateBar('geoBarAfter', 82, 1200);
+    countUp('geoAfter', 0, 82, 1200);
+    fadeInEl('geoDelta', 900);
+    setTimeout(() => countUp('geoDeltaNum', 0, 811, 1000), 400);
+
+    await sleep(800);
+
+    // Stagger metric pills
+    ['metricJSDoc','metricParams','metricReturns',
+     'metricExamples','metricThrows','metricCoverage'
+    ].forEach((id, i) => fadeInEl(id, i * 130));
 }
 
 // Initialize demo when DOM is ready
@@ -2166,5 +2262,6 @@ if (document.readyState === 'loading') {
 } else {
     initializeAISettings();
 }
+
 
 
