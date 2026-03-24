@@ -1,4 +1,3 @@
-/* v7 */
 // Comment patterns and templates for all supported languages
 const commentPatterns = {
     python: {
@@ -2558,8 +2557,7 @@ function initCommentGenerator() {
         }
         cgScoreInputBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
-            // Mirror markdown exactly: pass the panel container id
-            PolyGlotScorer.renderInline('inputPanel', code, null, true);
+            PolyGlotScorer.renderInline('inputPanel', code, null, true, cgLanguage.value);
         }
         if (typeof gtag !== 'undefined') gtag('event', 'cg_score_input_clicked', { language: cgLanguage.value });
     });
@@ -2575,8 +2573,7 @@ function initCommentGenerator() {
         }
         cgScoreBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
-            // Mirror markdown exactly: pass the panel container id
-            PolyGlotScorer.renderInline('outputPanel', lastInputText, lastOutputText, true);
+            PolyGlotScorer.renderInline('outputPanel', lastInputText, lastOutputText, true, cgLanguage.value);
         }
         if (typeof gtag !== 'undefined') gtag('event', 'cg_score_output_clicked', { language: cgLanguage.value });
     });
