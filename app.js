@@ -1303,14 +1303,16 @@ function setupEventListeners() {
 
     document.getElementById('analyzeBtn').addEventListener('click', analyzeCode);
     
-    document.getElementById('clearBtn').addEventListener('click', () => {
-        document.getElementById('codeEditor').value = '';
-        document.getElementById('suggestions').innerHTML = '';
+    const clearBtnEl = document.getElementById('clearBtn');
+    if (clearBtnEl) clearBtnEl.addEventListener('click', () => {
+        const ce = document.getElementById('codeEditor'); if(ce) ce.value = '';
+        const sg = document.getElementById('suggestions'); if(sg) sg.innerHTML = '';
     });
 
     // ── Score Input button (Your Code panel) ──
-    document.getElementById('scoreInputBtn').addEventListener('click', () => {
-        const code = document.getElementById('codeEditor').value.trim();
+    const _scoreInputLegacy = document.getElementById('scoreInputBtn');
+    if (_scoreInputLegacy) _scoreInputLegacy.addEventListener('click', () => {
+        const code = (document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''}).value.trim();
         if (!code) { alert('Paste some code first.'); return; }
         const btn = document.getElementById('scoreInputBtn');
         btn.classList.toggle('active');
@@ -1888,7 +1890,7 @@ function initializeAISettings() {
             return;
         }
         
-        const codeEditor = document.getElementById('codeEditor');
+        const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''};
         const code = codeEditor.value.trim();
         
         if (!code) {
@@ -1959,7 +1961,7 @@ function initializeAISettings() {
             return;
         }
 
-        const code = document.getElementById('codeEditor').value.trim();
+        const code = (document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''}).value.trim();
         if (!code) {
             alert('📝 Please paste some code into the editor first.');
             return;
@@ -2139,8 +2141,8 @@ function initializeAISettings() {
         `;
 
         // Insert after suggestions
-        const suggestions = document.getElementById('suggestions');
-        suggestions.parentNode.insertBefore(panel, suggestions.nextSibling);
+        const _anchor = document.getElementById('cgOutputArea') || document.getElementById('suggestions');
+        if(_anchor && _anchor.parentNode) _anchor.parentNode.insertBefore(panel, _anchor.nextSibling);
         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         // Close buttons
@@ -2201,7 +2203,7 @@ function initializeAISettings() {
 
         // ── Score Improvement button ──
         document.getElementById('scoreOutputBtn').addEventListener('click', () => {
-            const inputCode = document.getElementById('codeEditor').value.trim();
+            const inputCode = (document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''}).value.trim();
             const btn = document.getElementById('scoreOutputBtn');
             btn.classList.toggle('active');
             PolyGlotScorer.renderInline('aiResultsDiv', inputCode || null, result.code, true);
@@ -2236,7 +2238,7 @@ function initializeAISettings() {
 
         // Replace code in editor
         document.getElementById('replaceCode').addEventListener('click', function() {
-            const codeEditor = document.getElementById('codeEditor');
+            const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''};
             codeEditor.value = result.code;
             flashCopied(this, '✅ Replace Code');
             setTimeout(() => resultsDiv.remove(), 1200);
@@ -2276,32 +2278,42 @@ if (document.readyState === 'loading') {
 /* ═══════════════════════════════════════════════════
    Comment Generator — two-panel feature
    ═══════════════════════════════════════════════════ */
-function initCommentGenerator() {
-    const cgLanguage    = document.getElementById('cgLanguage');
-    const cgStyle       = document.getElementById('cgStyle');
-    const cgProvider    = document.getElementById('cgProvider');
-    const cgModel       = document.getElementById('cgModel');
-    const cgApiKey      = document.getElementById('cgApiKey');
-    const cgToggleKey   = document.getElementById('cgToggleKey');
-    const cgSaveKey     = document.getElementById('cgSaveKey');
-    const cgKeyStatus   = document.getElementById('cgKeyStatus');
-    const cgFileUpload  = document.getElementById('cgFileUpload');
-    const cgInput       = document.getElementById('cgInput');
-    const cgInputStats  = document.getElementById('cgInputStats');
-    const cgClearInput  = document.getElementById('cgClearInput');
-    const cgGenerateBtn = document.getElementById('cgGenerateBtn');
-    const cgCopyBtn     = document.getElementById('cgCopyBtn');
-    const cgDownloadBtn = document.getElementById('cgDownloadBtn');
-    const cgPlaceholder = document.getElementById('cgPlaceholder');
-    const cgOutput      = document.getElementById('cgOutput');
-    const cgOutputFooter= document.getElementById('cgOutputFooter');
-    const cgOutputStats = document.getElementById('cgOutputStats');
-    const cgOutputCost  = document.getElementById('cgOutputCost');
-    const cgLoading          = document.getElementById('cgLoading');
-    const cgScoreBtn         = document.getElementById('cgScoreBtn');
-    const cgScoreInputBtn    = document.getElementById('cgScoreInputBtn');
 
-    // Separate localStorage keys so CG settings don't conflict with legacy settings
+/* ═══════════════════════════════════════════════════════════
+   Comment Generator — parallel design to markdown.poly-glot.ai
+   ═══════════════════════════════════════════════════════════ */
+function initCommentGenerator() {
+    // Settings elements
+    const cgLanguage     = document.getElementById('cgLanguage');
+    const cgStyle        = document.getElementById('cgStyle');
+    const cgProvider     = document.getElementById('cgProvider');
+    const cgModel        = document.getElementById('cgModel');
+    const cgApiKey       = document.getElementById('cgApiKey');
+    const cgToggleKey    = document.getElementById('cgToggleKey');
+    const cgSaveKey      = document.getElementById('cgSaveKey');
+    const cgKeyStatus    = document.getElementById('cgKeyStatus');
+
+    // Panel elements
+    const cgFileUpload   = document.getElementById('cgFileUpload');
+    const cgInput        = document.getElementById('cgInput');
+    const cgInputStats   = document.getElementById('cgInputStats');
+    const cgClearInput   = document.getElementById('cgClearInput');
+    const cgGenerateBtn  = document.getElementById('cgGenerateBtn');
+    const cgScoreInputBtn= document.getElementById('cgScoreInputBtn');
+    const cgScoreBtn     = document.getElementById('cgScoreBtn');
+    const cgCopyBtn      = document.getElementById('cgCopyBtn');
+    const cgDownloadBtn  = document.getElementById('cgDownloadBtn');
+    const cgPlaceholder  = document.getElementById('cgPlaceholder');
+    const cgOutput       = document.getElementById('cgOutput');
+    const cgOutputFooter = document.getElementById('cgOutputFooter');
+    const cgOutputStats  = document.getElementById('cgOutputStats');
+    const cgOutputCost   = document.getElementById('cgOutputCost');
+    const cgImpBadges    = document.getElementById('cgImpBadges');
+    const cgLoading      = document.getElementById('cgLoading');
+
+    if (!cgInput) return; // guard
+
+    // LocalStorage keys (isolated from legacy settings)
     const LS = {
         key:      'cg_api_key',
         provider: 'cg_provider',
@@ -2321,20 +2333,20 @@ function initCommentGenerator() {
         ]
     };
 
-    // Language → comment style defaults
+    // Language → comment style
     const STYLE_MAP = {
-        javascript: 'jsdoc', typescript: 'jsdoc', java: 'javadoc',
-        python: 'pydoc', cpp: 'doxygen', csharp: 'xmldoc',
-        go: 'godoc', rust: 'rustdoc', ruby: 'rdoc',
-        php: 'phpdoc', swift: 'swift', kotlin: 'kotlin'
+        javascript: 'jsdoc',  typescript: 'jsdoc',  java: 'javadoc',
+        python: 'pydoc',      cpp: 'doxygen',        csharp: 'xmldoc',
+        go: 'godoc',          rust: 'rustdoc',       ruby: 'rdoc',
+        php: 'phpdoc',        swift: 'swift',        kotlin: 'kotlin'
     };
 
-    // File extension → language map
+    // File extension → language
     const EXT_MAP = {
-        js: 'javascript', ts: 'typescript', jsx: 'javascript', tsx: 'typescript',
-        py: 'python', java: 'java', cpp: 'cpp', c: 'cpp', cs: 'csharp',
-        go: 'go', rs: 'rust', rb: 'ruby', php: 'php',
-        swift: 'swift', kt: 'kotlin'
+        js:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',
+        py:'python',     java:'java',     cpp:'cpp',        c:'cpp',
+        cs:'csharp',     go:'go',         rs:'rust',        rb:'ruby',
+        php:'php',       swift:'swift',   kt:'kotlin'
     };
 
     let lastInputText  = '';
@@ -2343,31 +2355,25 @@ function initCommentGenerator() {
 
     // ── Restore saved settings ──
     function restoreSettings() {
-        const savedKey      = localStorage.getItem(LS.key)      || '';
-        const savedProvider = localStorage.getItem(LS.provider)  || 'openai';
-        const savedModel    = localStorage.getItem(LS.model)     || 'gpt-4o-mini';
-
-        if (savedKey) {
-            cgApiKey.value = savedKey;
-            cgKeyStatus.textContent = '✅ Key saved';
-            cgKeyStatus.className   = 'cg-key-status ok';
-        }
-        cgProvider.value = savedProvider;
-        updateModelDropdown(savedProvider, savedModel);
+        const key      = localStorage.getItem(LS.key)      || '';
+        const provider = localStorage.getItem(LS.provider) || 'openai';
+        const model    = localStorage.getItem(LS.model)    || 'gpt-4o-mini';
+        if (key) { cgApiKey.value = key; cgKeyStatus.textContent = '✅ Key saved'; cgKeyStatus.className = 'pg-key-status ok'; }
+        cgProvider.value = provider;
+        updateModelDropdown(provider, model);
     }
 
     function updateModelDropdown(provider, selectedModel) {
         const list = MODELS[provider] || MODELS.openai;
-        cgModel.innerHTML = list.map(m =>
-            `<option value="${m.value}"${m.value === selectedModel ? ' selected' : ''}>${m.label}</option>`
-        ).join('');
+        cgModel.innerHTML = list
+            .map(m => `<option value="${m.value}"${m.value === selectedModel ? ' selected' : ''}>${m.label}</option>`)
+            .join('');
     }
 
-    // ── Provider change → update model list ──
+    // ── Provider change → update model dropdown ──
     cgProvider.addEventListener('change', () => {
         const prov = cgProvider.value;
-        const defaultModel = prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini';
-        updateModelDropdown(prov, defaultModel);
+        updateModelDropdown(prov, prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini');
     });
 
     // ── Language change → auto-update comment style ──
@@ -2386,103 +2392,87 @@ function initCommentGenerator() {
         const key = cgApiKey.value.trim();
         if (!key) {
             cgKeyStatus.textContent = '❌ Please enter an API key';
-            cgKeyStatus.className   = 'cg-key-status err';
+            cgKeyStatus.className   = 'pg-key-status err';
             return;
         }
         localStorage.setItem(LS.key,      key);
         localStorage.setItem(LS.provider, cgProvider.value);
         localStorage.setItem(LS.model,    cgModel.value);
         cgKeyStatus.textContent = '✅ Settings saved';
-        cgKeyStatus.className   = 'cg-key-status ok';
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value, model: cgModel.value });
+        cgKeyStatus.className   = 'pg-key-status ok';
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value });
     });
 
     // ── File upload ──
     cgFileUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const ext = file.name.split('.').pop().toLowerCase();
+        const ext  = file.name.split('.').pop().toLowerCase();
         const lang = EXT_MAP[ext];
-        if (lang) {
-            cgLanguage.value = lang;
-            const style = STYLE_MAP[lang];
-            if (style) cgStyle.value = style;
-        }
-        lastFilename = file.name.replace(/\.[^.]+$/, '') + '-commented.' + (file.name.split('.').pop());
+        if (lang) { cgLanguage.value = lang; const sty = STYLE_MAP[lang]; if (sty) cgStyle.value = sty; }
+        lastFilename = file.name.replace(/\.[^.]+$/, '') + '-commented.' + file.name.split('.').pop();
         const reader = new FileReader();
-        reader.onload = (ev) => {
-            cgInput.value = ev.target.result;
-            updateInputStats();
-        };
+        reader.onload = (ev) => { cgInput.value = ev.target.result; updateInputStats(); };
         reader.readAsText(file);
         cgFileUpload.value = '';
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_file_uploaded', { ext, lang: lang || 'unknown', size: file.size });
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_file_uploaded', { ext, size: file.size });
     });
 
     // ── Input stats ──
     function updateInputStats() {
         const text = cgInput.value;
         if (!text.trim()) { cgInputStats.textContent = ''; return; }
-        const lines = text.split('\n').length;
-        const chars = text.length;
-        cgInputStats.textContent = `${lines} lines · ${chars} chars`;
+        cgInputStats.textContent = `${text.split('\n').length} lines · ${text.length} chars`;
     }
     cgInput.addEventListener('input', updateInputStats);
 
-    // ── Clear input ──
+    // ── Clear ──
     cgClearInput.addEventListener('click', () => {
         cgInput.value = '';
         updateInputStats();
         resetOutput();
+        cgScoreInputBtn.classList.remove('active');
+        document.getElementById('cgInputScorePanel').innerHTML = '';
     });
 
+    // ── Reset output ──
     function resetOutput() {
-        cgPlaceholder.style.display = 'flex';
-        cgOutput.style.display      = 'none';
-        cgOutput.textContent        = '';
-        cgOutputFooter.style.display= 'none';
-        cgCopyBtn.disabled          = true;
-        cgDownloadBtn.disabled      = true;
-        lastOutputText              = '';
-        lastInputText               = '';
-        document.getElementById('cgScorePanel').innerHTML    = '';
-        document.getElementById('cgInputScorePanel').innerHTML = '';
+        cgPlaceholder.style.display  = 'flex';
+        cgOutput.style.display       = 'none';
+        cgOutput.textContent         = '';
+        cgOutputFooter.style.display = 'none';
+        cgCopyBtn.disabled           = true;
+        cgDownloadBtn.disabled       = true;
+        cgScoreBtn.disabled          = true;
+        document.getElementById('cgScorePanel').innerHTML = '';
         cgScoreBtn.classList.remove('active');
-        cgScoreInputBtn.classList.remove('active');
+        lastOutputText = '';
+        lastInputText  = '';
+        if (cgImpBadges) cgImpBadges.innerHTML = '';
     }
 
     // ── Generate Comments ──
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
-        if (!code) {
-            alert('Please paste or upload some code first.');
-            return;
-        }
+        if (!code) { alert('Please paste or upload some code first.'); return; }
         const key = localStorage.getItem(LS.key) || '';
-        if (!key || key.length < 10) {
-            alert('Please enter and save your API key in the settings above.');
-            return;
-        }
+        if (!key || key.length < 10) { alert('Please enter and save your API key in the settings above.'); return; }
 
-        // Temporarily configure the shared aiGenerator with CG settings
-        const origKey      = window.aiGenerator.apiKey;
-        const origProvider = window.aiGenerator.provider;
-        const origModel    = window.aiGenerator.model;
-
+        // Temporarily configure shared aiGenerator
+        const orig = { key: window.aiGenerator.apiKey, prov: window.aiGenerator.provider, model: window.aiGenerator.model };
         window.aiGenerator.apiKey   = key;
         window.aiGenerator.provider = cgProvider.value;
         window.aiGenerator.model    = cgModel.value;
 
         cgLoading.style.display    = 'flex';
         cgGenerateBtn.disabled     = true;
-        cgGenerateBtn.classList.add('loading');
 
         try {
             lastInputText  = code;
             const result   = await window.aiGenerator.generateComments(code, cgLanguage.value, cgStyle.value);
             lastOutputText = result.code;
 
-            // Show output
+            // Show output — identical to markdown site flow
             cgPlaceholder.style.display  = 'none';
             cgOutput.style.display       = 'block';
             cgOutput.textContent         = result.code;
@@ -2491,10 +2481,20 @@ function initCommentGenerator() {
             // Stats
             const lines = result.code.split('\n').length;
             cgOutputStats.textContent = `${lines} lines · ${result.code.length} chars`;
-            cgOutputCost.textContent  = result.cost > 0 ? `Cost: $${result.cost.toFixed(4)}` : '';
+            if (cgOutputCost) cgOutputCost.textContent = result.cost > 0 ? `~$${result.cost.toFixed(4)}` : '';
+
+            // Improvement badges
+            if (cgImpBadges) {
+                cgImpBadges.innerHTML = [
+                    `<span class="imp-badge">✅ ${cgStyle.value.toUpperCase()}</span>`,
+                    `<span class="imp-badge">✅ ${cgLanguage.value}</span>`,
+                    `<span class="imp-badge">✅ RAG-ready</span>`
+                ].join('');
+            }
 
             cgCopyBtn.disabled     = false;
             cgDownloadBtn.disabled = false;
+            cgScoreBtn.disabled    = false;
 
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
                 provider: result.provider, model: result.model,
@@ -2505,17 +2505,14 @@ function initCommentGenerator() {
             cgPlaceholder.style.display = 'none';
             cgOutput.style.display      = 'block';
             cgOutput.textContent        = '❌ Error: ' + err.message;
-            cgOutputFooter.style.display= 'none';
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_error', { error: err.message });
         } finally {
             // Restore original aiGenerator state
-            window.aiGenerator.apiKey   = origKey;
-            window.aiGenerator.provider = origProvider;
-            window.aiGenerator.model    = origModel;
-
+            window.aiGenerator.apiKey   = orig.key;
+            window.aiGenerator.provider = orig.prov;
+            window.aiGenerator.model    = orig.model;
             cgLoading.style.display  = 'none';
             cgGenerateBtn.disabled   = false;
-            cgGenerateBtn.classList.remove('loading');
         }
     });
 
@@ -2528,9 +2525,6 @@ function initCommentGenerator() {
             cgCopyBtn.classList.add('copied');
             setTimeout(() => { cgCopyBtn.innerHTML = orig; cgCopyBtn.classList.remove('copied'); }, 2000);
             if (typeof gtag !== 'undefined') gtag('event', 'cg_output_copied', { language: cgLanguage.value });
-        }).catch(() => {
-            cgCopyBtn.innerHTML = '❌ Failed';
-            setTimeout(() => { cgCopyBtn.innerHTML = '📋 Copy'; }, 2000);
         });
     });
 
@@ -2540,38 +2534,36 @@ function initCommentGenerator() {
         const blob = new Blob([lastOutputText], { type: 'text/plain' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
-        a.href     = url;
-        a.download = lastFilename;
-        a.click();
+        a.href = url; a.download = lastFilename; a.click();
         URL.revokeObjectURL(url);
         if (typeof gtag !== 'undefined') gtag('event', 'cg_output_downloaded', { language: cgLanguage.value });
     });
 
-    // ── Score Input (Your Code panel) ──
+    // ── Score Input (Your Code) — identical to markdown scoreInputBtn ──
     cgScoreInputBtn.addEventListener('click', () => {
         const code = cgInput.value.trim();
         if (!code) { alert('Paste or upload some code first.'); return; }
-        cgScoreInputBtn.classList.toggle('active');
-        // collapse output score panel to avoid confusion
-        if (cgScoreInputBtn.classList.contains('active')) {
+        // Collapse output score if open
+        if (cgScoreBtn.classList.contains('active')) {
             cgScoreBtn.classList.remove('active');
             document.getElementById('cgScorePanel').innerHTML = '';
         }
+        cgScoreInputBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
             PolyGlotScorer.renderInline('cgInputScorePanel', code, null, true);
         }
         if (typeof gtag !== 'undefined') gtag('event', 'cg_score_input_clicked', { language: cgLanguage.value });
     });
 
-    // ── Score Output (Commented Code panel — before vs. after) ──
+    // ── Score Output (before → after) — identical to markdown scoreOutputBtn ──
     cgScoreBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
-        cgScoreBtn.classList.toggle('active');
-        // collapse input score panel to avoid confusion
-        if (cgScoreBtn.classList.contains('active')) {
+        // Collapse input score if open
+        if (cgScoreInputBtn.classList.contains('active')) {
             cgScoreInputBtn.classList.remove('active');
             document.getElementById('cgInputScorePanel').innerHTML = '';
         }
+        cgScoreBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
             PolyGlotScorer.renderInline('cgScorePanel', lastInputText, lastOutputText, true);
         }
@@ -2581,15 +2573,9 @@ function initCommentGenerator() {
     restoreSettings();
 }
 
-// Boot the Comment Generator
+// Boot
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCommentGenerator);
 } else {
     initCommentGenerator();
 }
-
-
-
-
-
-
