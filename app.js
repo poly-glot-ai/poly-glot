@@ -1312,7 +1312,9 @@ function setupEventListeners() {
     document.getElementById('scoreInputBtn').addEventListener('click', () => {
         const code = document.getElementById('codeEditor').value.trim();
         if (!code) { alert('Paste some code first.'); return; }
-        PolyGlotScorer.show(code, null, true);
+        const btn = document.getElementById('scoreInputBtn');
+        btn.classList.toggle('active');
+        PolyGlotScorer.renderInline('editorContent', code, null, true);
         if (typeof gtag !== 'undefined') gtag('event', 'score_input_clicked', { site: 'poly-glot' });
     });
 
@@ -2163,6 +2165,7 @@ function initializeAISettings() {
         // Create results container
         const resultsDiv = document.createElement('div');
         resultsDiv.className = 'ai-results';
+        resultsDiv.id = 'aiResultsDiv';
         resultsDiv.innerHTML = `
             <div class="ai-results-header">
                 <h3>✨ AI-Generated Comments</h3>
@@ -2199,7 +2202,9 @@ function initializeAISettings() {
         // ── Score Improvement button ──
         document.getElementById('scoreOutputBtn').addEventListener('click', () => {
             const inputCode = document.getElementById('codeEditor').value.trim();
-            PolyGlotScorer.show(inputCode || null, result.code, true);
+            const btn = document.getElementById('scoreOutputBtn');
+            btn.classList.toggle('active');
+            PolyGlotScorer.renderInline('aiResultsDiv', inputCode || null, result.code, true);
             if (typeof gtag !== 'undefined') gtag('event', 'score_output_clicked', { site: 'poly-glot' });
         });
 
@@ -2267,6 +2272,7 @@ if (document.readyState === 'loading') {
 } else {
     initializeAISettings();
 }
+
 
 
 
