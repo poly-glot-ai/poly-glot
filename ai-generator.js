@@ -37,7 +37,7 @@ class AICommentGenerator {
     loadModel() {
         const defaultModels = {
             openai: 'gpt-4o-mini',
-            anthropic: 'claude-3-5-sonnet-20241022'
+            anthropic: 'claude-sonnet-4-5'
         };
         return localStorage.getItem('polyglot_ai_model') || defaultModels[this.provider];
     }
@@ -390,12 +390,14 @@ ${code}
     /** Calculate Anthropic API cost estimate */
     calculateAnthropicCost(inputTokens, outputTokens) {
         const pricing = {
+            'claude-sonnet-4-5':          { input: 0.003 / 1000,   output: 0.015 / 1000 },
             'claude-3-5-sonnet-20241022': { input: 0.003 / 1000,   output: 0.015 / 1000 },
+            'claude-3-5-haiku-20241022':  { input: 0.0008 / 1000,  output: 0.004 / 1000 },
             'claude-3-opus-20240229':     { input: 0.015 / 1000,   output: 0.075 / 1000 },
             'claude-3-sonnet-20240229':   { input: 0.003 / 1000,   output: 0.015 / 1000 },
             'claude-3-haiku-20240307':    { input: 0.00025 / 1000, output: 0.00125 / 1000 }
         };
-        const p = pricing[this.model] || pricing['claude-3-5-sonnet-20241022'];
+        const p = pricing[this.model] || pricing['claude-sonnet-4-5'];
         return (inputTokens * p.input) + (outputTokens * p.output);
     }
 
@@ -410,9 +412,10 @@ ${code}
                 { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', cost: 'Very Low' }
             ],
             anthropic: [
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Recommended)', cost: 'Low' },
-                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (Cheapest)', cost: 'Very Low' },
-                { value: 'claude-3-sonnet-20240229',   label: 'Claude 3 Sonnet', cost: 'Low' },
+                { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (Recommended)', cost: 'Low' },
+                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', cost: 'Low' },
+                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku (Cheapest)', cost: 'Very Low' },
+                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku', cost: 'Very Low' },
                 { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus', cost: 'High' }
             ]
         };
