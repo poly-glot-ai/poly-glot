@@ -349,19 +349,97 @@
                 </div>
 
                 <div class="demo-stats" id="demoStats" style="display: none;">
-                    <div class="stat-card">
-                        <div class="stat-value">12%</div>
-                        <div class="stat-label">Comment Coverage Before</div>
+
+                    <div class="score-section-label">📊 Documentation Quality Scores</div>
+
+                    <!-- Doc Coverage Score -->
+                    <div class="score-block">
+                        <div class="score-title">📝 Comment Coverage Score</div>
+                        <div class="score-meter-row">
+                            <div class="score-before-wrap">
+                                <div class="score-num before" id="coverageBefore">12</div>
+                                <div class="score-sublabel">Before</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar before" id="coverageBarBefore" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="score-arrow-big">→</div>
+                            <div class="score-after-wrap">
+                                <div class="score-num after" id="coverageAfter">0</div>
+                                <div class="score-sublabel">After</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar after" id="coverageBarAfter" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="score-delta" id="coverageDelta" style="opacity:0">+<span id="coverageDeltaNum">0</span>% improvement</div>
                     </div>
-                    <div class="stat-arrow">→</div>
-                    <div class="stat-card highlight">
-                        <div class="stat-value">85%</div>
-                        <div class="stat-label">Comment Coverage After</div>
+
+                    <div class="score-divider"></div>
+
+                    <!-- RAG Score -->
+                    <div class="score-block">
+                        <div class="score-title">🤖 RAG Retrieval Score</div>
+                        <div class="score-meter-row">
+                            <div class="score-before-wrap">
+                                <div class="score-num before" id="ragBefore">14</div>
+                                <div class="score-sublabel">Before</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar before" id="ragBarBefore" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="score-arrow-big">→</div>
+                            <div class="score-after-wrap">
+                                <div class="score-num after" id="ragAfter">0</div>
+                                <div class="score-sublabel">After</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar after" id="ragBarAfter" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="score-delta" id="ragDelta" style="opacity:0">+<span id="ragDeltaNum">0</span>% improvement</div>
                     </div>
-                    <div class="stat-card highlight">
-                        <div class="stat-value">+73%</div>
-                        <div class="stat-label">Improvement</div>
+
+                    <div class="score-divider"></div>
+
+                    <!-- GEO Score -->
+                    <div class="score-block">
+                        <div class="score-title">🌐 GEO Discoverability Score</div>
+                        <div class="score-meter-row">
+                            <div class="score-before-wrap">
+                                <div class="score-num before" id="geoBefore">9</div>
+                                <div class="score-sublabel">Before</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar before" id="geoBarBefore" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="score-arrow-big">→</div>
+                            <div class="score-after-wrap">
+                                <div class="score-num after" id="geoAfter">0</div>
+                                <div class="score-sublabel">After</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar after" id="geoBarAfter" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="score-delta" id="geoDelta" style="opacity:0">+<span id="geoDeltaNum">0</span>% improvement</div>
                     </div>
+
+                    <div class="score-divider"></div>
+
+                    <!-- Improvement pills -->
+                    <div class="score-block metrics-block">
+                        <div class="score-title">✨ Improvements Applied</div>
+                        <div class="metrics-grid">
+                            <div class="metric-pill" id="metricJSDoc"     style="opacity:0">📋 JSDoc Standard</div>
+                            <div class="metric-pill" id="metricParams"    style="opacity:0">🔖 @param Types</div>
+                            <div class="metric-pill" id="metricReturns"   style="opacity:0">↩️ @returns Docs</div>
+                            <div class="metric-pill" id="metricExamples"  style="opacity:0">💡 @example Added</div>
+                            <div class="metric-pill" id="metricThrows"    style="opacity:0">⚠️ @throws Noted</div>
+                            <div class="metric-pill" id="metricCoverage"  style="opacity:0">📈 85% Coverage</div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="demo-cta">
@@ -420,3 +498,4 @@
     </div>
 </body>
 </html>
+
