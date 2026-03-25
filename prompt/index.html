@@ -13,8 +13,8 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            color: #ffffff;
+            background: #0f1117;
+            color: #e2e8f0;
             overflow: hidden;
             height: 100vh;
         }
@@ -173,7 +173,7 @@
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 6px;
             padding: 15px;
-            color: white;
+            color: transparent;
             font-family: Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
@@ -208,11 +208,11 @@
             overflow: auto;
             pointer-events: none;
             z-index: 1;
-            color: transparent; /* Fix text jumble - make base text transparent */
+            color: rgba(0,0,0,0); /* Make base text invisible but spans visible */
         }
 
         .variable-highlight {
-            color: #ff00ff;
+            color: #ff00ff !important;
             font-weight: 700;
             text-shadow: 0 0 8px rgba(255,0,255,0.5);
         }
