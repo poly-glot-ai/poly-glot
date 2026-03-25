@@ -2361,6 +2361,8 @@ function initCommentGenerator() {
         if (key) { cgApiKey.value = key; cgKeyStatus.textContent = '✅ Key saved'; cgKeyStatus.className = 'pg-key-status ok'; }
         cgProvider.value = provider;
         updateModelDropdown(provider, model);
+        // Sync comment style to match default language on page load
+        syncStyleToLanguage();
     }
 
     function updateModelDropdown(provider, selectedModel) {
@@ -2376,11 +2378,28 @@ function initCommentGenerator() {
         updateModelDropdown(prov, prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini');
     });
 
-    // ── Language change → auto-update comment style ──
-    cgLanguage.addEventListener('change', () => {
+    // ── Sync comment style to language ──
+    function syncStyleToLanguage() {
         const style = STYLE_MAP[cgLanguage.value];
-        if (style) cgStyle.value = style;
-    });
+        if (!style) return;
+        cgStyle.value = style;
+        // Show a brief "auto-set" indicator on the style label
+        const lbl = document.querySelector('label[for="cgStyle"]');
+        if (!lbl) return;
+        let badge = lbl.querySelector('.style-auto-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'style-auto-badge';
+            lbl.appendChild(badge);
+        }
+        badge.textContent = ' auto';
+        badge.style.opacity = '1';
+        clearTimeout(badge._timer);
+        badge._timer = setTimeout(() => { badge.style.opacity = '0'; }, 2000);
+    }
+
+    // ── Language change → auto-update comment style ──
+    cgLanguage.addEventListener('change', syncStyleToLanguage);
 
     // ── Toggle API key visibility ──
     cgToggleKey.addEventListener('click', () => {

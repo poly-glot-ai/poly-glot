@@ -3191,3 +3191,21 @@ textarea:focus {
     .isp-divider-v  { display: none; }
     .isp-score-section { padding: 0; }
 }
+
+/* ── Comment style auto-set badge ── */
+.style-auto-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
