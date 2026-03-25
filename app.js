@@ -2399,7 +2399,7 @@ function initCommentGenerator() {
     }
 
     // ── Language change → auto-update comment style ──
-    cgLanguage.addEventListener('change', syncStyleToLanguage);
+    // (manual override handling lives in the auto-detect block below)
 
     // ── Toggle API key visibility ──
     cgToggleKey.addEventListener('click', () => {
@@ -2428,10 +2428,25 @@ function initCommentGenerator() {
         if (!file) return;
         const ext  = file.name.split('.').pop().toLowerCase();
         const lang = EXT_MAP[ext];
-        if (lang) { cgLanguage.value = lang; const sty = STYLE_MAP[lang]; if (sty) cgStyle.value = sty; }
+        // File extension is authoritative — set language, style, and lock override
+        if (lang) {
+            cgLanguage.value = lang;
+            const sty = STYLE_MAP[lang];
+            if (sty) cgStyle.value = sty;
+            _langUserOverride = true; // extension already determined language precisely
+            hideLangDetectedBadge();
+        } else {
+            // Unknown extension — let content-based detection run after load
+            _langUserOverride = false;
+        }
         lastFilename = file.name.replace(/\.[^.]+$/, '') + '-commented.' + file.name.split('.').pop();
         const reader = new FileReader();
-        reader.onload = (ev) => { cgInput.value = ev.target.result; updateInputStats(); };
+        reader.onload = (ev) => {
+            cgInput.value = ev.target.result;
+            updateInputStats();
+            // If extension was unknown, try content-based detection now
+            if (!_langUserOverride) scheduleAutoDetect();
+        };
         reader.readAsText(file);
         cgFileUpload.value = '';
         if (typeof gtag !== 'undefined') gtag('event', 'cg_file_uploaded', { ext, size: file.size });
@@ -2443,7 +2458,106 @@ function initCommentGenerator() {
         if (!text.trim()) { cgInputStats.textContent = ''; return; }
         cgInputStats.textContent = `${text.split('\n').length} lines · ${text.length} chars`;
     }
-    cgInput.addEventListener('input', updateInputStats);
+
+    // ── Language auto-detection from pasted / typed code ──
+    // Tracks whether the user has manually overridden the language dropdown.
+    // If they have, we respect their choice and skip auto-detect until the
+    // input is cleared.
+    let _langUserOverride = false;
+
+    // Map detectLanguage() return values → cgLanguage <option> values
+    const DETECT_TO_OPTION = {
+        javascript: 'javascript',
+        typescript: 'typescript',
+        python:     'python',
+        java:       'java',
+        cpp:        'cpp',
+        csharp:     'csharp',
+        go:         'go',
+        rust:       'rust',
+        ruby:       'ruby',
+        php:        'php',
+        swift:      'swift',
+        kotlin:     'kotlin',
+    };
+
+    // Friendly display names for the badge
+    const LANG_DISPLAY = {
+        javascript: 'JavaScript', typescript: 'TypeScript', python: 'Python',
+        java: 'Java', cpp: 'C++', csharp: 'C#', go: 'Go', rust: 'Rust',
+        ruby: 'Ruby', php: 'PHP', swift: 'Swift', kotlin: 'Kotlin',
+    };
+
+    // Show / hide the "detected: X" badge on the Language label
+    function showLangDetectedBadge(langKey) {
+        const lbl = document.querySelector('label[for="cgLanguage"]');
+        if (!lbl) return;
+        let badge = lbl.querySelector('.lang-auto-badge');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'lang-auto-badge';
+            lbl.appendChild(badge);
+        }
+        badge.textContent = `✦ ${LANG_DISPLAY[langKey] || langKey}`;
+        badge.style.opacity = '1';
+        clearTimeout(badge._timer);
+        badge._timer = setTimeout(() => { badge.style.opacity = '0'; }, 3000);
+    }
+
+    function hideLangDetectedBadge() {
+        const lbl = document.querySelector('label[for="cgLanguage"]');
+        if (!lbl) return;
+        const badge = lbl.querySelector('.lang-auto-badge');
+        if (badge) { badge.style.opacity = '0'; }
+    }
+
+    // Core detection logic — debounced so it doesn't fire on every keystroke
+    let _detectTimer = null;
+    function scheduleAutoDetect() {
+        if (_langUserOverride) return;
+        clearTimeout(_detectTimer);
+        _detectTimer = setTimeout(() => {
+            const code = cgInput.value.trim();
+            if (!code || code.length < 30) return; // too short to detect reliably
+            if (typeof PolyGlotScorer === 'undefined') return;
+            const detected = PolyGlotScorer.detectLanguage(code);
+            const option   = DETECT_TO_OPTION[detected];
+            if (!option) return;
+            // Only update + notify if it's a meaningful change
+            if (cgLanguage.value !== option) {
+                cgLanguage.value = option;
+                syncStyleToLanguage();
+                showLangDetectedBadge(option);
+                if (typeof gtag !== 'undefined') gtag('event', 'cg_language_auto_detected', { detected: option });
+            }
+        }, 400); // 400ms debounce — fast enough, won't fire mid-paste
+    }
+
+    // Re-enable auto-detect when input is fully cleared
+    function onInputChanged() {
+        updateInputStats();
+        if (!cgInput.value.trim()) {
+            _langUserOverride = false;
+            hideLangDetectedBadge();
+        } else {
+            scheduleAutoDetect();
+        }
+    }
+
+    cgInput.addEventListener('input', onInputChanged);
+
+    // Paste fires before 'input' — schedule detect after DOM settles
+    cgInput.addEventListener('paste', () => {
+        if (_langUserOverride) return;
+        setTimeout(scheduleAutoDetect, 0);
+    });
+
+    // When user manually picks a language: sync style + lock out auto-detect
+    cgLanguage.addEventListener('change', () => {
+        syncStyleToLanguage();
+        _langUserOverride = true;
+        hideLangDetectedBadge();
+    });
 
     // ── Clear ──
     cgClearInput.addEventListener('click', () => {
@@ -2451,6 +2565,9 @@ function initCommentGenerator() {
         updateInputStats();
         resetOutput();
         cgScoreInputBtn.classList.remove('active');
+        // Reset language override so auto-detect works fresh on next paste
+        _langUserOverride = false;
+        hideLangDetectedBadge();
         // Remove ISP from input panel
         const inPanel = document.getElementById('inputPanel');
         if (inPanel) { const isp = inPanel.querySelector('.isp-panel'); if (isp) isp.remove(); }
