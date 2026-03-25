@@ -336,6 +336,95 @@ Goose autonomously:
 
 ---
 
+---
+
+# 🚀 Prompt Poly-Glot.AI ⚡ NEW!
+
+> **Professional Prompt Engineering with Human-in-the-Loop Testing**
+
+**🌐 Live App:** [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/)
+
+## Overview
+
+**Prompt Poly-Glot.AI** is the second tool in the Poly-Glot Suite - a professional prompt engineering platform for creating, testing, and refining prompts for OpenAI and Anthropic APIs. With advanced Human-in-the-Loop testing, quality metrics, and intelligent suggestions, it's the professional's choice for prompt engineering.
+
+## 🌟 Key Features
+
+### 🔄 Human-in-the-Loop Testing
+- Test prompts with mock AI responses
+- Quality metrics dashboard (Clarity, Completeness, Tone)
+- Smart improvement suggestions powered by analysis
+- Version control with diff view
+- A/B comparison mode for testing variants
+
+### 🎨 Variable System
+- Use `{{variable}}` syntax for reusable templates
+- Auto-detection of variables from template
+- Configurable input types (text, textarea, dropdown, number)
+- Real-time preview updates as you type
+
+### 🌐 Multi-Provider Export
+- **OpenAI Format**: Valid JSON for GPT-4, GPT-3.5, etc.
+- **Anthropic Format**: Valid JSON for Claude 3.5 Sonnet, Opus, etc.
+- **cURL Commands**: Ready-to-use API calls for both providers
+- **Plain Text**: Simple rendered output
+
+### 📚 Template Library
+8 professional pre-built templates:
+- **Code Review Assistant** - Review code for security, performance, best practices
+- **Content Writer** - Create blog posts, articles, marketing copy
+- **Data Analyst** - Analyze datasets and generate insights
+- **Translation Expert** - Accurate, context-aware translations
+- **Summarization Tool** - Concise summaries of any content
+- **Creative Storyteller** - Narrative writing and storytelling
+- **Technical Documentation** - Developer docs and guides
+- **Customer Support** - Empathetic customer service responses
+
+### 💾 Advanced Features
+- Auto-save to localStorage every 2 seconds
+- Character and token counter (real-time)
+- Real-time syntax highlighting for `{{variables}}`
+- Import/export templates as JSON
+- Share prompts via URL (base64 encoded)
+- Export test reports with iteration history
+- Works completely offline after first load
+
+## 🎯 Quick Example
+
+Create a reusable template:
+```
+You are a {{role}} assistant with expertise in {{domain}}.
+
+Task: {{task}}
+
+Requirements:
+- Tone: {{tone}}
+- Output format: {{format}}
+
+Additional context:
+{{context}}
+```
+
+Then:
+1. Fill in the variables (auto-detected on right panel)
+2. Test with mock AI in Human-in-the-Loop tab
+3. Review quality metrics
+4. Apply improvement suggestions
+5. Export in OpenAI or Anthropic format
+6. Use in production!
+
+## 📖 Documentation
+
+See [/prompt/README.md](./prompt/README.md) for detailed documentation.
+
+## 🚀 Get Started
+
+**Visit:** [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/)
+
+Start engineering better prompts today - no installation or account required!
+
+---
+
 <div align="center">
 
 **Made with 💻 and ☕ by developers, for developers**
