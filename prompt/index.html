@@ -700,6 +700,450 @@
             border-radius: 4px;
             color: white;
         }
+
+        /* ========================================
+           MOBILE RESPONSIVE STYLES
+           ======================================== */
+
+        /* Tablet Landscape (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .left-panel {
+                width: 55%;
+            }
+
+            .right-panel {
+                width: 45%;
+            }
+        }
+
+        /* Tablet Portrait (768px and below) */
+        @media screen and (max-width: 768px) {
+            /* Allow body scrolling on mobile */
+            body {
+                overflow-y: auto;
+                overflow-x: hidden;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .app-container {
+                height: auto;
+                min-height: 100vh;
+            }
+
+            /* Header adjustments */
+            .header {
+                padding: 12px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+                width: 100%;
+                text-align: center;
+                margin-bottom: 8px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            /* Stack panels vertically on mobile */
+            .main-content {
+                flex-direction: column;
+                overflow: visible;
+            }
+
+            .left-panel,
+            .right-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            /* Panel adjustments */
+            .panel {
+                margin: 8px;
+            }
+
+            .panel-header {
+                padding: 12px 15px;
+            }
+
+            .panel-title {
+                font-size: 15px;
+            }
+
+            .panel-body {
+                padding: 15px;
+            }
+
+            /* Touch-friendly buttons */
+            .btn {
+                padding: 12px 18px;
+                font-size: 14px;
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .btn-small {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            /* Template editor */
+            .editor-wrapper {
+                min-height: 300px;
+            }
+
+            #templateEditor {
+                font-size: 14px;
+                padding: 12px;
+                min-height: 300px;
+            }
+
+            /* Variable cards */
+            .variable-card {
+                padding: 12px;
+            }
+
+            .variable-card input,
+            .variable-card textarea,
+            .variable-card select {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            /* Tabs */
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab {
+                padding: 10px 15px;
+                font-size: 13px;
+                white-space: nowrap;
+                min-width: auto;
+            }
+
+            /* Preview content */
+            .preview-content {
+                font-size: 13px;
+                padding: 12px;
+            }
+
+            /* Modal adjustments */
+            .modal-content {
+                width: 95%;
+                max-width: 95%;
+                margin: 10px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-header {
+                padding: 15px;
+            }
+
+            .modal-body {
+                padding: 15px;
+            }
+
+            /* Template library grid */
+            .template-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .template-card {
+                padding: 15px;
+            }
+
+            /* Dropdown menu */
+            .dropdown-menu {
+                right: 0;
+                left: auto;
+                min-width: 200px;
+            }
+
+            /* Advanced settings */
+            .advanced-settings {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .advanced-settings input[type="range"] {
+                width: 100%;
+            }
+
+            /* Footer/status bar */
+            .footer {
+                padding: 10px 15px;
+                font-size: 12px;
+            }
+
+            /* Toolbar */
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .toolbar .btn {
+                flex: 1;
+                min-width: auto;
+            }
+        }
+
+        /* Mobile (576px and below) */
+        @media screen and (max-width: 576px) {
+            /* Further mobile optimizations */
+            .header {
+                padding: 10px 12px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .btn {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .panel {
+                margin: 6px;
+                border-radius: 6px;
+            }
+
+            .panel-header {
+                padding: 10px 12px;
+            }
+
+            .panel-title {
+                font-size: 14px;
+            }
+
+            .panel-body {
+                padding: 12px;
+            }
+
+            #templateEditor {
+                font-size: 13px;
+                padding: 10px;
+            }
+
+            .variable-card {
+                padding: 10px;
+            }
+
+            .variable-label {
+                font-size: 13px;
+            }
+
+            .tab {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .preview-content {
+                font-size: 12px;
+                padding: 10px;
+            }
+
+            /* Make code blocks scrollable on mobile */
+            pre {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Adjust modal for very small screens */
+            .modal-content {
+                width: 98%;
+                margin: 5px;
+            }
+
+            .modal-header h2 {
+                font-size: 18px;
+            }
+
+            /* Template cards */
+            .template-card h3 {
+                font-size: 15px;
+            }
+
+            .template-card p {
+                font-size: 12px;
+            }
+        }
+
+        /* Small phones (414px and below) */
+        @media screen and (max-width: 414px) {
+            .header h1 {
+                font-size: 15px;
+            }
+
+            .header-actions {
+                gap: 6px;
+            }
+
+            .btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .panel-title {
+                font-size: 13px;
+            }
+
+            #templateEditor {
+                font-size: 12px;
+            }
+
+            .variable-card input,
+            .variable-card textarea,
+            .variable-card select {
+                font-size: 13px;
+            }
+        }
+
+        /* Very small phones (375px and below) */
+        @media screen and (max-width: 375px) {
+            .header {
+                padding: 8px 10px;
+            }
+
+            .header h1 {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .panel {
+                margin: 5px;
+            }
+
+            .panel-header {
+                padding: 8px 10px;
+            }
+
+            .panel-body {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+
+        /* Landscape orientation on mobile */
+        @media screen and (max-width: 768px) and (orientation: landscape) {
+            .main-content {
+                flex-direction: row;
+            }
+
+            .left-panel {
+                width: 50%;
+                border-right: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .right-panel {
+                width: 50%;
+            }
+
+            .editor-wrapper {
+                min-height: 250px;
+            }
+
+            #templateEditor {
+                min-height: 250px;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            /* Larger tap targets for touch devices */
+            .btn {
+                min-height: 48px;
+                padding: 12px 16px;
+            }
+
+            .tab {
+                min-height: 44px;
+                padding: 10px 16px;
+            }
+
+            .variable-card input,
+            .variable-card textarea,
+            .variable-card select {
+                min-height: 44px;
+            }
+
+            /* Remove hover effects on touch devices */
+            .btn:hover {
+                transform: none;
+            }
+
+            /* Add active/tap feedback instead */
+            .btn:active {
+                transform: scale(0.98);
+                opacity: 0.8;
+            }
+
+            .tab:active {
+                opacity: 0.8;
+            }
+        }
+
+        /* Prevent horizontal scroll */
+        @media screen and (max-width: 768px) {
+            * {
+                max-width: 100%;
+            }
+
+            .main-content,
+            .left-panel,
+            .right-panel,
+            .panel,
+            .panel-body {
+                overflow-x: hidden;
+            }
+
+            /* Ensure textareas don't cause overflow */
+            textarea,
+            input[type="text"] {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        /* High contrast mode for accessibility */
+        @media (prefers-contrast: high) {
+            .header,
+            .panel {
+                border: 2px solid rgba(255,255,255,0.3);
+            }
+
+            .btn {
+                border: 2px solid rgba(255,255,255,0.4);
+            }
+        }
+
+        /* Reduced motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
   <script type="application/ld+json">
 {
