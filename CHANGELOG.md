@@ -4,6 +4,40 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.1.0] — 2026-03-25
+
+### 🚀 New Features
+
+#### ⌨️ CLI Tool — `poly-glot-ai-cli` (now live on npm!)
+- **`npm install -g poly-glot-ai-cli`** — zero-dependency CLI for AI-powered comment generation
+- `poly-glot comment <file>` — comment a single file inline
+- `poly-glot comment --dir <dir> --output-dir <out>` — recursively comment an entire directory
+- `poly-glot comment --stdin --lang python` — pipe code from stdin/stdout
+- `poly-glot explain <file>` — deep AI analysis from the terminal
+- `poly-glot config` — interactive API key + provider setup
+- Supports env vars: `POLYGLOT_API_KEY`, `POLYGLOT_PROVIDER`, `POLYGLOT_MODEL`
+- Config stored in `~/.config/polyglot/config.json` with secure `0o600` permissions
+- OpenAI + Anthropic support, spinner animations, ANSI colour output
+
+#### 💻 VS Code Extension — `Poly-Glot` (coming soon to Marketplace)
+- New command: **"Poly-Glot: Comment File"** — comments entire active file (`Cmd+Shift+Alt+/`)
+- New command: **"Poly-Glot: Comment This File"** — right-click any file in Explorer sidebar
+- Auto comment style detection based on file language (JSDoc, Javadoc, PyDoc, Doxygen, etc.)
+- `polyglot.commentStyle` config setting (default: `auto`)
+- Editor title bar button for "Comment File"
+- Explorer context menu for all supported file types
+
+#### 🎨 Web App Improvements
+- Auto-select comment style on language change with animated "auto" badge feedback
+- Updated "Paste your code" → "Paste or upload your code" in How It Works
+- New VS Code Extension and CLI sections in overview with install steps
+- Version bump to v1.1.0
+
+### 📦 Published
+- `poly-glot-ai-cli@1.0.0` → [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
 ## [1.0.0] - 2024-03-22 🎉 LAUNCH!
 
 ### 🚀 Major Release: AI-Powered Comment Generation

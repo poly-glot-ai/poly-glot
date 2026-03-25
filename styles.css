@@ -2530,6 +2530,299 @@ textarea:focus {
     }
 }
 
+/* ── Feature badge "new" variant ──────────────────────────────────────── */
+.feature-badge-new {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+.feature-badge-new:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.6);
+}
+
+/* ── Status badges (Coming Soon / Live) ───────────────────────────────── */
+.coming-soon-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    margin-left: 10px;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    margin-left: 10px;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+
+/* ── VS Code section ──────────────────────────────────────────────────── */
+.overview-section-vscode {
+    background: rgba(0, 122, 204, 0.05);
+    border: 1px solid rgba(0, 122, 204, 0.2);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-top: 4px;
+}
+
+.vscode-icon { font-size: 16px; }
+
+.integration-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0 16px;
+}
+
+.integration-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(0, 122, 204, 0.15);
+    border-radius: 8px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.integration-card:hover {
+    border-color: rgba(0, 122, 204, 0.35);
+    background: rgba(0, 122, 204, 0.06);
+}
+
+.integration-card-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.integration-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.integration-card-body strong {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e0e0f0;
+}
+
+.integration-card-body span {
+    font-size: 12px;
+    color: #9090b0;
+    line-height: 1.55;
+}
+
+kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Fira Code', monospace;
+    color: #c0c0d8;
+    white-space: nowrap;
+}
+
+/* ── Install steps (shared between VS Code + CLI) ─────────────────────── */
+.integration-install {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.install-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #9090b0;
+    flex: 1;
+    min-width: 180px;
+}
+
+.install-step strong { color: #e0e0f0; }
+
+.install-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(125, 211, 252, 0.15);
+    color: #7dd3fc;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.install-arrow {
+    color: #4a4a6a;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.inline-code {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.07);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #7dd3fc;
+}
+
+/* ── CLI section ───────────────────────────────────────────────────────── */
+.overview-section-cli {
+    background: rgba(16, 185, 129, 0.04);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-top: 4px;
+}
+
+.cli-icon { font-size: 16px; }
+
+.cli-demo {
+    background: #0d1117;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0 16px;
+    font-family: 'Fira Code', monospace;
+}
+
+.cli-demo-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cli-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+.cli-dot-red    { background: #ff5f57; }
+.cli-dot-yellow { background: #ffbd2e; }
+.cli-dot-green  { background: #28c840; }
+
+.cli-demo-title {
+    font-size: 11px;
+    color: #6b7280;
+    margin-left: 4px;
+    font-family: 'Inter', sans-serif;
+}
+
+.cli-demo-body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cli-line {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #e2e8f0;
+}
+
+.cli-dim {
+    color: #4b5563;
+    font-style: italic;
+}
+
+.cli-prompt {
+    color: #34d399;
+    margin-right: 8px;
+    user-select: none;
+}
+
+.cli-cmd {
+    color: #e2e8f0;
+}
+
+.cli-links {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+.cli-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.cli-link-npm {
+    background: rgba(203, 56, 55, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(203, 56, 55, 0.3);
+}
+
+.cli-link-npm:hover {
+    background: rgba(203, 56, 55, 0.22);
+    border-color: rgba(203, 56, 55, 0.6);
+    transform: translateY(-1px);
+}
+
+.cli-link-github {
+    background: rgba(125, 211, 252, 0.08);
+    color: #7dd3fc;
+    border: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.cli-link-github:hover {
+    background: rgba(125, 211, 252, 0.15);
+    border-color: rgba(125, 211, 252, 0.5);
+    transform: translateY(-1px);
+}
+
+/* ── Responsive: VS Code + CLI sections ───────────────────────────────── */
+@media (max-width: 700px) {
+    .integration-grid { grid-template-columns: 1fr; }
+    .integration-install { flex-direction: column; gap: 6px; }
+    .install-arrow { transform: rotate(90deg); }
+    .cli-demo-body { padding: 10px 12px; }
+    .cli-line { font-size: 11px; }
+    .cli-links { flex-direction: column; }
+}
+
 /* ── Footer ── */
 .site-footer {
     text-align: center;

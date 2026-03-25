@@ -26,7 +26,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
     <div class="container">
@@ -34,7 +34,7 @@
             <div class="header-top">
                 <h1>Poly-Glot Code Comment Library</h1>
                 <div class="header-badges">
-                    <span class="version-badge">v1.0.0</span>
+                    <span class="version-badge">v1.1.0</span>
                     <a href="https://github.com/hmoses/poly-glot/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="changelog-btn" title="View changelog">
                         📝 What's New
                     </a>
@@ -121,10 +121,129 @@
                     <span class="feature-badge">💾 Save Favorites</span>
                     <span class="feature-badge">🔒 Privacy-First</span>
                     <span class="feature-badge">🪿 Built with Goose</span>
+                    <span class="feature-badge feature-badge-new">💻 VS Code Extension</span>
+                    <span class="feature-badge feature-badge-new">⌨️ CLI Tool</span>
                 </div>
             </div>
 
-            <!-- ── Section 4: RAG & GEO ── -->
+            <!-- ── Section 4: VS Code Extension ── -->
+            <div class="overview-section overview-section-vscode">
+                <h2 class="overview-heading">
+                    <span class="vscode-icon">💻</span>
+                    VS Code Extension
+                    <span class="coming-soon-badge">Coming Soon</span>
+                </h2>
+                <p class="overview-text">
+                    Comment code without leaving your editor. The <strong>Poly-Glot VS Code Extension</strong> brings
+                    AI-powered comment generation directly into your workflow — no copy-pasting, no context switching.
+                </p>
+                <div class="integration-grid">
+                    <div class="integration-card">
+                        <div class="integration-card-icon">⌨️</div>
+                        <div class="integration-card-body">
+                            <strong>Comment Selection</strong>
+                            <span>Select any code → <kbd>Cmd+Shift+/</kbd> → comments inserted inline instantly</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">📄</div>
+                        <div class="integration-card-body">
+                            <strong>Comment Entire File</strong>
+                            <span>Press <kbd>Cmd+Shift+Alt+/</kbd> or right-click any file in Explorer → "Poly-Glot: Comment This File"</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">🔍</div>
+                        <div class="integration-card-body">
+                            <strong>Explain Code</strong>
+                            <span>Select code → <kbd>Cmd+Shift+E</kbd> → AI analysis panel with complexity, bugs, and doc quality score</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">🎯</div>
+                        <div class="integration-card-body">
+                            <strong>Auto Style Detection</strong>
+                            <span>Automatically picks JSDoc, Javadoc, PyDoc, Doxygen, etc. based on your file's language</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="integration-install">
+                    <div class="install-step">
+                        <span class="install-num">1</span>
+                        <span>Search <strong>"Poly-Glot"</strong> in VS Code Extensions panel (<kbd>Cmd+Shift+X</kbd>)</span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">2</span>
+                        <span>Open Command Palette → <strong>"Poly-Glot: Configure API Key"</strong></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">3</span>
+                        <span>Select code and press <strong><kbd>Cmd+Shift+/</kbd></strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 5: CLI Tool ── -->
+            <div class="overview-section overview-section-cli">
+                <h2 class="overview-heading">
+                    <span class="cli-icon">⌨️</span>
+                    CLI Tool
+                    <span class="live-badge">Live on npm</span>
+                </h2>
+                <p class="overview-text">
+                    Comment code from your terminal. <strong>poly-glot-ai-cli</strong> is a zero-dependency command-line tool
+                    for batch commenting, CI/CD pipelines, and scripting — powered by the same AI engine as the web app.
+                </p>
+                <div class="cli-demo">
+                    <div class="cli-demo-bar">
+                        <span class="cli-dot cli-dot-red"></span>
+                        <span class="cli-dot cli-dot-yellow"></span>
+                        <span class="cli-dot cli-dot-green"></span>
+                        <span class="cli-demo-title">Terminal</span>
+                    </div>
+                    <div class="cli-demo-body">
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npm install -g poly-glot-ai-cli</span></div>
+                        <div class="cli-line cli-dim"># Configure your API key once</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot config --key sk-... --provider openai</span></div>
+                        <div class="cli-line cli-dim"># Comment a single file</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment utils.py</span></div>
+                        <div class="cli-line cli-dim"># Comment an entire directory</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment --dir ./src --output-dir ./commented</span></div>
+                        <div class="cli-line cli-dim"># Explain any file</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot explain app.js</span></div>
+                        <div class="cli-line cli-dim"># Pipe from stdin</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">cat server.ts | poly-glot comment --stdin --lang typescript</span></div>
+                    </div>
+                </div>
+                <div class="integration-install">
+                    <div class="install-step">
+                        <span class="install-num">1</span>
+                        <span>Run <code class="inline-code">npm install -g poly-glot-ai-cli</code></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">2</span>
+                        <span>Run <code class="inline-code">poly-glot config --key YOUR_API_KEY</code></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">3</span>
+                        <span>Run <code class="inline-code">poly-glot comment &lt;file&gt;</code></span>
+                    </div>
+                </div>
+                <div class="cli-links">
+                    <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm">
+                        <span>📦</span> View on npm
+                    </a>
+                    <a href="https://github.com/hmoses/poly-glot/tree/main/cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github">
+                        <span>⭐</span> View on GitHub
+                    </a>
+                </div>
+            </div>
+
+            <!-- ── Section 7: RAG & GEO ── -->
             <div class="overview-section overview-section-rag">
                 <h2 class="overview-heading">
                     <span class="rag-icon">🧠</span>
