@@ -1,30 +1,32 @@
 {
   "name": "poly-glot",
-  "displayName": "Poly-Glot — AI Code Comments",
-  "description": "Generate intelligent, language-aware code comments and deep code analysis using OpenAI or Anthropic AI — 100% client-side, your API key, your privacy.",
-  "version": "1.0.0",
-  "publisher": "PLACEHOLDER_PUBLISHER_ID",
-  "icon": "images/icon.png",
+  "displayName": "Poly-Glot Code Comment Library",
+  "description": "AI-powered code comment generation for 12+ languages — JSDoc, Javadoc, PyDoc, Doxygen, and more.",
+  "version": "1.1.0",
+  "publisher": "hmoses",
+  "icon": "icon.png",
+  "repository": { "type": "git", "url": "https://github.com/hmoses/poly-glot" },
   "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other", "Machine Learning", "Education"],
-  "keywords": [
-    "comments", "documentation", "AI", "OpenAI", "Anthropic", "Claude",
-    "GPT-4", "code analysis", "jsdoc", "docstring", "poly-glot"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hmoses/poly-glot"
-  },
-  "homepage": "https://hmoses.github.io/poly-glot/",
-  "license": "MIT",
+  "categories": ["Other", "Programming Languages"],
+  "keywords": ["comments", "documentation", "jsdoc", "javadoc", "pydoc", "ai", "openai", "anthropic"],
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "polyglot.generateComments",
-        "title": "Poly-Glot: Generate AI Comments",
+        "title": "Poly-Glot: Generate Comments",
         "icon": "$(comment)"
+      },
+      {
+        "command": "polyglot.commentFile",
+        "title": "Poly-Glot: Comment Entire File",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "polyglot.commentFileFromExplorer",
+        "title": "Poly-Glot: Comment This File",
+        "icon": "$(file-code)"
       },
       {
         "command": "polyglot.explainCode",
@@ -57,9 +59,16 @@
       ],
       "editor/title": [
         {
-          "command": "polyglot.generateComments",
-          "when": "editorHasSelection",
+          "command": "polyglot.commentFile",
+          "when": "editorIsOpen",
           "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "polyglot.commentFileFromExplorer",
+          "when": "resourceExtname =~ /\\.(js|ts|jsx|tsx|py|java|cpp|c|cs|go|rs|rb|php|swift|kt)$/",
+          "group": "polyglot@1"
         }
       ]
     },
@@ -69,6 +78,12 @@
         "key": "ctrl+shift+/",
         "mac": "cmd+shift+/",
         "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "polyglot.commentFile",
+        "key": "ctrl+shift+alt+/",
+        "mac": "cmd+shift+alt+/",
+        "when": "editorTextFocus"
       },
       {
         "command": "polyglot.explainCode",
@@ -104,7 +119,7 @@
           "enum": ["openai", "anthropic"],
           "enumDescriptions": [
             "Use OpenAI (GPT-4o, GPT-4o-mini)",
-            "Use Anthropic (Claude 3.5 Sonnet)"
+            "Use Anthropic (Claude Sonnet 4, Claude 3.5 Sonnet)"
           ],
           "description": "AI provider for comment generation"
         },
@@ -113,10 +128,30 @@
           "default": "gpt-4o-mini",
           "description": "Model to use. Set to any valid model ID from your provider."
         },
+        "polyglot.commentStyle": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "jsdoc", "javadoc", "pydoc", "doxygen", "xmldoc", "godoc", "rustdoc", "rdoc", "phpdoc", "swift", "kotlin"],
+          "enumDescriptions": [
+            "Auto-detect based on file language (recommended)",
+            "JSDoc (JavaScript / TypeScript)",
+            "Javadoc (Java)",
+            "PyDoc / Google-style (Python)",
+            "Doxygen (C / C++)",
+            "XML doc comments (C#)",
+            "GoDoc (Go)",
+            "Rust doc comments (Rust)",
+            "RDoc / YARD (Ruby)",
+            "PHPDoc (PHP)",
+            "Swift markup (Swift)",
+            "KDoc (Kotlin)"
+          ],
+          "description": "Comment style to use. 'auto' detects from file language."
+        },
         "polyglot.insertInline": {
           "type": "boolean",
           "default": true,
-          "description": "Insert generated comments directly into the editor (replaces selection). If false, shows comments in a side panel."
+          "description": "Insert generated comments directly into the editor. If false, shows output in a side panel."
         }
       }
     }
