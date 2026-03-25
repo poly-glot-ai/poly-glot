@@ -208,7 +208,7 @@
             overflow: auto;
             pointer-events: none;
             z-index: 1;
-            color: white;
+            color: transparent; /* Fix text jumble - make base text transparent */
         }
 
         .variable-highlight {
@@ -489,17 +489,104 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Footer */
-        .footer {
+        /* Overview Section */
+        .overview-section {
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 24px 25px;
+        }
+
+        .overview-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .overview-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 12px;
+        }
+
+        .overview-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 20px;
+        }
+
+        .overview-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .feature-box {
             background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding: 10px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-box:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(0,212,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .feature-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #bd00ff;
+            margin-bottom: 6px;
+        }
+
+        .feature-desc {
             font-size: 13px;
+            line-height: 1.5;
             color: rgba(255,255,255,0.7);
+        }
+
+        /* Footer */
+        .site-footer {
+            text-align: center;
+            padding: 18px 24px;
+            border-top: 1px solid rgba(125, 211, 252, 0.1);
+            background: rgba(0,0,0,0.2);
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        .site-footer strong { 
+            color: #94a3b8; 
+        }
+        
+        .footer-domain {
+            color: #7dd3fc;
+            font-family: 'Fira Code', Monaco, Consolas, monospace;
+            font-weight: 600;
+        }
+
+        .auto-save-indicator {
+            position: fixed;
+            bottom: 70px;
+            right: 25px;
+            background: rgba(0,212,255,0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .auto-save-indicator.show {
+            opacity: 1;
         }
 
         /* Modal */
@@ -1477,6 +1564,48 @@ This is the **ULTIMATE prompt engineering tool** - ready for professional use!
             </div>
         </div>
 
+        <!-- Overview Section -->
+        <div class="overview-section">
+            <div class="overview-content">
+                <div class="overview-title">🚀 Professional Prompt Engineering Made Easy</div>
+                <p class="overview-text">
+                    <strong>Prompt Poly-Glot.AI</strong> is a powerful prompt engineering tool that helps you create, test, and export high-quality prompts for OpenAI and Anthropic APIs. Design reusable prompt templates with variables, test them with Human-in-the-Loop simulation, and export in multiple formats—all without leaving your browser.
+                </p>
+                
+                <div class="overview-features">
+                    <div class="feature-box">
+                        <div class="feature-title">🎨 Real-Time Variable Highlighting</div>
+                        <div class="feature-desc">Write templates with {{variables}} and see them highlighted instantly in bright magenta. Auto-detect variables and configure them with smart input types.</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">🔄 Human-in-the-Loop Testing</div>
+                        <div class="feature-desc">Test your prompts with mock AI responses, get quality metrics, receive intelligent improvement suggestions, and track version history—all before spending on API calls.</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">📦 Multi-Format Export</div>
+                        <div class="feature-desc">Export as plain text, OpenAI JSON, Anthropic JSON, cURL commands, or shareable URLs. Copy to clipboard or download—ready for production use.</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">📚 Professional Template Library</div>
+                        <div class="feature-desc">Start with 8 pre-built templates: Code Review, Content Writing, Data Analysis, Translation, Summarization, Storytelling, Documentation, and Customer Support.</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">💾 Auto-Save & Version Control</div>
+                        <div class="feature-desc">Never lose your work with automatic localStorage persistence. Track up to 10 versions with one-click revert capability for iterative refinement.</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">🎯 Why Choose This Over Alternatives?</div>
+                        <div class="feature-desc"><strong>vs ChatGPT/Claude Console:</strong> Test before you pay, get quality metrics, version control, and reusable templates. <strong>vs Generic Editors:</strong> Purpose-built for prompts with HITL testing, variable management, and multi-provider support—no account needed!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="main-content">
             <!-- Left Panel: Template Editor -->
@@ -1627,12 +1756,13 @@ Additional context:
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <div id="autoSaveStatus">⚡ Auto-saved just now</div>
-            <div id="outputStats">Output: 0 chars, ~0 tokens</div>
-            <div>v1.0</div>
-        </div>
+        <!-- Auto-Save Indicator (floating) -->
+        <div class="auto-save-indicator" id="autoSaveFloating">⚡ Saved</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="site-footer">
+        <p>© 2026 <strong>Harold Moses</strong> · <span class="footer-domain">prompt-poly-glot.ai</span> is a registered domain · Built with 🪿 Goose</p>
     </div>
 
     <!-- Template Library Modal -->
@@ -1845,7 +1975,6 @@ Company policy to consider:
         const anthropicPreview = document.getElementById('anthropicPreview');
         const templateStats = document.getElementById('templateStats');
         const outputStats = document.getElementById('outputStats');
-        const autoSaveStatus = document.getElementById('autoSaveStatus');
 
         // Debounce utility
         function debounce(func, wait) {
@@ -2011,7 +2140,6 @@ Company policy to consider:
             localStorage.setItem('polyglot_current_template', state.template);
             localStorage.setItem('polyglot_variables', JSON.stringify(state.variables));
             state.lastSave = Date.now();
-            autoSaveStatus.textContent = '⚡ Auto-saved just now';
         }, 2000);
 
         // Template editor input with highlighting
@@ -2650,18 +2778,6 @@ The AI successfully follows the template structure and provides relevant, high-q
             updatePreviews();
             updateTemplateStats();
             displayVersionHistory();
-
-            // Update auto-save status periodically
-            setInterval(() => {
-                const secondsAgo = Math.floor((Date.now() - state.lastSave) / 1000);
-                if (secondsAgo < 5) {
-                    autoSaveStatus.textContent = `⚡ Auto-saved just now`;
-                } else if (secondsAgo < 60) {
-                    autoSaveStatus.textContent = `💾 Saved ${secondsAgo}s ago`;
-                } else {
-                    autoSaveStatus.textContent = `💾 Saved ${Math.floor(secondsAgo / 60)}m ago`;
-                }
-            }, 1000);
         }
 
         init();
