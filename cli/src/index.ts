@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     if (cmd === 'comment') { await runComment(args.slice(1)); return; }
     if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
 
-    error(`Unknown command: ${cmd}. Run 'polyglot --help' for usage.`);
+    error(`Unknown command: ${cmd}. Run 'poly-glot --help' for usage.`);
     process.exit(1);
 }
 
@@ -171,7 +171,7 @@ async function runComment(args: string[]): Promise<void> {
 
     // ── single file mode ──
     const filePath = args.find(a => !a.startsWith('-'));
-    if (!filePath) { error('Specify a file, --dir, or --stdin. Run polyglot --help for usage.'); process.exit(1); }
+    if (!filePath) { error('Specify a file, --dir, or --stdin. Run poly-glot --help for usage.'); process.exit(1); }
 
     const absPath = path.resolve(filePath);
     if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
@@ -326,7 +326,7 @@ function printHelp(): void {
 ${COLORS.bold}${COLORS.cyan}Poly-Glot CLI${COLORS.reset} v${VERSION} — AI code comment generation
 
 ${COLORS.bold}Usage:${COLORS.reset}
-  polyglot <command> [options]
+  poly-glot <command> [options]
 
 ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}comment${COLORS.reset} <file>               Comment a single file (edits in place)

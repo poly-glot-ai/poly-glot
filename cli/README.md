@@ -8,13 +8,13 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 ## Install
 
 ```bash
-npm install -g polyglot-cli
+npm install -g poly-glot-ai-cli
 ```
 
 Or run without installing:
 
 ```bash
-npx polyglot-cli comment src/auth.js
+npx poly-glot-ai-cli comment src/auth.js
 ```
 
 ---
@@ -23,42 +23,42 @@ npx polyglot-cli comment src/auth.js
 
 ```bash
 # 1. Configure your API key (stored in ~/.config/polyglot/config.json)
-polyglot config
+poly-glot config
 
 # 2. Comment a file (edits in place)
-polyglot comment src/auth.js
+poly-glot comment src/auth.js
 
 # 3. Write commented output to a new file
-polyglot comment src/auth.js --output src/auth.documented.js
+poly-glot comment src/auth.js --output src/auth.documented.js
 
 # 4. Comment every JS/TS file in a directory
-polyglot comment --dir src/
+poly-glot comment --dir src/
 
 # 5. Comment a directory and write output to a separate folder
-polyglot comment --dir src/ --output-dir src-commented/
+poly-glot comment --dir src/ --output-dir src-commented/
 
 # 6. Pipe from stdin
-cat main.py | polyglot comment --stdin --lang python > main_commented.py
+cat main.py | poly-glot comment --stdin --lang python > main_commented.py
 
 # 7. Analyse code quality
-polyglot explain src/utils.ts
+poly-glot explain src/utils.ts
 ```
 
 ---
 
 ## Commands
 
-### `polyglot config`
+### `poly-glot config`
 
 Set your API key and preferred provider/model.
 
 ```bash
 # Interactive
-polyglot config
+poly-glot config
 
 # Non-interactive (great for CI/CD)
-polyglot config --key sk-... --provider openai --model gpt-4o-mini
-polyglot config --key sk-ant-... --provider anthropic --model claude-sonnet-4-5
+poly-glot config --key sk-... --provider openai --model gpt-4o-mini
+poly-glot config --key sk-ant-... --provider anthropic --model claude-sonnet-4-5
 ```
 
 **Environment variables** (override config file — ideal for CI):
@@ -67,12 +67,12 @@ polyglot config --key sk-ant-... --provider anthropic --model claude-sonnet-4-5
 export POLYGLOT_API_KEY=sk-...
 export POLYGLOT_PROVIDER=openai
 export POLYGLOT_MODEL=gpt-4o-mini
-polyglot comment src/auth.js
+poly-glot comment src/auth.js
 ```
 
 ---
 
-### `polyglot comment`
+### `poly-glot comment`
 
 Comment a file, directory, or stdin.
 
@@ -90,12 +90,12 @@ Comment a file, directory, or stdin.
 
 ---
 
-### `polyglot explain`
+### `poly-glot explain`
 
 Analyse a file for complexity, bugs, documentation quality, and more.
 
 ```bash
-polyglot explain src/auth.js
+poly-glot explain src/auth.js
 ```
 
 Output includes:
@@ -135,8 +135,8 @@ Output includes:
     POLYGLOT_PROVIDER: openai
     POLYGLOT_MODEL: gpt-4o-mini
   run: |
-    npm install -g polyglot-cli
-    polyglot comment --dir src/ --output-dir src-commented/
+    npm install -g poly-glot-ai-cli
+    poly-glot comment --dir src/ --output-dir src-commented/
 ```
 
 ---
