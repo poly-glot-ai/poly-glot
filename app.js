@@ -1736,24 +1736,25 @@ function calculateAge(birthDate) {
         }
     });
     
-    // Try it now - scroll to main content
+    // Try it now - scroll to API Settings section
     tryItBtn.addEventListener('click', () => {
-        const mainContent = document.querySelector('.main-content');
-        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // Auto-select JavaScript and show functions
-        const languageSelect = document.getElementById('language');
-        languageSelect.value = 'javascript';
-        languageSelect.dispatchEvent(new Event('change'));
-        
-        // Highlight the function examples category
-        setTimeout(() => {
-            const functionNav = document.querySelector('[data-category="functions"]');
-            if (functionNav) {
-                functionNav.click();
+        const apiSettings = document.getElementById('commentGenerator');
+        if (apiSettings) {
+            // Use scrollIntoView for broad device support
+            apiSettings.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Fallback for browsers that don't support smooth scrollIntoView
+            // (e.g. older Safari/iOS) — manual scroll with offset
+            try {
+                const rect = apiSettings.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const targetY = rect.top + scrollTop - 24; // 24px breathing room
+                window.scrollTo({ top: targetY, behavior: 'smooth' });
+            } catch (e) {
+                // silent — scrollIntoView already fired above
             }
-        }, 500);
-        
+        }
+
         // Track CTA click
         if (window.polyglotAnalytics) {
             window.polyglotAnalytics.trackEvent('demo_cta_clicked', {

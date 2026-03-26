@@ -4,6 +4,19 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.5.2] — 2026-03-26
+
+### ✨ Polish
+
+- **"Try It Now Below" CTA** — button is now perfectly centered on all screen sizes (desktop, tablet, mobile)
+- **Clickable CTA** — clicking "Try It Now Below ↓" smoothly scrolls to the ⚙️ API Settings section on all devices
+- Added subtle pulse animation to CTA button so it draws the eye without being distracting
+- Hover pauses pulse; active state gives tactile press feedback
+- Responsive max-width caps (320px tablet, 280px mobile) keep button from stretching edge-to-edge
+- Asset cache-bust bumped to `?v=205`
+
+---
+
 ## [v1.5.1] — 2026-04-02
 
 ### 🚀 New Features
