@@ -18,14 +18,14 @@ import * as fs   from 'fs';
 import * as path from 'path';
 import * as os   from 'os';
 import * as readline from 'readline';
-import { PolyGlotGenerator } from './generator';
+import { PolyGlotGenerator, WhyResult } from './generator';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
 import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -258,39 +258,95 @@ async function runComment(args: string[]): Promise<void> {
 // ─── Command: why ─────────────────────────────────────────────────────────────
 
 async function runWhy(args: string[]): Promise<void> {
-    const flags  = parseFlags(args);
-    const cfg    = loadConfig();
+    const flags   = parseFlags(args);
+    const cfg     = loadConfig();
 
     assertConfigured(cfg);
 
     const gen = new PolyGlotGenerator(cfg);
 
-    // ── single file mode (WHY comments don't support stdin/dir yet) ──
+    // ── stdin mode ──
+    if (flags['--stdin']) {
+        const lang = (flags['--lang'] as string) || 'javascript';
+        const code = await readStdin();
+        if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
+
+        spin(`Adding why-comments for stdin (${lang})…`);
+        const result = await gen.generateWhyComments(code, lang);
+        stopSpin();
+        ping({ cmd: 'why', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
+        process.stdout.write(result.commentedCode + '\n');
+        return;
+    }
+
+    // ── directory mode ──
+    if (flags['--dir']) {
+        const dir  = path.resolve(flags['--dir'] as string);
+        const exts = flags['--ext']
+            ? (flags['--ext'] as string).split(',').map(e => e.trim().replace(/^\./, ''))
+            : Object.keys(SUPPORTED_EXTENSIONS);
+
+        if (!fs.existsSync(dir)) { error(`Directory not found: ${dir}`); process.exit(1); }
+
+        const files = collectFiles(dir, exts);
+        if (!files.length) { warn(`No supported files found in ${dir}`); return; }
+
+        console.log(`\n${COLORS.cyan}${COLORS.bold}Poly-Glot${COLORS.reset} — why-commenting ${files.length} file(s) in ${COLORS.dim}${dir}${COLORS.reset}\n`);
+
+        let ok = 0;
+        let fail = 0;
+
+        for (const file of files) {
+            const rel  = path.relative(dir, file);
+            const ext  = file.split('.').pop()!.toLowerCase();
+            const lang = SUPPORTED_EXTENSIONS[ext] || 'javascript';
+            const code = fs.readFileSync(file, 'utf8');
+
+            process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
+            try {
+                const result = await gen.generateWhyComments(code, lang);
+                const outPath = flags['--output-dir']
+                    ? path.join(flags['--output-dir'] as string, rel)
+                    : file;
+
+                if (flags['--output-dir']) {
+                    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                }
+                fs.writeFileSync(outPath, result.commentedCode, 'utf8');
+                ok++;
+                console.log(`${COLORS.green}✓${COLORS.reset}`);
+            } catch (e: unknown) {
+                fail++;
+                console.log(`${COLORS.red}✗ ${e instanceof Error ? e.message : String(e)}${COLORS.reset}`);
+            }
+        }
+
+        ping({ cmd: 'why', lang: 'multi', provider: cfg.provider, mode: 'dir', version: VERSION }, !!cfg.telemetry);
+        console.log(`\n${ok} done, ${fail} failed\n`);
+        return;
+    }
+
+    // ── single file mode ──
     const filePath = args.find(a => !a.startsWith('-'));
-    if (!filePath) { error('Specify a file. Run poly-glot --help for usage.'); process.exit(1); }
+    if (!filePath) { error('Specify a file, --dir, or --stdin. Run poly-glot --help for usage.'); process.exit(1); }
 
     const absPath = path.resolve(filePath);
     if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
 
-    const ext    = absPath.split('.').pop()!.toLowerCase();
-    const lang   = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
-    const code   = fs.readFileSync(absPath, 'utf8');
+    const ext     = absPath.split('.').pop()!.toLowerCase();
+    const lang    = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    const code    = fs.readFileSync(absPath, 'utf8');
     const outPath = flags['--output']
         ? path.resolve(flags['--output'] as string)
         : absPath;
 
-    spin(`Adding WHY comments to ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
+    spin(`Why-commenting ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.generateWhyComments(code, lang);
     stopSpin();
 
     ping({ cmd: 'why', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     fs.writeFileSync(outPath, result.commentedCode, 'utf8');
-    success(`${path.basename(outPath)} — WHY comments added — $${result.cost.toFixed(5)} | ${result.tokensUsed} tokens`);
-    
-    console.log('');
-    console.log(`  ${COLORS.dim}💡 WHY comments explain business logic & design decisions (not just WHAT the code does)${COLORS.reset}`);
-    console.log(`  ${COLORS.dim}   Use both: ${COLORS.cyan}polyglot comment${COLORS.reset}${COLORS.dim} (WHAT) + ${COLORS.cyan}polyglot why${COLORS.reset}${COLORS.dim} (WHY) for complete documentation${COLORS.reset}`);
-    console.log('');
+    success(`${path.basename(outPath)} why-commented`);
 }
 
 // ─── Command: explain ─────────────────────────────────────────────────────────
@@ -546,17 +602,15 @@ ${COLORS.bold}Usage:${COLORS.reset}
 
 ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}demo${COLORS.reset}                         See Poly-Glot in action with interactive examples
-  ${COLORS.cyan}comment${COLORS.reset} <file>               Add WHAT comments (standard documentation)
-  ${COLORS.cyan}why${COLORS.reset} <file>                   Add WHY comments (explain business logic & decisions)
+  ${COLORS.cyan}comment${COLORS.reset} <file>               Comment a single file (edits in place)
   ${COLORS.cyan}comment${COLORS.reset} <file> --output <f>  Write commented code to a different file
   ${COLORS.cyan}comment${COLORS.reset} --dir <dir>          Comment all supported files in a directory
   ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>   Read code from stdin, write to stdout
+  ${COLORS.cyan}why${COLORS.reset} <file>                   Add why-comments explaining decisions & intent
+  ${COLORS.cyan}why${COLORS.reset} --dir <dir>              Why-comment all supported files in a directory
+  ${COLORS.cyan}why${COLORS.reset} --stdin --lang <l>       Read from stdin, write why-commented code to stdout
   ${COLORS.cyan}explain${COLORS.reset} <file>               Analyse a file (complexity, bugs, quality)
   ${COLORS.cyan}config${COLORS.reset}                       Configure API key and provider interactively
-
-${COLORS.bold}Comment Types:${COLORS.reset}
-  ${COLORS.dim}WHAT${COLORS.reset} (comment) - Standard documentation (params, returns, usage)
-  ${COLORS.dim}WHY${COLORS.reset}  (why)     - Reasoning, design decisions, trade-offs, business logic
 
 ${COLORS.bold}Options:${COLORS.reset}
   --lang <lang>         Override language detection (e.g. python, javascript)
@@ -577,15 +631,14 @@ ${COLORS.bold}Examples:${COLORS.reset}
   polyglot demo --lang javascript      # View JavaScript example
   polyglot demo --lang python --live   # Generate live comments with API
   polyglot config --key sk-... --provider openai --model gpt-4o-mini
-  
-  polyglot comment src/auth.js         # Add WHAT comments (documentation)
-  polyglot why src/auth.js             # Add WHY comments (reasoning)
-  polyglot comment src/auth.js && polyglot why src/auth.js  # Both!
-  
+  polyglot comment src/auth.js
   polyglot comment src/auth.js --output src/auth.documented.js
   polyglot comment --dir src/ --ext js,ts
   polyglot comment --dir src/ --output-dir src-commented/
   cat main.py | polyglot comment --stdin --lang python > main_commented.py
+  polyglot why src/auth.js
+  polyglot why --dir src/ --output-dir src-why/
+  cat main.py | polyglot why --stdin --lang python > main_why.py
   polyglot explain src/utils.ts
 
 ${COLORS.bold}Supported languages:${COLORS.reset}

@@ -77,6 +77,13 @@ export interface ExplainResult {
     cost: number;
 }
 
+export interface WhyResult {
+    commentedCode: string;
+    model: string;
+    cost: number;
+    tokensUsed: number;
+}
+
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 export class PolyGlotGenerator {
@@ -105,12 +112,10 @@ export class PolyGlotGenerator {
         };
     }
 
-    async generateWhyComments(code: string, languageId: string): Promise<GenerateResult> {
-        const style = LANGUAGE_STYLE[languageId] || 'inline comments';
-        const prompt = this._buildWhyPrompt(code, languageId, style);
+    async generateWhyComments(code: string, languageId: string): Promise<WhyResult> {
+        const prompt = this._buildWhyPrompt(code, languageId);
         const raw    = await this._call(prompt);
 
-        // Strip markdown fences if the model wrapped the output
         const commentedCode = raw
             .replace(/^```[\w]*\n?/m, '')
             .replace(/\n?```$/m, '')
@@ -118,7 +123,7 @@ export class PolyGlotGenerator {
 
         return {
             commentedCode,
-            model:      raw,  // overwritten below
+            model:      this.cfg.model || '',
             cost:       0,
             tokensUsed: 0,
         };
@@ -205,6 +210,24 @@ export class PolyGlotGenerator {
 
     // ─── Prompts ──────────────────────────────────────────────────────────────
 
+    private _buildWhyPrompt(code: string, lang: string): string {
+        return `You are a senior ${lang} engineer doing a code review. Add inline "why" comments to the following code.
+
+Rules:
+- Focus exclusively on WHY decisions were made, not WHAT the code does
+- Comment on: algorithmic trade-offs, non-obvious choices, performance decisions, edge-case handling, historical context clues, and anything a new engineer would ask "why not just…?" about
+- Use the correct single-line comment syntax for ${lang} (// for most languages, # for Python/Ruby/Shell, -- for SQL/Lua, ' for VBA)
+- Place comments on the line immediately above the code they describe, or inline at the end of short lines
+- Do NOT restate what the code does literally — only explain the reasoning behind it
+- Do NOT add comments to self-explanatory lines (trivial assignments, obvious returns, etc.)
+- Keep each comment to one line — concise and precise
+- Keep existing code exactly as-is — only add comments
+- Return ONLY the commented code, no explanations or markdown fences
+
+Code:
+${code}`;
+    }
+
     private _buildCommentPrompt(code: string, lang: string, style: string): string {
         return `You are an expert ${lang} developer. Add comprehensive ${style} comments to the following code.
 
@@ -238,38 +261,6 @@ ${code}`;
 }
 
 Return ONLY valid JSON, no markdown.
-
-Code:
-${code}`;
-    }
-
-    private _buildWhyPrompt(code: string, lang: string, style: string): string {
-        return `You are an expert ${lang} developer. Add WHY comments to this code explaining business logic, design decisions, and reasoning.
-
-CRITICAL DISTINCTION:
-- WHAT comments (basic documentation): Describe what the code does
-- WHY comments (reasoning): Explain WHY design decisions were made, business logic, trade-offs, intent
-
-GOOD WHY COMMENT EXAMPLES:
-✅ "// Using debounce here to prevent API spam during rapid typing - reduces server load by 90%"
-✅ "// Cache invalidation after 5min because user data changes infrequently, balancing freshness vs performance"
-✅ "// Validating email on blur (not keystroke) to avoid annoying UX while user is still typing"
-✅ "// Choosing bubble sort despite O(n²) complexity - dataset is always <10 items, simplicity > optimization"
-✅ "// Using UTC timestamps throughout to avoid timezone bugs in multi-region deployments"
-
-BAD WHY COMMENT EXAMPLES (these are WHAT comments):
-❌ "// This function calculates the total" (describes WHAT, not WHY)
-❌ "// Loop through array" (obvious from code)
-❌ "// Return the result" (no reasoning explained)
-
-RULES:
-- Use ${style} format for inline comments
-- Focus ONLY on business logic, architectural decisions, trade-offs, performance reasoning
-- Explain WHY this approach was chosen over alternatives
-- Mention constraints, requirements, or context that influenced the design
-- Keep existing code exactly as-is — only add comments
-- Skip trivial/obvious code - only comment where reasoning matters
-- Return ONLY the commented code, no explanations or markdown fences
 
 Code:
 ${code}`;
