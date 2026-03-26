@@ -861,18 +861,14 @@
                 </div>
             </div>
 
-            <form action="https://formspree.io/f/mqakwpbq" method="POST" class="enterprise-form" id="enterpriseForm">
-                <!-- Hidden fields for FormSpree -->
-                <input type="hidden" name="_subject" value="Poly-Glot Enterprise Demo Request">
-                <input type="text" name="_gotcha" style="display:none">
-                
+            <form class="enterprise-form" id="enterpriseForm">
                 <div class="form-row">
-                    <input type="text" name="name" placeholder="Name *" required class="form-input">
-                    <input type="email" name="_replyto" placeholder="Work Email *" required class="form-input">
+                    <input type="text" name="name" id="formName" placeholder="Name *" required class="form-input">
+                    <input type="email" name="email" id="formEmail" placeholder="Work Email *" required class="form-input">
                 </div>
                 <div class="form-row">
-                    <input type="text" name="company" placeholder="Company Name *" required class="form-input">
-                    <select name="team_size" class="form-input">
+                    <input type="text" name="company" id="formCompany" placeholder="Company Name *" required class="form-input">
+                    <select name="team_size" id="formTeamSize" class="form-input">
                         <option value="">Team Size</option>
                         <option value="1-10">1-10 developers</option>
                         <option value="11-50">11-50 developers</option>
@@ -880,7 +876,7 @@
                         <option value="200+">200+ developers</option>
                     </select>
                 </div>
-                <textarea name="message" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
+                <textarea name="message" id="formMessage" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
                 
                 <button type="submit" class="btn-enterprise" id="submitBtn">
                     <span id="btnText">Request Enterprise Demo →</span>
@@ -908,7 +904,6 @@
         document.getElementById('enterpriseForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            var form = e.target;
             var submitBtn = document.getElementById('submitBtn');
             var btnText = document.getElementById('btnText');
             var btnLoading = document.getElementById('btnLoading');
@@ -924,24 +919,41 @@
             btnText.style.display = 'none';
             btnLoading.style.display = 'inline';
             
-            var data = new FormData(form);
+            // Get form values
+            var name = document.getElementById('formName').value;
+            var email = document.getElementById('formEmail').value;
+            var company = document.getElementById('formCompany').value;
+            var teamSize = document.getElementById('formTeamSize').value;
+            var message = document.getElementById('formMessage').value;
             
-            fetch(form.action, {
+            // Use Web3Forms (free, unlimited, works immediately)
+            var formData = new FormData();
+            formData.append('access_key', '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('company', company);
+            formData.append('team_size', teamSize || 'Not specified');
+            formData.append('message', message || 'No additional message');
+            formData.append('subject', 'Poly-Glot Enterprise Demo Request from ' + company);
+            formData.append('from_name', name + ' (' + company + ')');
+            formData.append('to', 'hwmoses2@icloud.com');
+            
+            fetch('https://api.web3forms.com/submit', {
                 method: 'POST',
-                body: data,
-                headers: {
-                    'Accept': 'application/json'
-                }
+                body: formData
             })
             .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
                 // Reset button state
                 submitBtn.disabled = false;
                 btnText.style.display = 'inline';
                 btnLoading.style.display = 'none';
                 
-                if (response.ok) {
+                if (data.success) {
                     // Success!
-                    form.reset();
+                    document.getElementById('enterpriseForm').reset();
                     successMsg.style.display = 'block';
                     
                     // Track in Google Analytics
@@ -959,13 +971,13 @@
                     
                     // Log for debugging
                     console.log('✅ Form submitted successfully to hwmoses2@icloud.com');
+                    console.log('Details:', { name: name, company: company, email: email });
                 } else {
-                    // Server error
-                    throw new Error('Server responded with ' + response.status);
+                    throw new Error(data.message || 'Submission failed');
                 }
             })
             .catch(function(error) {
-                // Network error or server error
+                // Error occurred
                 submitBtn.disabled = false;
                 btnText.style.display = 'inline';
                 btnLoading.style.display = 'none';
