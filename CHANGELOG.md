@@ -47,6 +47,15 @@ All notable changes to Poly-Glot will be documented in this file.
 - `GET /health` endpoint for smoke testing
 - Zero impact on web UI or VS Code extension
 
+#### 🧪 "Try a Sample" Code Strip
+- **One-click sample code buttons** above the textarea — no API key needed to see the tool in action
+- 6 languages: Python, JavaScript, TypeScript, Go, Rust, Java
+- Each button loads a real ~40-line uncommented snippet (caches, rate limiters, event buses, LRU caches — real-world patterns)
+- Auto-detects language and syncs Comment Style dropdown on click
+- Active button highlights to show which sample is loaded
+- Tracks `sample_loaded` event in GA4 per language
+- Addresses high bounce rate (67%) caused by users landing on a blank textarea with no clear starting point
+
 ### 📦 Published
 - `poly-glot-ai-cli@1.2.0` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
 
