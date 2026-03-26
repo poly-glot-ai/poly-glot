@@ -48,6 +48,31 @@ poly-glot explain src/utils.ts
 
 ## Commands
 
+### `poly-glot demo`
+
+**See Poly-Glot in action** with interactive code examples before using it on your own files.
+
+```bash
+# Interactive demo - choose a language
+poly-glot demo
+
+# View a specific language example
+poly-glot demo --lang javascript
+poly-glot demo --lang python
+
+# Generate live comments using your API key (requires configuration)
+poly-glot demo --lang rust --live
+```
+
+**Features:**
+- 📚 Pre-built examples for 6+ languages (JavaScript, Python, TypeScript, Java, Go, Rust)
+- 🎯 See before/after transformations instantly
+- ⚡ No API key required for static examples
+- 🔴 Optional `--live` mode to test with your configured API
+- 💡 Learn what Poly-Glot can do for your codebase
+
+---
+
 ### `poly-glot config`
 
 Set your API key and preferred provider/model.

@@ -20,6 +20,7 @@ import * as os   from 'os';
 import * as readline from 'readline';
 import { PolyGlotGenerator } from './generator';
 import { loadConfig, saveConfig, Config } from './config';
+import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ async function main(): Promise<void> {
     if (cmd === 'config')  { await runConfig(args.slice(1)); return; }
     if (cmd === 'comment') { await runComment(args.slice(1)); return; }
     if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
+    if (cmd === 'demo')    { await runDemo(args.slice(1)); return; }
 
     error(`Unknown command: ${cmd}. Run 'poly-glot --help' for usage.`);
     process.exit(1);
@@ -247,6 +249,119 @@ async function runExplain(args: string[]): Promise<void> {
     }
 }
 
+// ─── Command: demo ────────────────────────────────────────────────────────────
+
+async function runDemo(args: string[]): Promise<void> {
+    const flags = parseFlags(args);
+    
+    console.log(`\n${COLORS.bold}${COLORS.cyan}🎬 Poly-Glot Demo — See It In Action${COLORS.reset}\n`);
+    console.log(`Watch how Poly-Glot transforms code with professional comments\n`);
+    
+    // Get available languages
+    const languages = getSampleLanguages();
+    
+    // If --lang specified, use that directly
+    let selectedLang = flags['--lang'] as string;
+    
+    // Interactive language selection if not specified
+    if (!selectedLang) {
+        console.log(`${COLORS.bold}Available languages:${COLORS.reset}`);
+        languages.forEach((lang, idx) => {
+            const sample = DEMO_SAMPLES[lang];
+            console.log(`  ${COLORS.cyan}${idx + 1}.${COLORS.reset} ${sample.displayName} ${COLORS.dim}(${sample.description})${COLORS.reset}`);
+        });
+        console.log('');
+        
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const ask = (q: string): Promise<string> => new Promise(res => rl.question(q, res));
+        
+        const choice = await ask(`Select a language [1-${languages.length}] or name: `);
+        rl.close();
+        
+        // Parse selection
+        const choiceNum = parseInt(choice.trim());
+        if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= languages.length) {
+            selectedLang = languages[choiceNum - 1];
+        } else {
+            selectedLang = choice.trim().toLowerCase();
+        }
+    }
+    
+    // Get the sample
+    const sample = DEMO_SAMPLES[selectedLang];
+    if (!sample) {
+        error(`Language '${selectedLang}' not found in demo samples.`);
+        console.log(`Available: ${languages.join(', ')}`);
+        process.exit(1);
+    }
+    
+    console.log(`\n${COLORS.bold}${COLORS.green}✓${COLORS.reset} Selected: ${sample.displayName}\n`);
+    console.log(`${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
+    
+    // Show BEFORE
+    console.log(`${COLORS.bold}${COLORS.yellow}BEFORE:${COLORS.reset} ${COLORS.dim}Inconsistent or minimal comments${COLORS.reset}\n`);
+    console.log(sample.before);
+    console.log(`\n${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
+    
+    // Option to generate live or show static
+    const cfg = loadConfig();
+    const hasApiKey = cfg.apiKey && cfg.apiKey.length >= 10;
+    
+    if (flags['--live'] && hasApiKey) {
+        // Generate live comments using API
+        console.log(`${COLORS.cyan}Generating live comments with ${cfg.provider} (${cfg.model})...${COLORS.reset}\n`);
+        const gen = new PolyGlotGenerator(cfg);
+        
+        spin('Generating comments...');
+        try {
+            const result = await gen.generateComments(sample.before, sample.language);
+            stopSpin();
+            
+            console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
+            console.log(result.commentedCode);
+            console.log(`\n${COLORS.dim}Cost: $${result.cost.toFixed(5)} | Tokens: ${result.tokensUsed}${COLORS.reset}\n`);
+        } catch (e) {
+            stopSpin();
+            error(`Failed to generate: ${e instanceof Error ? e.message : String(e)}`);
+            console.log(`\nShowing pre-generated example instead:\n`);
+            console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
+            console.log(sample.after);
+            console.log('');
+        }
+    } else {
+        // Show static after example
+        console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
+        console.log(sample.after);
+        console.log('');
+        
+        if (!hasApiKey && flags['--live']) {
+            warn('API key not configured. Showing pre-generated example.');
+            console.log(`Run ${COLORS.cyan}poly-glot config${COLORS.reset} to set up live demo.\n`);
+        }
+    }
+    
+    console.log(`${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
+    
+    // Show benefits
+    console.log(`${COLORS.bold}✨ Key Improvements:${COLORS.reset}`);
+    console.log(`  ${COLORS.green}✓${COLORS.reset} Standardized documentation format (JSDoc, PyDoc, etc.)`);
+    console.log(`  ${COLORS.green}✓${COLORS.reset} Complete parameter and return type descriptions`);
+    console.log(`  ${COLORS.green}✓${COLORS.reset} Error handling and edge cases documented`);
+    console.log(`  ${COLORS.green}✓${COLORS.reset} Usage examples included`);
+    console.log(`  ${COLORS.green}✓${COLORS.reset} Better searchability and AI comprehension\n`);
+    
+    // CTA
+    console.log(`${COLORS.bold}${COLORS.cyan}Ready to try it on your code?${COLORS.reset}`);
+    console.log(`  ${COLORS.dim}poly-glot comment your-file.js${COLORS.reset}`);
+    console.log(`  ${COLORS.dim}poly-glot comment --dir src/${COLORS.reset}`);
+    
+    if (!hasApiKey) {
+        console.log(`\n${COLORS.yellow}⚠${COLORS.reset}  Set up your API key first: ${COLORS.cyan}poly-glot config${COLORS.reset}`);
+    }
+    
+    console.log('');
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseFlags(args: string[]): Record<string, string | boolean> {
@@ -329,6 +444,7 @@ ${COLORS.bold}Usage:${COLORS.reset}
   poly-glot <command> [options]
 
 ${COLORS.bold}Commands:${COLORS.reset}
+  ${COLORS.cyan}demo${COLORS.reset}                         See Poly-Glot in action with interactive examples
   ${COLORS.cyan}comment${COLORS.reset} <file>               Comment a single file (edits in place)
   ${COLORS.cyan}comment${COLORS.reset} <file> --output <f>  Write commented code to a different file
   ${COLORS.cyan}comment${COLORS.reset} --dir <dir>          Comment all supported files in a directory
@@ -338,6 +454,7 @@ ${COLORS.bold}Commands:${COLORS.reset}
 
 ${COLORS.bold}Options:${COLORS.reset}
   --lang <lang>         Override language detection (e.g. python, javascript)
+  --live                Generate live comments using your API (demo command only)
   --output <file>       Output file for single-file mode
   --output-dir <dir>    Output directory for --dir mode (preserves structure)
   --ext <list>          Comma-separated extensions to include in --dir mode
@@ -348,6 +465,9 @@ ${COLORS.bold}Options:${COLORS.reset}
   --help, -h            Show this help
 
 ${COLORS.bold}Examples:${COLORS.reset}
+  polyglot demo                        # Interactive demo - see it in action!
+  polyglot demo --lang javascript      # View JavaScript example
+  polyglot demo --lang python --live   # Generate live comments with API
   polyglot config --key sk-... --provider openai --model gpt-4o-mini
   polyglot comment src/auth.js
   polyglot comment src/auth.js --output src/auth.documented.js
