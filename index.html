@@ -901,95 +901,120 @@
 
     <!-- Enterprise Form Handler -->
     <script>
-        document.getElementById('enterpriseForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('enterpriseForm');
+            if (!form) {
+                console.error('Form not found!');
+                return;
+            }
             
-            var submitBtn = document.getElementById('submitBtn');
-            var btnText = document.getElementById('btnText');
-            var btnLoading = document.getElementById('btnLoading');
-            var successMsg = document.getElementById('formSuccess');
-            var errorMsg = document.getElementById('formError');
-            
-            // Hide previous messages
-            successMsg.style.display = 'none';
-            errorMsg.style.display = 'none';
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            btnText.style.display = 'none';
-            btnLoading.style.display = 'inline';
-            
-            // Get form values
-            var name = document.getElementById('formName').value;
-            var email = document.getElementById('formEmail').value;
-            var company = document.getElementById('formCompany').value;
-            var teamSize = document.getElementById('formTeamSize').value;
-            var message = document.getElementById('formMessage').value;
-            
-            // Use Web3Forms (free, unlimited, works immediately)
-            var formData = new FormData();
-            formData.append('access_key', '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
-            formData.append('name', name);
-            formData.append('email', email);
-            formData.append('company', company);
-            formData.append('team_size', teamSize || 'Not specified');
-            formData.append('message', message || 'No additional message');
-            formData.append('subject', 'Poly-Glot Enterprise Demo Request from ' + company);
-            formData.append('from_name', name + ' (' + company + ')');
-            formData.append('to', 'hwmoses2@icloud.com');
-            
-            fetch('https://api.web3forms.com/submit', {
-                method: 'POST',
-                body: formData
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                // Reset button state
-                submitBtn.disabled = false;
-                btnText.style.display = 'inline';
-                btnLoading.style.display = 'none';
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
                 
-                if (data.success) {
-                    // Success!
-                    document.getElementById('enterpriseForm').reset();
-                    successMsg.style.display = 'block';
+                var submitBtn = document.getElementById('submitBtn');
+                var btnText = document.getElementById('btnText');
+                var btnLoading = document.getElementById('btnLoading');
+                var successMsg = document.getElementById('formSuccess');
+                var errorMsg = document.getElementById('formError');
+                
+                // Hide previous messages
+                if (successMsg) successMsg.style.display = 'none';
+                if (errorMsg) errorMsg.style.display = 'none';
+                
+                // Show loading state
+                if (submitBtn) submitBtn.disabled = true;
+                if (btnText) btnText.style.display = 'none';
+                if (btnLoading) btnLoading.style.display = 'inline';
+                
+                // Get form values
+                var name = document.getElementById('formName') ? document.getElementById('formName').value : '';
+                var email = document.getElementById('formEmail') ? document.getElementById('formEmail').value : '';
+                var company = document.getElementById('formCompany') ? document.getElementById('formCompany').value : '';
+                var teamSize = document.getElementById('formTeamSize') ? document.getElementById('formTeamSize').value : '';
+                var message = document.getElementById('formMessage') ? document.getElementById('formMessage').value : '';
+                
+                // Simple mailto fallback - ALWAYS WORKS
+                var subject = encodeURIComponent('Poly-Glot Enterprise Demo Request from ' + company);
+                var body = encodeURIComponent(
+                    'Name: ' + name + '\n' +
+                    'Email: ' + email + '\n' +
+                    'Company: ' + company + '\n' +
+                    'Team Size: ' + (teamSize || 'Not specified') + '\n' +
+                    'Message: ' + (message || 'No additional message')
+                );
+                
+                // Try Web3Forms first, fallback to mailto
+                var formData = new FormData();
+                formData.append('access_key', '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('company', company);
+                formData.append('team_size', teamSize || 'Not specified');
+                formData.append('message', message || 'No additional message');
+                formData.append('subject', 'Poly-Glot Enterprise Demo Request from ' + company);
+                
+                fetch('https://api.web3forms.com/submit', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    // Reset button state
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
                     
-                    // Track in Google Analytics
-                    if (typeof gtag !== 'undefined') {
-                        gtag('event', 'submit', {
-                            'event_category': 'Enterprise',
-                            'event_label': 'Demo Request'
-                        });
+                    if (data.success) {
+                        // Success!
+                        form.reset();
+                        if (successMsg) successMsg.style.display = 'block';
+                        
+                        // Track in Google Analytics
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'submit', {
+                                'event_category': 'Enterprise',
+                                'event_label': 'Demo Request'
+                            });
+                        }
+                        
+                        // Hide success message after 10 seconds
+                        setTimeout(function() {
+                            if (successMsg) successMsg.style.display = 'none';
+                        }, 10000);
+                        
+                        // Log for debugging
+                        console.log('✅ Form submitted successfully to hwmoses2@icloud.com');
+                        console.log('Details:', { name: name, company: company, email: email });
+                    } else {
+                        throw new Error(data.message || 'Submission failed');
                     }
+                })
+                .catch(function(error) {
+                    // Web3Forms failed - use mailto fallback
+                    console.warn('Web3Forms failed, opening email client as fallback');
+                    console.error('Error:', error);
                     
-                    // Hide success message after 10 seconds
-                    setTimeout(function() {
-                        successMsg.style.display = 'none';
-                    }, 10000);
+                    // Open email client
+                    window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + subject + '&body=' + body;
                     
-                    // Log for debugging
-                    console.log('✅ Form submitted successfully to hwmoses2@icloud.com');
-                    console.log('Details:', { name: name, company: company, email: email });
-                } else {
-                    throw new Error(data.message || 'Submission failed');
-                }
-            })
-            .catch(function(error) {
-                // Error occurred
-                submitBtn.disabled = false;
-                btnText.style.display = 'inline';
-                btnLoading.style.display = 'none';
-                errorMsg.style.display = 'block';
-                
-                // Log for debugging
-                console.error('❌ Form submission failed:', error);
-                
-                // Hide error after 10 seconds
-                setTimeout(function() {
-                    errorMsg.style.display = 'none';
-                }, 10000);
+                    // Reset button state
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    
+                    // Show success message (email client opened)
+                    if (successMsg) {
+                        successMsg.innerHTML = '✅ Opening your email client... Please send the pre-filled message.';
+                        successMsg.style.display = 'block';
+                        
+                        setTimeout(function() {
+                            successMsg.style.display = 'none';
+                            successMsg.innerHTML = '✅ Thanks! We\'ll contact you within 24 hours.';
+                        }, 8000);
+                    }
+                });
             });
         });
     </script>
