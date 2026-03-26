@@ -97,6 +97,11 @@ function calculateAge(birthDate) {
                 terminalDemo.classList.remove('active');
                 setTimeout(() => {
                     terminalDemo.style.display = 'none';
+                    // Also hide code output section
+                    const codeOutputSection = document.getElementById('codeOutputSection');
+                    if (codeOutputSection) {
+                        codeOutputSection.style.display = 'none';
+                    }
                 }, 500);
             });
         }
@@ -153,7 +158,56 @@ function calculateAge(birthDate) {
         
         // Step 5: Show file updated message
         outputEl.textContent += '\n💾 File updated: calculateAge.js\n';
-        await sleep(300);
+        await sleep(600);
+        
+        // Step 6: Show the code output below
+        const codeOutputSection = document.getElementById('codeOutputSection');
+        const codeOutputBody = document.getElementById('codeOutputBody');
+        
+        if (codeOutputSection && codeOutputBody) {
+            // Clear previous output
+            codeOutputBody.innerHTML = '';
+            
+            // Show the section
+            codeOutputSection.style.display = 'block';
+            
+            // Add all code lines with highlighting
+            const lines = DEMO_CODE.after.split('\n');
+            const commentLines = [];
+            
+            // Identify comment lines
+            let inComment = false;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.trim().startsWith('/**')) {
+                    inComment = true;
+                    commentLines.push(i);
+                } else if (inComment && line.trim().includes('*/')) {
+                    commentLines.push(i);
+                    inComment = false;
+                } else if (inComment) {
+                    commentLines.push(i);
+                }
+            }
+            
+            // Create and add all lines
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'terminal-code-line';
+                
+                // Highlight comment lines
+                if (commentLines.includes(i)) {
+                    lineDiv.classList.add('code-added');
+                }
+                
+                lineDiv.innerHTML = highlightCode(line);
+                codeOutputBody.appendChild(lineDiv);
+            }
+            
+            // Scroll output into view
+            codeOutputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
         
         isRunning = false;
     }

@@ -3756,6 +3756,38 @@ kbd {
     margin-top: 1rem;
 }
 
+/* Code Output Section */
+.code-output-section {
+    margin-top: 2rem;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.code-output-header {
+    padding: 1rem 1.5rem;
+    background: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.code-output-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.code-output-body {
+    padding: 1.5rem;
+    background: #1e1e1e;
+    max-height: 500px;
+    overflow-y: auto;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
 .terminal-control-btn {
     display: inline-flex;
     align-items: center;
