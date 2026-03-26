@@ -302,22 +302,93 @@ fn find_max(numbers: &[i32]) -> Option<i32> {
         });
     }
     
-    function showLanguageDemo(lang) {
+    // Utility function for delays
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // Type code character by character with typing animation
+    async function typeCode(codeElement, code, speed = 15) {
+        codeElement.textContent = '';
+        const lines = code.split('\n');
+        
+        // Add typing class for cursor animation
+        codeElement.classList.add('typing');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let currentLine = '';
+            
+            // Type each character in the line
+            for (let char of line) {
+                currentLine += char;
+                codeElement.textContent = lines.slice(0, i).join('\n') + 
+                    (i > 0 ? '\n' : '') + currentLine;
+                
+                // Faster for whitespace, slower for code
+                const charSpeed = char === ' ' || char === '\t' ? speed / 3 : speed;
+                await sleep(charSpeed);
+            }
+            
+            // Add newline if not last line
+            if (i < lines.length - 1) {
+                codeElement.textContent += '\n';
+                await sleep(speed * 2); // Brief pause at end of line
+            }
+        }
+        
+        // Remove typing class to hide cursor after completion
+        setTimeout(() => {
+            codeElement.classList.remove('typing');
+        }, 500);
+    }
+    
+    async function showLanguageDemo(lang) {
         const sample = CLI_DEMO_SAMPLES[lang];
         if (!sample) return;
         
         // Hide language selector, show panels
-        document.getElementById('cliDemoLanguageGrid').parentElement.style.display = 'none';
-        document.getElementById('cliDemoPanels').style.display = 'grid';
+        const languageSelector = document.getElementById('cliDemoLanguageGrid').parentElement;
+        const panels = document.getElementById('cliDemoPanels');
         
-        // Populate code panels
-        document.querySelector('#cliDemoBefore code').textContent = sample.before;
-        document.querySelector('#cliDemoAfter code').textContent = sample.after;
+        languageSelector.style.display = 'none';
+        panels.style.display = 'grid';
+        
+        const beforeCodeElement = document.querySelector('#cliDemoBefore code');
+        const afterCodeElement = document.querySelector('#cliDemoAfter code');
+        
+        // Clear any existing content
+        beforeCodeElement.textContent = '';
+        afterCodeElement.textContent = '';
+        
+        // Highlight the selected card
+        document.querySelectorAll('.cli-demo-lang-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Step 1: Type the BEFORE code
+        const beforePanel = document.getElementById('cliDemoBefore');
+        beforePanel.style.opacity = '1';
+        beforePanel.style.transform = 'scale(1)';
+        await sleep(300);
+        
+        await typeCode(beforeCodeElement, sample.before, 12);
+        await sleep(800);
+        
+        // Step 2: Type the AFTER code with improvements
+        const afterPanel = document.getElementById('cliDemoAfter');
+        afterPanel.style.opacity = '1';
+        afterPanel.style.transform = 'scale(1)';
+        await sleep(300);
+        
+        await typeCode(afterCodeElement, sample.after, 10);
+        await sleep(500);
         
         // Track analytics
         if (window.polyglotAnalytics) {
             window.polyglotAnalytics.trackEvent('cli_demo_language_selected', {
-                language: lang
+                language: lang,
+                animation: 'typing'
             });
         }
     }

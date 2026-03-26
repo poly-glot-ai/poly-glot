@@ -1,0 +1,36 @@
+feat(cli): Add interactive "See It In Action" demo command
+
+Adds a new `poly-glot demo` command that allows users to experience
+Poly-Glot's capabilities with interactive code examples before using
+it on their own files. Inspired by the web app's demo functionality.
+
+Features:
+- Interactive language selection from 6+ examples
+- Before/after code transformations with syntax highlighting
+- Static examples (no API key required)
+- Optional --live mode for real-time API generation
+- Beautiful colored terminal output
+- Graceful error handling and fallbacks
+
+New files:
+- cli/src/demo-samples.ts: Library of before/after code examples
+  for JavaScript, Python, TypeScript, Java, Go, and Rust
+- cli/DEMO_FEATURE.md: Complete implementation documentation
+
+Modified files:
+- cli/src/index.ts: Added runDemo() command handler with
+  interactive UI, language selection, and live generation support
+- cli/README.md: Added demo command documentation and usage examples
+
+Usage:
+  poly-glot demo                        # Interactive demo
+  poly-glot demo --lang javascript      # Direct language selection
+  poly-glot demo --lang python --live   # Live generation with API
+
+Benefits:
+- New users can explore risk-free without API keys
+- Users can validate their API configuration
+- Quick reference for documentation styles
+- Engaging onboarding experience
+
+No breaking changes. Fully backward compatible.

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-result { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>🔍 CLI Demo Button Test</h1>
+    <p>Checking if all files are properly set up...</p>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        let allGood = true;
+        
+        function addResult(test, passed, details) {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${passed ? '✅' : '❌'} ${test}</strong><br>${details}`;
+            results.appendChild(div);
+            if (!passed) allGood = false;
+        }
+        
+        // Test 1: Check if button exists in HTML
+        fetch('index.html')
+            .then(r => r.text())
+            .then(html => {
+                const hasButton = html.includes('cliDemoBtn') && html.includes('See CLI Demo in Action');
+                addResult('Button HTML', hasButton, 
+                    hasButton ? 'Button found in index.html' : 'Button NOT found in index.html');
+                
+                const hasModal = html.includes('cli-demo-modal');
+                addResult('Modal HTML', hasModal,
+                    hasModal ? 'Modal structure found in index.html' : 'Modal NOT found in index.html');
+                
+                const hasScript = html.includes('cli-demo.js');
+                addResult('Script Tag', hasScript,
+                    hasScript ? 'cli-demo.js script tag found' : 'Script tag NOT found');
+            });
+        
+        // Test 2: Check if CSS file has styles
+        fetch('styles.css')
+            .then(r => r.text())
+            .then(css => {
+                const hasButtonStyles = css.includes('.cli-demo-button');
+                addResult('Button CSS', hasButtonStyles,
+                    hasButtonStyles ? 'Button styles found in styles.css' : 'Button styles NOT found');
+                
+                const hasModalStyles = css.includes('.cli-demo-modal');
+                addResult('Modal CSS', hasModalStyles,
+                    hasModalStyles ? 'Modal styles found in styles.css' : 'Modal styles NOT found');
+            });
+        
+        // Test 3: Check if JS file exists and loads
+        fetch('cli-demo.js')
+            .then(r => r.text())
+            .then(js => {
+                const hasInit = js.includes('CLI_DEMO_SAMPLES');
+                addResult('JavaScript File', hasInit,
+                    hasInit ? 'cli-demo.js loads successfully with sample data' : 'JavaScript file missing content');
+            })
+            .catch(e => {
+                addResult('JavaScript File', false, 'cli-demo.js failed to load: ' + e.message);
+            });
+        
+        // Test 4: Check Git commits
+        setTimeout(() => {
+            addResult('Summary', allGood, 
+                allGood ? 
+                '🎉 All tests passed! Button should be visible on https://poly-glot.ai' :
+                '⚠️ Some tests failed. Check the details above.');
+        }, 2000);
+    </script>
+</body>
+</html>
