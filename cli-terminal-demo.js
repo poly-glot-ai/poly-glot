@@ -190,35 +190,48 @@ function calculateAge(birthDate) {
     }
     
     function highlightCode(line) {
-        // Simple syntax highlighting
-        // Escape HTML first to prevent injection
-        let highlighted = escapeHtml(line);
+        // Simple syntax highlighting - build HTML safely
         
-        // Comments - return early if it's a comment line
+        // Comments - handle separately
         if (line.trim().startsWith('/**') || line.trim().startsWith('*') || line.trim().startsWith('*/')) {
-            return `<span class="code-comment">${highlighted}</span>`;
+            return `<span class="code-comment">${escapeHtml(line)}</span>`;
         }
         
-        // Inline comments
-        highlighted = highlighted.replace(/\/\/ (.+)$/g, '<span class="code-comment">// $1</span>');
+        // Build highlighted HTML by tokenizing the line
+        let html = '';
+        let remaining = line;
         
-        // Strings (do these first to avoid highlighting keywords inside strings)
-        highlighted = highlighted.replace(/&#39;([^&#39;]*)&#39;/g, '<span class="code-string">&#39;$1&#39;</span>');
-        highlighted = highlighted.replace(/&quot;([^&quot;]*)&quot;/g, '<span class="code-string">&quot;$1&quot;</span>');
+        // Handle inline comments first
+        const commentMatch = remaining.match(/^(.*)\/\/ (.*)$/);
+        if (commentMatch) {
+            html = highlightCodePart(commentMatch[1]) + '<span class="code-comment">// ' + escapeHtml(commentMatch[2]) + '</span>';
+            return html;
+        }
         
-        // Keywords
-        highlighted = highlighted.replace(/\b(function|const|let|var|if|return|throw|new|isNaN|else)\b/g, 
+        return highlightCodePart(remaining);
+    }
+    
+    function highlightCodePart(code) {
+        // Escape the whole thing first
+        let html = escapeHtml(code);
+        
+        // Replace strings (look for both &quot; and &#39; from escapeHtml)
+        html = html.replace(/&#39;([^&#39;]*)&#39;/g, '<span class="code-string">&#39;$1&#39;</span>');
+        html = html.replace(/&quot;([^&quot;]*)&quot;/g, '<span class="code-string">&quot;$1&quot;</span>');
+        
+        // Replace keywords
+        html = html.replace(/\b(function|const|let|var|if|return|throw|new|isNaN|else)\b/g, 
             '<span class="code-keyword">$1</span>');
         
-        // Function calls
-        highlighted = highlighted.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, 
+        // Replace function calls
+        html = html.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, 
             '<span class="code-function">$1</span>(');
         
-        // Numbers
-        highlighted = highlighted.replace(/\b(\d+)\b/g, 
+        // Replace numbers
+        html = html.replace(/\b(\d+)\b/g, 
             '<span class="code-number">$1</span>');
         
-        return highlighted;
+        return html;
     }
     
     function escapeHtml(text) {
