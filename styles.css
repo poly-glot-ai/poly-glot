@@ -4205,6 +4205,21 @@ kbd {
         width: 100%;
         justify-content: center;
     }
+
+    .cli-demo-language-selector-inline {
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .cli-demo-language-select {
+        min-width: 0;
+        flex: 1;
+        font-size: 0.82rem;
+    }
+
+    .cli-demo-selector-divider {
+        display: none;
+    }
     
     .cli-demo-modal {
         padding: 0.5rem;
@@ -4540,6 +4555,75 @@ kbd {
     background: rgba(99, 102, 241, 0.25);
     border-color: #6366f1;
     color: #e0e7ff;
+}
+
+/* ── CLI Demo CTA — language/mode selector + button spacing ────────────────── */
+.cli-demo-language-selector-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.75rem;        /* space between selectors and button */
+}
+
+.cli-demo-language-selector-inline label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.cli-demo-language-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(99, 102, 241, 0.1)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 8px;
+    color: var(--text-primary, #e2e8f0);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    min-width: 130px;
+}
+
+.cli-demo-language-select:hover {
+    border-color: rgba(99, 102, 241, 0.65);
+    background-color: rgba(99, 102, 241, 0.15);
+}
+
+.cli-demo-language-select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.cli-demo-language-select option {
+    background: #1e1e2e;
+    color: #e2e8f0;
+}
+
+/* separator between the two select groups */
+.cli-demo-selector-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(99, 102, 241, 0.25);
+    margin: 0 0.25rem;
+}
+
+/* button itself — keep centered, full-width on small screens */
+.cli-demo-cta .cli-demo-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 220px;
 }
 
 /* ── Keyboard shortcut badges on buttons ───────────────────────────────────── */
