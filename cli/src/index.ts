@@ -26,7 +26,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.4.1';  // README + CHANGELOG docs update
+const VERSION = '1.4.2';  // one-time what's-new notice + generic provider step in setup
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -45,6 +45,39 @@ const COLORS = {
     bold:   '\x1b[1m',
 };
 
+// ─── What's New notice (shown once per major feature release) ─────────────────
+
+function showWhatsNew(cfg: Config): void {
+    const last = cfg.lastSeenVersion || '0.0.0';
+
+    // Show notice when upgrading from any version before 1.3.0 (pre-why-comments)
+    const isOld = last === '' || last === '0.0.0' ||
+        last.startsWith('1.0') || last.startsWith('1.1') || last.startsWith('1.2');
+
+    if (!isOld) return;
+
+    console.log(`
+${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
+
+  ${COLORS.cyan}Three comment modes${COLORS.reset} are now available:
+
+  ${COLORS.bold}comment${COLORS.reset}  (default) — JSDoc, PyDoc, KDoc, Javadoc, etc.
+           ${COLORS.dim}poly-glot comment src/auth.js${COLORS.reset}
+
+  ${COLORS.bold}why${COLORS.reset}               — Inline reasoning: why this code was written this way
+           ${COLORS.dim}poly-glot comment src/auth.js --why${COLORS.reset}
+           ${COLORS.dim}poly-glot why src/auth.js${COLORS.reset}
+
+  ${COLORS.bold}both${COLORS.reset}              — Doc-comments + why-comments in one two-pass run
+           ${COLORS.dim}poly-glot comment src/auth.js --both${COLORS.reset}
+
+  Set your default so you never have to type the flag:
+  ${COLORS.dim}poly-glot config --mode both${COLORS.reset}
+
+${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
+`);
+}
+
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -54,8 +87,21 @@ async function main(): Promise<void> {
     if (!cmd || cmd === '--help' || cmd === '-h') { printHelp(); process.exit(0); }
     if (cmd === '--version' || cmd === '-v')      { console.log(VERSION); process.exit(0); }
 
-    // ── Telemetry consent (asked once, on first real command) ─────────────
+    // ── Load config ───────────────────────────────────────────────────────
     const cfg = loadConfig();
+
+    // ── One-time what's-new notice (only for users upgrading from < v1.3.0) ─
+    if (cmd !== 'config' && !process.env.CI && process.stdout.isTTY) {
+        showWhatsNew(cfg);
+    }
+
+    // ── Stamp the current version so notice won't show again ─────────────
+    if (cfg.lastSeenVersion !== VERSION) {
+        cfg.lastSeenVersion = VERSION;
+        saveConfig(cfg);
+    }
+
+    // ── Telemetry consent (asked once, on first real command) ─────────────
     if (cfg.telemetry === null && cmd !== 'config') {
         await askTelemetryConsent(cfg);
     }

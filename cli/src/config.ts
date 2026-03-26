@@ -5,11 +5,12 @@ import * as os   from 'os';
 export type CommentMode = 'comment' | 'why' | 'both';
 
 export interface Config {
-    apiKey:      string;
-    provider:    string;
-    model:       string;
-    telemetry:   boolean | null;   // null = not yet asked, true = opted in, false = opted out
-    defaultMode: CommentMode;      // default commenting mode (comment / why / both)
+    apiKey:          string;
+    provider:        string;
+    model:           string;
+    telemetry:       boolean | null;   // null = not yet asked, true = opted in, false = opted out
+    defaultMode:     CommentMode;      // default commenting mode (comment / why / both)
+    lastSeenVersion: string;           // last version the user ran — used for one-time "what's new" notices
 }
 
 const CONFIG_DIR  = path.join(os.homedir(), '.config', 'polyglot');
@@ -21,10 +22,11 @@ export function loadConfig(): Config {
         const envMode = process.env.POLYGLOT_MODE as CommentMode | undefined;
         const validModes: CommentMode[] = ['comment', 'why', 'both'];
         return {
-            apiKey:      process.env.POLYGLOT_API_KEY,
-            provider:    process.env.POLYGLOT_PROVIDER  || 'openai',
-            model:       process.env.POLYGLOT_MODEL      || 'gpt-4.1-mini',
-            defaultMode: validModes.includes(envMode!) ? envMode! : 'comment',
+            apiKey:          process.env.POLYGLOT_API_KEY,
+            provider:        process.env.POLYGLOT_PROVIDER || 'openai',
+            model:           process.env.POLYGLOT_MODEL    || 'gpt-4.1-mini',
+            defaultMode:     validModes.includes(envMode!) ? envMode! : 'comment',
+            lastSeenVersion: '',
             // CI/CD: respect POLYGLOT_TELEMETRY=0 to disable, default off in CI
             telemetry: process.env.POLYGLOT_TELEMETRY === '1' ? true
                      : process.env.POLYGLOT_TELEMETRY === '0' ? false
@@ -34,24 +36,25 @@ export function loadConfig(): Config {
     }
 
     if (!fs.existsSync(CONFIG_FILE)) {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '' };
     }
 
     try {
-        const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
+        const raw    = fs.readFileSync(CONFIG_FILE, 'utf8');
         const parsed = JSON.parse(raw) as Partial<Config>;
         const validModes: CommentMode[] = ['comment', 'why', 'both'];
         return {
-            apiKey:      parsed.apiKey    || '',
-            provider:    parsed.provider  || 'openai',
-            model:       parsed.model     || 'gpt-4o-mini',
-            telemetry:   parsed.telemetry ?? null,
-            defaultMode: validModes.includes(parsed.defaultMode as CommentMode)
-                             ? (parsed.defaultMode as CommentMode)
-                             : 'comment',
+            apiKey:          parsed.apiKey    || '',
+            provider:        parsed.provider  || 'openai',
+            model:           parsed.model     || 'gpt-4o-mini',
+            telemetry:       parsed.telemetry ?? null,
+            defaultMode:     validModes.includes(parsed.defaultMode as CommentMode)
+                                 ? (parsed.defaultMode as CommentMode)
+                                 : 'comment',
+            lastSeenVersion: parsed.lastSeenVersion || '',
         };
     } catch {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4o-mini', telemetry: null, defaultMode: 'comment' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4o-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '' };
     }
 }
 
