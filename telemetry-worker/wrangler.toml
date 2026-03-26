@@ -1,0 +1,23 @@
+name            = "polyglot-telemetry"
+main            = "worker.js"
+compatibility_date = "2024-09-23"
+
+# ── Routes ───────────────────────────────────────────────────────────────────
+# Serve all traffic on telemetry.poly-glot.ai
+# The DNS CNAME for this subdomain must point to workers.dev
+# (set via Cloudflare dashboard: CNAME telemetry → polyglot-telemetry.YOUR_SUBDOMAIN.workers.dev)
+routes = [
+  { pattern = "telemetry.poly-glot.ai/*", zone_name = "poly-glot.ai" }
+]
+
+# ── Analytics Engine binding ──────────────────────────────────────────────────
+# Free tier: 100k writes/day, 90-day retention, SQL queryable
+# Create the dataset in Cloudflare dashboard:
+#   Workers & Pages → Analytics Engine → Create dataset → name: "cli_telemetry"
+[[analytics_engine_datasets]]
+binding  = "TELEMETRY"
+dataset  = "cli_telemetry"
+
+# ── Optional: environment overrides ──────────────────────────────────────────
+[env.production]
+name = "polyglot-telemetry"
