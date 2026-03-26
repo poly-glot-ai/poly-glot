@@ -26,7 +26,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=202">
+    <link rel="stylesheet" href="styles.css?v=203">
 </head>
 <body>
     <div class="container">
@@ -239,6 +239,151 @@
                         <span>Run <code class="inline-code">poly-glot comment &lt;file&gt;</code>, <code class="inline-code">poly-glot comment &lt;file&gt; --why</code>, or <code class="inline-code">poly-glot comment &lt;file&gt; --both</code></span>
                     </div>
                 </div>
+
+                <!-- ── CLI Flags Reference ── -->
+                <div class="cli-flags-reference" id="cliFlagsRef">
+                    <div class="cli-flags-header" id="cliFlagsToggle">
+                        <span class="cli-flags-title">📋 CLI Flags Reference</span>
+                        <span class="cli-flags-subtitle">All flags, modes, and examples in one place</span>
+                        <span class="cli-flags-chevron open" id="cliFlagsChevron">▼</span>
+                    </div>
+                    <div class="cli-flags-body open" id="cliFlagsBody">
+
+                        <!-- Comment Modes -->
+                        <div class="flags-group">
+                            <h4 class="flags-group-title">💬 Comment Modes</h4>
+                            <p class="flags-group-desc">Three modes let you choose exactly what kind of comments get added.</p>
+                            <div class="flags-table">
+                                <div class="flags-row flags-row-header">
+                                    <span>Flag</span><span>Mode</span><span>What it adds</span><span>Example</span>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">default</code>
+                                    <span class="flags-badge flags-badge-blue">comment</span>
+                                    <span>JSDoc, PyDoc, Javadoc, KDoc — params, returns, exceptions</span>
+                                    <code class="flags-example">poly-glot comment auth.js</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--why</code>
+                                    <span class="flags-badge flags-badge-amber">why</span>
+                                    <span>Inline reasoning — <em>why</em> the code was written this way, trade-offs, intent</span>
+                                    <code class="flags-example">poly-glot comment auth.js --why</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--both</code>
+                                    <span class="flags-badge flags-badge-purple">both</span>
+                                    <span>Two sequential passes — doc-comments first, then why-comments on the result</span>
+                                    <code class="flags-example">poly-glot comment auth.js --both</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--mode &lt;m&gt;</code>
+                                    <span class="flags-badge flags-badge-gray">explicit</span>
+                                    <span>Set mode directly: <code>comment</code>, <code>why</code>, or <code>both</code></span>
+                                    <code class="flags-example">poly-glot comment auth.js --mode why</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Safety Flags -->
+                        <div class="flags-group">
+                            <h4 class="flags-group-title">🛡️ Safety Flags</h4>
+                            <p class="flags-group-desc">Always preview before you commit. These flags give you full control before anything touches disk.</p>
+                            <div class="flags-table">
+                                <div class="flags-row flags-row-header">
+                                    <span>Flag</span><span>What it does</span><span>Example</span>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--dry-run</code>
+                                    <span>Preview what <em>would</em> change — no files written</span>
+                                    <code class="flags-example">poly-glot comment auth.js --dry-run</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--diff</code>
+                                    <span>Show a unified diff of every change before writing</span>
+                                    <code class="flags-example">poly-glot comment auth.js --diff</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--backup</code>
+                                    <span>Save a <code>.orig</code> copy of every file before overwriting</span>
+                                    <code class="flags-example">poly-glot comment auth.js --backup</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Directory Flags -->
+                        <div class="flags-group">
+                            <h4 class="flags-group-title">📁 Directory Mode</h4>
+                            <p class="flags-group-desc">Process whole directories. Confirms before writing, then shows a summary when done.</p>
+                            <div class="cli-flags-terminal">
+                                <div class="cli-flags-terminal-bar">
+                                    <span class="cft-dot cft-red"></span>
+                                    <span class="cft-dot cft-yellow"></span>
+                                    <span class="cft-dot cft-green"></span>
+                                    <span class="cft-title">Terminal</span>
+                                </div>
+                                <div class="cli-flags-terminal-body">
+                                    <div class="cft-line"><span class="cft-prompt">$</span> <span class="cft-cmd">poly-glot comment --dir src/</span></div>
+                                    <div class="cft-line cft-output">Poly-Glot — 📝 doc-comments</div>
+                                    <div class="cft-line cft-output">About to process 23 file(s) in /src (in-place)</div>
+                                    <div class="cft-line cft-output">Continue? (Y/n) <span class="cft-cursor">▌</span></div>
+                                    <div class="cft-line cft-dim">&nbsp;&nbsp;src/auth.js … <span class="cft-green">✓</span></div>
+                                    <div class="cft-line cft-dim">&nbsp;&nbsp;src/utils.ts … <span class="cft-green">✓</span></div>
+                                    <div class="cft-line cft-dim">&nbsp;&nbsp;src/api/client.ts … <span class="cft-green">✓</span></div>
+                                    <div class="cft-line cft-summary"><span class="cft-green">✓ 21 commented</span> · 2 skipped · ~$0.06 · 22s</div>
+                                </div>
+                            </div>
+                            <div class="flags-table" style="margin-top:1rem;">
+                                <div class="flags-row flags-row-header">
+                                    <span>Flag</span><span>What it does</span><span>Example</span>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--yes / -y</code>
+                                    <span>Skip the confirmation prompt — use in scripts or CI</span>
+                                    <code class="flags-example">poly-glot comment --dir src/ --yes</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--output-dir</code>
+                                    <span>Write to a separate directory, originals untouched</span>
+                                    <code class="flags-example">poly-glot comment --dir src/ --output-dir out/</code>
+                                </div>
+                                <div class="flags-row">
+                                    <code class="flags-code">--ext &lt;list&gt;</code>
+                                    <span>Limit to specific file extensions</span>
+                                    <code class="flags-example">poly-glot comment --dir src/ --ext js,ts</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shorthands + stdin -->
+                        <div class="flags-group">
+                            <h4 class="flags-group-title">⚡ Shorthands &amp; Stdin</h4>
+                            <div class="flags-table">
+                                <div class="flags-row flags-row-header">
+                                    <span>Command</span><span>What it does</span>
+                                </div>
+                                <div class="flags-row flags-row-2col">
+                                    <code class="flags-example">poly-glot why auth.js</code>
+                                    <span>Shorthand for <code>poly-glot comment auth.js --why</code></span>
+                                </div>
+                                <div class="flags-row flags-row-2col">
+                                    <code class="flags-example">poly-glot config --mode both</code>
+                                    <span>Set <code>both</code> as your default — no flag needed on future runs</span>
+                                </div>
+                                <div class="flags-row flags-row-2col">
+                                    <code class="flags-example">cat main.py | poly-glot comment --stdin --lang python</code>
+                                    <span>Pipe code through stdin — works with all modes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flags-cta">
+                            <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm" style="text-decoration:none;">📦 Install CLI</a>
+                            <a href="https://github.com/hmoses/poly-glot/tree/main/cli#readme" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github" style="text-decoration:none;">📖 Full Docs</a>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div class="cli-demo-cta">
                     <h3 class="cli-demo-heading">🎬 See How It Works</h3>
                     <p class="cli-demo-description">
@@ -376,150 +521,6 @@
                                 <span>📖</span> View Documentation
                             </a>
                         </div>
-                    </div>
-                </div>
-
-                <!-- ── CLI Flags Reference ── -->
-                <div class="cli-flags-reference" id="cliFlagsRef">
-                    <div class="cli-flags-header" id="cliFlagsToggle">
-                        <span class="cli-flags-title">📋 CLI Flags Reference</span>
-                        <span class="cli-flags-subtitle">All flags, modes, and examples in one place</span>
-                        <span class="cli-flags-chevron open" id="cliFlagsChevron">▼</span>
-                    </div>
-                    <div class="cli-flags-body open" id="cliFlagsBody">
-
-                        <!-- Comment Modes -->
-                        <div class="flags-group">
-                            <h4 class="flags-group-title">💬 Comment Modes</h4>
-                            <p class="flags-group-desc">Three modes let you choose exactly what kind of comments get added.</p>
-                            <div class="flags-table">
-                                <div class="flags-row flags-row-header">
-                                    <span>Flag</span><span>Mode</span><span>What it adds</span><span>Example</span>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">default</code>
-                                    <span class="flags-badge flags-badge-blue">comment</span>
-                                    <span>JSDoc, PyDoc, Javadoc, KDoc — params, returns, exceptions</span>
-                                    <code class="flags-example">poly-glot comment auth.js</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--why</code>
-                                    <span class="flags-badge flags-badge-amber">why</span>
-                                    <span>Inline reasoning — <em>why</em> the code was written this way, trade-offs, intent</span>
-                                    <code class="flags-example">poly-glot comment auth.js --why</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--both</code>
-                                    <span class="flags-badge flags-badge-purple">both</span>
-                                    <span>Two sequential passes — doc-comments first, then why-comments on the result</span>
-                                    <code class="flags-example">poly-glot comment auth.js --both</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--mode &lt;m&gt;</code>
-                                    <span class="flags-badge flags-badge-gray">explicit</span>
-                                    <span>Set mode directly: <code>comment</code>, <code>why</code>, or <code>both</code></span>
-                                    <code class="flags-example">poly-glot comment auth.js --mode why</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Safety Flags -->
-                        <div class="flags-group">
-                            <h4 class="flags-group-title">🛡️ Safety Flags</h4>
-                            <p class="flags-group-desc">Always preview before you commit. These flags give you full control before anything touches disk.</p>
-                            <div class="flags-table">
-                                <div class="flags-row flags-row-header">
-                                    <span>Flag</span><span>What it does</span><span>Example</span>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--dry-run</code>
-                                    <span>Preview what <em>would</em> change — no files written</span>
-                                    <code class="flags-example">poly-glot comment auth.js --dry-run</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--diff</code>
-                                    <span>Show a <code>+/-</code> unified diff of every change before writing</span>
-                                    <code class="flags-example">poly-glot comment auth.js --diff</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--backup</code>
-                                    <span>Save a <code>.orig</code> copy of every file before overwriting. Restore with <code>mv auth.js.orig auth.js</code></span>
-                                    <code class="flags-example">poly-glot comment auth.js --backup</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Directory Flags -->
-                        <div class="flags-group">
-                            <h4 class="flags-group-title">📁 Directory Mode</h4>
-                            <p class="flags-group-desc">Process whole directories. Prompts for confirmation by default, then shows a summary when done.</p>
-                            <div class="cli-flags-terminal">
-                                <div class="cli-flags-terminal-bar">
-                                    <span class="cft-dot cft-red"></span>
-                                    <span class="cft-dot cft-yellow"></span>
-                                    <span class="cft-dot cft-green"></span>
-                                    <span class="cft-title">Terminal</span>
-                                </div>
-                                <div class="cli-flags-terminal-body">
-                                    <div class="cft-line"><span class="cft-prompt">$</span> <span class="cft-cmd">poly-glot comment --dir src/</span></div>
-                                    <div class="cft-line cft-output">Poly-Glot — 📝 doc-comments</div>
-                                    <div class="cft-line cft-output">About to process 23 file(s) in /src (in-place)</div>
-                                    <div class="cft-line cft-output cft-prompt-out">Continue? (Y/n) <span class="cft-cursor">▌</span></div>
-                                    <div class="cft-line cft-dim">  src/auth.js … <span class="cft-green">✓</span></div>
-                                    <div class="cft-line cft-dim">  src/utils.ts … <span class="cft-green">✓</span></div>
-                                    <div class="cft-line cft-dim">  src/api/client.ts … <span class="cft-green">✓</span></div>
-                                    <div class="cft-line cft-summary"><span class="cft-green">✓ 21 commented</span> · <span class="cft-dim">2 skipped</span> · <span class="cft-dim">~$0.06 · 22s</span></div>
-                                </div>
-                            </div>
-                            <div class="flags-table" style="margin-top:1rem;">
-                                <div class="flags-row flags-row-header">
-                                    <span>Flag</span><span>What it does</span><span>Example</span>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--yes / -y</code>
-                                    <span>Skip the confirmation prompt — use in scripts or CI</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --yes</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--output-dir</code>
-                                    <span>Write to a separate directory, originals untouched</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --output-dir out/</code>
-                                </div>
-                                <div class="flags-row">
-                                    <code class="flags-code">--ext &lt;list&gt;</code>
-                                    <span>Limit to specific file extensions</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --ext js,ts</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Shorthand + stdin -->
-                        <div class="flags-group">
-                            <h4 class="flags-group-title">⚡ Shorthands &amp; Stdin</h4>
-                            <div class="flags-table">
-                                <div class="flags-row flags-row-header">
-                                    <span>Command</span><span>What it does</span>
-                                </div>
-                                <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">poly-glot why auth.js</code>
-                                    <span>Shorthand for <code>poly-glot comment auth.js --why</code></span>
-                                </div>
-                                <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">poly-glot config --mode both</code>
-                                    <span>Set <code>both</code> as your default — no flag needed on future runs</span>
-                                </div>
-                                <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">cat main.py | poly-glot comment --stdin --lang python</code>
-                                    <span>Pipe code through stdin — works with all modes</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flags-cta">
-                            <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm" style="text-decoration:none;">📦 Install CLI</a>
-                            <a href="https://github.com/hmoses/poly-glot/tree/main/cli#readme" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github" style="text-decoration:none;">📖 Full Docs</a>
-                        </div>
-
                     </div>
                 </div>
 
@@ -1067,11 +1068,11 @@
         </div>
     </section>
 
-    <script src="analytics.js?v=202"></script>
-    <script src="ai-generator.js?v=202"></script>
-    <script src="scorer.js?v=202"></script>
-    <script src="app.js?v=202"></script>
-    <script src="cli-terminal-demo.js?v=202"></script>
+    <script src="analytics.js?v=203"></script>
+    <script src="ai-generator.js?v=203"></script>
+    <script src="scorer.js?v=203"></script>
+    <script src="app.js?v=203"></script>
+    <script src="cli-terminal-demo.js?v=203"></script>
 
     <!-- Enterprise Form Handler -->
     <script>
