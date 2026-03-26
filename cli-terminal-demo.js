@@ -128,15 +128,16 @@ function calculateAge(birthDate) {
         cursorEl.classList.add('hidden');
         
         // Step 2: Show processing message
-        outputEl.textContent = '✨ Processing calculateAge.js...\n📝 Adding JSDoc comments...\n';
-        await sleep(1000);
+        outputEl.textContent = '✨ Processing calculateAge.js...\n📝 Analyzing code structure...\n📝 Generating JSDoc comments...\n';
+        await sleep(1500);
         
-        // Step 3: Type the code with comments appearing
+        // Step 3: Show the documented code all at once (like real terminal output)
+        outputEl.textContent += '\n✅ Comments added successfully!\n\n📄 Result:\n\n';
+        
         const lines = DEMO_CODE.after.split('\n');
         const commentLines = [];
-        const codeLines = [];
         
-        // Separate comment lines from code lines
+        // Identify comment lines for highlighting
         let inComment = false;
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -148,16 +149,15 @@ function calculateAge(birthDate) {
                 inComment = false;
             } else if (inComment) {
                 commentLines.push(i);
-            } else {
-                codeLines.push(i);
             }
         }
         
-        // Type code line by line
+        // Display all code at once with staggered fade-in animation
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const lineDiv = document.createElement('div');
             lineDiv.className = 'terminal-code-line';
+            lineDiv.style.opacity = '0';
             
             // Check if this is a comment line
             const isComment = commentLines.includes(i);
@@ -171,20 +171,19 @@ function calculateAge(birthDate) {
             
             codeDisplayEl.appendChild(lineDiv);
             
-            // Scroll to bottom
-            codeDisplayEl.scrollTop = codeDisplayEl.scrollHeight;
-            
-            // Wait longer for comment lines to emphasize them
-            if (isComment) {
-                await sleep(80);
-            } else {
-                await sleep(40);
-            }
+            // Fade in with slight delay
+            setTimeout(() => {
+                lineDiv.style.transition = 'opacity 0.3s ease';
+                lineDiv.style.opacity = '1';
+            }, i * 30);
         }
         
-        // Step 4: Show completion message
-        await sleep(800);
-        outputEl.textContent += '\n✅ Comments added successfully!\n💡 File saved: calculateAge.js\n';
+        // Wait for all lines to finish animating
+        await sleep(lines.length * 30 + 500);
+        
+        // Step 4: Show file saved message
+        await sleep(300);
+        outputEl.textContent += '\n💾 File saved: calculateAge.js\n';
         
         isRunning = false;
     }
