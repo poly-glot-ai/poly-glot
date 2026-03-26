@@ -2660,34 +2660,28 @@ function initCommentGenerator() {
 
     // ── Language auto-detection from pasted / typed code ──
     // Tracks whether the user has manually overridden the language dropdown.
-    // If they have, we respect their choice and skip auto-detect until the
-    // input is cleared.
+    // _langUserOverride: set true when the user manually picks from the
+    // Language dropdown.  Typing respects this.  Paste and Score-click
+    // always re-detect from content regardless — they bypass the override.
     let _langUserOverride = false;
 
-    // Map detectLanguage() return values → cgLanguage <option> values
+    // detectLanguage() result → <option> value mapping
     const DETECT_TO_OPTION = {
-        javascript: 'javascript',
-        typescript: 'typescript',
-        python:     'python',
-        java:       'java',
-        cpp:        'cpp',
-        csharp:     'csharp',
-        go:         'go',
-        rust:       'rust',
-        ruby:       'ruby',
-        php:        'php',
-        swift:      'swift',
-        kotlin:     'kotlin',
+        javascript: 'javascript', typescript: 'typescript', python:  'python',
+        java:       'java',       cpp:        'cpp',        csharp:  'csharp',
+        go:         'go',         rust:       'rust',       ruby:    'ruby',
+        php:        'php',        swift:      'swift',      kotlin:  'kotlin',
     };
 
-    // Friendly display names for the badge
+    // Human-readable names for the badge
     const LANG_DISPLAY = {
         javascript: 'JavaScript', typescript: 'TypeScript', python: 'Python',
-        java: 'Java', cpp: 'C++', csharp: 'C#', go: 'Go', rust: 'Rust',
-        ruby: 'Ruby', php: 'PHP', swift: 'Swift', kotlin: 'Kotlin',
+        java:       'Java',       cpp:        'C++',        csharp: 'C#',
+        go:         'Go',         rust:       'Rust',       ruby:   'Ruby',
+        php:        'PHP',        swift:      'Swift',      kotlin: 'Kotlin',
     };
 
-    // Show / hide the "detected: X" badge on the Language label
+    // ── Badge helpers ──────────────────────────────────────────────────────
     function showLangDetectedBadge(langKey) {
         const lbl = document.querySelector('label[for="cgLanguage"]');
         if (!lbl) return;
@@ -2700,39 +2694,46 @@ function initCommentGenerator() {
         badge.textContent = `✦ ${LANG_DISPLAY[langKey] || langKey}`;
         badge.style.opacity = '1';
         clearTimeout(badge._timer);
-        badge._timer = setTimeout(() => { badge.style.opacity = '0'; }, 3000);
+        // Keep visible for 5s then fade — long enough for user to notice
+        badge._timer = setTimeout(() => { badge.style.opacity = '0'; }, 5000);
     }
 
     function hideLangDetectedBadge() {
         const lbl = document.querySelector('label[for="cgLanguage"]');
         if (!lbl) return;
         const badge = lbl.querySelector('.lang-auto-badge');
-        if (badge) { badge.style.opacity = '0'; }
+        if (badge) { clearTimeout(badge._timer); badge.style.opacity = '0'; }
     }
 
-    // Core detection logic — debounced so it doesn't fire on every keystroke
+    // ── Core: detect language, update BOTH dropdowns, optionally show badge ─
+    // Returns the detected language key, or null if code is too short / scorer
+    // not loaded yet.  silent=true suppresses the badge (used internally).
+    function applyDetectedLanguage(code, silent) {
+        if (!code || code.trim().length < 20) return null;
+        if (typeof PolyGlotScorer === 'undefined') return null;
+        const detected = PolyGlotScorer.detectLanguage(code.trim());
+        const option   = DETECT_TO_OPTION[detected];
+        if (!option) return null;
+        cgLanguage.value = option;   // update Language dropdown
+        syncStyleToLanguage();       // update Comment Style dropdown
+        if (!silent) showLangDetectedBadge(option);
+        return option;
+    }
+
+    // ── Debounced detection for keystroke typing ───────────────────────────
     let _detectTimer = null;
     function scheduleAutoDetect() {
-        if (_langUserOverride) return;
+        if (_langUserOverride) return;          // respect manual choice while typing
         clearTimeout(_detectTimer);
         _detectTimer = setTimeout(() => {
-            const code = cgInput.value.trim();
-            if (!code || code.length < 30) return; // too short to detect reliably
-            if (typeof PolyGlotScorer === 'undefined') return;
-            const detected = PolyGlotScorer.detectLanguage(code);
-            const option   = DETECT_TO_OPTION[detected];
-            if (!option) return;
-            // Only update + notify if it's a meaningful change
-            if (cgLanguage.value !== option) {
-                cgLanguage.value = option;
-                syncStyleToLanguage();
-                showLangDetectedBadge(option);
-                if (typeof gtag !== 'undefined') gtag('event', 'cg_language_auto_detected', { detected: option });
+            const detected = applyDetectedLanguage(cgInput.value);
+            if (detected && typeof gtag !== 'undefined') {
+                gtag('event', 'cg_language_auto_detected', { detected, trigger: 'type' });
             }
-        }, 400); // 400ms debounce — fast enough, won't fire mid-paste
+        }, 400);
     }
 
-    // Re-enable auto-detect when input is fully cleared
+    // ── Input event: stats + typed detection ──────────────────────────────
     function onInputChanged() {
         updateInputStats();
         if (!cgInput.value.trim()) {
@@ -2742,16 +2743,22 @@ function initCommentGenerator() {
             scheduleAutoDetect();
         }
     }
-
     cgInput.addEventListener('input', onInputChanged);
 
-    // Paste fires before 'input' — schedule detect after DOM settles
+    // ── Paste: always detect, always bypass override ───────────────────────
+    // paste fires before the value reaches the DOM — defer one tick
     cgInput.addEventListener('paste', () => {
-        if (_langUserOverride) return;
-        setTimeout(scheduleAutoDetect, 0);
+        clearTimeout(_detectTimer);
+        _langUserOverride = false;          // paste always gets fresh detection
+        setTimeout(() => {
+            const detected = applyDetectedLanguage(cgInput.value);
+            if (detected && typeof gtag !== 'undefined') {
+                gtag('event', 'cg_language_auto_detected', { detected, trigger: 'paste' });
+            }
+        }, 0);
     });
 
-    // When user manually picks a language: sync style + lock out auto-detect
+    // ── Manual dropdown change ─────────────────────────────────────────────
     cgLanguage.addEventListener('change', () => {
         syncStyleToLanguage();
         _langUserOverride = true;
@@ -2880,21 +2887,31 @@ function initCommentGenerator() {
         if (typeof gtag !== 'undefined') gtag('event', 'cg_output_downloaded', { language: cgLanguage.value });
     });
 
-    // ── Score Input (Your Code) — identical to markdown scoreInputBtn ──
+    // ── Score Input (Your Code) ────────────────────────────────────────────
     cgScoreInputBtn.addEventListener('click', () => {
         const code = cgInput.value.trim();
         if (!code) { alert('Paste or upload some code first.'); return; }
-        // Collapse output score panel if open (remove any existing ispPanel in outputPanel)
+
+        // Always re-detect at click time — catches the case where code was
+        // pasted just before clicking Score (debounce may not have fired yet)
+        // and the case where the user pasted without triggering the paste event.
+        const detected = applyDetectedLanguage(code);
+        const scoreLang = detected || cgLanguage.value || 'javascript';
+
+        // Collapse output score panel if open
         if (cgScoreBtn.classList.contains('active')) {
             cgScoreBtn.classList.remove('active');
             const outPanel = document.getElementById('outputPanel');
             if (outPanel) { const isp = outPanel.querySelector('.isp-panel'); if (isp) isp.remove(); }
         }
+
         cgScoreInputBtn.classList.toggle('active');
         if (typeof PolyGlotScorer !== 'undefined') {
-            PolyGlotScorer.renderInline('inputPanel', code, null, true, cgLanguage.value);
+            PolyGlotScorer.renderInline('inputPanel', code, null, true, scoreLang);
         }
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_score_input_clicked', { language: cgLanguage.value });
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'cg_score_input_clicked', { language: scoreLang, trigger: 'score_btn' });
+        }
     });
 
     // ── Score Output (before → after) — identical to markdown scoreOutputBtn ──
