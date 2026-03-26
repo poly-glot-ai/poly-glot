@@ -4,6 +4,81 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.4.0] — 2026-04-01
+
+### 🚀 New Features
+
+#### 📝💬 Three Comment Modes — `comment`, `why`, `both`
+
+- **`--why` flag** — `poly-glot comment <file> --why` adds inline *why-comments* explaining reasoning, trade-offs, and intent (not what the code does — that's what the code is for)
+- **`--both` flag** — `poly-glot comment <file> --both` runs two sequential AI passes: doc-comments first, then why-comments applied to the result. Both types coexist in the final output
+- **`--mode <m>` flag** — explicit mode selection: `comment`, `why`, or `both`. Works alongside all input modes (file, dir, stdin)
+- **`poly-glot why <file>`** — shorthand alias for `poly-glot comment <file> --why`
+- All three modes work with every input mode: single file, `--dir`, and `--stdin`
+
+#### ⚙️ Persistent Default Mode
+
+- **`poly-glot config --mode <m>`** — saves your preferred mode to `~/.config/polyglot/config.json`
+- Interactive `poly-glot config` now prompts: *"Default mode [comment/why/both] (current: …)"*
+- **`POLYGLOT_MODE` environment variable** — override default mode in CI/CD without touching config
+- **Priority order:** `--both` > `--why` > `--mode <value>` > saved `defaultMode` > `comment`
+
+#### 🎬 Updated Demo — All 12 Languages × 3 Modes
+
+- **Mode dropdown** added to "See CLI in Action" section — switch between 🤖 Comment, 💬 Why, 📝💬 Both
+- All 12 languages now have realistic `afterWhy` and `afterBoth` code samples showing real transformed output
+- **Two-pass terminal animation** for `both` mode: *📝 Pass 1 — doc-comments… ✓ | 💬 Pass 2 — why-comments… ✓ | ✅ Both passes complete!*
+- Code panel header updates per mode: "after documentation" / "after why-comments" / "after doc + why comments"
+
+#### 🌐 Web UI — Why Comments Button
+
+- New amber **💬 Why** button in the AI toolbar alongside the existing Generate Comments button
+- Results panel shows WHY badge + description: *"Inline comments explaining reasoning & intent"*
+- Copy, replace, and close actions all supported
+
+#### 🛠️ CLI 1–2–3 Setup Steps Updated
+
+- Step 2 now correctly shows `--provider openai` in the `poly-glot config` command
+- Step 3 now surfaces all three modes: `comment`, `--why`, `--both`
+
+### 📦 Published
+- `poly-glot-ai-cli@1.4.0` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
+## [v1.3.0] — 2026-03-28
+
+### 🚀 New Features
+
+#### 💬 Why Comments — Web UI
+
+- **Why Comments feature** launched on [poly-glot.ai](https://poly-glot.ai) — add inline comments that explain *why* code was written the way it was, not just what it does
+- Language-aware comment syntax for all 12 languages (JS/TS `// why:`, Python `# why:`, Java/Go/Rust/C++/C#/PHP/Swift/Kotlin `// why:`)
+- New `generateWhyComments()` method in `ai-generator.js` — builds why-prompt, calls AI, strips markdown fences, returns annotated code
+- New `generateBoth()` method — sequential two-pass generation (doc-comments → why-comments)
+- `buildWhyPrompt()` — language-specific prompts that explicitly instruct the AI to explain reasoning, trade-offs, and intent rather than describe the code
+
+#### 🎨 Styles
+
+- `.why-btn` — amber gradient (`#d97706 → #b45309`) to visually distinguish from the primary Generate button
+- `.why-badge` — inline amber "WHY" label in results panel
+- Spinner animation for `#whyBtn.loading`
+
+#### ⌨️ CLI — `poly-glot why` Command
+
+- `poly-glot why <file>` — initial release of why-comment generation from the terminal
+- Supports all 12 detected languages with correct per-language comment syntax
+- Identical input/output options to `poly-glot comment` (file, dir, stdin, --output, --output-dir)
+
+#### 🌐 All 12 Languages
+
+- Why-comment support fully available across: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
+
+### 📦 Published
+- `poly-glot-ai-cli@1.3.0` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
 ## [v1.2.0] — 2026-03-26
 
 ### 🐛 Bug Fixes
