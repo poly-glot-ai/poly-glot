@@ -12,8 +12,6 @@ routes = [
 
 # ── Analytics Engine binding ──────────────────────────────────────────────────
 # Free tier: 100k writes/day, 90-day retention, SQL queryable
-# Create the dataset in Cloudflare dashboard:
-#   Workers & Pages → Analytics Engine → Create dataset → name: "cli_telemetry"
 [[analytics_engine_datasets]]
 binding  = "TELEMETRY"
 dataset  = "cli_telemetry"
