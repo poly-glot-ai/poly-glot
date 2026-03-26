@@ -6,14 +6,14 @@
     
     const DEMO_CODE = {
         before: `function calculateAge(birthDate) {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
 }`,
         after: `/**
  * Calculates a person's age based on their birth date
@@ -27,26 +27,26 @@
  * console.log(age); // 35
  */
 function calculateAge(birthDate) {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    
-    if (isNaN(birth.getTime())) {
-        throw new Error('Invalid birth date format');
-    }
-    
-    if (birth > today) {
-        throw new Error('Birth date cannot be in the future');
-    }
-    
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    // Adjust age if birthday hasn't occurred yet this year
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    
-    return age;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  
+  if (isNaN(birth.getTime())) {
+    throw new Error('Invalid birth date format');
+  }
+  
+  if (birth > today) {
+    throw new Error('Birth date cannot be in the future');
+  }
+  
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  
+  // Adjust age if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  
+  return age;
 }`
     };
     
