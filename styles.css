@@ -4557,6 +4557,106 @@ kbd {
     color: #e0e7ff;
 }
 
+/* ── Both button ────────────────────────────────────────────────────────────── */
+.both-btn {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    position: relative;
+}
+.both-btn:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #4338ca 100%) !important;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45) !important;
+    transform: translateY(-1px);
+}
+.both-btn:active { transform: translateY(0); }
+#bothBtn.loading::after {
+    content: '';
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+/* ── Both badge in results panel ────────────────────────────────────────────── */
+.both-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.25));
+    border: 1px solid rgba(124,58,237,0.4);
+    color: #c4b5fd;
+    text-transform: uppercase;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ── Cost note ──────────────────────────────────────────────────────────────── */
+.cost-note {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-left: 4px;
+}
+
+/* ── CLI Flags filter bar ───────────────────────────────────────────────────── */
+.cli-flags-filter-bar {
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid rgba(99,102,241,0.12);
+    background: rgba(99,102,241,0.03);
+}
+.cli-flags-filter-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.84rem;
+    color: var(--text-primary, #e2e8f0);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cli-flags-filter-input::placeholder { color: #6b7280; }
+.cli-flags-filter-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+}
+
+/* ── Copy button on flags examples ─────────────────────────────────────────── */
+.flags-example-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.flags-copy-btn {
+    opacity: 0;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 5px;
+    padding: 1px 5px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: opacity 0.15s, background 0.15s;
+    color: #a5b4fc;
+    line-height: 1.6;
+    flex-shrink: 0;
+}
+.flags-row:hover .flags-copy-btn,
+.flags-example-wrap:hover .flags-copy-btn {
+    opacity: 1;
+}
+.flags-copy-btn:hover {
+    background: rgba(99,102,241,0.3);
+}
+
 /* ── CLI Demo CTA — language/mode selector + button spacing ────────────────── */
 .cli-demo-language-selector-inline {
     display: flex;

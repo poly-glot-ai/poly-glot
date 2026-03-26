@@ -334,6 +334,37 @@ class AICommentGenerator {
         throw new Error('Invalid provider selected.');
     }
 
+    /**
+     * Two-pass generation: doc-comments first, then why-comments on the result.
+     * Returns merged output with both types of comments, plus combined cost.
+     */
+    async generateBoth(code, language) {
+        if (!this.isConfigured()) {
+            throw new Error('API key not configured. Please add your API key in settings.');
+        }
+        // Pass 1 — doc-comments
+        const docResult = await this.generateComments(code, language, this._getCommentStyle(language));
+        // Pass 2 — why-comments applied to the doc-commented code
+        const whyResult = await this.generateWhyComments(docResult.code, language);
+        return {
+            code:     whyResult.code,
+            provider: whyResult.provider,
+            model:    whyResult.model,
+            cost:     (docResult.cost || 0) + (whyResult.cost || 0),
+        };
+    }
+
+    /** Map language to its doc-comment style */
+    _getCommentStyle(language) {
+        const styles = {
+            javascript: 'jsdoc', typescript: 'jsdoc', java: 'javadoc',
+            python: 'pydoc', cpp: 'doxygen', csharp: 'xmldoc',
+            go: 'godoc', rust: 'rustdoc', ruby: 'rdoc',
+            php: 'phpdoc', swift: 'swift', kotlin: 'kotlin'
+        };
+        return styles[language] || 'jsdoc';
+    }
+
     /** Shared OpenAI call returning { code, provider, model, cost } */
     async _callOpenAIRaw(prompt, systemMsg) {
         let response;

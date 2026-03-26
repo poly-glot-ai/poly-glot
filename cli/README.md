@@ -10,6 +10,31 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 
 ---
 
+## At a glance
+
+| Command | What it does |
+|---------|-------------|
+| `poly-glot comment <file>` | Add standardized doc-comments (JSDoc, PyDoc, Javadoc…) |
+| `poly-glot comment <file> --why` | Add inline why-comments explaining reasoning & intent |
+| `poly-glot comment <file> --both` | Doc-comments + why-comments in one two-pass run |
+| `poly-glot why <file>` | Shorthand for `--why` |
+| `poly-glot both <file>` | Shorthand for `--both` |
+| `poly-glot comment --dir <dir>` | Comment every supported file in a directory |
+| `poly-glot explain <file>` | Deep analysis: complexity, bugs, doc quality |
+| `poly-glot config` | Set API key, provider, model, and default mode |
+| `poly-glot demo` | See before/after examples without an API key |
+
+**Safety flags** (use before any file is written):
+
+| Flag | What it does |
+|------|-------------|
+| `--dry-run` | Preview changes — no files written |
+| `--diff` | Show a `+/-` unified diff before writing |
+| `--backup` | Save `.orig` copy of every file before overwriting |
+| `--yes` / `-y` | Skip `--dir` confirmation prompt |
+
+---
+
 ## Install
 
 ```bash
@@ -45,7 +70,10 @@ poly-glot comment src/auth.js --why
 # 6. Both doc-comments AND why-comments in one pass
 poly-glot comment src/auth.js --both
 
-# 7. Comment an entire directory (confirms before writing)
+# 7. Shorthand for --both
+poly-glot both src/auth.js
+
+# 8. Comment an entire directory (confirms before writing)
 poly-glot comment --dir src/
 
 # 8. Directory run, no prompt (great for CI)
@@ -226,6 +254,18 @@ Shorthand for `poly-glot comment <file> --why`. Accepts all the same flags.
 poly-glot why src/auth.js
 poly-glot why src/auth.js --output src/auth.why.js
 poly-glot why --dir src/ --output-dir src-why/
+```
+
+### `poly-glot both`
+
+Shorthand for `poly-glot comment <file> --both`. Runs two sequential passes — doc-comments first, then why-comments. Accepts all the same flags.
+
+```bash
+poly-glot both src/auth.js
+poly-glot both src/auth.js --output src/auth.both.js
+poly-glot both --dir src/ --output-dir src-both/
+poly-glot both src/auth.js --dry-run    # preview without writing
+poly-glot both src/auth.js --backup     # save .orig before overwriting
 ```
 
 ### `poly-glot explain`

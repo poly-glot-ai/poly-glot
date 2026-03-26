@@ -3368,42 +3368,226 @@ if (document.readyState === 'loading') {
 // Expose sample loader globally (called from onclick in HTML)
 window.loadSample = loadSample;
 
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
-// Cmd+Enter (Mac) / Ctrl+Enter (Win/Linux) → Generate Comments
-// Cmd+Shift+Enter / Ctrl+Shift+Enter       → Why Comments
-document.addEventListener('keydown', function(e) {
-    const isMac    = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifier = isMac ? e.metaKey : e.ctrlKey;
-    if (!modifier) return;
+// (keyboard shortcuts consolidated below with Both + Explain shortcut handlers)
 
-    // Only fire when focus is inside the code editor area or on body
-    const tag = document.activeElement ? document.activeElement.tagName : '';
-    const isInput = tag === 'INPUT' || tag === 'SELECT';
-    if (isInput) return;
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const btn = document.getElementById('generateBtn');
-        if (btn && !btn.disabled) btn.click();
-    }
-
-    if (e.key === 'Enter' && e.shiftKey) {
-        e.preventDefault();
-        const btn = document.getElementById('whyBtn');
-        if (btn && !btn.disabled) btn.click();
-    }
-});
-
-// ── CLI Flags Reference toggle ────────────────────────────────────────────────
+// ── CLI Flags Reference — toggle, filter, copy buttons ───────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-    const toggle  = document.getElementById('cliFlagsToggle');
-    const body    = document.getElementById('cliFlagsBody');
-    const chevron = document.getElementById('cliFlagsChevron');
-    if (!toggle || !body || !chevron) return;
 
-    toggle.addEventListener('click', function() {
-        const isOpen = body.classList.contains('open');
-        body.classList.toggle('open', !isOpen);
-        chevron.classList.toggle('open', !isOpen);
-    });
+    // ── Toggle ──────────────────────────────────────────────────────────────
+    const toggle   = document.getElementById('cliFlagsToggle');
+    const body     = document.getElementById('cliFlagsBody');
+    const chevron  = document.getElementById('cliFlagsChevron');
+    const filterEl = document.getElementById('cliFlagsFilter');
+
+    if (toggle && body && chevron) {
+        toggle.addEventListener('click', function() {
+            const isOpen = body.classList.contains('open');
+            body.classList.toggle('open', !isOpen);
+            chevron.classList.toggle('open', !isOpen);
+        });
+    }
+
+    // ── Filter ──────────────────────────────────────────────────────────────
+    if (filterEl && body) {
+        // Stop toggle firing when clicking the filter input
+        filterEl.addEventListener('click', function(e) { e.stopPropagation(); });
+
+        filterEl.addEventListener('input', function() {
+            const q = this.value.trim().toLowerCase();
+            const rows = body.querySelectorAll('.flags-row:not(.flags-row-header)');
+            rows.forEach(function(row) {
+                const text = row.textContent.toLowerCase();
+                row.style.display = (!q || text.includes(q)) ? '' : 'none';
+            });
+            // Show/hide group titles if all rows inside are hidden
+            body.querySelectorAll('.flags-group').forEach(function(group) {
+                const visible = group.querySelectorAll('.flags-row:not(.flags-row-header):not([style*="none"])');
+                group.style.display = (!q || visible.length > 0) ? '' : 'none';
+            });
+        });
+    }
+
+    // ── Copy buttons on every flags-example ─────────────────────────────────
+    if (body) {
+        body.querySelectorAll('code.flags-example').forEach(function(el) {
+            // Wrap in a relative container
+            const wrapper = document.createElement('span');
+            wrapper.className = 'flags-example-wrap';
+            el.parentNode.insertBefore(wrapper, el);
+            wrapper.appendChild(el);
+
+            const btn = document.createElement('button');
+            btn.className = 'flags-copy-btn';
+            btn.title = 'Copy to clipboard';
+            btn.textContent = '📋';
+            wrapper.appendChild(btn);
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const text = el.textContent;
+                navigator.clipboard.writeText(text).then(function() {
+                    btn.textContent = '✅';
+                    setTimeout(function() { btn.textContent = '📋'; }, 1500);
+                }).catch(function() {
+                    btn.textContent = '✅';
+                    setTimeout(function() { btn.textContent = '📋'; }, 1500);
+                });
+            });
+        });
+    }
 });
+
+// ── Both button ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    const bothBtn     = document.getElementById('bothBtn');
+    const aiSettingsBtn = document.getElementById('aiSettingsBtn');
+    if (!bothBtn) return;
+
+    bothBtn.addEventListener('click', async function() {
+        if (!window.aiGenerator || !window.aiGenerator.isConfigured()) {
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            if (aiSettingsBtn) aiSettingsBtn.click();
+            return;
+        }
+
+        const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || { value: '' };
+        const code = codeEditor.value.trim();
+        if (!code) {
+            alert('📝 Please paste some code in the editor first.');
+            return;
+        }
+
+        const language = (document.getElementById('language') || { value: 'javascript' }).value;
+
+        bothBtn.classList.add('loading');
+        bothBtn.disabled = true;
+        bothBtn.innerHTML = '📝💬 Pass 1… <kbd class="btn-kbd">⌘⌥↵</kbd>';
+
+        try {
+            // Show pass 1 progress
+            const docResult = await window.aiGenerator.generateComments(code, language, window.aiGenerator._getCommentStyle(language));
+            bothBtn.innerHTML = '📝💬 Pass 2… <kbd class="btn-kbd">⌘⌥↵</kbd>';
+            const whyResult = await window.aiGenerator.generateWhyComments(docResult.code, language);
+
+            const combinedResult = {
+                code:     whyResult.code,
+                provider: whyResult.provider,
+                model:    whyResult.model,
+                cost:     (docResult.cost || 0) + (whyResult.cost || 0),
+            };
+
+            displayBothResults(combinedResult);
+
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('both_generation_success', {
+                    language,
+                    provider: combinedResult.provider,
+                    model: combinedResult.model,
+                    cost: combinedResult.cost
+                });
+            }
+        } catch (error) {
+            alert('❌ Generation failed: ' + error.message + '\n\nPlease check your API key and try again.');
+        } finally {
+            bothBtn.classList.remove('loading');
+            bothBtn.disabled = false;
+            bothBtn.innerHTML = '📝💬 Both <kbd class="btn-kbd">⌘⌥↵</kbd>';
+        }
+    });
+
+    function displayBothResults(result) {
+        const existing = document.querySelector('.ai-results');
+        if (existing) existing.remove();
+
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'ai-results';
+        resultsDiv.id = 'aiResultsDiv';
+        resultsDiv.innerHTML = `
+            <div class="ai-results-header">
+                <h3>📝💬 Doc + Why Comments <span class="both-badge">BOTH</span></h3>
+                <span class="ai-cost" title="Combined cost of two AI passes">Cost: $${result.cost.toFixed(4)} <span class="cost-note">(2 passes)</span></span>
+            </div>
+            <p class="why-results-desc">Two-pass result — standardized doc-comments <em>and</em> inline why-comments explaining the reasoning behind your code.</p>
+            <div class="ai-code-wrapper">
+                <button class="ai-copy-inline" id="copyAiCodeInline" title="Copy code">📋</button>
+                <div class="ai-code-output">${typeof escapeHtml === 'function' ? escapeHtml(result.code) : result.code}</div>
+            </div>
+            <div class="ai-actions">
+                <button class="btn-primary" id="copyAiCode">📋 Copy to Clipboard</button>
+                <button class="btn-primary" id="replaceCode">✅ Replace Code</button>
+                <button class="btn-secondary" id="closeAiResults">✗ Close</button>
+            </div>
+        `;
+
+        const suggestions = document.getElementById('suggestions');
+        if (suggestions) suggestions.parentNode.insertBefore(resultsDiv, suggestions.nextSibling);
+        else document.body.appendChild(resultsDiv);
+
+        // Wire up buttons
+        const inlineBtn  = document.getElementById('copyAiCodeInline');
+        const copyBtn    = document.getElementById('copyAiCode');
+        const replaceBtn = document.getElementById('replaceCode');
+        const closeBtn   = document.getElementById('closeAiResults');
+
+        function flashCopied(btn, orig) {
+            btn.innerHTML = '✅ Copied!';
+            btn.disabled = true;
+            setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2000);
+        }
+
+        if (inlineBtn) inlineBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(result.code).then(() => flashCopied(inlineBtn, '📋'));
+        });
+        if (copyBtn) copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(result.code).then(() => flashCopied(copyBtn, '📋 Copy to Clipboard'));
+        });
+        if (replaceBtn) replaceBtn.addEventListener('click', () => {
+            const ed = document.getElementById('cgInput') || document.getElementById('codeEditor');
+            if (ed) { ed.value = result.code; }
+            resultsDiv.remove();
+        });
+        if (closeBtn) closeBtn.addEventListener('click', () => resultsDiv.remove());
+    }
+});
+
+// ── Keyboard shortcuts (updated with Cmd+Alt+Enter for Both, Cmd+E for Explain) ─
+// Remove old listener and replace with complete set
+(function() {
+    function handleShortcut(e) {
+        const isMac    = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modifier = isMac ? e.metaKey : e.ctrlKey;
+        if (!modifier) return;
+
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (tag === 'INPUT' || tag === 'SELECT') return;
+
+        // Cmd+Enter → Generate Comments
+        if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            if (btn && !btn.disabled) btn.click();
+        }
+        // Cmd+Shift+Enter → Why Comments
+        if (e.key === 'Enter' && e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            const btn = document.getElementById('whyBtn');
+            if (btn && !btn.disabled) btn.click();
+        }
+        // Cmd+Alt+Enter → Both
+        if (e.key === 'Enter' && e.altKey) {
+            e.preventDefault();
+            const btn = document.getElementById('bothBtn');
+            if (btn && !btn.disabled) btn.click();
+        }
+        // Cmd+E → Explain Code
+        if (e.key === 'e' || e.key === 'E') {
+            e.preventDefault();
+            const btn = document.getElementById('explainBtn');
+            if (btn && !btn.disabled) btn.click();
+        }
+    }
+
+    // Remove any previous listener (belt and braces)
+    document.removeEventListener('keydown', handleShortcut);
+    document.addEventListener('keydown', handleShortcut);
+})();

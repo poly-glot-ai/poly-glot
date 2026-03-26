@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.5.0';  // --dry-run, --diff, --backup, --dir confirm+summary, Cmd+Enter web shortcut
+const VERSION = '1.5.1';  // poly-glot both shorthand + web: bothBtn, cost display, Cmd+E, copy on flags, README quick-ref
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -96,6 +96,9 @@ ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
   ${COLORS.bold}--backup${COLORS.reset}    Save a .orig copy of every file before overwriting
            ${COLORS.dim}poly-glot comment src/auth.js --backup${COLORS.reset}
 
+  ${COLORS.bold}both${COLORS.reset}        New shorthand — doc + why in one command
+           ${COLORS.dim}poly-glot both src/auth.js${COLORS.reset}
+
   ${COLORS.bold}--dir confirm${COLORS.reset}  Now asks "About to modify N files. Continue?" before running
            ${COLORS.dim}poly-glot comment --dir src/ --yes${COLORS.reset}  ${COLORS.dim}(skip prompt)${COLORS.reset}
 
@@ -137,6 +140,7 @@ async function main(): Promise<void> {
     if (cmd === 'config')  { await runConfig(args.slice(1)); return; }
     if (cmd === 'comment') { await runComment(args.slice(1)); return; }
     if (cmd === 'why')     { await runWhy(args.slice(1)); return; }
+    if (cmd === 'both')    { await runBoth(args.slice(1)); return; }
     if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
     if (cmd === 'demo')    { await runDemo(args.slice(1)); return; }
 
@@ -465,6 +469,13 @@ async function runWhy(args: string[]): Promise<void> {
     return runComment(['--why', ...args]);
 }
 
+// ─── Command: both ────────────────────────────────────────────────────────────
+
+async function runBoth(args: string[]): Promise<void> {
+    // Delegate to runComment with --both injected
+    return runComment(['--both', ...args]);
+}
+
 // ─── Command: explain ─────────────────────────────────────────────────────────
 
 async function runExplain(args: string[]): Promise<void> {
@@ -746,6 +757,8 @@ ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>        Read from stdin, write to stdout
   ${COLORS.cyan}why${COLORS.reset} <file>                        Shorthand: add why-comments to a file
   ${COLORS.cyan}why${COLORS.reset} --dir <dir>                   Shorthand: why-comment a whole directory
+  ${COLORS.cyan}both${COLORS.reset} <file>                       Shorthand: add doc + why-comments to a file
+  ${COLORS.cyan}both${COLORS.reset} --dir <dir>                  Shorthand: doc + why-comment a whole directory
   ${COLORS.cyan}explain${COLORS.reset} <file>                    Analyse a file (complexity, bugs, quality)
   ${COLORS.cyan}config${COLORS.reset}                            Configure API key, provider, and default mode
 
@@ -812,8 +825,10 @@ ${COLORS.bold}Examples:${COLORS.reset}
   cat main.py | poly-glot comment --stdin --lang python --both
 
   ${COLORS.dim}# Shorthands${COLORS.reset}
-  poly-glot why src/auth.js
+  poly-glot why src/auth.js                           # why-comments only
   poly-glot why --dir src/ --output-dir src-why/
+  poly-glot both src/auth.js                          # doc + why in one command
+  poly-glot both --dir src/ --output-dir src-both/
   poly-glot explain src/utils.ts
 
 ${COLORS.bold}Environment variables:${COLORS.reset}

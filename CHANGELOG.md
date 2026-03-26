@@ -4,6 +4,57 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.5.1] — 2026-04-02
+
+### 🚀 New Features
+
+#### 📝💬 `poly-glot both` — New Shorthand Command
+
+- `poly-glot both <file>` — shorthand for `poly-glot comment <file> --both`
+- `poly-glot both --dir <dir>` — runs two-pass doc + why across a whole directory
+- Accepts all the same flags as `comment`: `--dry-run`, `--diff`, `--backup`, `--yes`, `--output`, `--output-dir`, `--lang`, etc.
+- Completes the pattern: `poly-glot comment` / `poly-glot why` / `poly-glot both`
+
+#### 📝💬 **Both** button in Web UI
+
+- New purple **📝💬 Both** button in the sticky toolbar alongside Generate Comments and Why Comments
+- Runs two sequential AI passes client-side — doc-comments first, then why-comments on the result
+- Results panel shows **BOTH** badge + combined cost display with `(2 passes)` note
+- Keyboard shortcut: `Cmd+Alt+Enter` / `Ctrl+Alt+Enter`
+
+#### 💲 Cost shown on every generation (web UI)
+
+- Generate Comments, Why Comments, and Both all show `Cost: $0.0012` in the results panel
+- Both mode shows combined cost with `(2 passes)` label for transparency
+
+#### ⌨️ `Cmd+E` / `Ctrl+E` keyboard shortcut for Explain Code
+
+- Completes the full shortcut set: `⌘↵` Generate · `⌘⇧↵` Why · `⌘⌥↵` Both · `⌘E` Explain
+- Shown as `⌘E` hint directly on the Explain Code button
+
+#### 📋 Copy button on every flags example
+
+- Every command example in the CLI Flags Reference panel now has a 📋 copy button that appears on hover
+- One click copies the exact command to clipboard, button flashes ✅ to confirm
+- Works like GitHub code block copy — no friction, no highlighting required
+
+#### 🔍 Filter on CLI Flags Reference panel
+
+- New `🔍 Filter flags…` input at the top of the panel
+- Type any keyword (`--dry`, `dir`, `backup`, `why`) to instantly filter rows
+- Groups with no matching rows are hidden automatically
+- Filter input doesn't trigger the panel collapse toggle
+
+#### 📋 README quick-reference table
+
+- New **"At a glance"** section at the very top of the npm README (before Quick Start)
+- Two tables: all commands + all safety flags — copy-ready in under 5 seconds
+
+### 📦 Published
+- `poly-glot-ai-cli@1.5.1` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
 ## [v1.5.0] — 2026-04-02
 
 ### 🚀 New Features
