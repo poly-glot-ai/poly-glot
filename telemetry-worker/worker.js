@@ -114,7 +114,7 @@ function isMilestone(n) {
 async function checkMilestone(kv, event) {
   try {
     // Only count real usage commands (not config/help)
-    if (event.cmd !== 'comment' && event.cmd !== 'explain') return;
+    if (event.cmd !== 'comment' && event.cmd !== 'explain' && event.cmd !== 'why') return;
 
     // Atomically increment total command count
     const raw = await kv.get('total_commands');
@@ -190,7 +190,7 @@ function nextMilestone(current) {
 // Sanitiser — accepts only known shapes, strips unknown keys
 // ─────────────────────────────────────────────────────────────────────────────
 
-const KNOWN_CMDS      = new Set(['comment', 'explain', 'config', 'help']);
+const KNOWN_CMDS      = new Set(['comment', 'why', 'explain', 'config', 'help']);
 const KNOWN_PROVIDERS = new Set(['openai', 'anthropic', null, undefined]);
 const KNOWN_MODES     = new Set(['file', 'dir', 'stdin', null, undefined]);
 const KNOWN_OS        = new Set(['darwin', 'linux', 'win32', 'freebsd', 'openbsd', null, undefined]);

@@ -2073,6 +2073,57 @@ textarea:focus {
     animation: spin 0.6s linear infinite;
 }
 
+/* ── Why Comments button ────────────────────────────────────────── */
+button.why-btn {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    border-color: #b45309;
+}
+button.why-btn:hover {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-color: #d97706;
+}
+#whyBtn.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+#whyBtn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+/* ── Why badge & description in results panel ───────────────────── */
+.why-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #d97706;
+    color: #fff;
+    vertical-align: middle;
+    margin-left: 8px;
+    position: relative;
+    top: -1px;
+}
+.why-results-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    margin: -4px 0 10px;
+    padding: 0 16px;
+}
+
 /* ── Explanation results panel ──────────────────────────────────── */
 .ai-explain-results {
     margin-top: 20px;

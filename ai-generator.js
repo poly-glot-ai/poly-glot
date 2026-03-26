@@ -316,6 +316,118 @@ class AICommentGenerator {
     }
 
     /**
+     * Generate "why" comments — inline reasoning, intent, and decision comments.
+     * Works for all 12 supported languages; uses correct single-line comment syntax per language.
+     */
+    async generateWhyComments(code, language) {
+        if (!this.isConfigured()) {
+            throw new Error('API key not configured. Please add your API key in settings.');
+        }
+        const prompt = this.buildWhyPrompt(code, language);
+        if (this.provider === 'openai') {
+            return await this._callOpenAIRaw(prompt,
+                'You are a senior software engineer doing a code review. Add inline why-comments that explain reasoning and intent. Return ONLY the commented code, no explanations.');
+        } else if (this.provider === 'anthropic') {
+            return await this._callAnthropicRaw(prompt,
+                'You are a senior software engineer doing a code review. Add inline why-comments that explain reasoning and intent. Return ONLY the commented code, no explanations.');
+        }
+        throw new Error('Invalid provider selected.');
+    }
+
+    /** Shared OpenAI call returning { code, provider, model, cost } */
+    async _callOpenAIRaw(prompt, systemMsg) {
+        let response;
+        try {
+            response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
+                body: JSON.stringify({
+                    model: this.model,
+                    messages: [
+                        { role: 'system', content: systemMsg },
+                        { role: 'user',   content: prompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 2000
+                })
+            });
+        } catch (e) { throw new Error(this._parseError(e, 'openai')); }
+        if (!response.ok) {
+            let b = {}; try { b = await response.json(); } catch (_) {}
+            throw new Error(b.error?.message || `OpenAI error ${response.status}`);
+        }
+        const data = await response.json();
+        const inputTokens  = data.usage?.prompt_tokens     || 0;
+        const outputTokens = data.usage?.completion_tokens || 0;
+        this.costEstimate  = this.calculateOpenAICost(inputTokens, outputTokens);
+        return { code: data.choices[0].message.content.trim(), provider: 'openai', model: this.model, cost: this.costEstimate };
+    }
+
+    /** Shared Anthropic call returning { code, provider, model, cost } */
+    async _callAnthropicRaw(prompt, systemMsg) {
+        let response;
+        try {
+            response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: this.model,
+                    max_tokens: 2000,
+                    messages: [{ role: 'user', content: `${systemMsg}\n\n${prompt}` }],
+                    temperature: 0.3
+                })
+            });
+        } catch (e) { throw new Error(this._parseError(e, 'anthropic')); }
+        if (!response.ok) {
+            let b = {}; try { b = await response.json(); } catch (_) {}
+            throw new Error(b.error?.message || `Anthropic error ${response.status}`);
+        }
+        const data = await response.json();
+        const inputTokens  = data.usage?.input_tokens  || 0;
+        const outputTokens = data.usage?.output_tokens || 0;
+        this.costEstimate  = this.calculateAnthropicCost(inputTokens, outputTokens);
+        return { code: data.content[0].text.trim(), provider: 'anthropic', model: this.model, cost: this.costEstimate };
+    }
+
+    /**
+     * Build the why-comments prompt — language-aware, all 12 languages supported.
+     */
+    buildWhyPrompt(code, language) {
+        // Map language → correct single-line comment token
+        const commentToken = {
+            javascript: '//', typescript: '//', java: '//', cpp: '//',
+            csharp: '//', go: '//', rust: '//', kotlin: '//', swift: '//',
+            python: '#', ruby: '#', php: '//'
+        }[language] || '//';
+
+        return `You are a senior ${language} engineer doing a code review. Add inline "why" comments to the following code.
+
+Rules:
+- Focus exclusively on WHY decisions were made — not WHAT the code does
+- Explain: algorithmic trade-offs, non-obvious choices, performance decisions, edge-case handling, and anything a new engineer would ask "why not just…?" about
+- Use ${commentToken} for all comments (correct ${language} single-line syntax)
+- Place comments on the line immediately above the code they describe, or inline at the end of short lines
+- Do NOT restate what the code literally does — only explain the reasoning
+- Do NOT add comments to self-explanatory lines (trivial assignments, obvious returns, etc.)
+- Keep each comment to one line — concise and precise
+- Keep existing code exactly as-is — only add comments
+- Return ONLY the commented code, no explanations or markdown fences
+
+Code:
+${code}`;
+    }
+
+    /** Alias so app.js explainBtn works (calls explainCode → analyzeCode) */
+    async explainCode(code, language) {
+        return this.analyzeCode(code, language);
+    }
+
+    /**
      * Build the explain/analyze prompt
      */
     buildExplainPrompt(code, language) {

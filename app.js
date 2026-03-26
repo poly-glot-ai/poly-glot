@@ -1847,6 +1847,7 @@ function initializeAISettings() {
     const saveBtn = document.getElementById('saveAiSettings');
     const testBtn = document.getElementById('testApiKey');
     const generateBtn = document.getElementById('generateBtn');
+    const whyBtn      = document.getElementById('whyBtn');
     const explainBtn  = document.getElementById('explainBtn');
     
     const providerSelect = document.getElementById('aiProvider');
@@ -2207,6 +2208,124 @@ function initializeAISettings() {
             explainBtn.textContent = '🔍 Explain Code';
         }
     });
+
+    // ── Why Comments button ──────────────────────────────────────────
+    whyBtn.addEventListener('click', async () => {
+        if (!window.aiGenerator.isConfigured()) {
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            aiSettingsBtn.click();
+            return;
+        }
+
+        const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || { value: '' };
+        const code = codeEditor.value.trim();
+        if (!code) {
+            alert('📝 Please paste some code in the editor first.');
+            return;
+        }
+
+        const language = document.getElementById('language').value;
+
+        whyBtn.classList.add('loading');
+        whyBtn.disabled = true;
+        whyBtn.textContent = '💬 Generating…';
+
+        try {
+            const result = await window.aiGenerator.generateWhyComments(code, language);
+            displayWhyResults(result);
+
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('why_generation_success', {
+                    language,
+                    provider: result.provider,
+                    model: result.model,
+                    cost: result.cost
+                });
+            }
+        } catch (error) {
+            alert(`❌ Why-comment generation failed: ${error.message}\n\nPlease check your API key and try again.`);
+
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('why_generation_failed', {
+                    language,
+                    error: error.message
+                });
+            }
+        } finally {
+            whyBtn.classList.remove('loading');
+            whyBtn.disabled = false;
+            whyBtn.textContent = '💬 Why Comments';
+        }
+    });
+
+    // ── Render why-comments results (reuses ai-results panel with a why badge) ──
+    function displayWhyResults(result) {
+        const existing = document.querySelector('.ai-results');
+        if (existing) existing.remove();
+
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'ai-results';
+        resultsDiv.id = 'aiResultsDiv';
+        resultsDiv.innerHTML = `
+            <div class="ai-results-header">
+                <h3>💬 Why Comments <span class="why-badge">WHY</span></h3>
+                <span class="ai-cost">Cost: $${result.cost.toFixed(4)}</span>
+            </div>
+            <p class="why-results-desc">Inline comments explaining the <em>reasoning</em> and <em>intent</em> behind your code — not just what it does.</p>
+            <div class="ai-code-wrapper">
+                <button class="ai-copy-inline" id="copyAiCodeInline" title="Copy code">📋</button>
+                <div class="ai-code-output">${escapeHtml(result.code)}</div>
+            </div>
+            <div class="ai-actions">
+                <button class="btn-primary" id="copyAiCode">📋 Copy to Clipboard</button>
+                <button class="btn-primary" id="replaceCode">✅ Replace Code</button>
+                <button class="btn-secondary" id="closeAiResults">✗ Close</button>
+            </div>
+        `;
+
+        const suggestions = document.getElementById('suggestions');
+        suggestions.parentNode.insertBefore(resultsDiv, suggestions.nextSibling);
+
+        function flashCopied(btn, originalHTML) {
+            btn.innerHTML = '✅ Copied!';
+            btn.classList.add('copied');
+            btn.disabled = true;
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('copied');
+                btn.disabled = false;
+            }, 2000);
+        }
+
+        document.getElementById('copyAiCodeInline').addEventListener('click', function () {
+            navigator.clipboard.writeText(result.code).then(() => {
+                flashCopied(this, '📋');
+            }).catch(() => {
+                this.innerHTML = '❌';
+                setTimeout(() => { this.innerHTML = '📋'; }, 2000);
+            });
+        });
+
+        document.getElementById('copyAiCode').addEventListener('click', function () {
+            navigator.clipboard.writeText(result.code).then(() => {
+                flashCopied(this, '📋 Copy to Clipboard');
+            }).catch(() => {
+                this.innerHTML = '❌ Copy failed';
+                setTimeout(() => { this.innerHTML = '📋 Copy to Clipboard'; }, 2000);
+            });
+        });
+
+        document.getElementById('replaceCode').addEventListener('click', function () {
+            const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || { value: '' };
+            codeEditor.value = result.code;
+            flashCopied(this, '✅ Replace Code');
+            setTimeout(() => resultsDiv.remove(), 1200);
+        });
+
+        document.getElementById('closeAiResults').addEventListener('click', () => resultsDiv.remove());
+
+        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     // ── Render the explanation panel ────────────────────────────────
     function displayExplanation(result) {
