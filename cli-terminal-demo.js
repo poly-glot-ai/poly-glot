@@ -55,7 +55,10 @@ function calculateAge(birthDate) {
                 functions: 'create_user()',
                 tags: 'Args, Returns, Raises, Examples'
             },
-            after: `def create_user(username, email, age):
+            after: `import uuid
+from datetime import datetime
+
+def create_user(username, email, age):
     """
     Creates a new user account with validation.
     
@@ -87,7 +90,7 @@ function calculateAge(birthDate) {
         raise ValueError("User must be at least 13 years old")
     
     return {
-        'id': generate_id(),
+        'id': str(uuid.uuid4()),
         'username': username,
         'email': email,
         'created_at': datetime.now()
@@ -162,7 +165,11 @@ public static String capitalize(String str) {
                 functions: 'Average()',
                 tags: 'Parameters, Returns, Example'
             },
-            after: `// Average calculates the arithmetic mean of a slice of numbers
+            after: `package math
+
+import "errors"
+
+// Average calculates the arithmetic mean of a slice of numbers
 //
 // Parameters:
 //   numbers - Slice of float64 values to average
@@ -227,7 +234,10 @@ pub fn parse_int(input: &str) -> Result<i32, std::num::ParseIntError> {
                 functions: 'dotProduct()',
                 tags: '@param, @return, @throws, @note'
             },
-            after: `/**
+            after: `#include <vector>
+#include <stdexcept>
+
+/**
  * @brief Calculates the dot product of two vectors
  * 
  * @param a First vector of doubles
@@ -354,11 +364,17 @@ function arraySum(array $numbers): float {
             filename: 'Validator.swift',
             command: 'poly-glot comment Validator.swift',
             summary: {
-                blocks: 1,
+                blocks: 2,
                 functions: 'isValidPassword()',
                 tags: '- Parameter, - Returns, - Throws'
             },
-            after: `/// Validates password strength requirements
+            after: `/// Error types for password validation
+enum ValidationError: Error {
+    case tooShort
+    case missingRequiredCharacters
+}
+
+/// Validates password strength requirements
 ///
 /// - Parameter password: The password string to validate
 /// - Returns: \`true\` if password meets all requirements
