@@ -1,3 +1,1055 @@
-{
-  "content": "$(base64 -i /tmp/poly-glot-index.html | tr -d '\n')"
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poly-Glot - Code Comment Library</title>
+    <meta name="description" content="A comprehensive library of coding comment patterns and best practices for 12 programming languages">
+    
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ECY2XSHS9F"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-ECY2XSHS9F');
+    </script>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=99">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>Poly-Glot Code Comment Library</h1>
+                <div class="header-badges">
+                    <span class="version-badge">v1.4.0</span>
+                    <a href="https://github.com/hmoses/poly-glot/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="changelog-btn" title="View changelog">
+                        📝 What's New
+                    </a>
+                </div>
+            </div>
+            <!-- ── Section 1: What is Poly-Glot Code Comment Library ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">What is Poly-Glot Code Comment Library?</h2>
+                <p class="overview-text">
+                    <strong>Poly-Glot transforms inconsistent, AI-generated code comments into standardized professional documentation — instantly.</strong>
+                    Paste, upload, or use the CLI tool with your undocumented code and Poly-Glot generates JSDoc, Javadoc, PyDoc, Doxygen, and more, tailored to your language and your team's standards.
+                </p>
+                <p class="overview-text">
+                    Works with <strong>12 programming languages</strong>, supports both <strong>OpenAI and Anthropic</strong> API keys,
+                    and runs entirely in your browser — your code and API keys never leave your machine.
+                </p>
+                <p class="overview-text"><strong>Well-documented code is:</strong></p>
+                <ul class="overview-list">
+                    <li>📚 <strong>Searchable</strong> — better RAG retrieval</li>
+                    <li>🧠 <strong>Understandable</strong> — AI grasps intent</li>
+                    <li>🎯 <strong>Discoverable</strong> — GEO optimized</li>
+                    <li>🛡️ <strong>Safer</strong> — preserves critical context</li>
+                </ul>
+            </div>
+
+            <!-- ── Section 2: How It Works ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">How It Works</h2>
+                <div class="how-it-works">
+                    <div class="how-step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Paste or upload your code</span>
+                    </div>
+                    <div class="how-arrow">→</div>
+                    <div class="how-step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Click "Generate Comments"</span>
+                    </div>
+                    <div class="how-arrow">→</div>
+                    <div class="how-step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Get standardized docs instantly</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 3: Key Benefits ── -->
+            <div class="overview-section">
+                <h2 class="overview-heading">Key Benefits</h2>
+                <div class="header-value-props">
+                    <div class="value-prop">
+                        <span class="value-icon">🤖</span>
+                        <div class="value-text">
+                            <strong>Team Consistency</strong>
+                            <span>Standardize AI-generated comments across your entire codebase</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">⚡</span>
+                        <div class="value-text">
+                            <strong>Quick Reference</strong>
+                            <span>12 languages and all documentation styles in one place</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">✅</span>
+                        <div class="value-text">
+                            <strong>Style Enforcement</strong>
+                            <span>Define your standard, analyze compliance, copy templates</span>
+                        </div>
+                    </div>
+                    <div class="value-prop">
+                        <span class="value-icon">🔍</span>
+                        <div class="value-text">
+                            <strong>Deep Code Analysis</strong>
+                            <span>Explain any code — complexity, bugs, strengths, and doc quality score</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-features">
+                    <span class="feature-badge">📚 12 Languages</span>
+                    <span class="feature-badge">📋 Copy Templates</span>
+                    <span class="feature-badge">🔍 Code Analysis</span>
+                    <span class="feature-badge">💾 Save Favorites</span>
+                    <span class="feature-badge">🔒 Privacy-First</span>
+                    <span class="feature-badge">🪿 Built with Goose</span>
+                    <span class="feature-badge feature-badge-new">💻 VS Code Extension</span>
+                    <span class="feature-badge feature-badge-new">⌨️ CLI Tool</span>
+                </div>
+            </div>
+
+            <!-- ── Section 4: VS Code Extension ── -->
+            <div class="overview-section overview-section-vscode">
+                <h2 class="overview-heading">
+                    <span class="vscode-icon">💻</span>
+                    VS Code Extension
+                    <span class="coming-soon-badge">Coming Soon</span>
+                </h2>
+                <p class="overview-text">
+                    Comment code without leaving your editor. The <strong>Poly-Glot VS Code Extension</strong> brings
+                    AI-powered comment generation directly into your workflow — no copy-pasting, no context switching.
+                </p>
+                <div class="integration-grid">
+                    <div class="integration-card">
+                        <div class="integration-card-icon">⌨️</div>
+                        <div class="integration-card-body">
+                            <strong>Comment Selection</strong>
+                            <span>Select any code → <kbd>Cmd+Shift+/</kbd> → comments inserted inline instantly</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">📄</div>
+                        <div class="integration-card-body">
+                            <strong>Comment Entire File</strong>
+                            <span>Press <kbd>Cmd+Shift+Alt+/</kbd> or right-click any file in Explorer → "Poly-Glot: Comment This File"</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">🔍</div>
+                        <div class="integration-card-body">
+                            <strong>Explain Code</strong>
+                            <span>Select code → <kbd>Cmd+Shift+E</kbd> → AI analysis panel with complexity, bugs, and doc quality score</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">🎯</div>
+                        <div class="integration-card-body">
+                            <strong>Auto Style Detection</strong>
+                            <span>Automatically picks JSDoc, Javadoc, PyDoc, Doxygen, etc. based on your file's language</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="integration-install">
+                    <div class="install-step">
+                        <span class="install-num">1</span>
+                        <span>Search <strong>"Poly-Glot"</strong> in VS Code Extensions panel (<kbd>Cmd+Shift+X</kbd>)</span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">2</span>
+                        <span>Open Command Palette → <strong>"Poly-Glot: Configure API Key"</strong></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">3</span>
+                        <span>Select code and press <strong><kbd>Cmd+Shift+/</kbd></strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 5: CLI Tool ── -->
+            <div class="overview-section overview-section-cli">
+                <h2 class="overview-heading">
+                    <span class="cli-icon">⌨️</span>
+                    CLI Tool
+                    <span class="live-badge">Live on npm</span>
+                </h2>
+                <p class="overview-text">
+                    Comment code from your terminal. <strong>poly-glot-ai-cli</strong> is a zero-dependency command-line tool
+                    for batch commenting, CI/CD pipelines, and scripting — powered by the same AI engine as the web app.
+                </p>
+                <p class="overview-text">
+                    <strong>Support for 12 languages:</strong> JavaScript, Python, TypeScript, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, and Kotlin.
+                    One tool for your entire codebase — from backend services to mobile apps.
+                </p>
+                <div class="cli-demo">
+                    <div class="cli-demo-bar">
+                        <span class="cli-dot cli-dot-red"></span>
+                        <span class="cli-dot cli-dot-yellow"></span>
+                        <span class="cli-dot cli-dot-green"></span>
+                        <span class="cli-demo-title">Terminal</span>
+                    </div>
+                    <div class="cli-demo-body">
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npm install -g poly-glot-ai-cli</span></div>
+                        <div class="cli-line cli-dim"># Configure your API key once</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot config --key sk-... --provider openai</span></div>
+                        <div class="cli-line cli-dim"># Comment a single file</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment utils.py</span></div>
+                        <div class="cli-line cli-dim"># Comment an entire directory</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment --dir ./src --output-dir ./commented</span></div>
+                        <div class="cli-line cli-dim"># Explain any file</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot explain app.js</span></div>
+                        <div class="cli-line cli-dim"># Add why-comments (reasoning &amp; intent, not just what)</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot why auth.js</span></div>
+                        <div class="cli-line cli-dim"># Pipe from stdin</div>
+                        <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">cat server.ts | poly-glot comment --stdin --lang typescript</span></div>
+                    </div>
+                </div>
+                <div class="integration-install">
+                    <div class="install-step">
+                        <span class="install-num">1</span>
+                        <span>Run <code class="inline-code">npm install -g poly-glot-ai-cli</code></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">2</span>
+                        <span>Run <code class="inline-code">poly-glot config --key YOUR_API_KEY --provider openai</code></span>
+                    </div>
+                    <div class="install-arrow">→</div>
+                    <div class="install-step">
+                        <span class="install-num">3</span>
+                        <span>Run <code class="inline-code">poly-glot comment &lt;file&gt;</code>, <code class="inline-code">poly-glot comment &lt;file&gt; --why</code>, or <code class="inline-code">poly-glot comment &lt;file&gt; --both</code></span>
+                    </div>
+                </div>
+                <div class="cli-demo-cta">
+                    <h3 class="cli-demo-heading">🎬 See How It Works</h3>
+                    <p class="cli-demo-description">
+                        Watch poly-glot transform your existing code by automatically adding professional documentation.
+                        Run one command, and AI analyzes your code to generate comprehensive comments — no typing required!
+                    </p>
+                    <div class="cli-demo-language-selector-inline">
+                        <label for="cliDemoLanguage">Language:</label>
+                        <select id="cliDemoLanguage" class="cli-demo-language-select">
+                            <option value="javascript">JavaScript</option>
+                            <option value="python">Python</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="java">Java</option>
+                            <option value="go">Go</option>
+                            <option value="rust">Rust</option>
+                            <option value="cpp">C++</option>
+                            <option value="csharp">C#</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="php">PHP</option>
+                            <option value="swift">Swift</option>
+                            <option value="kotlin">Kotlin</option>
+                        </select>
+                        <label for="cliDemoMode">Mode:</label>
+                        <select id="cliDemoMode" class="cli-demo-language-select">
+                            <option value="comment">🤖 Comment</option>
+                            <option value="why">💬 Why</option>
+                            <option value="both">📝💬 Both</option>
+                        </select>
+                    </div>
+                    <button id="cliDemoBtn" class="cli-demo-button">
+                        <span class="demo-button-icon">▶️</span>
+                        See CLI Demo in Action
+                    </button>
+                </div>
+                
+                <!-- Inline Terminal Demo -->
+                <div class="cli-terminal-demo" id="cliTerminalDemo" style="display: none;">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span class="terminal-btn terminal-btn-close"></span>
+                                <span class="terminal-btn terminal-btn-minimize"></span>
+                                <span class="terminal-btn terminal-btn-maximize"></span>
+                            </div>
+                            <div class="terminal-title">Terminal — poly-glot demo</div>
+                        </div>
+                        <div class="terminal-body">
+                            <div class="terminal-prompt">
+                                <span class="terminal-user">user@poly-glot</span>
+                                <span class="terminal-separator">:</span>
+                                <span class="terminal-path">~/project</span>
+                                <span class="terminal-symbol">$</span>
+                                <span class="terminal-command" id="terminalCommand"></span>
+                                <span class="terminal-cursor"></span>
+                            </div>
+                            <div class="terminal-output" id="terminalOutput"></div>
+                            <div class="terminal-code-display" id="terminalCodeDisplay"></div>
+                        </div>
+                    </div>
+                    <div class="terminal-controls">
+                        <button class="terminal-control-btn" id="replayDemo">
+                            <span>🔄</span> Replay
+                        </button>
+                        <button class="terminal-control-btn" id="closeDemo">
+                            <span>✕</span> Close
+                        </button>
+                    </div>
+                    
+                    <!-- Code Output Display -->
+                    <div class="code-output-section" id="codeOutputSection" style="display: none;">
+                        <div class="code-output-header">
+                            <h4>📄 calculateAge.js (after documentation)</h4>
+                        </div>
+                        <div class="code-output-body" id="codeOutputBody">
+                            <!-- Code will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="cli-links">
+                    <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm">
+                        <span>📦</span> View on npm
+                    </a>
+                    <a href="https://github.com/hmoses/poly-glot/tree/main/cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github">
+                        <span>⭐</span> View on GitHub
+                    </a>
+                </div>
+            </div>
+
+            <!-- CLI Demo Modal -->
+            <div class="cli-demo-modal" id="cliDemoModal">
+                <div class="cli-demo-modal-content">
+                    <div class="cli-demo-modal-header">
+                        <h2 class="cli-demo-modal-title">
+                            <span>🎬</span>
+                            CLI Demo: See It In Action
+                        </h2>
+                        <button class="cli-demo-modal-close" id="cliDemoModalClose">&times;</button>
+                    </div>
+                    
+                    <div class="cli-demo-language-selector">
+                        <h3>Choose a Language:</h3>
+                        <div class="cli-demo-language-grid" id="cliDemoLanguageGrid">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="cli-demo-panels" id="cliDemoPanels" style="display: none;">
+                        <div class="cli-demo-panel">
+                            <div class="cli-demo-panel-header">
+                                <h3 class="cli-demo-panel-title">❌ Before: Poorly Commented</h3>
+                            </div>
+                            <pre class="cli-demo-panel-code" id="cliDemoBefore"><code></code></pre>
+                        </div>
+                        
+                        <div class="cli-demo-arrow">→</div>
+                        
+                        <div class="cli-demo-panel">
+                            <div class="cli-demo-panel-header">
+                                <h3 class="cli-demo-panel-title">✅ After: Professional Documentation</h3>
+                            </div>
+                            <pre class="cli-demo-panel-code" id="cliDemoAfter"><code></code></pre>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
+                        <p style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-secondary);">
+                            Ready to try it yourself?
+                        </p>
+                        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm" style="text-decoration: none;">
+                                <span>📦</span> Install from npm
+                            </a>
+                            <a href="https://github.com/hmoses/poly-glot/tree/main/cli#readme" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github" style="text-decoration: none;">
+                                <span>📖</span> View Documentation
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 7: RAG & GEO ── -->
+            <div class="overview-section overview-section-rag">
+                <h2 class="overview-heading">
+                    <span class="rag-icon">🧠</span>
+                    Why Comments Matter for AI — RAG &amp; GEO
+                </h2>
+                <p class="overview-text">
+                    AI coding assistants like <strong>GitHub Copilot, ChatGPT, and Claude</strong> actively read and interpret
+                    your code comments to understand developer intent, context, and business logic. Well-written comments
+                    are no longer just for humans — they are <strong>instructions for AI</strong>.
+                </p>
+                <p class="overview-text">
+                    Standardized comments help AI assistants <strong>identify bugs 4× faster</strong>, generate more accurate code,
+                    and produce better PR summaries and documentation — making Poly-Glot a direct multiplier on your
+                    team's AI-assisted productivity.
+                </p>
+
+                <div class="rag-grid">
+                    <div class="rag-card">
+                        <div class="rag-card-icon">💬</div>
+                        <div class="rag-card-body">
+                            <h3>Contextual Understanding</h3>
+                            <p>AI uses comments to understand the <em>"why"</em> behind your code, not just the <em>"what"</em> — enabling far more accurate suggestions and completions.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">⚡</div>
+                        <div class="rag-card-body">
+                            <h3>Code Generation</h3>
+                            <p>When you write a clear comment, AI uses it to prompt the generation of corresponding implementation code — turning your intent directly into working code.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">🐛</div>
+                        <div class="rag-card-body">
+                            <h3>Refactoring &amp; Debugging</h3>
+                            <p>Comments help AI understand intended functionality, making it significantly better at spotting bugs, edge cases, and suggesting targeted improvements.</p>
+                        </div>
+                    </div>
+                    <div class="rag-card">
+                        <div class="rag-card-icon">📄</div>
+                        <div class="rag-card-body">
+                            <h3>Documentation &amp; PR Summaries</h3>
+                            <p>AI analyses code and comments together to auto-generate accurate documentation, pull request summaries, and onboarding guides for new team members.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rag-callout">
+                    <span class="rag-callout-icon">💡</span>
+                    <p><strong>The bottom line:</strong> Clean, standardized comments are the highest-leverage investment you can make in your AI-assisted workflow. Poly-Glot makes it effortless.</p>
+                </div>
+            </div>
+        </div>
+        <!-- Sticky toolbar — always visible below header -->
+        <div class="toolbar">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="php">PHP</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="swift">Swift</option>
+                        <option value="kotlin">Kotlin</option>
+                    </select>
+                </div>
+                <button class="primary" id="analyzeBtn">Analyze Code</button>
+                <button class="primary" id="generateBtn" title="Generate AI-powered comments">🤖 Generate Comments</button>
+                <button class="primary why-btn" id="whyBtn" title="Add inline why-comments explaining decisions &amp; intent">💬 Why Comments</button>
+                <button class="primary" id="explainBtn" title="Get a deep analysis of your code">🔍 Explain Code</button>
+                <button id="exportBtn">Export Templates</button>
+                <button id="aiSettingsBtn" title="Configure AI API settings">⚙️ AI Settings</button>
+                <a href="https://buymeacoffee.com/hmoses" target="_blank" rel="noopener noreferrer" id="supportBtn" class="support-btn" title="Support Poly-Glot development">
+                    <span class="support-icon">☕</span>
+                    <span class="support-text">Buy Me a Coffee</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- AI Settings Modal -->
+        <div id="aiSettingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🤖 AI Comment Generation Settings</h2>
+                    <button class="modal-close" id="closeAiSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>API Configuration</h3>
+                        <p class="settings-description">
+                            Poly-Glot uses your own API key to generate comments. Your key is stored locally in your browser and never sent to our servers.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label for="aiProvider">AI Provider:</label>
+                            <select id="aiProvider" class="settings-select">
+                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aiModel">Model:</label>
+                            <select id="aiModel" class="settings-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group custom-model-row" id="customModelRow" style="display:none;">
+                            <label for="customModelInput">Custom model name:</label>
+                            <input type="text" id="customModelInput" class="settings-input custom-model-input"
+                                   placeholder="e.g. gpt-4o-2024-11-20, claude-3-7-sonnet-20250219"
+                                   autocomplete="off" spellcheck="false">
+                            <small class="help-text custom-model-hint">
+                                Enter any model ID supported by your provider. Find model names at
+                                <a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener noreferrer">OpenAI docs</a> or
+                                <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener noreferrer">Anthropic docs</a>.
+                                Pricing will fall back to the closest known model.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key:</label>
+                            <div class="api-key-input-wrapper">
+                                <input type="password" id="apiKey" class="settings-input" placeholder="sk-..." autocomplete="off">
+                                <button type="button" id="toggleApiKeyVisibility" class="toggle-visibility">👁️</button>
+                            </div>
+                            <small class="help-text">
+                                Get your API key from:
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> or
+                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>
+                            </small>
+                        </div>
+
+                        <div class="api-status" id="apiStatus">
+                            <span class="status-indicator"></span>
+                            <span class="status-text">Not configured</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>💰 Cost Information</h3>
+                        <div class="cost-info">
+                            <div class="cost-card">
+                                <h4>GPT-4o Mini (Recommended)</h4>
+                                <p class="cost-price">~$0.001 per request</p>
+                                <p class="cost-desc">Best balance of quality and cost</p>
+                            </div>
+                            <div class="cost-card">
+                                <h4>Claude 3.5 Sonnet</h4>
+                                <p class="cost-price">~$0.01 per request</p>
+                                <p class="cost-desc">Excellent for complex code</p>
+                            </div>
+                        </div>
+                        <p class="cost-note">
+                            💡 Actual costs depend on code size. Most requests cost less than $0.01.
+                        </p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>🔒 Privacy & Security</h3>
+                        <ul class="privacy-list">
+                            <li>✅ API key stored locally in your browser only</li>
+                            <li>✅ Direct connection from your browser to AI provider</li>
+                            <li>✅ No data sent to Poly-Glot servers</li>
+                            <li>✅ You control your API usage and costs</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="testApiKey" class="btn-secondary">Test Connection</button>
+                    <button id="saveAiSettings" class="btn-primary">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Section -->
+        <div class="demo-section" id="demoSection">
+            <div class="demo-container">
+                <h2 class="demo-title">
+                    <span class="demo-icon">🎬</span>
+                    See It In Action
+                </h2>
+                <p class="demo-subtitle">Watch how Poly-Glot transforms inconsistent AI-generated comments into standardized documentation</p>
+                
+                <div class="demo-controls">
+                    <button id="playDemoBtn" class="demo-btn primary">▶️ Play Demo</button>
+                    <button id="resetDemoBtn" class="demo-btn">↻ Reset</button>
+                </div>
+
+                <div class="demo-panels">
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 1</span>
+                            <h3>Before: Inconsistent AI Comments</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeBefore">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-issues" id="demoIssues">
+                            <div class="issue-badge">🤖 AI Generated Comments</div>
+                        </div>
+                    </div>
+
+                    <div class="demo-arrow">→</div>
+
+                    <div class="demo-panel">
+                        <div class="demo-panel-header">
+                            <span class="demo-step">Step 2</span>
+                            <h3>After: JSDoc Standard</h3>
+                        </div>
+                        <div class="demo-code" id="demoCodeAfter">
+<pre><code class="language-javascript"></code></pre>
+                        </div>
+                        <div class="demo-benefits" id="demoBenefits">
+                            <div class="benefit-badge">✨ Poly-Glot Generated Comments</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-stats" id="demoStats" style="display: none;">
+
+                    <!-- RAG Score -->
+                    <div class="score-block">
+                        <div class="score-title">🤖 RAG Retrieval Score</div>
+                        <div class="score-meter-row">
+                            <div class="score-before-wrap">
+                                <div class="score-num before" id="ragBefore">11</div>
+                                <div class="score-sublabel">Before</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar before" id="ragBarBefore" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="score-arrow-big">→</div>
+                            <div class="score-after-wrap">
+                                <div class="score-num after" id="ragAfter">0</div>
+                                <div class="score-sublabel">After</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar after" id="ragBarAfter" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="score-delta" id="ragDelta" style="opacity:0">+<span id="ragDeltaNum">0</span>% improvement</div>
+                    </div>
+
+                    <div class="score-divider"></div>
+
+                    <!-- GEO Score -->
+                    <div class="score-block">
+                        <div class="score-title">🌐 GEO Discoverability Score</div>
+                        <div class="score-meter-row">
+                            <div class="score-before-wrap">
+                                <div class="score-num before" id="geoBefore">9</div>
+                                <div class="score-sublabel">Before</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar before" id="geoBarBefore" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <div class="score-arrow-big">→</div>
+                            <div class="score-after-wrap">
+                                <div class="score-num after" id="geoAfter">0</div>
+                                <div class="score-sublabel">After</div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar after" id="geoBarAfter" style="width:0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="score-delta" id="geoDelta" style="opacity:0">+<span id="geoDeltaNum">0</span>% improvement</div>
+                    </div>
+
+                    <div class="score-divider"></div>
+
+                    <!-- Improvement pills -->
+                    <div class="score-block metrics-block">
+                        <div class="score-title">✨ Improvements Applied</div>
+                        <div class="metrics-grid">
+                            <div class="metric-pill" id="metricJSDoc"    style="opacity:0">📋 JSDoc Standard</div>
+                            <div class="metric-pill" id="metricParams"   style="opacity:0">🔖 @param Types</div>
+                            <div class="metric-pill" id="metricReturns"  style="opacity:0">↩️ @returns Docs</div>
+                            <div class="metric-pill" id="metricExamples" style="opacity:0">💡 @example Added</div>
+                            <div class="metric-pill" id="metricThrows"   style="opacity:0">⚠️ @throws Noted</div>
+                            <div class="metric-pill" id="metricCoverage" style="opacity:0">📈 85% Coverage</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="demo-cta">
+                    <p>Ready to standardize your team's documentation?</p>
+                    <button id="tryItNowBtn" class="cta-btn">Try It Now Below ↓</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- v6-cache-bust ══════════════════════════════════════════════════════
+             Comment Generator — primary tool, parallel design
+             matching markdown.poly-glot.ai exactly
+             ══════════════════════════════════════════════════════ -->
+
+        <!-- ⚙️ Settings (overview-box style matching markdown site) -->
+        <div class="pg-tool-settings" id="commentGenerator">
+            <div class="pg-settings-heading">⚙️ API Settings</div>
+            <div class="pg-settings-row">
+                <div class="pg-field">
+                    <label class="pg-label" for="cgLanguage">Language</label>
+                    <select id="cgLanguage" class="pg-select">
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="php">PHP</option>
+                        <option value="swift">Swift</option>
+                        <option value="kotlin">Kotlin</option>
+                    </select>
+                </div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgStyle">Comment Style</label>
+                    <select id="cgStyle" class="pg-select">
+                        <option value="jsdoc">JSDoc</option>
+                        <option value="javadoc">Javadoc</option>
+                        <option value="pydoc">PyDoc</option>
+                        <option value="doxygen">Doxygen</option>
+                        <option value="xmldoc">XMLDoc (C#)</option>
+                        <option value="godoc">GoDoc</option>
+                        <option value="rustdoc">RustDoc</option>
+                        <option value="rdoc">RDoc (Ruby)</option>
+                        <option value="phpdoc">PHPDoc</option>
+                        <option value="swift">Swift Doc</option>
+                        <option value="kotlin">KDoc</option>
+                    </select>
+                </div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgProvider">Provider</label>
+                    <select id="cgProvider" class="pg-select">
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                    </select>
+                </div>
+                <div class="pg-field">
+                    <label class="pg-label" for="cgModel">Model</label>
+                    <select id="cgModel" class="pg-select">
+                        <option value="gpt-4.1-mini">GPT-4.1 Mini ✨ (recommended)</option>
+                        <option value="gpt-4.1">GPT-4.1 (best)</option>
+                        <option value="gpt-4.1-nano">GPT-4.1 Nano (cheapest)</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini</option>
+                        <option value="o3-mini">o3-mini (reasoning)</option>
+                        <option value="o3">o3 (reasoning, powerful)</option>
+                        <option value="o1-mini">o1-mini (reasoning)</option>
+                        <option value="o1">o1 (reasoning)</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="gpt-4">GPT-4</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (legacy)</option>
+                    </select>
+                </div>
+                <div class="pg-field pg-field-key">
+                    <label class="pg-label" for="cgApiKey">API Key</label>
+                    <div class="pg-key-row">
+                        <input type="password" id="cgApiKey" class="pg-key-input" placeholder="sk-… or sk-ant-…" autocomplete="off">
+                        <button id="cgToggleKey" class="pg-icon-btn" title="Show/hide key">👁</button>
+                        <button id="cgSaveKey" class="pg-save-btn">Save</button>
+                    </div>
+                    <span id="cgKeyStatus" class="pg-key-status"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Main Tool: two-panel, sidebar + panels ── -->
+        <div class="pg-main-tool">
+
+            <!-- Sidebar: Categories (kept as-is) -->
+            <div class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search templates...">
+                </div>
+                <h3>Categories</h3>
+                <div class="nav-item active" data-category="syntax">Comment Syntax</div>
+                <div class="nav-item" data-category="functions">Function Examples</div>
+                <div class="nav-item" data-category="classes">Class Examples</div>
+                <div class="nav-item" data-category="best-practices">Best Practices</div>
+                <div class="nav-item" data-category="examples">Code Examples</div>
+                <div class="nav-item" data-category="editor">Interactive Editor</div>
+                <div class="nav-item" data-category="favorites">⭐ Favorites</div>
+            </div>
+
+            <!-- Tool panels container -->
+            <div class="pg-panels-wrap">
+
+                <!-- Reference panel (left, collapsible by category click) -->
+                <div class="panel pg-ref-panel" id="leftPanel">
+                    <div class="panel-header pg-panel-header-legacy">
+                        <span class="panel-title-legacy">Templates &amp; Reference</span>
+                    </div>
+                    <div id="templateContent" class="pg-template-content"></div>
+                </div>
+
+                <!-- Divider between reference and tool -->
+                <div class="pg-ref-divider" id="refDivider"></div>
+
+                <!-- Input panel — matches markdown site .panel#inputPanel exactly -->
+                <div class="panel pg-tool-panel" id="inputPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">Your Code</span>
+                        <div class="panel-actions">
+                            <label class="upload-btn" for="cgFileUpload">📁 Upload</label>
+                            <input type="file" id="cgFileUpload" accept=".js,.ts,.jsx,.tsx,.py,.java,.cpp,.c,.cs,.go,.rs,.rb,.php,.swift,.kt" style="display:none">
+                            <button id="cgScoreInputBtn" class="action-btn score-btn" title="Score this code for RAG &amp; GEO quality">📊 Score</button>
+                            <button id="cgClearInput" class="action-btn">✕ Clear</button>
+                        </div>
+                    </div>
+                    <div class="sample-strip">
+                        <span class="sample-strip-label">Try a sample:</span>
+                        <button class="sample-btn" onclick="loadSample('python')">Python</button>
+                        <button class="sample-btn" onclick="loadSample('javascript')">JavaScript</button>
+                        <button class="sample-btn" onclick="loadSample('typescript')">TypeScript</button>
+                        <button class="sample-btn" onclick="loadSample('go')">Go</button>
+                        <button class="sample-btn" onclick="loadSample('rust')">Rust</button>
+                        <button class="sample-btn" onclick="loadSample('java')">Java</button>
+                    </div>
+                    <textarea id="cgInput" class="pg-editor" placeholder="Paste your code here or upload a file…&#10;&#10;Language &amp; comment style auto-detect from file extension."></textarea>
+                    <div class="panel-footer">
+                        <span id="cgInputStats" class="stats-text"></span>
+                        <button id="cgGenerateBtn" class="format-btn">🤖 Generate Comments</button>
+                    </div>
+                </div>
+
+                <!-- Divider — identical to markdown site -->
+                <div class="divider">
+                    <div class="divider-line"></div>
+                    <span class="divider-icon">→</span>
+                    <div class="divider-line"></div>
+                </div>
+
+                <!-- Output panel — matches markdown site .panel#outputPanel exactly -->
+                <div class="panel pg-tool-panel" id="outputPanel">
+                    <div class="panel-header">
+                        <span class="panel-title">Commented Code</span>
+                        <div class="panel-actions">
+                            <button id="cgScoreBtn" class="action-btn score-btn" disabled title="Compare RAG &amp; GEO scores before vs. after">📊 Score</button>
+                            <button id="cgCopyBtn" class="action-btn" disabled>📋 Copy</button>
+                            <button id="cgDownloadBtn" class="action-btn" disabled>⬇️ Download</button>
+                        </div>
+                    </div>
+                    <div id="cgOutputArea" class="pg-output-area">
+                        <div class="output-placeholder" id="cgPlaceholder">
+                            <span class="placeholder-icon">💬</span>
+                            <p>Your documented code will appear here</p>
+                            <p class="placeholder-sub">RAG-ready · GEO-optimized · Documented</p>
+                        </div>
+                        <pre id="cgOutput" class="pg-output-pre" style="display:none"></pre>
+                    </div>
+                    <div class="panel-footer" id="cgOutputFooter" style="display:none">
+                        <span id="cgOutputStats" class="stats-text"></span>
+                        <span id="cgOutputCost" class="pg-cost"></span>
+                        <div id="cgImpBadges" class="improvement-badges"></div>
+                    </div>
+                </div>
+
+            </div><!-- /pg-panels-wrap -->
+        </div><!-- /pg-main-tool -->
+
+        <!-- Loading overlay -->
+        <div class="pg-loading" id="cgLoading" style="display:none">
+            <div class="pg-spinner"></div>
+            <p>Generating comments…</p>
+        </div>
+
+    </div><!-- /container -->
+
+    <!-- ── Enterprise Demo Request Section ── -->
+    <section class="enterprise-section">
+        <div class="enterprise-content">
+            <h2 class="enterprise-heading">Need Poly-Glot for Your Team?</h2>
+            <p class="enterprise-subtitle">
+                Custom integrations, SSO, compliance, and dedicated support for engineering teams
+            </p>
+            
+            <div class="enterprise-features">
+                <div class="feature-item">
+                    <span class="feature-icon">🔐</span>
+                    <span>SSO & SAML</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span>Team Analytics</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">⚡</span>
+                    <span>Custom Integrations</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🛡️</span>
+                    <span>SLA & Support</span>
+                </div>
+            </div>
+
+            <form class="enterprise-form" id="enterpriseForm">
+                <div class="form-row">
+                    <input type="text" name="name" id="formName" placeholder="Name *" required class="form-input">
+                    <input type="email" name="email" id="formEmail" placeholder="Work Email *" required class="form-input">
+                </div>
+                <div class="form-row">
+                    <input type="text" name="company" id="formCompany" placeholder="Company Name *" required class="form-input">
+                    <select name="team_size" id="formTeamSize" class="form-input">
+                        <option value="">Team Size</option>
+                        <option value="1-10">1-10 developers</option>
+                        <option value="11-50">11-50 developers</option>
+                        <option value="51-200">51-200 developers</option>
+                        <option value="200+">200+ developers</option>
+                    </select>
+                </div>
+                <textarea name="message" id="formMessage" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
+                
+                <button type="submit" class="btn-enterprise" id="submitBtn">
+                    <span id="btnText">Request Enterprise Demo →</span>
+                    <span id="btnLoading" style="display: none;">⏳ Sending...</span>
+                </button>
+                
+                <p class="form-success" id="formSuccess" style="display: none;">
+                    ✅ Thanks! We'll contact you within 24 hours.
+                </p>
+                <p class="form-error" id="formError" style="display: none;">
+                    ❌ Something went wrong. Please try again or email hwmoses2@icloud.com directly.
+                </p>
+            </form>
+        </div>
+    </section>
+
+    <script src="analytics.js?v=8"></script>
+    <script src="ai-generator.js?v=99"></script>
+    <script src="scorer.js?v=9"></script>
+    <script src="app.js?v=99"></script>
+    <script src="cli-terminal-demo.js?v=101"></script>
+
+    <!-- Enterprise Form Handler -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('enterpriseForm');
+            if (!form) {
+                console.error('Form not found!');
+                return;
+            }
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                var submitBtn = document.getElementById('submitBtn');
+                var btnText = document.getElementById('btnText');
+                var btnLoading = document.getElementById('btnLoading');
+                var successMsg = document.getElementById('formSuccess');
+                var errorMsg = document.getElementById('formError');
+                
+                // Hide previous messages
+                if (successMsg) successMsg.style.display = 'none';
+                if (errorMsg) errorMsg.style.display = 'none';
+                
+                // Show loading state
+                if (submitBtn) submitBtn.disabled = true;
+                if (btnText) btnText.style.display = 'none';
+                if (btnLoading) btnLoading.style.display = 'inline';
+                
+                // Get form values
+                var name = document.getElementById('formName') ? document.getElementById('formName').value : '';
+                var email = document.getElementById('formEmail') ? document.getElementById('formEmail').value : '';
+                var company = document.getElementById('formCompany') ? document.getElementById('formCompany').value : '';
+                var teamSize = document.getElementById('formTeamSize') ? document.getElementById('formTeamSize').value : '';
+                var message = document.getElementById('formMessage') ? document.getElementById('formMessage').value : '';
+                
+                // Simple mailto fallback - ALWAYS WORKS
+                var subject = encodeURIComponent('Poly-Glot Enterprise Demo Request from ' + company);
+                var body = encodeURIComponent(
+                    'Name: ' + name + '\n' +
+                    'Email: ' + email + '\n' +
+                    'Company: ' + company + '\n' +
+                    'Team Size: ' + (teamSize || 'Not specified') + '\n' +
+                    'Message: ' + (message || 'No additional message')
+                );
+                
+                // Try Web3Forms first, fallback to mailto
+                var formData = new FormData();
+                formData.append('access_key', '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('company', company);
+                formData.append('team_size', teamSize || 'Not specified');
+                formData.append('message', message || 'No additional message');
+                formData.append('subject', 'Poly-Glot Enterprise Demo Request from ' + company);
+                
+                fetch('https://api.web3forms.com/submit', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    // Reset button state
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    
+                    if (data.success) {
+                        // Success!
+                        form.reset();
+                        if (successMsg) successMsg.style.display = 'block';
+                        
+                        // Track in Google Analytics
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'submit', {
+                                'event_category': 'Enterprise',
+                                'event_label': 'Demo Request'
+                            });
+                        }
+                        
+                        // Hide success message after 10 seconds
+                        setTimeout(function() {
+                            if (successMsg) successMsg.style.display = 'none';
+                        }, 10000);
+                        
+                        // Log for debugging
+                        console.log('✅ Form submitted successfully to hwmoses2@icloud.com');
+                        console.log('Details:', { name: name, company: company, email: email });
+                    } else {
+                        throw new Error(data.message || 'Submission failed');
+                    }
+                })
+                .catch(function(error) {
+                    // Web3Forms failed - use mailto fallback
+                    console.warn('Web3Forms failed, opening email client as fallback');
+                    console.error('Error:', error);
+                    
+                    // Open email client
+                    window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + subject + '&body=' + body;
+                    
+                    // Reset button state
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    
+                    // Show success message (email client opened)
+                    if (successMsg) {
+                        successMsg.innerHTML = '✅ Opening your email client... Please send the pre-filled message.';
+                        successMsg.style.display = 'block';
+                        
+                        setTimeout(function() {
+                            successMsg.style.display = 'none';
+                            successMsg.innerHTML = '✅ Thanks! We\'ll contact you within 24 hours.';
+                        }, 8000);
+                    }
+                });
+            });
+        });
+    </script>
+
+    <!-- ── Footer ── -->
+    <div class="site-footer">
+        <p>© 2026 <strong>Harold Moses</strong> · <span class="footer-domain">poly-glot.ai</span> is a registered domain owned by Harold Moses · Built with 🪿 Goose</p>
+    </div>
+</body>
+</html>
