@@ -26,7 +26,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
     <div class="container">
@@ -784,6 +784,15 @@
                             <button id="cgClearInput" class="action-btn">✕ Clear</button>
                         </div>
                     </div>
+                    <div class="sample-strip">
+                        <span class="sample-strip-label">Try a sample:</span>
+                        <button class="sample-btn" onclick="loadSample('python')">Python</button>
+                        <button class="sample-btn" onclick="loadSample('javascript')">JavaScript</button>
+                        <button class="sample-btn" onclick="loadSample('typescript')">TypeScript</button>
+                        <button class="sample-btn" onclick="loadSample('go')">Go</button>
+                        <button class="sample-btn" onclick="loadSample('rust')">Rust</button>
+                        <button class="sample-btn" onclick="loadSample('java')">Java</button>
+                    </div>
                     <textarea id="cgInput" class="pg-editor" placeholder="Paste your code here or upload a file…&#10;&#10;Language &amp; comment style auto-detect from file extension."></textarea>
                     <div class="panel-footer">
                         <span id="cgInputStats" class="stats-text"></span>
@@ -896,7 +905,7 @@
     <script src="analytics.js?v=8"></script>
     <script src="ai-generator.js?v=8"></script>
     <script src="scorer.js?v=9"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
     <script src="cli-terminal-demo.js?v=9"></script>
 
     <!-- Enterprise Form Handler -->

@@ -2479,6 +2479,298 @@ if (document.readyState === 'loading') {
    ═══════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════
+   Sample Code — one real snippet per language, no API key needed
+   ═══════════════════════════════════════════════════════════ */
+const SAMPLES = {
+    python: {
+        lang: 'python', label: 'Python',
+        code: `import re
+from collections import defaultdict
+
+class LogParser:
+    def __init__(self, path):
+        self.path = path
+        self.errors = defaultdict(int)
+        self._pattern = re.compile(r'\\[(ERROR|WARN|INFO)\\]\\s+(.*)')
+
+    def parse(self):
+        with open(self.path, 'r') as f:
+            for line in f:
+                m = self._pattern.search(line)
+                if m:
+                    level, msg = m.group(1), m.group(2).strip()
+                    self.errors[level] += 1
+        return dict(self.errors)
+
+    def top_errors(self, n=5):
+        sorted_items = sorted(self.errors.items(), key=lambda x: x[1], reverse=True)
+        return sorted_items[:n]
+
+
+def summarise(path):
+    parser = LogParser(path)
+    counts = parser.parse()
+    return parser.top_errors()
+`,
+    },
+    javascript: {
+        lang: 'javascript', label: 'JavaScript',
+        code: `const CACHE_TTL = 5 * 60 * 1000;
+
+class DataCache {
+    constructor() {
+        this._store = new Map();
+    }
+
+    set(key, value) {
+        this._store.set(key, { value, ts: Date.now() });
+    }
+
+    get(key) {
+        const entry = this._store.get(key);
+        if (!entry) return null;
+        if (Date.now() - entry.ts > CACHE_TTL) {
+            this._store.delete(key);
+            return null;
+        }
+        return entry.value;
+    }
+
+    invalidate(key) {
+        this._store.delete(key);
+    }
+
+    purge() {
+        const now = Date.now();
+        for (const [k, v] of this._store) {
+            if (now - v.ts > CACHE_TTL) this._store.delete(k);
+        }
+    }
+}
+
+async function fetchWithCache(cache, url) {
+    const cached = cache.get(url);
+    if (cached) return cached;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
+    const data = await res.json();
+    cache.set(url, data);
+    return data;
+}
+`,
+    },
+    typescript: {
+        lang: 'typescript', label: 'TypeScript',
+        code: `interface PaginationOptions {
+    page: number;
+    pageSize: number;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
+}
+
+interface PaginatedResult<T> {
+    items: T[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+}
+
+async function paginate<T>(
+    fetchAll: () => Promise<T[]>,
+    opts: PaginationOptions,
+    filter?: (item: T) => boolean
+): Promise<PaginatedResult<T>> {
+    let items = await fetchAll();
+    if (filter) items = items.filter(filter);
+    const total = items.length;
+    const totalPages = Math.ceil(total / opts.pageSize);
+    const start = (opts.page - 1) * opts.pageSize;
+    const slice = items.slice(start, start + opts.pageSize);
+    return { items: slice, total, page: opts.page, pageSize: opts.pageSize, totalPages };
+}
+`,
+    },
+    go: {
+        lang: 'go', label: 'Go',
+        code: `package ratelimit
+
+import (
+    "sync"
+    "time"
+)
+
+type RateLimiter struct {
+    mu       sync.Mutex
+    tokens   float64
+    maxTokens float64
+    refillRate float64
+    lastRefill time.Time
+}
+
+func New(maxTokens, refillPerSecond float64) *RateLimiter {
+    return &RateLimiter{
+        tokens:     maxTokens,
+        maxTokens:  maxTokens,
+        refillRate: refillPerSecond,
+        lastRefill: time.Now(),
+    }
+}
+
+func (r *RateLimiter) Allow() bool {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    now := time.Now()
+    elapsed := now.Sub(r.lastRefill).Seconds()
+    r.tokens = min(r.maxTokens, r.tokens + elapsed*r.refillRate)
+    r.lastRefill = now
+    if r.tokens >= 1 {
+        r.tokens--
+        return true
+    }
+    return false
+}
+
+func min(a, b float64) float64 {
+    if a < b { return a }
+    return b
+}
+`,
+    },
+    rust: {
+        lang: 'rust', label: 'Rust',
+        code: `use std::collections::HashMap;
+use std::hash::Hash;
+
+pub struct LruCache<K, V> {
+    capacity: usize,
+    map: HashMap<K, V>,
+    order: Vec<K>,
+}
+
+impl<K: Eq + Hash + Clone, V> LruCache<K, V> {
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            capacity,
+            map: HashMap::new(),
+            order: Vec::new(),
+        }
+    }
+
+    pub fn get(&mut self, key: &K) -> Option<&V> {
+        if self.map.contains_key(key) {
+            self.order.retain(|k| k != key);
+            self.order.push(key.clone());
+            self.map.get(key)
+        } else {
+            None
+        }
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        if self.map.len() == self.capacity {
+            if let Some(oldest) = self.order.first().cloned() {
+                self.order.remove(0);
+                self.map.remove(&oldest);
+            }
+        }
+        self.order.push(key.clone());
+        self.map.insert(key, value);
+    }
+}
+`,
+    },
+    java: {
+        lang: 'java', label: 'Java',
+        code: `import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class EventBus<T> {
+    private final List<EventHandler<T>> handlers = new ArrayList<>();
+
+    @FunctionalInterface
+    public interface EventHandler<T> {
+        void handle(T event);
+    }
+
+    public void subscribe(EventHandler<T> handler) {
+        if (handler == null) throw new IllegalArgumentException("Handler must not be null");
+        handlers.add(handler);
+    }
+
+    public boolean unsubscribe(EventHandler<T> handler) {
+        return handlers.remove(handler);
+    }
+
+    public void publish(T event) {
+        handlers.forEach(h -> {
+            try {
+                h.handle(event);
+            } catch (Exception e) {
+                System.err.println("Handler error: " + e.getMessage());
+            }
+        });
+    }
+
+    public int subscriberCount() {
+        return handlers.size();
+    }
+}
+`,
+    },
+};
+
+function loadSample(lang) {
+    const sample = SAMPLES[lang];
+    if (!sample) return;
+
+    const input    = document.getElementById('cgInput');
+    const langSel  = document.getElementById('cgLanguage');
+    if (!input || !langSel) return;
+
+    // Fill textarea
+    input.value = sample.code;
+
+    // Mark all sample buttons inactive, highlight the clicked one
+    document.querySelectorAll('.sample-btn').forEach(b => b.classList.remove('active'));
+    const clicked = [...document.querySelectorAll('.sample-btn')]
+        .find(b => b.textContent.trim() === sample.label);
+    if (clicked) clicked.classList.add('active');
+
+    // Reset override so detection runs fresh
+    // (access via the closure inside initCommentGenerator isn't possible from outside,
+    //  so we dispatch a real paste event to trigger the existing paste handler)
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Set language directly and sync style
+    langSel.value = sample.lang;
+    langSel.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Override the user-override flag by dispatching paste (triggers full detection path)
+    const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        clipboardData: new DataTransfer(),
+    });
+    input.dispatchEvent(pasteEvent);
+
+    // Update stats line
+    const stats = document.getElementById('cgInputStats');
+    if (stats) {
+        const lines = sample.code.split('\n').length;
+        stats.textContent = `${lines} lines · ${sample.code.length} chars`;
+    }
+
+    // Track
+    if (window.polyglotAnalytics) {
+        window.polyglotAnalytics.trackEvent('sample_loaded', { lang });
+    }
+
+    // Scroll into view
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/* ═══════════════════════════════════════════════════════════
    Comment Generator — parallel design to markdown.poly-glot.ai
    ═══════════════════════════════════════════════════════════ */
 function initCommentGenerator() {
@@ -2939,3 +3231,6 @@ if (document.readyState === 'loading') {
 } else {
     initCommentGenerator();
 }
+
+// Expose sample loader globally (called from onclick in HTML)
+window.loadSample = loadSample;
