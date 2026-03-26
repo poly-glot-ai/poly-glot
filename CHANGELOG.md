@@ -4,6 +4,54 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.2.0] — 2026-03-26
+
+### 🐛 Bug Fixes
+
+#### 🔍 Language Detection — Complete Rewrite
+- **Replaced broken if-else chain with confidence-scoring system** — every language accumulates points across multiple signals; highest score wins
+- Go: `package main`, `import (`, `chan`, `defer`, `:=`, `sync.` — was being misidentified as Python or Swift
+- Ruby: standalone `end`, `def`+`end` combo, `@ivar`, `elsif`, `attr_*` — was being misidentified as Python
+- PHP: `<?php`, `$this->`, `$var=` — was being misidentified as Python
+- Swift: `import Foundation/UIKit`, `guard let` — guarded against false positives with Go's `package main`
+- Kotlin: `data class`, `fun`, `when()`, `val x: Type`
+- All 12 languages verified correct on real-world poorly-commented code samples
+
+#### 🎨 Syntax Highlighter — Complete Rewrite
+- **Replaced chained regex approach with single-pass token-based parser**
+- Old approach re-processed already-injected HTML — string regex `"[^"]*"` matched `"syntax-keyword"` inside span attributes, causing corrupted nested tags in C#, Rust, Go, C++, Kotlin, Swift, PHP
+- New approach: scans source character-by-character into typed tokens (`comment | string | keyword | number | decorator | code`), HTML-escapes exactly once during final emit — never on already-rendered output
+- Full keyword sets for all 12 languages (150–200 keywords each)
+- Handles: `/* */` blocks, `///` triple-slash, `//` line comments, `#` hash comments, `"""` triple-quoted strings, template literals, escape sequences, hex/float numbers, `@decorators`, C++ `#include`
+
+#### ⚡ Auto Language Detection on Paste
+- **Paste always triggers fresh language detection** — clears any manual override, updates both Language and Comment Style dropdowns immediately
+- **Score button now always uses the correct language** — detection runs synchronously before scoring, eliminating the race condition where the debounce hadn't fired yet
+- Unified `applyDetectedLanguage()` function replaces three separate code paths that could get out of sync
+- Auto-detection badge visible for 5 seconds (extended from 3s) with smooth fade
+
+### 🔭 New Features
+
+#### 📡 Anonymous Opt-In Telemetry (CLI)
+- CLI now asks once on first use: *"Help improve Poly-Glot by sharing anonymous usage data?"*
+- **Strictly opt-in** — nothing is sent until the user explicitly agrees
+- **Zero PII** — no API keys, no code, no file paths, no usernames
+- Payload: CLI version, command name, language, provider, mode, OS platform, Node.js major version
+- Fire-and-forget with 2.5s timeout — never delays a command, never throws, never logs errors
+- Control via `poly-glot config --telemetry` / `--no-telemetry`
+
+#### 🛰️ Telemetry Receiver Endpoint
+- New Cloudflare Worker deployed at `https://telemetry.poly-glot.ai/cli`
+- Full input sanitisation — unknown cmd/lang/provider/os values are replaced, never stored raw
+- Writes to Cloudflare Analytics Engine (`cli_telemetry` dataset) — free tier, 100k writes/day, SQL-queryable
+- `GET /health` endpoint for smoke testing
+- Zero impact on web UI or VS Code extension
+
+### 📦 Published
+- `poly-glot-ai-cli@1.2.0` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
 ## [v1.1.0] — 2026-03-25
 
 ### 🚀 New Features

@@ -2,14 +2,33 @@
   "name": "poly-glot",
   "displayName": "Poly-Glot Code Comment Library",
   "description": "AI-powered code comment generation for 12+ languages — JSDoc, Javadoc, PyDoc, Doxygen, and more.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "hmoses",
   "icon": "icon.png",
-  "repository": { "type": "git", "url": "https://github.com/hmoses/poly-glot" },
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other", "Programming Languages"],
-  "keywords": ["comments", "documentation", "jsdoc", "javadoc", "pydoc", "ai", "openai", "anthropic"],
-  "activationEvents": ["onStartupFinished"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hmoses/poly-glot"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "comments",
+    "documentation",
+    "jsdoc",
+    "javadoc",
+    "pydoc",
+    "ai",
+    "openai",
+    "anthropic"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -116,7 +135,10 @@
         "polyglot.provider": {
           "type": "string",
           "default": "openai",
-          "enum": ["openai", "anthropic"],
+          "enum": [
+            "openai",
+            "anthropic"
+          ],
           "enumDescriptions": [
             "Use OpenAI (GPT-4o, GPT-4o-mini)",
             "Use Anthropic (Claude Sonnet 4, Claude 3.5 Sonnet)"
@@ -131,7 +153,20 @@
         "polyglot.commentStyle": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "jsdoc", "javadoc", "pydoc", "doxygen", "xmldoc", "godoc", "rustdoc", "rdoc", "phpdoc", "swift", "kotlin"],
+          "enum": [
+            "auto",
+            "jsdoc",
+            "javadoc",
+            "pydoc",
+            "doxygen",
+            "xmldoc",
+            "godoc",
+            "rustdoc",
+            "rdoc",
+            "phpdoc",
+            "swift",
+            "kotlin"
+          ],
           "enumDescriptions": [
             "Auto-detect based on file language (recommended)",
             "JSDoc (JavaScript / TypeScript)",

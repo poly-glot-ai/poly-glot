@@ -25,7 +25,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
