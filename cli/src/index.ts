@@ -21,10 +21,11 @@ import * as readline from 'readline';
 import { PolyGlotGenerator } from './generator';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
+import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -52,6 +53,12 @@ async function main(): Promise<void> {
     if (!cmd || cmd === '--help' || cmd === '-h') { printHelp(); process.exit(0); }
     if (cmd === '--version' || cmd === '-v')      { console.log(VERSION); process.exit(0); }
 
+    // ── Telemetry consent (asked once, on first real command) ─────────────
+    const cfg = loadConfig();
+    if (cfg.telemetry === null && cmd !== 'config') {
+        await askTelemetryConsent(cfg);
+    }
+
     if (cmd === 'config')  { await runConfig(args.slice(1)); return; }
     if (cmd === 'comment') { await runComment(args.slice(1)); return; }
     if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
@@ -61,11 +68,62 @@ async function main(): Promise<void> {
     process.exit(1);
 }
 
+// ── Telemetry consent prompt ───────────────────────────────────────────────────
+async function askTelemetryConsent(cfg: Config): Promise<void> {
+    // Skip in non-interactive environments (CI, pipes, etc.)
+    if (!process.stdout.isTTY || process.env.CI) {
+        cfg.telemetry = false;
+        saveConfig(cfg);
+        return;
+    }
+
+    console.log(`
+${COLORS.dim}─────────────────────────────────────────────────────${COLORS.reset}
+${COLORS.bold}Help improve Poly-Glot?${COLORS.reset}
+
+Send ${COLORS.cyan}anonymous${COLORS.reset} usage stats (command name, language, OS).
+${COLORS.dim}No code, no API keys, no file paths — ever.
+Docs: https://github.com/hmoses/poly-glot#telemetry${COLORS.reset}
+${COLORS.dim}─────────────────────────────────────────────────────${COLORS.reset}`);
+
+    const answer = await promptLine('Enable anonymous telemetry? (Y/n) ');
+    cfg.telemetry = answer.trim().toLowerCase() !== 'n';
+    saveConfig(cfg);
+
+    if (cfg.telemetry) {
+        console.log(`${COLORS.dim}  ✓ Thanks! You can opt out anytime: poly-glot config --no-telemetry${COLORS.reset}`);
+    } else {
+        console.log(`${COLORS.dim}  ✓ No problem. Telemetry disabled.${COLORS.reset}`);
+    }
+    console.log();
+}
+
+function promptLine(question: string): Promise<string> {
+    return new Promise(resolve => {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        rl.question(`  ${question}`, ans => { rl.close(); resolve(ans); });
+    });
+}
+
 // ─── Command: config ──────────────────────────────────────────────────────────
 
 async function runConfig(args: string[]): Promise<void> {
     const flags = parseFlags(args);
     const cfg   = loadConfig();
+
+    // Telemetry opt-out / opt-in flags
+    if ('--no-telemetry' in flags) {
+        cfg.telemetry = false;
+        saveConfig(cfg);
+        success('Telemetry disabled. No usage data will be sent.');
+        return;
+    }
+    if ('--telemetry' in flags) {
+        cfg.telemetry = true;
+        saveConfig(cfg);
+        success('Telemetry enabled. Thank you for helping improve Poly-Glot!');
+        return;
+    }
 
     // Non-interactive mode if flags are provided
     if (flags['--key']) {
@@ -118,6 +176,7 @@ async function runComment(args: string[]): Promise<void> {
         spin(`Generating comments for stdin (${lang})…`);
         const result = await gen.generateComments(code, lang);
         stopSpin();
+        ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
         process.stdout.write(result.commentedCode + '\n');
         dim(`  cost: $${result.cost.toFixed(5)} | tokens: ${result.tokensUsed}`);
         return;
@@ -167,6 +226,7 @@ async function runComment(args: string[]): Promise<void> {
             }
         }
 
+        ping({ cmd: 'comment', lang: 'multi', provider: cfg.provider, mode: 'dir', version: VERSION }, !!cfg.telemetry);
         console.log(`\n${ok} commented, ${fail} failed — total cost: ${COLORS.green}$${totalCost.toFixed(5)}${COLORS.reset}\n`);
         return;
     }
@@ -189,6 +249,7 @@ async function runComment(args: string[]): Promise<void> {
     const result = await gen.generateComments(code, lang);
     stopSpin();
 
+    ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     fs.writeFileSync(outPath, result.commentedCode, 'utf8');
     success(`${path.basename(outPath)} commented — $${result.cost.toFixed(5)} | ${result.tokensUsed} tokens`);
 }
@@ -214,6 +275,7 @@ async function runExplain(args: string[]): Promise<void> {
     spin(`Analyzing ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.explainCode(code, lang);
     stopSpin();
+    ping({ cmd: 'explain', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
 
     console.log(`\n${COLORS.bold}${COLORS.cyan}🔍 Code Analysis — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Cost: $${result.cost.toFixed(5)}${COLORS.reset}\n`);
@@ -461,6 +523,8 @@ ${COLORS.bold}Options:${COLORS.reset}
   --provider <name>     Override provider (openai | anthropic)
   --model <name>        Override model (e.g. gpt-4o, claude-sonnet-4-5)
   --key <key>           Set API key non-interactively (use with config command)
+  --telemetry           Enable anonymous usage stats (config command)
+  --no-telemetry        Disable anonymous usage stats (config command)
   --version, -v         Print version
   --help, -h            Show this help
 
