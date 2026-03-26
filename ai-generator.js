@@ -36,7 +36,7 @@ class AICommentGenerator {
     /** Load model preference from localStorage */
     loadModel() {
         const defaultModels = {
-            openai: 'gpt-4o-mini',
+            openai: 'gpt-4.1-mini',
             anthropic: 'claude-sonnet-4-5'
         };
         return localStorage.getItem('polyglot_ai_model') || defaultModels[this.provider];
@@ -377,11 +377,18 @@ ${code}
     /** Calculate OpenAI API cost estimate */
     calculateOpenAICost(inputTokens, outputTokens) {
         const pricing = {
-            'gpt-4':         { input: 0.03 / 1000,    output: 0.06 / 1000 },
-            'gpt-4-turbo':   { input: 0.01 / 1000,    output: 0.03 / 1000 },
-            'gpt-4o':        { input: 0.005 / 1000,   output: 0.015 / 1000 },
-            'gpt-4o-mini':   { input: 0.00015 / 1000, output: 0.0006 / 1000 },
-            'gpt-3.5-turbo': { input: 0.0005 / 1000,  output: 0.0015 / 1000 }
+            'o3':              { input: 0.010 / 1000,   output: 0.040 / 1000 },
+            'o3-mini':         { input: 0.0011 / 1000,  output: 0.0044 / 1000 },
+            'o1':              { input: 0.015 / 1000,   output: 0.060 / 1000 },
+            'o1-mini':         { input: 0.0011 / 1000,  output: 0.0044 / 1000 },
+            'gpt-4.1':         { input: 0.002 / 1000,   output: 0.008 / 1000 },
+            'gpt-4.1-mini':    { input: 0.0004 / 1000,  output: 0.0016 / 1000 },
+            'gpt-4.1-nano':    { input: 0.0001 / 1000,  output: 0.0004 / 1000 },
+            'gpt-4o':          { input: 0.0025 / 1000,  output: 0.010 / 1000 },
+            'gpt-4o-mini':     { input: 0.00015 / 1000, output: 0.0006 / 1000 },
+            'gpt-4-turbo':     { input: 0.010 / 1000,   output: 0.030 / 1000 },
+            'gpt-4':           { input: 0.030 / 1000,   output: 0.060 / 1000 },
+            'gpt-3.5-turbo':   { input: 0.0005 / 1000,  output: 0.0015 / 1000 },
         };
         const p = pricing[this.model] || pricing['gpt-4o-mini'];
         return (inputTokens * p.input) + (outputTokens * p.output);
@@ -390,12 +397,13 @@ ${code}
     /** Calculate Anthropic API cost estimate */
     calculateAnthropicCost(inputTokens, outputTokens) {
         const pricing = {
+            'claude-opus-4-5':            { input: 0.015 / 1000,   output: 0.075 / 1000 },
             'claude-sonnet-4-5':          { input: 0.003 / 1000,   output: 0.015 / 1000 },
+            'claude-haiku-4-5':           { input: 0.0008 / 1000,  output: 0.004 / 1000 },
             'claude-3-5-sonnet-20241022': { input: 0.003 / 1000,   output: 0.015 / 1000 },
             'claude-3-5-haiku-20241022':  { input: 0.0008 / 1000,  output: 0.004 / 1000 },
             'claude-3-opus-20240229':     { input: 0.015 / 1000,   output: 0.075 / 1000 },
-            'claude-3-sonnet-20240229':   { input: 0.003 / 1000,   output: 0.015 / 1000 },
-            'claude-3-haiku-20240307':    { input: 0.00025 / 1000, output: 0.00125 / 1000 }
+            'claude-3-haiku-20240307':    { input: 0.00025 / 1000, output: 0.00125 / 1000 },
         };
         const p = pricing[this.model] || pricing['claude-sonnet-4-5'];
         return (inputTokens * p.input) + (outputTokens * p.output);
@@ -405,18 +413,27 @@ ${code}
     getAvailableModels() {
         const models = {
             openai: [
-                { value: 'gpt-4o',        label: 'GPT-4o (Recommended)', cost: 'Low' },
-                { value: 'gpt-4o-mini',   label: 'GPT-4o Mini (Cheapest)', cost: 'Very Low' },
-                { value: 'gpt-4-turbo',   label: 'GPT-4 Turbo', cost: 'Medium' },
-                { value: 'gpt-4',         label: 'GPT-4', cost: 'High' },
-                { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', cost: 'Very Low' }
+                { value: 'gpt-4.1',        label: 'GPT-4.1 ✨ (Recommended)', cost: 'Low' },
+                { value: 'gpt-4.1-mini',   label: 'GPT-4.1 Mini (Fast)', cost: 'Very Low' },
+                { value: 'gpt-4.1-nano',   label: 'GPT-4.1 Nano (Cheapest)', cost: 'Minimal' },
+                { value: 'gpt-4o',         label: 'GPT-4o', cost: 'Low' },
+                { value: 'gpt-4o-mini',    label: 'GPT-4o Mini', cost: 'Very Low' },
+                { value: 'o3',             label: 'o3 (Reasoning)', cost: 'High' },
+                { value: 'o3-mini',        label: 'o3-mini (Reasoning, Fast)', cost: 'Low' },
+                { value: 'o1',             label: 'o1 (Reasoning)', cost: 'Very High' },
+                { value: 'o1-mini',        label: 'o1-mini (Reasoning, Fast)', cost: 'Low' },
+                { value: 'gpt-4-turbo',    label: 'GPT-4 Turbo', cost: 'High' },
+                { value: 'gpt-4',          label: 'GPT-4', cost: 'Very High' },
+                { value: 'gpt-3.5-turbo',  label: 'GPT-3.5 Turbo (Legacy)', cost: 'Very Low' }
             ],
             anthropic: [
                 { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (Recommended)', cost: 'Low' },
+                { value: 'claude-opus-4-5',            label: 'Claude Opus 4 (Most Powerful)', cost: 'Very High' },
+                { value: 'claude-haiku-4-5',           label: 'Claude Haiku 4 (Fast)', cost: 'Very Low' },
                 { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', cost: 'Low' },
-                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku (Cheapest)', cost: 'Very Low' },
-                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku', cost: 'Very Low' },
-                { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus', cost: 'High' }
+                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku', cost: 'Very Low' },
+                { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus', cost: 'High' },
+                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (Legacy)', cost: 'Minimal' }
             ]
         };
         return models[this.provider] || [];
