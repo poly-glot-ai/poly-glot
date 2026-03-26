@@ -4338,6 +4338,22 @@ kbd {
     font-weight: 500;
 }
 
+.form-error {
+    margin-top: 1.5rem;
+    padding: 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #f87171;
+    font-weight: 500;
+}
+
+.btn-enterprise:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
     .enterprise-heading {

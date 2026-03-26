@@ -878,12 +878,16 @@
                 </div>
                 <textarea name="message" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
                 
-                <button type="submit" class="btn-enterprise">
-                    Request Enterprise Demo →
+                <button type="submit" class="btn-enterprise" id="submitBtn">
+                    <span id="btnText">Request Enterprise Demo →</span>
+                    <span id="btnLoading" style="display: none;">⏳ Sending...</span>
                 </button>
                 
                 <p class="form-success" id="formSuccess" style="display: none;">
                     ✅ Thanks! We'll contact you within 24 hours.
+                </p>
+                <p class="form-error" id="formError" style="display: none;">
+                    ❌ Something went wrong. Please try again or email hwmoses2@icloud.com directly.
                 </p>
             </form>
         </div>
@@ -898,7 +902,24 @@
     <!-- Enterprise Form Handler -->
     <script>
         document.getElementById('enterpriseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
             var form = e.target;
+            var submitBtn = document.getElementById('submitBtn');
+            var btnText = document.getElementById('btnText');
+            var btnLoading = document.getElementById('btnLoading');
+            var successMsg = document.getElementById('formSuccess');
+            var errorMsg = document.getElementById('formError');
+            
+            // Hide previous messages
+            successMsg.style.display = 'none';
+            errorMsg.style.display = 'none';
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline';
+            
             var data = new FormData(form);
             
             fetch(form.action, {
@@ -907,10 +928,17 @@
                 headers: {
                     'Accept': 'application/json'
                 }
-            }).then(function(response) {
+            })
+            .then(function(response) {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                
                 if (response.ok) {
+                    // Success!
                     form.reset();
-                    document.getElementById('formSuccess').style.display = 'block';
+                    successMsg.style.display = 'block';
                     
                     // Track in Google Analytics
                     if (typeof gtag !== 'undefined') {
@@ -920,13 +948,33 @@
                         });
                     }
                     
+                    // Hide success message after 10 seconds
                     setTimeout(function() {
-                        document.getElementById('formSuccess').style.display = 'none';
-                    }, 5000);
+                        successMsg.style.display = 'none';
+                    }, 10000);
+                    
+                    // Log for debugging
+                    console.log('✅ Form submitted successfully to hwmoses2@icloud.com');
+                } else {
+                    // Server error
+                    throw new Error('Server responded with ' + response.status);
                 }
+            })
+            .catch(function(error) {
+                // Network error or server error
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                errorMsg.style.display = 'block';
+                
+                // Log for debugging
+                console.error('❌ Form submission failed:', error);
+                
+                // Hide error after 10 seconds
+                setTimeout(function() {
+                    errorMsg.style.display = 'none';
+                }, 10000);
             });
-            
-            e.preventDefault();
         });
     </script>
 
