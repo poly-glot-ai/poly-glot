@@ -26,7 +26,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=205">
+    <link rel="stylesheet" href="styles.css?v=206">
 </head>
 <body>
     <div class="container">
@@ -261,28 +261,28 @@
                                     <span>Flag</span><span>Mode</span><span>What it adds</span><span>Example</span>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">default</code>
-                                    <span class="flags-badge flags-badge-blue">comment</span>
-                                    <span>JSDoc, PyDoc, Javadoc, KDoc — params, returns, exceptions</span>
-                                    <code class="flags-example">poly-glot comment auth.js</code>
+                                    <code class="flags-code" data-label="Flag">default</code>
+                                    <span class="flags-badge flags-badge-blue" data-label="Mode">comment</span>
+                                    <span data-label="What it adds">JSDoc, PyDoc, Javadoc, KDoc — params, returns, exceptions</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--why</code>
-                                    <span class="flags-badge flags-badge-amber">why</span>
-                                    <span>Inline reasoning — <em>why</em> the code was written this way, trade-offs, intent</span>
-                                    <code class="flags-example">poly-glot comment auth.js --why</code>
+                                    <code class="flags-code" data-label="Flag">--why</code>
+                                    <span class="flags-badge flags-badge-amber" data-label="Mode">why</span>
+                                    <span data-label="What it adds">Inline reasoning — <em>why</em> the code was written this way, trade-offs, intent</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --why</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--both</code>
-                                    <span class="flags-badge flags-badge-purple">both</span>
-                                    <span>Two sequential passes — doc-comments first, then why-comments on the result</span>
-                                    <code class="flags-example">poly-glot comment auth.js --both</code>
+                                    <code class="flags-code" data-label="Flag">--both</code>
+                                    <span class="flags-badge flags-badge-purple" data-label="Mode">both</span>
+                                    <span data-label="What it adds">Two sequential passes — doc-comments first, then why-comments on the result</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --both</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--mode &lt;m&gt;</code>
-                                    <span class="flags-badge flags-badge-gray">explicit</span>
-                                    <span>Set mode directly: <code>comment</code>, <code>why</code>, or <code>both</code></span>
-                                    <code class="flags-example">poly-glot comment auth.js --mode why</code>
+                                    <code class="flags-code" data-label="Flag">--mode &lt;m&gt;</code>
+                                    <span class="flags-badge flags-badge-gray" data-label="Mode">explicit</span>
+                                    <span data-label="What it adds">Set mode directly: <code>comment</code>, <code>why</code>, or <code>both</code></span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --mode why</code>
                                 </div>
                             </div>
                         </div>
@@ -296,19 +296,19 @@
                                     <span>Flag</span><span>What it does</span><span>Example</span>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--dry-run</code>
-                                    <span>Preview what <em>would</em> change — no files written</span>
-                                    <code class="flags-example">poly-glot comment auth.js --dry-run</code>
+                                    <code class="flags-code" data-label="Flag">--dry-run</code>
+                                    <span data-label="What it does">Preview what <em>would</em> change — no files written</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --dry-run</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--diff</code>
-                                    <span>Show a unified diff of every change before writing</span>
-                                    <code class="flags-example">poly-glot comment auth.js --diff</code>
+                                    <code class="flags-code" data-label="Flag">--diff</code>
+                                    <span data-label="What it does">Show a unified diff of every change before writing</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --diff</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--backup</code>
-                                    <span>Save a <code>.orig</code> copy of every file before overwriting</span>
-                                    <code class="flags-example">poly-glot comment auth.js --backup</code>
+                                    <code class="flags-code" data-label="Flag">--backup</code>
+                                    <span data-label="What it does">Save a <code>.orig</code> copy of every file before overwriting</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment auth.js --backup</code>
                                 </div>
                             </div>
                         </div>
@@ -340,19 +340,19 @@
                                     <span>Flag</span><span>What it does</span><span>Example</span>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--yes / -y</code>
-                                    <span>Skip the confirmation prompt — use in scripts or CI</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --yes</code>
+                                    <code class="flags-code" data-label="Flag">--yes / -y</code>
+                                    <span data-label="What it does">Skip the confirmation prompt — use in scripts or CI</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment --dir src/ --yes</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--output-dir</code>
-                                    <span>Write to a separate directory, originals untouched</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --output-dir out/</code>
+                                    <code class="flags-code" data-label="Flag">--output-dir</code>
+                                    <span data-label="What it does">Write to a separate directory, originals untouched</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment --dir src/ --output-dir out/</code>
                                 </div>
                                 <div class="flags-row">
-                                    <code class="flags-code">--ext &lt;list&gt;</code>
-                                    <span>Limit to specific file extensions</span>
-                                    <code class="flags-example">poly-glot comment --dir src/ --ext js,ts</code>
+                                    <code class="flags-code" data-label="Flag">--ext &lt;list&gt;</code>
+                                    <span data-label="What it does">Limit to specific file extensions</span>
+                                    <code class="flags-example" data-label="Example">poly-glot comment --dir src/ --ext js,ts</code>
                                 </div>
                             </div>
                         </div>
@@ -365,16 +365,16 @@
                                     <span>Command</span><span>What it does</span>
                                 </div>
                                 <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">poly-glot why auth.js</code>
-                                    <span>Shorthand for <code>poly-glot comment auth.js --why</code></span>
+                                    <code class="flags-example" data-label="Command">poly-glot why auth.js</code>
+                                    <span data-label="What it does">Shorthand for <code>poly-glot comment auth.js --why</code></span>
                                 </div>
                                 <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">poly-glot config --mode both</code>
-                                    <span>Set <code>both</code> as your default — no flag needed on future runs</span>
+                                    <code class="flags-example" data-label="Command">poly-glot config --mode both</code>
+                                    <span data-label="What it does">Set <code>both</code> as your default — no flag needed on future runs</span>
                                 </div>
                                 <div class="flags-row flags-row-2col">
-                                    <code class="flags-example">cat main.py | poly-glot comment --stdin --lang python</code>
-                                    <span>Pipe code through stdin — works with all modes</span>
+                                    <code class="flags-example" data-label="Command">cat main.py | poly-glot comment --stdin --lang python</code>
+                                    <span data-label="What it does">Pipe code through stdin — works with all modes</span>
                                 </div>
                             </div>
                         </div>
@@ -1072,11 +1072,11 @@
         </div>
     </section>
 
-    <script src="analytics.js?v=205"></script>
-    <script src="ai-generator.js?v=205"></script>
-    <script src="scorer.js?v=205"></script>
-    <script src="app.js?v=205"></script>
-    <script src="cli-terminal-demo.js?v=205"></script>
+    <script src="analytics.js?v=206"></script>
+    <script src="ai-generator.js?v=206"></script>
+    <script src="scorer.js?v=206"></script>
+    <script src="app.js?v=206"></script>
+    <script src="cli-terminal-demo.js?v=206"></script>
 
     <!-- Enterprise Form Handler -->
     <script>

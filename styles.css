@@ -4634,7 +4634,7 @@ kbd {
 
 /* ── CLI Flags filter bar ───────────────────────────────────────────────────── */
 .cli-flags-filter-bar {
-    padding: 0.6rem 1.5rem;
+    padding: 0.6rem 1.25rem;
     border-bottom: 1px solid rgba(99,102,241,0.12);
     background: rgba(99,102,241,0.03);
 }
@@ -4649,6 +4649,8 @@ kbd {
     color: var(--text-primary, #e2e8f0);
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
+    /* Prevent zoom on iOS (needs ≥16px to avoid auto-zoom) */
+    font-size: max(0.84rem, 16px);
 }
 .cli-flags-filter-input::placeholder { color: #6b7280; }
 .cli-flags-filter-input:focus {
@@ -4659,12 +4661,25 @@ kbd {
 /* ── Copy button on flags examples ─────────────────────────────────────────── */
 .flags-example-wrap {
     position: relative;
-    display: inline-flex;
+    display: flex;           /* block-level flex so it fills the grid cell */
     align-items: center;
     gap: 4px;
+    min-width: 0;            /* allow flex children to shrink */
+    overflow: hidden;
+}
+.flags-example-wrap > code.flags-example {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;        /* scroll long commands instead of overflowing */
+    white-space: nowrap;
+    scrollbar-width: none;   /* Firefox — hide scrollbar visually */
+}
+.flags-example-wrap > code.flags-example::-webkit-scrollbar {
+    display: none;           /* Chrome/Safari — hide scrollbar visually */
 }
 .flags-copy-btn {
-    opacity: 0;
+    /* Always visible on touch; fade in on pointer:fine */
+    opacity: 1;
     background: rgba(99,102,241,0.15);
     border: 1px solid rgba(99,102,241,0.3);
     border-radius: 5px;
@@ -4676,9 +4691,11 @@ kbd {
     line-height: 1.6;
     flex-shrink: 0;
 }
-.flags-row:hover .flags-copy-btn,
-.flags-example-wrap:hover .flags-copy-btn {
-    opacity: 1;
+/* On devices with a real pointer (mouse), start hidden, show on hover */
+@media (pointer: fine) {
+    .flags-copy-btn { opacity: 0; }
+    .flags-row:hover .flags-copy-btn,
+    .flags-example-wrap:hover .flags-copy-btn { opacity: 1; }
 }
 .flags-copy-btn:hover {
     background: rgba(99,102,241,0.3);
@@ -4772,6 +4789,13 @@ kbd.btn-kbd {
 }
 
 /* ── CLI Flags Reference section ───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   CLI FLAGS REFERENCE — fully responsive
+   Desktop  : 3-col grid (flag | desc | example)
+   Tablet   : 2-col (flag+desc | example) — example scrollable
+   Mobile   : card layout with data-label context labels
+   ══════════════════════════════════════════════════════════════════ */
+
 .cli-flags-reference {
     margin-top: 2.5rem;
     border: 1px solid rgba(99,102,241,0.2);
@@ -4780,11 +4804,12 @@ kbd.btn-kbd {
     background: rgba(99,102,241,0.03);
 }
 
+/* ── Header (toggle bar) ───────────────────────────────────────── */
 .cli-flags-header {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
     cursor: pointer;
     user-select: none;
     background: rgba(99,102,241,0.06);
@@ -4797,25 +4822,34 @@ kbd.btn-kbd {
     font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary, #e2e8f0);
+    white-space: nowrap;
 }
 .cli-flags-subtitle {
     font-size: 0.82rem;
     color: var(--text-secondary, #94a3b8);
     flex: 1;
+    /* truncate gracefully rather than wrapping mid-line */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 .cli-flags-chevron {
     font-size: 0.75rem;
     color: var(--text-secondary, #94a3b8);
     transition: transform 0.25s;
+    flex-shrink: 0;
 }
 .cli-flags-chevron.open { transform: rotate(180deg); }
 
+/* ── Body ──────────────────────────────────────────────────────── */
 .cli-flags-body {
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: none;
 }
 .cli-flags-body.open { display: block; }
 
+/* ── Group ─────────────────────────────────────────────────────── */
 .flags-group {
     margin-bottom: 2rem;
 }
@@ -4831,30 +4865,40 @@ kbd.btn-kbd {
     font-size: 0.82rem;
     color: var(--text-secondary, #94a3b8);
     margin: 0 0 0.85rem;
+    line-height: 1.5;
 }
 
+/* ── Table + Rows ──────────────────────────────────────────────── */
 .flags-table {
     border: 1px solid rgba(99,102,241,0.15);
     border-radius: 8px;
     overflow: hidden;
     font-size: 0.82rem;
+    /* prevent table from forcing page-level horizontal scroll */
+    min-width: 0;
+    width: 100%;
 }
 
+/* Desktop: flag (auto) | desc (flex) | example (flex, wide) */
 .flags-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 2fr 2fr;
+    grid-template-columns: minmax(120px, auto) 1fr minmax(0, 1.8fr);
     gap: 0;
     border-bottom: 1px solid rgba(99,102,241,0.1);
-    align-items: center;
+    align-items: stretch;
 }
+/* 2-col rows (shorthands) */
 .flags-row.flags-row-2col {
-    grid-template-columns: 3fr 3fr;
+    grid-template-columns: minmax(0, 1fr) 1fr;
 }
 .flags-row:last-child { border-bottom: none; }
 
 .flags-row > * {
     padding: 0.55rem 0.85rem;
     border-right: 1px solid rgba(99,102,241,0.1);
+    /* prevent any single cell from blowing out the grid */
+    min-width: 0;
+    overflow: hidden;
 }
 .flags-row > *:last-child { border-right: none; }
 
@@ -4866,24 +4910,27 @@ kbd.btn-kbd {
     text-transform: uppercase;
     color: var(--text-secondary, #94a3b8);
 }
-
 .flags-row:not(.flags-row-header):hover {
     background: rgba(99,102,241,0.05);
 }
 
+/* ── Inline code elements ──────────────────────────────────────── */
 .flags-code {
     font-family: 'Fira Code', 'SF Mono', monospace;
     font-size: 0.78rem;
     color: #a5b4fc;
     white-space: nowrap;
 }
+/* flags-example lives inside .flags-example-wrap which handles overflow */
 .flags-example {
     font-family: 'Fira Code', 'SF Mono', monospace;
     font-size: 0.74rem;
     color: #6ee7b7;
-    white-space: nowrap;
+    white-space: nowrap;    /* keep single line; parent scrolls */
+    display: block;
 }
 
+/* ── Badges ────────────────────────────────────────────────────── */
 .flags-badge {
     display: inline-block;
     font-size: 0.65rem;
@@ -4898,7 +4945,7 @@ kbd.btn-kbd {
 .flags-badge-purple { background: rgba(168, 85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.35); }
 .flags-badge-gray   { background: rgba(148,163,184,0.15);color: #94a3b8; border: 1px solid rgba(148,163,184,0.25); }
 
-/* Mini terminal inside flags reference */
+/* ── Mini terminal inside flags reference ──────────────────────── */
 .cli-flags-terminal {
     border-radius: 10px;
     overflow: hidden;
@@ -4918,28 +4965,34 @@ kbd.btn-kbd {
     width: 10px; height: 10px;
     border-radius: 50%;
     display: inline-block;
+    flex-shrink: 0;
 }
 .cft-red    { background: #ff5f57; }
 .cft-yellow { background: #febc2e; }
-.cft-green  { background: #28c840; }
+/* .cft-green on a .cft-dot = macOS green dot background
+   .cft-green on any other element = green text color           */
+.cft-dot.cft-green { background: #28c840; }
+.cft-green:not(.cft-dot) { color: #6ee7b7; }
 .cft-title  { font-size: 0.72rem; color: #6b7280; margin-left: 6px; }
 
 .cli-flags-terminal-body {
     background: #1a1a2e;
     padding: 14px 18px;
     line-height: 1.85;
+    overflow-x: auto;       /* scroll long lines on narrow screens */
 }
-.cft-line { color: #e2e8f0; }
+.cft-line { color: #e2e8f0; white-space: nowrap; }
 .cft-prompt { color: #6ee7b7; margin-right: 8px; }
 .cft-cmd    { color: #a5b4fc; }
 .cft-output { color: #94a3b8; padding-left: 4px; }
 .cft-dim    { color: #4b5563; padding-left: 4px; }
-.cft-green  { color: #6ee7b7; }
+/* .cft-green color utility defined with .cft-dot.cft-green above */
 .cft-summary { color: #e2e8f0; font-weight: 600; padding-left: 4px; margin-top: 4px; }
 .cft-prompt-out { color: #d1d5db; }
 .cft-cursor { animation: blink 1s step-end infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
+/* ── CTA row ───────────────────────────────────────────────────── */
 .flags-cta {
     display: flex;
     gap: 1rem;
@@ -4947,21 +5000,129 @@ kbd.btn-kbd {
     flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet  (≤900px)
+   Collapse to 2-col: flag+desc stack, example scrolls
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+    .cli-flags-body {
+        padding: 1rem;
+    }
+    .cli-flags-filter-bar {
+        padding: 0.5rem 1rem;
+    }
     .flags-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(110px, auto) 1fr;
+        grid-template-rows: auto auto;
+    }
+    /* Example spans full width below flag+desc */
+    .flags-row > *:nth-child(3) {
+        grid-column: 1 / -1;
+        border-right: none;
+        border-top: 1px solid rgba(99,102,241,0.1);
+        border-bottom: none;
     }
     .flags-row.flags-row-2col {
         grid-template-columns: 1fr;
     }
+    .flags-row.flags-row-2col > *:nth-child(2) {
+        grid-column: 1;
+        border-right: none;
+        border-top: 1px solid rgba(99,102,241,0.1);
+    }
+    .cli-flags-subtitle { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile  (≤640px)
+   Card layout: each row is a self-contained card with data labels
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .cli-flags-header {
+        padding: 0.85rem 1rem;
+    }
+    .cli-flags-body {
+        padding: 0.75rem;
+    }
+    .cli-flags-filter-bar {
+        padding: 0.5rem 0.75rem;
+    }
+    .cli-flags-filter-input {
+        font-size: 16px; /* hard-set: prevent iOS zoom */
+        padding: 0.5rem 0.75rem;
+    }
+    .flags-group {
+        margin-bottom: 1.5rem;
+    }
+    .flags-group-title {
+        font-size: 0.88rem;
+    }
+
+    /* Header rows hidden on mobile — data-label provides context */
+    .flags-row.flags-row-header { display: none; }
+
+    /* Card layout: every data row becomes a vertical card */
+    .flags-row,
+    .flags-row.flags-row-2col {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        border-bottom: 1px solid rgba(99,102,241,0.12);
+        border-radius: 0;
+    }
     .flags-row > * {
         border-right: none;
-        border-bottom: 1px solid rgba(99,102,241,0.1);
-        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid rgba(99,102,241,0.07);
+        padding: 0.45rem 0.85rem;
+        /* data-label pseudo-label above each cell */
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
     }
-    .flags-row > *:last-child { border-bottom: none; }
-    .flags-row.flags-row-header { display: none; }
-    .cli-flags-header { flex-wrap: wrap; }
-    .cli-flags-subtitle { display: none; }
-    .flags-example { white-space: normal; word-break: break-all; }
+    .flags-row > *:last-child {
+        border-bottom: none;
+    }
+    /* data-label attribute → rendered as a tiny uppercase label */
+    .flags-row > [data-label]::before {
+        content: attr(data-label);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6366f1;
+        opacity: 0.8;
+        display: block;
+    }
+
+    /* Example code: scrollable horizontally, no wrap */
+    .flags-example {
+        white-space: nowrap;
+        font-size: 0.72rem;
+    }
+    .flags-example-wrap {
+        overflow: hidden;
+    }
+    .flags-example-wrap > code.flags-example {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
+    /* Terminal: smaller font, scrollable */
+    .cli-flags-terminal {
+        font-size: 0.72rem;
+    }
+    .cli-flags-terminal-body {
+        padding: 10px 12px;
+    }
+
+    /* CTA buttons: full width */
+    .flags-cta {
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+    .flags-cta .cli-link-btn {
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+    }
 }

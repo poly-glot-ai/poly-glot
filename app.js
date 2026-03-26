@@ -3411,14 +3411,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Copy buttons on every flags-example ─────────────────────────────────
     if (body) {
         body.querySelectorAll('code.flags-example').forEach(function(el) {
-            // Wrap in a relative container
+            // Lift the data-label off the <code> so the wrapper can carry it
+            // (CSS ::before targets the grid cell; the wrapper IS the grid cell
+            //  after wrapping, so we move the attribute there)
+            const label = el.getAttribute('data-label');
+
             const wrapper = document.createElement('span');
             wrapper.className = 'flags-example-wrap';
+            if (label) {
+                wrapper.setAttribute('data-label', label);
+                el.removeAttribute('data-label');
+            }
             el.parentNode.insertBefore(wrapper, el);
             wrapper.appendChild(el);
 
             const btn = document.createElement('button');
             btn.className = 'flags-copy-btn';
+            btn.setAttribute('aria-label', 'Copy to clipboard');
             btn.title = 'Copy to clipboard';
             btn.textContent = '📋';
             wrapper.appendChild(btn);
