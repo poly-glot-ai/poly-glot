@@ -127,63 +127,33 @@ function calculateAge(birthDate) {
         await sleep(500);
         cursorEl.classList.add('hidden');
         
-        // Step 2: Show processing message
-        outputEl.textContent = '✨ Processing calculateAge.js...\n📝 Analyzing code structure...\n📝 Generating JSDoc comments...\n';
-        await sleep(1500);
+        // Step 2: Show processing messages
+        outputEl.textContent = '✨ Processing calculateAge.js...\n';
+        await sleep(600);
         
-        // Step 3: Show the documented code all at once (like real terminal output)
-        outputEl.textContent += '\n✅ Comments added successfully!\n\n📄 Result:\n\n';
+        outputEl.textContent += '📝 Analyzing code structure...\n';
+        await sleep(600);
         
-        const lines = DEMO_CODE.after.split('\n');
-        const commentLines = [];
+        // Step 3: Show success message
+        outputEl.textContent += '✅ Comments added successfully!\n';
+        await sleep(400);
         
-        // Identify comment lines for highlighting
-        let inComment = false;
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (line.trim().startsWith('/**')) {
-                inComment = true;
-                commentLines.push(i);
-            } else if (inComment && line.trim().includes('*/')) {
-                commentLines.push(i);
-                inComment = false;
-            } else if (inComment) {
-                commentLines.push(i);
-            }
-        }
-        
-        // Display all code at once with staggered fade-in animation
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const lineDiv = document.createElement('div');
-            lineDiv.className = 'terminal-code-line';
-            lineDiv.style.opacity = '0';
-            
-            // Check if this is a comment line
-            const isComment = commentLines.includes(i);
-            
-            if (isComment) {
-                lineDiv.classList.add('code-added');
-            }
-            
-            // Add syntax highlighting
-            lineDiv.innerHTML = highlightCode(line);
-            
-            codeDisplayEl.appendChild(lineDiv);
-            
-            // Fade in with slight delay
-            setTimeout(() => {
-                lineDiv.style.transition = 'opacity 0.3s ease';
-                lineDiv.style.opacity = '1';
-            }, i * 30);
-        }
-        
-        // Wait for all lines to finish animating
-        await sleep(lines.length * 30 + 500);
-        
-        // Step 4: Show file saved message
+        // Step 4: Show summary
+        outputEl.textContent += '\nSummary:\n';
         await sleep(300);
-        outputEl.textContent += '\n💾 File saved: calculateAge.js\n';
+        
+        outputEl.textContent += '  • Added JSDoc comment block\n';
+        await sleep(200);
+        
+        outputEl.textContent += '  • Documented 1 function: calculateAge()\n';
+        await sleep(200);
+        
+        outputEl.textContent += '  • Added @param, @returns, @throws, @example tags\n';
+        await sleep(400);
+        
+        // Step 5: Show file updated message
+        outputEl.textContent += '\n💾 File updated: calculateAge.js\n';
+        await sleep(300);
         
         isRunning = false;
     }
