@@ -16,6 +16,12 @@ routes = [
 binding  = "TELEMETRY"
 dataset  = "cli_telemetry"
 
+# ── KV — milestone counter + dedup ───────────────────────────────────────────
+# Stores: total_commands, total_users (HLL), last_milestone_hit
+[[kv_namespaces]]
+binding = "MILESTONES"
+id      = "cd35631f42ba496480af95df4953c6cc"
+
 # ── Optional: environment overrides ──────────────────────────────────────────
 [env.production]
 name = "polyglot-telemetry"

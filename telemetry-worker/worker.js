@@ -3,14 +3,16 @@
  * Cloudflare Worker — endpoint: https://telemetry.poly-glot.ai/cli
  *
  * Accepts anonymous usage pings from poly-glot-ai-cli.
- * Zero PII collected. Stores to Cloudflare Analytics Engine.
+ * Stores to Cloudflare Analytics Engine + KV milestone counter.
+ * Sends email to owner at confirmed usage milestones via MailChannels.
  *
  * Expected payload (POST /cli):
  *   { v, cmd, lang, provider, mode, os, node }
  *
- * All writes are fire-and-forget from the worker's perspective —
- * if Analytics Engine is unavailable we still return 200 so the CLI
- * never retries or blocks.
+ * Milestones (confirmed commands run, not installs):
+ *   100, 250, 500, 1000, then every 500 after that
+ *
+ * Email: hwmoses2@icloud.com
  */
 
 export default {
@@ -57,11 +59,11 @@ async function handleCliPing(request, env, ctx) {
     return corsResponse(200, { ok: true });
   }
 
-  // Write to Analytics Engine (non-blocking — use ctx.waitUntil so the worker
-  // doesn't close the connection before the write is flushed)
-  if (env.TELEMETRY) {
-    ctx.waitUntil(writeAnalytics(env.TELEMETRY, event));
-  }
+  // Non-blocking: write analytics + check milestones in background
+  ctx.waitUntil(Promise.all([
+    env.TELEMETRY ? writeAnalytics(env.TELEMETRY, event) : Promise.resolve(),
+    env.MILESTONES ? checkMilestone(env.MILESTONES, event) : Promise.resolve(),
+  ]));
 
   return corsResponse(200, { ok: true });
 }
@@ -92,6 +94,96 @@ async function writeAnalytics(dataset, event) {
   } catch {
     // Analytics Engine unavailable — swallow, never surface to caller
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Milestone tracking + email notifications
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NOTIFY_EMAIL   = 'hwmoses2@icloud.com';
+const FROM_EMAIL     = 'milestones@poly-glot.ai';
+const FROM_NAME      = 'Poly-Glot';
+
+// Milestones: 100, 250, 500, 1000, then every 500 after
+function isMilestone(n) {
+  if (n === 100 || n === 250 || n === 500 || n === 1000) return true;
+  if (n > 1000 && n % 500 === 0) return true;
+  return false;
+}
+
+async function checkMilestone(kv, event) {
+  try {
+    // Only count real usage commands (not config/help)
+    if (event.cmd !== 'comment' && event.cmd !== 'explain') return;
+
+    // Atomically increment total command count
+    const raw = await kv.get('total_commands');
+    const prev = parseInt(raw || '0', 10);
+    const next = prev + 1;
+    await kv.put('total_commands', String(next));
+
+    // Check if this crosses a milestone
+    if (!isMilestone(next)) return;
+
+    // Guard: don't double-send for the same milestone
+    const lastHit = parseInt(await kv.get('last_milestone') || '0', 10);
+    if (lastHit >= next) return;
+    await kv.put('last_milestone', String(next));
+
+    // Fire the email
+    await sendMilestoneEmail(next, event);
+  } catch {
+    // Never surface errors — telemetry must not break
+  }
+}
+
+async function sendMilestoneEmail(count, event) {
+  const subject = `🎉 Poly-Glot CLI — ${count.toLocaleString()} confirmed commands run`;
+  const body = `
+Hey Harold,
+
+Poly-Glot CLI just hit ${count.toLocaleString()} confirmed commands run.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  Milestone: ${count.toLocaleString()} commands
+  Triggered by: poly-glot ${event.cmd}
+  Language: ${event.lang || 'unknown'}
+  Provider: ${event.provider || 'unknown'}
+  OS: ${event.os || 'unknown'}
+  CLI version: ${event.v || 'unknown'}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This counts only real 'comment' and 'explain' commands from opted-in users —
+not installs, not config runs, not test pings.
+
+Next milestone: ${nextMilestone(count).toLocaleString()} commands
+
+— Poly-Glot Telemetry
+  `.trim();
+
+  try {
+    await fetch('https://api.mailchannels.net/tx/v1/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: NOTIFY_EMAIL }] }],
+        from: { email: FROM_EMAIL, name: FROM_NAME },
+        subject,
+        content: [{ type: 'text/plain', value: body }],
+      }),
+    });
+  } catch {
+    // Email failure is non-fatal
+  }
+}
+
+function nextMilestone(current) {
+  const candidates = [100, 250, 500, 1000];
+  for (const c of candidates) {
+    if (c > current) return c;
+  }
+  // After 1000: next multiple of 500
+  return Math.ceil((current + 1) / 500) * 500;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
