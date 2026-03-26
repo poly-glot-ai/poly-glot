@@ -3707,7 +3707,10 @@ kbd {
 
 .terminal-code-line {
     margin: 0.2rem 0;
-    white-space: pre-wrap;
+    white-space: pre;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .code-comment {
