@@ -233,6 +233,14 @@
                         <span>Run <code class="inline-code">poly-glot comment &lt;file&gt;</code></span>
                     </div>
                 </div>
+                <div class="cli-demo-cta">
+                    <h3 class="cli-demo-heading">🎬 Try Before You Install</h3>
+                    <p class="cli-demo-description">Experience the CLI with interactive examples — no installation required!</p>
+                    <button id="cliDemoBtn" class="cli-demo-button">
+                        <span class="demo-button-icon">▶️</span>
+                        See CLI Demo in Action
+                    </button>
+                </div>
                 <div class="cli-links">
                     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm">
                         <span>📦</span> View on npm
@@ -240,6 +248,58 @@
                     <a href="https://github.com/hmoses/poly-glot/tree/main/cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github">
                         <span>⭐</span> View on GitHub
                     </a>
+                </div>
+            </div>
+
+            <!-- CLI Demo Modal -->
+            <div class="cli-demo-modal" id="cliDemoModal">
+                <div class="cli-demo-modal-content">
+                    <div class="cli-demo-modal-header">
+                        <h2 class="cli-demo-modal-title">
+                            <span>🎬</span>
+                            CLI Demo: See It In Action
+                        </h2>
+                        <button class="cli-demo-modal-close" id="cliDemoModalClose">&times;</button>
+                    </div>
+                    
+                    <div class="cli-demo-language-selector">
+                        <h3>Choose a Language:</h3>
+                        <div class="cli-demo-language-grid" id="cliDemoLanguageGrid">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="cli-demo-panels" id="cliDemoPanels" style="display: none;">
+                        <div class="cli-demo-panel">
+                            <div class="cli-demo-panel-header">
+                                <h3 class="cli-demo-panel-title">❌ Before: Poorly Commented</h3>
+                            </div>
+                            <pre class="cli-demo-panel-code" id="cliDemoBefore"><code></code></pre>
+                        </div>
+                        
+                        <div class="cli-demo-arrow">→</div>
+                        
+                        <div class="cli-demo-panel">
+                            <div class="cli-demo-panel-header">
+                                <h3 class="cli-demo-panel-title">✅ After: Professional Documentation</h3>
+                            </div>
+                            <pre class="cli-demo-panel-code" id="cliDemoAfter"><code></code></pre>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
+                        <p style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--text-secondary);">
+                            Ready to try it yourself?
+                        </p>
+                        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm" style="text-decoration: none;">
+                                <span>📦</span> Install from npm
+                            </a>
+                            <a href="https://github.com/hmoses/poly-glot/tree/main/cli#readme" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-github" style="text-decoration: none;">
+                                <span>📖</span> View Documentation
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -710,6 +770,7 @@
     <script src="ai-generator.js?v=8"></script>
     <script src="scorer.js?v=8"></script>
     <script src="app.js?v=8"></script>
+    <script src="cli-demo.js?v=1"></script>
 
     <!-- ── Footer ── -->
     <div class="site-footer">
