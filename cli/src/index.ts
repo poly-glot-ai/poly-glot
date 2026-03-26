@@ -18,14 +18,15 @@ import * as fs   from 'fs';
 import * as path from 'path';
 import * as os   from 'os';
 import * as readline from 'readline';
-import { PolyGlotGenerator, WhyResult } from './generator';
+import { PolyGlotGenerator, WhyResult, BothResult } from './generator';
+import { CommentMode } from './config';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
 import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';  // comment --why / --both / --mode + defaultMode config
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -127,12 +128,22 @@ async function runConfig(args: string[]): Promise<void> {
     }
 
     // Non-interactive mode if flags are provided
-    if (flags['--key']) {
-        cfg.apiKey   = flags['--key'] as string;
-        cfg.provider = (flags['--provider'] as string) || cfg.provider || 'openai';
-        cfg.model    = (flags['--model']    as string) || cfg.model    || 'gpt-4o-mini';
+    if (flags['--key'] || '--mode' in flags) {
+        if (flags['--key'])      cfg.apiKey   = flags['--key']      as string;
+        if (flags['--provider']) cfg.provider = flags['--provider'] as string;
+        if (flags['--model'])    cfg.model    = flags['--model']    as string;
+        if (flags['--mode']) {
+            const m = (flags['--mode'] as string).toLowerCase();
+            if (!['comment', 'why', 'both'].includes(m)) {
+                error(`Invalid mode "${m}". Use: comment, why, or both`);
+                process.exit(1);
+            }
+            cfg.defaultMode = m as CommentMode;
+        }
+        if (!cfg.provider) cfg.provider = 'openai';
+        if (!cfg.model)    cfg.model    = 'gpt-4o-mini';
         saveConfig(cfg);
-        success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}`);
+        success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}, default mode: ${cfg.defaultMode}`);
         return;
     }
 
@@ -142,51 +153,91 @@ async function runConfig(args: string[]): Promise<void> {
 
     console.log(`\n${COLORS.bold}${COLORS.cyan}Poly-Glot CLI — Configuration${COLORS.reset}\n`);
 
-    const provider = await ask(`Provider [openai/anthropic] (current: ${cfg.provider || 'not set'}): `);
+    const provider = await ask(`  Provider [openai/anthropic] (current: ${cfg.provider || 'not set'}): `);
     if (provider.trim()) cfg.provider = provider.trim();
 
-    const key = await ask(`API Key (input hidden — press Enter to keep current): `);
+    const key = await ask(`  API Key (press Enter to keep current): `);
     if (key.trim()) cfg.apiKey = key.trim();
 
-    const defaultModel = cfg.provider === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini';
-    const model = await ask(`Model (current: ${cfg.model || defaultModel}): `);
+    const defaultModel = cfg.provider === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4.1-mini';
+    const model = await ask(`  Model (current: ${cfg.model || defaultModel}): `);
     if (model.trim()) cfg.model = model.trim();
     else if (!cfg.model) cfg.model = defaultModel;
 
+    const modeAnswer = await ask(`  Default mode [comment/why/both] (current: ${cfg.defaultMode || 'comment'}): `);
+    if (modeAnswer.trim()) {
+        const m = modeAnswer.trim().toLowerCase();
+        if (['comment', 'why', 'both'].includes(m)) {
+            cfg.defaultMode = m as CommentMode;
+        } else {
+            warn(`Unknown mode "${m}" — keeping "${cfg.defaultMode}"`);
+        }
+    }
+
     rl.close();
     saveConfig(cfg);
-    success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}`);
+    success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}, default mode: ${cfg.defaultMode}`);
 }
 
 // ─── Command: comment ─────────────────────────────────────────────────────────
 
 async function runComment(args: string[]): Promise<void> {
-    const flags  = parseFlags(args);
-    const cfg    = loadConfig();
+    const flags = parseFlags(args);
+    const cfg   = loadConfig();
 
     assertConfigured(cfg);
 
+    // ── Resolve effective mode ─────────────────────────────────────────────────
+    // Priority: --both flag > --why flag > --mode <value> > cfg.defaultMode
+    let effectiveMode: CommentMode = cfg.defaultMode || 'comment';
+    if ('--both' in flags)                        effectiveMode = 'both';
+    else if ('--why' in flags)                    effectiveMode = 'why';
+    else if (flags['--mode']) {
+        const m = (flags['--mode'] as string).toLowerCase();
+        if (['comment', 'why', 'both'].includes(m)) effectiveMode = m as CommentMode;
+        else { error(`Invalid --mode "${m}". Use: comment, why, or both`); process.exit(1); }
+    }
+
+    const modeLabel: Record<CommentMode, string> = {
+        comment: '📝 doc-comments',
+        why:     '💬 why-comments',
+        both:    '📝💬 doc + why comments',
+    };
+
     const gen = new PolyGlotGenerator(cfg);
 
-    // ── stdin mode ──
+    // ── Helper: run one file through the right generator ──────────────────────
+    async function processCode(code: string, lang: string): Promise<string> {
+        if (effectiveMode === 'both') {
+            const r = await gen.generateBoth(code, lang);
+            return r.commentedCode;
+        } else if (effectiveMode === 'why') {
+            const r = await gen.generateWhyComments(code, lang);
+            return r.commentedCode;
+        } else {
+            const r = await gen.generateComments(code, lang);
+            return r.commentedCode;
+        }
+    }
+
+    // ── stdin mode ────────────────────────────────────────────────────────────
     if (flags['--stdin']) {
         const lang = (flags['--lang'] as string) || 'javascript';
         const code = await readStdin();
         if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
 
-        spin(`Generating comments for stdin (${lang})…`);
-        const result = await gen.generateComments(code, lang);
+        spin(`Adding ${modeLabel[effectiveMode]} for stdin (${lang})…`);
+        const output = await processCode(code, lang);
         stopSpin();
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
-        process.stdout.write(result.commentedCode + '\n');
-        dim(`  cost: $${result.cost.toFixed(5)} | tokens: ${result.tokensUsed}`);
+        process.stdout.write(output + '\n');
         return;
     }
 
-    // ── directory mode ──
+    // ── directory mode ────────────────────────────────────────────────────────
     if (flags['--dir']) {
-        const dir   = path.resolve(flags['--dir'] as string);
-        const exts  = flags['--ext']
+        const dir  = path.resolve(flags['--dir'] as string);
+        const exts = flags['--ext']
             ? (flags['--ext'] as string).split(',').map(e => e.trim().replace(/^\./, ''))
             : Object.keys(SUPPORTED_EXTENSIONS);
 
@@ -195,11 +246,9 @@ async function runComment(args: string[]): Promise<void> {
         const files = collectFiles(dir, exts);
         if (!files.length) { warn(`No supported files found in ${dir}`); return; }
 
-        console.log(`\n${COLORS.cyan}${COLORS.bold}Poly-Glot${COLORS.reset} — commenting ${files.length} file(s) in ${COLORS.dim}${dir}${COLORS.reset}\n`);
+        console.log(`\n${COLORS.cyan}${COLORS.bold}Poly-Glot${COLORS.reset} — ${modeLabel[effectiveMode]} on ${files.length} file(s) in ${COLORS.dim}${dir}${COLORS.reset}\n`);
 
-        let totalCost = 0;
-        let ok = 0;
-        let fail = 0;
+        let ok = 0, fail = 0;
 
         for (const file of files) {
             const rel  = path.relative(dir, file);
@@ -209,18 +258,14 @@ async function runComment(args: string[]): Promise<void> {
 
             process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
             try {
-                const result = await gen.generateComments(code, lang);
+                const output  = await processCode(code, lang);
                 const outPath = flags['--output-dir']
                     ? path.join(flags['--output-dir'] as string, rel)
                     : file;
-
-                if (flags['--output-dir']) {
-                    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-                }
-                fs.writeFileSync(outPath, result.commentedCode, 'utf8');
-                totalCost += result.cost;
+                if (flags['--output-dir']) fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                fs.writeFileSync(outPath, output, 'utf8');
                 ok++;
-                console.log(`${COLORS.green}✓${COLORS.reset} ${COLORS.dim}$${result.cost.toFixed(5)}${COLORS.reset}`);
+                console.log(`${COLORS.green}✓${COLORS.reset}`);
             } catch (e: unknown) {
                 fail++;
                 console.log(`${COLORS.red}✗ ${e instanceof Error ? e.message : String(e)}${COLORS.reset}`);
@@ -228,31 +273,50 @@ async function runComment(args: string[]): Promise<void> {
         }
 
         ping({ cmd: 'comment', lang: 'multi', provider: cfg.provider, mode: 'dir', version: VERSION }, !!cfg.telemetry);
-        console.log(`\n${ok} commented, ${fail} failed — total cost: ${COLORS.green}$${totalCost.toFixed(5)}${COLORS.reset}\n`);
+        console.log(`\n${ok} done, ${fail} failed\n`);
         return;
     }
 
-    // ── single file mode ──
+    // ── single file mode ──────────────────────────────────────────────────────
     const filePath = args.find(a => !a.startsWith('-'));
     if (!filePath) { error('Specify a file, --dir, or --stdin. Run poly-glot --help for usage.'); process.exit(1); }
 
     const absPath = path.resolve(filePath);
     if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
 
-    const ext    = absPath.split('.').pop()!.toLowerCase();
-    const lang   = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
-    const code   = fs.readFileSync(absPath, 'utf8');
-    const outPath = flags['--output']
-        ? path.resolve(flags['--output'] as string)
-        : absPath;
+    const ext     = absPath.split('.').pop()!.toLowerCase();
+    const lang    = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    const code    = fs.readFileSync(absPath, 'utf8');
+    const outPath = flags['--output'] ? path.resolve(flags['--output'] as string) : absPath;
 
-    spin(`Commenting ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
-    const result = await gen.generateComments(code, lang);
-    stopSpin();
+    if (effectiveMode === 'both') {
+        spin(`Adding doc-comments to ${path.basename(absPath)} (${lang})…`);
+        // show two-pass progress for 'both'
+        const docResult = await gen.generateComments(code, lang);
+        stopSpin();
+        success(`Pass 1 complete — doc-comments added`);
 
-    ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    fs.writeFileSync(outPath, result.commentedCode, 'utf8');
-    success(`${path.basename(outPath)} commented — $${result.cost.toFixed(5)} | ${result.tokensUsed} tokens`);
+        spin(`Adding why-comments to ${path.basename(absPath)} (${lang})…`);
+        const whyPrompt = await gen.generateWhyComments(docResult.commentedCode, lang);
+        stopSpin();
+
+        ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+        fs.writeFileSync(outPath, whyPrompt.commentedCode, 'utf8');
+        success(`Pass 2 complete — why-comments added`);
+        success(`${path.basename(outPath)} fully commented (doc + why)`);
+    } else {
+        const spinLabel = effectiveMode === 'why'
+            ? `Adding why-comments to ${path.basename(absPath)} (${lang}, ${cfg.model})…`
+            : `Commenting ${path.basename(absPath)} (${lang}, ${cfg.model})…`;
+
+        spin(spinLabel);
+        const output = await processCode(code, lang);
+        stopSpin();
+
+        ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+        fs.writeFileSync(outPath, output, 'utf8');
+        success(`${path.basename(outPath)} commented [${effectiveMode}]`);
+    }
 }
 
 // ─── Command: why ─────────────────────────────────────────────────────────────
@@ -601,45 +665,63 @@ ${COLORS.bold}Usage:${COLORS.reset}
   poly-glot <command> [options]
 
 ${COLORS.bold}Commands:${COLORS.reset}
-  ${COLORS.cyan}demo${COLORS.reset}                         See Poly-Glot in action with interactive examples
-  ${COLORS.cyan}comment${COLORS.reset} <file>               Comment a single file (edits in place)
-  ${COLORS.cyan}comment${COLORS.reset} <file> --output <f>  Write commented code to a different file
-  ${COLORS.cyan}comment${COLORS.reset} --dir <dir>          Comment all supported files in a directory
-  ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>   Read code from stdin, write to stdout
-  ${COLORS.cyan}why${COLORS.reset} <file>                   Add why-comments explaining decisions & intent
-  ${COLORS.cyan}why${COLORS.reset} --dir <dir>              Why-comment all supported files in a directory
-  ${COLORS.cyan}why${COLORS.reset} --stdin --lang <l>       Read from stdin, write why-commented code to stdout
-  ${COLORS.cyan}explain${COLORS.reset} <file>               Analyse a file (complexity, bugs, quality)
-  ${COLORS.cyan}config${COLORS.reset}                       Configure API key and provider interactively
+  ${COLORS.cyan}demo${COLORS.reset}                              See Poly-Glot in action with interactive examples
+  ${COLORS.cyan}comment${COLORS.reset} <file>                    Add doc-comments to a file (default mode)
+  ${COLORS.cyan}comment${COLORS.reset} <file> --why              Add why-comments instead of doc-comments
+  ${COLORS.cyan}comment${COLORS.reset} <file> --both             Add doc-comments AND why-comments in one pass
+  ${COLORS.cyan}comment${COLORS.reset} <file> --mode <m>         Explicit mode: comment | why | both
+  ${COLORS.cyan}comment${COLORS.reset} --dir <dir>               Comment all supported files in a directory
+  ${COLORS.cyan}comment${COLORS.reset} --dir <dir> --both        Both comment types across a whole directory
+  ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>        Read from stdin, write to stdout
+  ${COLORS.cyan}why${COLORS.reset} <file>                        Shorthand: add why-comments to a file
+  ${COLORS.cyan}why${COLORS.reset} --dir <dir>                   Shorthand: why-comment a whole directory
+  ${COLORS.cyan}why${COLORS.reset} --stdin --lang <l>            Shorthand: why-comment from stdin
+  ${COLORS.cyan}explain${COLORS.reset} <file>                    Analyse a file (complexity, bugs, quality)
+  ${COLORS.cyan}config${COLORS.reset}                            Configure API key, provider, and default mode
+
+${COLORS.bold}Comment modes:${COLORS.reset}
+  ${COLORS.cyan}comment${COLORS.reset}   JSDoc/PyDoc/KDoc/etc. — parameter types, return values, exceptions
+  ${COLORS.cyan}why${COLORS.reset}       Inline reasoning — trade-offs, intent, non-obvious decisions
+  ${COLORS.cyan}both${COLORS.reset}      Two-pass: doc-comments first, then why-comments on the result
 
 ${COLORS.bold}Options:${COLORS.reset}
+  --why                 Use why-comment mode (shorthand for --mode why)
+  --both                Use both modes in sequence (shorthand for --mode both)
+  --mode <m>            Set mode explicitly: comment | why | both
   --lang <lang>         Override language detection (e.g. python, javascript)
-  --live                Generate live comments using your API (demo command only)
   --output <file>       Output file for single-file mode
   --output-dir <dir>    Output directory for --dir mode (preserves structure)
   --ext <list>          Comma-separated extensions to include in --dir mode
   --provider <name>     Override provider (openai | anthropic)
-  --model <name>        Override model (e.g. gpt-4o, claude-sonnet-4-5)
+  --model <name>        Override model (e.g. gpt-4.1-mini, claude-sonnet-4-5)
   --key <key>           Set API key non-interactively (use with config command)
+  --mode <m>            Set default mode in config: comment | why | both
   --telemetry           Enable anonymous usage stats (config command)
   --no-telemetry        Disable anonymous usage stats (config command)
   --version, -v         Print version
   --help, -h            Show this help
 
 ${COLORS.bold}Examples:${COLORS.reset}
-  polyglot demo                        # Interactive demo - see it in action!
-  polyglot demo --lang javascript      # View JavaScript example
-  polyglot demo --lang python --live   # Generate live comments with API
-  polyglot config --key sk-... --provider openai --model gpt-4o-mini
-  polyglot comment src/auth.js
-  polyglot comment src/auth.js --output src/auth.documented.js
-  polyglot comment --dir src/ --ext js,ts
-  polyglot comment --dir src/ --output-dir src-commented/
-  cat main.py | polyglot comment --stdin --lang python > main_commented.py
-  polyglot why src/auth.js
-  polyglot why --dir src/ --output-dir src-why/
-  cat main.py | polyglot why --stdin --lang python > main_why.py
-  polyglot explain src/utils.ts
+  poly-glot config                                    # Interactive setup (sets API key + default mode)
+  poly-glot config --key sk-... --provider openai --mode both
+  poly-glot config --mode why                         # Set why-comments as your default
+
+  poly-glot comment src/auth.js                       # Doc-comments (or your configured default)
+  poly-glot comment src/auth.js --why                 # Why-comments this one time
+  poly-glot comment src/auth.js --both                # Doc + why in one command
+  poly-glot comment src/auth.js --output src/auth.documented.js
+
+  poly-glot comment --dir src/ --ext js,ts            # Doc-comment entire directory
+  poly-glot comment --dir src/ --both                 # Doc + why entire directory
+  poly-glot comment --dir src/ --output-dir src-out/
+
+  cat main.py | poly-glot comment --stdin --lang python          # Doc-comments from stdin
+  cat main.py | poly-glot comment --stdin --lang python --why    # Why-comments from stdin
+  cat main.py | poly-glot comment --stdin --lang python --both   # Both from stdin
+
+  poly-glot why src/auth.js                           # Shorthand for --why
+  poly-glot why --dir src/ --output-dir src-why/
+  poly-glot explain src/utils.ts
 
 ${COLORS.bold}Supported languages:${COLORS.reset}
   JavaScript, TypeScript, Python, Java, C++, C, C#, Go, Rust, Ruby, PHP, Swift, Kotlin

@@ -84,6 +84,13 @@ export interface WhyResult {
     tokensUsed: number;
 }
 
+export interface BothResult {
+    commentedCode: string;  // doc-comments + why-comments merged
+    model: string;
+    cost: number;
+    tokensUsed: number;
+}
+
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 export class PolyGlotGenerator {
@@ -109,6 +116,39 @@ export class PolyGlotGenerator {
             model:      raw,  // overwritten below
             cost:       0,
             tokensUsed: 0,
+        };
+    }
+
+    /**
+     * Run comment + why in sequence.
+     * Pass 1: add full doc-comments (JSDoc / PyDoc / etc.)
+     * Pass 2: add why-comments to the already-documented output
+     * Result: both types of comments coexist in a single file.
+     */
+    async generateBoth(code: string, languageId: string): Promise<BothResult> {
+        const style   = LANGUAGE_STYLE[languageId] || 'inline comments';
+
+        // Pass 1 — doc-comments
+        const docPrompt = this._buildCommentPrompt(code, languageId, style);
+        const docRaw    = await this._call(docPrompt);
+        const docCode   = docRaw
+            .replace(/^```[\w]*\n?/m, '')
+            .replace(/\n?```$/m, '')
+            .trim();
+
+        // Pass 2 — why-comments applied to the doc-commented output
+        const whyPrompt = this._buildWhyPrompt(docCode, languageId);
+        const whyRaw    = await this._call(whyPrompt);
+        const bothCode  = whyRaw
+            .replace(/^```[\w]*\n?/m, '')
+            .replace(/\n?```$/m, '')
+            .trim();
+
+        return {
+            commentedCode: bothCode,
+            model:         this.cfg.model || '',
+            cost:          0,
+            tokensUsed:    0,
         };
     }
 

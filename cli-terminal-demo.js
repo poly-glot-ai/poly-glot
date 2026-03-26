@@ -9,6 +9,7 @@
             filename: 'calculateAge.js',
             command: 'poly-glot comment calculateAge.js',
             commandWhy: 'poly-glot why calculateAge.js',
+            commandBoth: 'poly-glot comment calculateAge.js --both',
             summary: {
                 blocks: 1,
                 functions: 'calculateAge()',
@@ -18,6 +19,11 @@
                 lines: 4,
                 focus: 'calculateAge()',
                 style: 'inline // why-comments'
+            },
+            summaryBoth: {
+                pass1: 'doc-comments (JSDoc)',
+                pass2: 'why-comments',
+                focus: 'calculateAge()'
             },
             afterWhy: `function calculateAge(birthDate) {
   const today = new Date();
@@ -40,6 +46,37 @@
 
   // Can't rely solely on year diff — a Dec 31 birthday hasn't occurred
   // yet for someone born next month, so we subtract one year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+}`,
+            afterBoth: `/**
+ * Calculates a person's age based on their birth date.
+ *
+ * @param {string} birthDate - Birth date in ISO format (YYYY-MM-DD)
+ * @returns {number} Age in whole years
+ * @throws {Error} If birthDate is invalid or in the future
+ */
+function calculateAge(birthDate) {
+  const today = new Date();
+  const birth = new Date(birthDate);
+
+  // isNaN is safer than try/catch — invalid strings silently produce NaN
+  if (isNaN(birth.getTime())) {
+    throw new Error('Invalid birth date format');
+  }
+
+  // Reject future dates early to avoid silently returning a negative age
+  if (birth > today) {
+    throw new Error('Birth date cannot be in the future');
+  }
+
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  // Year diff alone isn't enough — birthday may not have occurred yet this year
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
@@ -84,10 +121,16 @@ function calculateAge(birthDate) {
             filename: 'user_manager.py',
             command: 'poly-glot comment user_manager.py',
             commandWhy: 'poly-glot why user_manager.py',
+            commandBoth: 'poly-glot comment user_manager.py --both',
             summaryWhy: {
                 lines: 5,
                 focus: 'create_user()',
                 style: 'inline # why-comments'
+            },
+            summaryBoth: {
+                pass1: 'doc-comments (PyDoc)',
+                pass2: 'why-comments',
+                focus: 'create_user()'
             },
             afterWhy: `import uuid
 from datetime import datetime
@@ -116,6 +159,46 @@ def create_user(username, email, age):
         'id': user_id,
         'username': username.strip(),
         'email': email.lower(), # normalise to lowercase to prevent duplicate accounts
+        'age': age,
+        'created_at': datetime.utcnow().isoformat()
+    }`,
+            afterBoth: `import uuid
+from datetime import datetime
+
+def create_user(username, email, age):
+    """
+    Creates a new user account with validation.
+
+    Args:
+        username (str): Desired username (3-20 characters)
+        email (str): User's email address
+        age (int): User's age (must be 13 or older)
+
+    Returns:
+        dict: User object with id, username, email, age, created_at
+
+    Raises:
+        ValueError: If any field fails validation
+    """
+    # uuid4 over uuid1 — avoids embedding the host MAC address
+    user_id = str(uuid.uuid4())
+
+    # Age check at domain level — returns a clean ValueError, not a raw DB IntegrityError
+    if age < 13:
+        raise ValueError("Users must be 13 or older (COPPA compliance)")
+
+    # strip() before len() — all-spaces username would pass a naive length check
+    if not 3 <= len(username.strip()) <= 20:
+        raise ValueError("Username must be 3-20 characters")
+
+    # Structural check only — full deliverability requires a send attempt
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        raise ValueError("Invalid email format")
+
+    return {
+        'id': user_id,
+        'username': username.strip(),
+        'email': email.lower(), # normalise to prevent duplicate accounts
         'age': age,
         'created_at': datetime.utcnow().isoformat()
     }`,
@@ -169,11 +252,30 @@ def create_user(username, email, age):
             filename: 'validator.ts',
             command: 'poly-glot comment validator.ts',
             commandWhy: 'poly-glot why validator.ts',
+            commandBoth: 'poly-glot comment validator.ts --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'validateEmail()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (JSDoc)', pass2: 'why-comments', focus: 'validateEmail()' },
+            afterBoth: `/**
+ * Validates an email address string.
+ *
+ * @param {string} email - The email address to validate
+ * @returns {boolean} True if the email is valid, false otherwise
+ */
+export function validateEmail(email: string): boolean {
+  // Trim here so callers don't have to — form inputs often carry accidental whitespace
+  const trimmed = email.trim();
+
+  // RFC 5321 cap: anything over 254 chars is almost certainly an injection or bug
+  if (trimmed.length > 254) return false;
+
+  // Intentionally permissive — exact RFC 5322 regex is 6KB and still misses edge cases
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}`,
             afterWhy: `export function validateEmail(email: string): boolean {
   // Trimming here rather than requiring callers to do it — form inputs
   // often carry accidental whitespace that shouldn't cause failures
@@ -218,11 +320,31 @@ function validateEmail(email: string): boolean {
             filename: 'StringUtils.java',
             command: 'poly-glot comment StringUtils.java',
             commandWhy: 'poly-glot why StringUtils.java',
+            commandBoth: 'poly-glot comment StringUtils.java --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'truncate()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (Javadoc)', pass2: 'why-comments', focus: 'truncate()' },
+            afterBoth: `public class StringUtils {
+    /**
+     * Truncates a string to the specified maximum length, appending "..." if truncated.
+     *
+     * @param text      The string to truncate; may be null
+     * @param maxLength The maximum length of the returned string, including "..."
+     * @return The truncated string, or null if input was null
+     */
+    public static String truncate(String text, int maxLength) {
+        // Return null rather than throwing — callers use this for display; null is handled gracefully
+        if (text == null) return null;
+
+        if (text.length() <= maxLength) return text;
+
+        // maxLength includes the ellipsis, so compare against maxLength - 3 to avoid overflow
+        return text.substring(0, maxLength - 3) + "...";
+    }
+}`,
             afterWhy: `public class StringUtils {
     public static String truncate(String text, int maxLength) {
         // Null guard returns null rather than throwing — callers treating
@@ -271,11 +393,29 @@ public static String capitalize(String str) {
             filename: 'math.go',
             command: 'poly-glot comment math.go',
             commandWhy: 'poly-glot why math.go',
+            commandBoth: 'poly-glot comment math.go --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'SafeDivide()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (GoDoc)', pass2: 'why-comments', focus: 'SafeDivide()' },
+            afterBoth: `package math
+
+import "errors"
+
+// SafeDivide divides a by b and returns the result.
+// Returns an error if b is zero.
+func SafeDivide(a, b float64) (float64, error) {
+    // Return error rather than panicking — division by zero in Go panics and
+    // crashes the goroutine; unrecoverable in a server context
+    if b == 0 {
+        return 0, errors.New("division by zero")
+    }
+    // Named return values considered but skipped — one success path makes
+    // naked returns obscure rather than clarify
+    return a / b, nil
+}`,
             afterWhy: `package math
 
 import "errors"
@@ -330,11 +470,29 @@ func Average(numbers []float64) (float64, error) {
             filename: 'parser.rs',
             command: 'poly-glot comment parser.rs',
             commandWhy: 'poly-glot why parser.rs',
+            commandBoth: 'poly-glot comment parser.rs --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'parse_int()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (RustDoc)', pass2: 'why-comments', focus: 'parse_int()' },
+            afterBoth: `/// Parses a trimmed string slice into a signed 32-bit integer.
+///
+/// # Arguments
+/// * \`s\` - A string slice to parse; leading/trailing whitespace is trimmed
+///
+/// # Returns
+/// * \`Ok(i32)\` on success
+/// * \`Err(String)\` with a descriptive message on failure
+// Returns Result not Option — callers need the specific parse failure, not just absence
+pub fn parse_int(s: &str) -> Result<i32, String> {
+    // trim() here because the stdlib parse() rejects whitespace that humans expect to be ignored
+    let trimmed = s.trim();
+    // map_err converts ParseIntError to our String type without needing a custom error enum
+    trimmed.parse::<i32>()
+        .map_err(|e| format!("Failed to parse '{}': {}", trimmed, e))
+}`,
             afterWhy: `// Returns Result rather than Option — callers need to know whether
 // parsing failed vs the input being intentionally absent
 pub fn parse_int(s: &str) -> Result<i32, String> {
@@ -382,11 +540,37 @@ pub fn parse_int(input: &str) -> Result<i32, std::num::ParseIntError> {
             filename: 'vector_ops.cpp',
             command: 'poly-glot comment vector_ops.cpp',
             commandWhy: 'poly-glot why vector_ops.cpp',
+            commandBoth: 'poly-glot comment vector_ops.cpp --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'dotProduct()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (Doxygen)', pass2: 'why-comments', focus: 'dotProduct()' },
+            afterBoth: `#include <vector>
+#include <stdexcept>
+
+/**
+ * @brief Computes the dot product of two equal-length vectors.
+ *
+ * @param a First input vector (const ref to avoid copy)
+ * @param b Second input vector (const ref to avoid copy)
+ * @return double The dot product result
+ * @throws std::invalid_argument If vectors differ in size
+ */
+// Takes by const& — avoids copying potentially large vectors on every call
+double dotProduct(const std::vector<double>& a, const std::vector<double>& b) {
+    // Size check before loop — mismatched sizes silently produce a wrong result, not a crash
+    if (a.size() != b.size()) {
+        throw std::invalid_argument("Vectors must be the same length");
+    }
+    double result = 0.0;
+    // Index-based loop — lets us access both vectors simultaneously without zip bookkeeping
+    for (size_t i = 0; i < a.size(); ++i) {
+        result += a[i] * b[i];
+    }
+    return result;
+}`,
             afterWhy: `#include <vector>
 #include <stdexcept>
 
@@ -447,11 +631,29 @@ double dotProduct(const std::vector<double>& a, const std::vector<double>& b) {
             filename: 'Calculator.cs',
             command: 'poly-glot comment Calculator.cs',
             commandWhy: 'poly-glot why Calculator.cs',
+            commandBoth: 'poly-glot comment Calculator.cs --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'Divide()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (XMLDoc)', pass2: 'why-comments', focus: 'Divide()' },
+            afterBoth: `public class Calculator {
+    /// <summary>
+    /// Divides the numerator by the denominator.
+    /// </summary>
+    /// <param name="numerator">The value to be divided.</param>
+    /// <param name="denominator">The divisor; must not be zero.</param>
+    /// <returns>The quotient as a decimal.</returns>
+    /// <exception cref="ArgumentException">Thrown when denominator is zero.</exception>
+    // decimal not double — binary floating point compounds rounding errors in financial math
+    public decimal Divide(decimal numerator, decimal denominator) {
+        // Explicit guard — C# decimal division by zero is silent Infinity, not an exception
+        if (denominator == 0)
+            throw new ArgumentException("Denominator cannot be zero");
+        return numerator / denominator;
+    }
+}`,
             afterWhy: `public class Calculator {
     // decimal instead of double — financial calculations require exact
     // decimal representation; double's binary floating point introduces
@@ -500,11 +702,25 @@ public static double Divide(double dividend, double divisor)
             filename: 'string_helper.rb',
             command: 'poly-glot comment string_helper.rb',
             commandWhy: 'poly-glot why string_helper.rb',
+            commandBoth: 'poly-glot comment string_helper.rb --both',
             summaryWhy: {
                 lines: 3,
                 focus: 'truncate()',
                 style: 'inline # why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (RDoc/YARD)', pass2: 'why-comments', focus: 'truncate()' },
+            afterBoth: `# Truncates a string to max_length, appending "..." if shortened.
+#
+# @param text [String, nil] The string to truncate
+# @param max_length [Integer] Maximum length of the result, including "..."
+# @return [String, nil] Truncated string, or nil if input was nil
+def truncate(text, max_length)
+  # Return nil not raise — this is a view helper; nil is handled gracefully by ERB
+  return nil if text.nil?
+  return text if text.length <= max_length
+  # Subtract 3 so ellipsis fits within max_length, not beyond it
+  text[0, max_length - 3] + "..."
+end`,
             afterWhy: `def truncate(text, max_length)
   # Return nil rather than raising — this is a display helper called
   # from views where nil is handled gracefully by ERB; an exception
@@ -544,11 +760,37 @@ end`
             filename: 'ArrayHelper.php',
             command: 'poly-glot comment ArrayHelper.php',
             commandWhy: 'poly-glot why ArrayHelper.php',
+            commandBoth: 'poly-glot comment ArrayHelper.php --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'sumArray()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (PHPDoc)', pass2: 'why-comments', focus: 'sumArray()' },
+            afterBoth: `<?php
+/**
+ * Sums all numeric values in an array.
+ *
+ * @param array $numbers Array of numeric values to sum
+ * @return float The total sum
+ * @throws TypeError If any value is non-numeric
+ */
+function sumArray(array $numbers): float {
+    // Return 0.0 not null — callers doing arithmetic shouldn't need a null check
+    if (empty($numbers)) {
+        return 0.0;
+    }
+    $sum = 0;
+    foreach ($numbers as $num) {
+        // is_numeric not is_int — allows numeric strings from form inputs or JSON decoding
+        if (!is_numeric($num)) {
+            throw new TypeError('All array values must be numeric');
+        }
+        $sum += $num;
+    }
+    // Cast to float — $sum may be int if all inputs were whole numbers; callers expect float
+    return (float)$sum;
+}`,
             afterWhy: `<?php
 function sumArray(array $numbers): float {
     // Return 0.0 for empty arrays rather than null — callers doing
@@ -608,11 +850,34 @@ function arraySum(array $numbers): float {
             filename: 'Validator.swift',
             command: 'poly-glot comment Validator.swift',
             commandWhy: 'poly-glot why Validator.swift',
+            commandBoth: 'poly-glot comment Validator.swift --both',
             summaryWhy: {
                 lines: 4,
                 focus: 'isValidPassword()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (Swift markup)', pass2: 'why-comments', focus: 'isValidPassword()' },
+            afterBoth: `enum ValidationError: Error {
+    case tooShort
+    case missingRequiredCharacters
+}
+
+/// Validates a password against minimum security requirements.
+///
+/// - Parameter password: The password string to validate
+/// - Returns: \`true\` if the password meets all requirements
+/// - Throws: \`ValidationError.tooShort\` if under 8 characters
+func isValidPassword(_ password: String) throws -> Bool {
+    // 8 chars is the NIST SP 800-63B minimum — enforce server-side, not just in UI
+    guard password.count >= 8 else {
+        throw ValidationError.tooShort
+    }
+    let hasUppercase = password.contains { $0.isUppercase }
+    let hasLowercase = password.contains { $0.isLowercase }
+    let hasNumber    = password.contains { $0.isNumber }
+    // && not early return — evaluates all three so future code can report which requirement failed
+    return hasUppercase && hasLowercase && hasNumber
+}`,
             afterWhy: `enum ValidationError: Error {
     case tooShort
     case missingRequiredCharacters
@@ -679,11 +944,26 @@ func isValidPassword(_ password: String) throws -> Bool {
             filename: 'ListUtils.kt',
             command: 'poly-glot comment ListUtils.kt',
             commandWhy: 'poly-glot why ListUtils.kt',
+            commandBoth: 'poly-glot comment ListUtils.kt --both',
             summaryWhy: {
                 lines: 3,
                 focus: 'filterEven()',
                 style: 'inline // why-comments'
             },
+            summaryBoth: { pass1: 'doc-comments (KDoc)', pass2: 'why-comments', focus: 'filterEven()' },
+            afterBoth: `/**
+ * Filters a list to return only even numbers.
+ *
+ * @param numbers A non-empty list of integers to filter
+ * @return A new list containing only the even values
+ * @throws IllegalArgumentException if the input list is empty
+ */
+fun filterEven(numbers: List<Int>): List<Int> {
+    // require() over if/throw — idiomatic Kotlin contract check, produces clear IllegalArgumentException
+    require(numbers.isNotEmpty()) { "Input list cannot be empty" }
+    // filter {} over manual loop — stdlib is optimised and avoids intermediate allocations
+    return numbers.filter { it % 2 == 0 }
+}`,
             afterWhy: `fun filterEven(numbers: List<Int>): List<Int> {
     // require() over if/throw — it produces a clear IllegalArgumentException
     // with the message, which is the idiomatic Kotlin contract-check pattern
@@ -783,43 +1063,66 @@ fun filterEven(numbers: List<Int>): List<Int> {
         isRunning = true;
         
         // Get selected language and mode
-        const langSelect = document.getElementById('cliDemoLanguage');
-        const modeToggle = document.getElementById('cliDemoMode');
+        const langSelect   = document.getElementById('cliDemoLanguage');
+        const modeToggle   = document.getElementById('cliDemoMode');
         const selectedLang = langSelect ? langSelect.value : 'javascript';
-        const isWhyMode = modeToggle ? modeToggle.value === 'why' : false;
-        const langData = DEMO_CODE[selectedLang] || DEMO_CODE.javascript;
-        
-        const commandEl = document.getElementById('terminalCommand');
-        const outputEl = document.getElementById('terminalOutput');
-        const codeDisplayEl = document.getElementById('terminalCodeDisplay');
-        const cursorEl = document.querySelector('.terminal-cursor');
+        const selectedMode = modeToggle ? modeToggle.value : 'comment'; // 'comment' | 'why' | 'both'
+        const langData     = DEMO_CODE[selectedLang] || DEMO_CODE.javascript;
+
+        const commandEl      = document.getElementById('terminalCommand');
+        const outputEl       = document.getElementById('terminalOutput');
+        const codeDisplayEl  = document.getElementById('terminalCodeDisplay');
+        const cursorEl       = document.querySelector('.terminal-cursor');
         const codeOutputHeader = document.querySelector('.code-output-header h4');
-        
+
         // Clear previous content
         commandEl.textContent = '';
-        outputEl.textContent = '';
+        outputEl.textContent  = '';
         codeDisplayEl.innerHTML = '';
         cursorEl.classList.remove('hidden');
-        
-        // Pick command + output based on mode
-        const command = isWhyMode ? (langData.commandWhy || langData.command) : langData.command;
-        const afterCode = isWhyMode ? (langData.afterWhy || langData.after) : langData.after;
-        const summary = isWhyMode ? (langData.summaryWhy || langData.summary) : langData.summary;
-        
+
+        // Pick command + output + summary based on mode
+        const command   = selectedMode === 'why'  ? (langData.commandWhy  || langData.command)
+                        : selectedMode === 'both' ? (langData.commandBoth || langData.command)
+                        : langData.command;
+        const afterCode = selectedMode === 'why'  ? (langData.afterWhy  || langData.after)
+                        : selectedMode === 'both' ? (langData.afterBoth || langData.after)
+                        : langData.after;
+        const summary   = selectedMode === 'why'  ? (langData.summaryWhy  || langData.summary)
+                        : selectedMode === 'both' ? (langData.summaryBoth || langData.summary)
+                        : langData.summary;
+
         // Step 1: Type the command
         for (let char of command) {
             commandEl.textContent += char;
             await sleep(50);
         }
-        
         await sleep(500);
         cursorEl.classList.add('hidden');
-        
-        // Step 2: Show processing messages
+
+        // Step 2: Animated terminal output per mode
         outputEl.textContent = `✨ Processing ${langData.filename}...\n`;
         await sleep(600);
-        
-        if (isWhyMode) {
+
+        if (selectedMode === 'both') {
+            outputEl.textContent += '📝 Pass 1 — adding doc-comments...\n';
+            await sleep(700);
+            outputEl.textContent += '  ✓ Doc-comments complete\n';
+            await sleep(400);
+            outputEl.textContent += '💬 Pass 2 — adding why-comments...\n';
+            await sleep(700);
+            outputEl.textContent += '  ✓ Why-comments complete\n';
+            await sleep(400);
+            outputEl.textContent += '✅ Both passes complete!\n';
+            await sleep(400);
+            outputEl.textContent += '\nSummary:\n';
+            await sleep(300);
+            outputEl.textContent += `  • Pass 1: ${summary.pass1}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Pass 2: ${summary.pass2}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Function: ${summary.focus}\n`;
+        } else if (selectedMode === 'why') {
             outputEl.textContent += '🔍 Identifying non-obvious decisions...\n';
             await sleep(600);
             outputEl.textContent += '✅ Why-comments added successfully!\n';
@@ -845,19 +1148,18 @@ fun filterEven(numbers: List<Int>): List<Int> {
             outputEl.textContent += `  • Added tags: ${summary.tags}\n`;
         }
         await sleep(400);
-        
-        // Step 5: Show file updated message
+
         outputEl.textContent += `\n💾 File updated: ${langData.filename}\n`;
         await sleep(600);
-        
-        // Step 6: Show the code output below
+
         const codeOutputSection = document.getElementById('codeOutputSection');
-        const codeOutputBody = document.getElementById('codeOutputBody');
-        
+        const codeOutputBody    = document.getElementById('codeOutputBody');
+
         if (codeOutputSection && codeOutputBody) {
-            // Update header with filename
             if (codeOutputHeader) {
-                const headerLabel = isWhyMode ? 'after why-comments' : 'after documentation';
+                const headerLabel = selectedMode === 'why'  ? 'after why-comments'
+                                  : selectedMode === 'both' ? 'after doc + why comments'
+                                  : 'after documentation';
                 codeOutputHeader.textContent = `📄 ${langData.filename} (${headerLabel})`;
             }
             
