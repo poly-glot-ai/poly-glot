@@ -61,6 +61,7 @@ async function main(): Promise<void> {
 
     if (cmd === 'config')  { await runConfig(args.slice(1)); return; }
     if (cmd === 'comment') { await runComment(args.slice(1)); return; }
+    if (cmd === 'why')     { await runWhy(args.slice(1)); return; }
     if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
     if (cmd === 'demo')    { await runDemo(args.slice(1)); return; }
 
@@ -252,6 +253,44 @@ async function runComment(args: string[]): Promise<void> {
     ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     fs.writeFileSync(outPath, result.commentedCode, 'utf8');
     success(`${path.basename(outPath)} commented — $${result.cost.toFixed(5)} | ${result.tokensUsed} tokens`);
+}
+
+// ─── Command: why ─────────────────────────────────────────────────────────────
+
+async function runWhy(args: string[]): Promise<void> {
+    const flags  = parseFlags(args);
+    const cfg    = loadConfig();
+
+    assertConfigured(cfg);
+
+    const gen = new PolyGlotGenerator(cfg);
+
+    // ── single file mode (WHY comments don't support stdin/dir yet) ──
+    const filePath = args.find(a => !a.startsWith('-'));
+    if (!filePath) { error('Specify a file. Run poly-glot --help for usage.'); process.exit(1); }
+
+    const absPath = path.resolve(filePath);
+    if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
+
+    const ext    = absPath.split('.').pop()!.toLowerCase();
+    const lang   = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    const code   = fs.readFileSync(absPath, 'utf8');
+    const outPath = flags['--output']
+        ? path.resolve(flags['--output'] as string)
+        : absPath;
+
+    spin(`Adding WHY comments to ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
+    const result = await gen.generateWhyComments(code, lang);
+    stopSpin();
+
+    ping({ cmd: 'why', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+    fs.writeFileSync(outPath, result.commentedCode, 'utf8');
+    success(`${path.basename(outPath)} — WHY comments added — $${result.cost.toFixed(5)} | ${result.tokensUsed} tokens`);
+    
+    console.log('');
+    console.log(`  ${COLORS.dim}💡 WHY comments explain business logic & design decisions (not just WHAT the code does)${COLORS.reset}`);
+    console.log(`  ${COLORS.dim}   Use both: ${COLORS.cyan}polyglot comment${COLORS.reset}${COLORS.dim} (WHAT) + ${COLORS.cyan}polyglot why${COLORS.reset}${COLORS.dim} (WHY) for complete documentation${COLORS.reset}`);
+    console.log('');
 }
 
 // ─── Command: explain ─────────────────────────────────────────────────────────
@@ -507,12 +546,17 @@ ${COLORS.bold}Usage:${COLORS.reset}
 
 ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}demo${COLORS.reset}                         See Poly-Glot in action with interactive examples
-  ${COLORS.cyan}comment${COLORS.reset} <file>               Comment a single file (edits in place)
+  ${COLORS.cyan}comment${COLORS.reset} <file>               Add WHAT comments (standard documentation)
+  ${COLORS.cyan}why${COLORS.reset} <file>                   Add WHY comments (explain business logic & decisions)
   ${COLORS.cyan}comment${COLORS.reset} <file> --output <f>  Write commented code to a different file
   ${COLORS.cyan}comment${COLORS.reset} --dir <dir>          Comment all supported files in a directory
   ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>   Read code from stdin, write to stdout
   ${COLORS.cyan}explain${COLORS.reset} <file>               Analyse a file (complexity, bugs, quality)
   ${COLORS.cyan}config${COLORS.reset}                       Configure API key and provider interactively
+
+${COLORS.bold}Comment Types:${COLORS.reset}
+  ${COLORS.dim}WHAT${COLORS.reset} (comment) - Standard documentation (params, returns, usage)
+  ${COLORS.dim}WHY${COLORS.reset}  (why)     - Reasoning, design decisions, trade-offs, business logic
 
 ${COLORS.bold}Options:${COLORS.reset}
   --lang <lang>         Override language detection (e.g. python, javascript)
@@ -533,7 +577,11 @@ ${COLORS.bold}Examples:${COLORS.reset}
   polyglot demo --lang javascript      # View JavaScript example
   polyglot demo --lang python --live   # Generate live comments with API
   polyglot config --key sk-... --provider openai --model gpt-4o-mini
-  polyglot comment src/auth.js
+  
+  polyglot comment src/auth.js         # Add WHAT comments (documentation)
+  polyglot why src/auth.js             # Add WHY comments (reasoning)
+  polyglot comment src/auth.js && polyglot why src/auth.js  # Both!
+  
   polyglot comment src/auth.js --output src/auth.documented.js
   polyglot comment --dir src/ --ext js,ts
   polyglot comment --dir src/ --output-dir src-commented/

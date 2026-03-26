@@ -105,6 +105,25 @@ export class PolyGlotGenerator {
         };
     }
 
+    async generateWhyComments(code: string, languageId: string): Promise<GenerateResult> {
+        const style = LANGUAGE_STYLE[languageId] || 'inline comments';
+        const prompt = this._buildWhyPrompt(code, languageId, style);
+        const raw    = await this._call(prompt);
+
+        // Strip markdown fences if the model wrapped the output
+        const commentedCode = raw
+            .replace(/^```[\w]*\n?/m, '')
+            .replace(/\n?```$/m, '')
+            .trim();
+
+        return {
+            commentedCode,
+            model:      raw,  // overwritten below
+            cost:       0,
+            tokensUsed: 0,
+        };
+    }
+
     async explainCode(code: string, languageId: string): Promise<ExplainResult> {
         const prompt = this._buildExplainPrompt(code, languageId);
         const raw    = await this._call(prompt);
@@ -219,6 +238,38 @@ ${code}`;
 }
 
 Return ONLY valid JSON, no markdown.
+
+Code:
+${code}`;
+    }
+
+    private _buildWhyPrompt(code: string, lang: string, style: string): string {
+        return `You are an expert ${lang} developer. Add WHY comments to this code explaining business logic, design decisions, and reasoning.
+
+CRITICAL DISTINCTION:
+- WHAT comments (basic documentation): Describe what the code does
+- WHY comments (reasoning): Explain WHY design decisions were made, business logic, trade-offs, intent
+
+GOOD WHY COMMENT EXAMPLES:
+✅ "// Using debounce here to prevent API spam during rapid typing - reduces server load by 90%"
+✅ "// Cache invalidation after 5min because user data changes infrequently, balancing freshness vs performance"
+✅ "// Validating email on blur (not keystroke) to avoid annoying UX while user is still typing"
+✅ "// Choosing bubble sort despite O(n²) complexity - dataset is always <10 items, simplicity > optimization"
+✅ "// Using UTC timestamps throughout to avoid timezone bugs in multi-region deployments"
+
+BAD WHY COMMENT EXAMPLES (these are WHAT comments):
+❌ "// This function calculates the total" (describes WHAT, not WHY)
+❌ "// Loop through array" (obvious from code)
+❌ "// Return the result" (no reasoning explained)
+
+RULES:
+- Use ${style} format for inline comments
+- Focus ONLY on business logic, architectural decisions, trade-offs, performance reasoning
+- Explain WHY this approach was chosen over alternatives
+- Mention constraints, requirements, or context that influenced the design
+- Keep existing code exactly as-is — only add comments
+- Skip trivial/obvious code - only comment where reasoning matters
+- Return ONLY the commented code, no explanations or markdown fences
 
 Code:
 ${code}`;
