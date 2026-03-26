@@ -191,26 +191,28 @@ function calculateAge(birthDate) {
     
     function highlightCode(line) {
         // Simple syntax highlighting
-        let highlighted = line;
+        // Escape HTML first to prevent injection
+        let highlighted = escapeHtml(line);
         
-        // Comments
+        // Comments - return early if it's a comment line
         if (line.trim().startsWith('/**') || line.trim().startsWith('*') || line.trim().startsWith('*/')) {
-            return `<span class="code-comment">${escapeHtml(line)}</span>`;
+            return `<span class="code-comment">${highlighted}</span>`;
         }
         
+        // Inline comments
+        highlighted = highlighted.replace(/\/\/ (.+)$/g, '<span class="code-comment">// $1</span>');
+        
+        // Strings (do these first to avoid highlighting keywords inside strings)
+        highlighted = highlighted.replace(/&#39;([^&#39;]*)&#39;/g, '<span class="code-string">&#39;$1&#39;</span>');
+        highlighted = highlighted.replace(/&quot;([^&quot;]*)&quot;/g, '<span class="code-string">&quot;$1&quot;</span>');
+        
         // Keywords
-        highlighted = highlighted.replace(/\b(function|const|let|var|if|return|throw|new|isNaN)\b/g, 
+        highlighted = highlighted.replace(/\b(function|const|let|var|if|return|throw|new|isNaN|else)\b/g, 
             '<span class="code-keyword">$1</span>');
         
-        // Function names
+        // Function calls
         highlighted = highlighted.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, 
             '<span class="code-function">$1</span>(');
-        
-        // Strings
-        highlighted = highlighted.replace(/'([^']*)'/g, 
-            '<span class="code-string">\'$1\'</span>');
-        highlighted = highlighted.replace(/"([^"]*)"/g, 
-            '<span class="code-string">"$1"</span>');
         
         // Numbers
         highlighted = highlighted.replace(/\b(\d+)\b/g, 
