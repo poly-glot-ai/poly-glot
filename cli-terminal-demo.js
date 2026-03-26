@@ -8,11 +8,44 @@
         javascript: {
             filename: 'calculateAge.js',
             command: 'poly-glot comment calculateAge.js',
+            commandWhy: 'poly-glot why calculateAge.js',
             summary: {
                 blocks: 1,
                 functions: 'calculateAge()',
                 tags: '@param, @returns, @throws, @example'
             },
+            summaryWhy: {
+                lines: 4,
+                focus: 'calculateAge()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `function calculateAge(birthDate) {
+  const today = new Date();
+  const birth = new Date(birthDate);
+
+  // isNaN check is safer than try/catch here — invalid strings silently
+  // produce NaN rather than throwing, so explicit guard is needed
+  if (isNaN(birth.getTime())) {
+    throw new Error('Invalid birth date format');
+  }
+
+  // Reject future dates early rather than returning a negative age,
+  // which would be a silent incorrect result
+  if (birth > today) {
+    throw new Error('Birth date cannot be in the future');
+  }
+
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+
+  // Can't rely solely on year diff — a Dec 31 birthday hasn't occurred
+  // yet for someone born next month, so we subtract one year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+}`,
             after: `/**
  * Calculates a person's age based on their birth date
  * 
@@ -50,6 +83,42 @@ function calculateAge(birthDate) {
         python: {
             filename: 'user_manager.py',
             command: 'poly-glot comment user_manager.py',
+            commandWhy: 'poly-glot why user_manager.py',
+            summaryWhy: {
+                lines: 5,
+                focus: 'create_user()',
+                style: 'inline # why-comments'
+            },
+            afterWhy: `import uuid
+from datetime import datetime
+
+def create_user(username, email, age):
+    # uuid4 over uuid1 — avoids embedding the host MAC address,
+    # which would be a privacy leak in user-facing IDs
+    user_id = str(uuid.uuid4())
+
+    # Minimum age enforced here rather than in the DB constraint so we
+    # can return a clean domain error instead of a raw IntegrityError
+    if age < 13:
+        raise ValueError("Users must be 13 or older (COPPA compliance)")
+
+    # strip() before length check — a username of all spaces would
+    # pass a naive len() check but is functionally empty
+    if not 3 <= len(username.strip()) <= 20:
+        raise ValueError("Username must be 3-20 characters")
+
+    # Basic format check only — full deliverability validation requires
+    # a send attempt; we avoid that cost at signup time
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        raise ValueError("Invalid email format")
+
+    return {
+        'id': user_id,
+        'username': username.strip(),
+        'email': email.lower(), # normalise to lowercase to prevent duplicate accounts
+        'age': age,
+        'created_at': datetime.utcnow().isoformat()
+    }`,
             summary: {
                 blocks: 1,
                 functions: 'create_user()',
@@ -99,6 +168,27 @@ def create_user(username, email, age):
         typescript: {
             filename: 'validator.ts',
             command: 'poly-glot comment validator.ts',
+            commandWhy: 'poly-glot why validator.ts',
+            summaryWhy: {
+                lines: 4,
+                focus: 'validateEmail()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `export function validateEmail(email: string): boolean {
+  // Trimming here rather than requiring callers to do it — form inputs
+  // often carry accidental whitespace that shouldn't cause failures
+  const trimmed = email.trim();
+
+  // RFC 5321 allows up to 254 chars; anything longer is almost certainly
+  // an injection attempt or a bug, not a real address
+  if (trimmed.length > 254) return false;
+
+  // Regex intentionally permissive — exact RFC 5322 compliance produces
+  // a 6KB regex that's unreadable and still misses edge cases; a simple
+  // structural check is a better trade-off here
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}`,
             summary: {
                 blocks: 1,
                 functions: 'validateEmail()',
@@ -127,6 +217,26 @@ function validateEmail(email: string): boolean {
         java: {
             filename: 'StringUtils.java',
             command: 'poly-glot comment StringUtils.java',
+            commandWhy: 'poly-glot why StringUtils.java',
+            summaryWhy: {
+                lines: 4,
+                focus: 'truncate()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `public class StringUtils {
+    public static String truncate(String text, int maxLength) {
+        // Null guard returns null rather than throwing — callers treating
+        // this as a display utility shouldn't need a try/catch
+        if (text == null) return null;
+
+        // maxLength includes the ellipsis, so we compare against
+        // maxLength - 3 to avoid exceeding the requested limit
+        if (text.length() <= maxLength) return text;
+
+        // substring end index is exclusive in Java, so no off-by-one here
+        return text.substring(0, maxLength - 3) + "...";
+    }
+}`,
             summary: {
                 blocks: 1,
                 functions: 'capitalize()',
@@ -160,6 +270,28 @@ public static String capitalize(String str) {
         go: {
             filename: 'math.go',
             command: 'poly-glot comment math.go',
+            commandWhy: 'poly-glot why math.go',
+            summaryWhy: {
+                lines: 4,
+                focus: 'SafeDivide()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `package math
+
+import "errors"
+
+func SafeDivide(a, b float64) (float64, error) {
+    // Return an error rather than panicking — division by zero in Go
+    // doesn't produce NaN like some languages; it would panic, which
+    // crashes the goroutine and is unrecoverable in a server context
+    if b == 0 {
+        return 0, errors.New("division by zero")
+    }
+
+    // Named return values were considered but skipped — with only one
+    // success path, naked returns would obscure what's being returned
+    return a / b, nil
+}`,
             summary: {
                 blocks: 1,
                 functions: 'Average()',
@@ -197,6 +329,26 @@ func Average(numbers []float64) (float64, error) {
         rust: {
             filename: 'parser.rs',
             command: 'poly-glot comment parser.rs',
+            commandWhy: 'poly-glot why parser.rs',
+            summaryWhy: {
+                lines: 4,
+                focus: 'parse_int()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `// Returns Result rather than Option — callers need to know whether
+// parsing failed vs the input being intentionally absent
+pub fn parse_int(s: &str) -> Result<i32, String> {
+    // trim() before parse() — the standard library's parse() is strict
+    // and will reject leading/trailing whitespace that humans expect to be ignored
+    let trimmed = s.trim();
+
+    // Shadowing 's' with 'trimmed' is deliberate — prevents accidentally
+    // using the un-trimmed original elsewhere in this function
+    trimmed.parse::<i32>()
+        // map_err converts the stdlib ParseIntError into our String error type
+        // without needing a custom error enum for this simple utility
+        .map_err(|e| format!("Failed to parse '{}': {}", trimmed, e))
+}`,
             summary: {
                 blocks: 1,
                 functions: 'parse_int()',
@@ -229,6 +381,32 @@ pub fn parse_int(input: &str) -> Result<i32, std::num::ParseIntError> {
         cpp: {
             filename: 'vector_ops.cpp',
             command: 'poly-glot comment vector_ops.cpp',
+            commandWhy: 'poly-glot why vector_ops.cpp',
+            summaryWhy: {
+                lines: 4,
+                focus: 'dotProduct()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `#include <vector>
+#include <stdexcept>
+
+// Takes vectors by const reference rather than value to avoid
+// copying potentially large vectors on every call
+double dotProduct(const std::vector<double>& a, const std::vector<double>& b) {
+    // Size check before the loop — mismatched sizes would silently
+    // produce a mathematically incorrect result, not a crash
+    if (a.size() != b.size()) {
+        throw std::invalid_argument("Vectors must be the same length");
+    }
+
+    double result = 0.0;
+    // Using index-based loop over range-for so we can access both
+    // vectors simultaneously without zip or index bookkeeping
+    for (size_t i = 0; i < a.size(); ++i) {
+        result += a[i] * b[i];
+    }
+    return result;
+}`,
             summary: {
                 blocks: 1,
                 functions: 'dotProduct()',
@@ -268,6 +446,26 @@ double dotProduct(const std::vector<double>& a, const std::vector<double>& b) {
         csharp: {
             filename: 'Calculator.cs',
             command: 'poly-glot comment Calculator.cs',
+            commandWhy: 'poly-glot why Calculator.cs',
+            summaryWhy: {
+                lines: 4,
+                focus: 'Divide()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `public class Calculator {
+    // decimal instead of double — financial calculations require exact
+    // decimal representation; double's binary floating point introduces
+    // rounding errors that compound over many operations
+    public decimal Divide(decimal numerator, decimal denominator) {
+        // Explicit zero check before division — C# throws DivideByZeroException
+        // for integer division but silently returns Infinity for decimal,
+        // which would propagate silently into downstream calculations
+        if (denominator == 0)
+            throw new ArgumentException("Denominator cannot be zero");
+
+        return numerator / denominator;
+    }
+}`,
             summary: {
                 blocks: 1,
                 functions: 'Divide()',
@@ -301,6 +499,24 @@ public static double Divide(double dividend, double divisor)
         ruby: {
             filename: 'string_helper.rb',
             command: 'poly-glot comment string_helper.rb',
+            commandWhy: 'poly-glot why string_helper.rb',
+            summaryWhy: {
+                lines: 3,
+                focus: 'truncate()',
+                style: 'inline # why-comments'
+            },
+            afterWhy: `def truncate(text, max_length)
+  # Return nil rather than raising — this is a display helper called
+  # from views where nil is handled gracefully by ERB; an exception
+  # would crash the entire render
+  return nil if text.nil?
+
+  return text if text.length <= max_length
+
+  # Subtract 3 before slicing so the ellipsis fits within max_length,
+  # not beyond it — a common off-by-one in truncation utilities
+  text[0, max_length - 3] + "..."
+end`,
             summary: {
                 blocks: 1,
                 functions: 'truncate()',
@@ -327,6 +543,34 @@ end`
         php: {
             filename: 'ArrayHelper.php',
             command: 'poly-glot comment ArrayHelper.php',
+            commandWhy: 'poly-glot why ArrayHelper.php',
+            summaryWhy: {
+                lines: 4,
+                focus: 'sumArray()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `<?php
+function sumArray(array $numbers): float {
+    // Return 0.0 for empty arrays rather than null — callers doing
+    // arithmetic on the result shouldn't need a null check
+    if (empty($numbers)) {
+        return 0.0;
+    }
+
+    $sum = 0;
+    foreach ($numbers as $num) {
+        // is_numeric check instead of is_int/is_float — allows numeric
+        // strings like "3.14" that arrive from form inputs or JSON decoding
+        if (!is_numeric($num)) {
+            throw new TypeError('All array values must be numeric');
+        }
+        $sum += $num;
+    }
+
+    // Cast to float on return — $sum could be int if all inputs were
+    // whole numbers, but callers expect a consistent float return type
+    return (float)$sum;
+}`,
             summary: {
                 blocks: 1,
                 functions: 'arraySum()',
@@ -363,6 +607,34 @@ function arraySum(array $numbers): float {
         swift: {
             filename: 'Validator.swift',
             command: 'poly-glot comment Validator.swift',
+            commandWhy: 'poly-glot why Validator.swift',
+            summaryWhy: {
+                lines: 4,
+                focus: 'isValidPassword()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `enum ValidationError: Error {
+    case tooShort
+    case missingRequiredCharacters
+}
+
+func isValidPassword(_ password: String) throws -> Bool {
+    // 8 is the NIST SP 800-63B minimum; we enforce it here rather than
+    // in the UI so server-side validation can't be bypassed
+    guard password.count >= 8 else {
+        throw ValidationError.tooShort
+    }
+
+    // Each check is separate so we can surface a specific error
+    // message to the user rather than a generic "password too weak"
+    let hasUppercase = password.contains { $0.isUppercase }
+    let hasLowercase = password.contains { $0.isLowercase }
+    let hasNumber = password.contains { $0.isNumber }
+
+    // && rather than early return — we want all three booleans evaluated
+    // so future code can report which specific requirements are unmet
+    return hasUppercase && hasLowercase && hasNumber
+}`,
             summary: {
                 blocks: 2,
                 functions: 'isValidPassword()',
@@ -406,6 +678,23 @@ func isValidPassword(_ password: String) throws -> Bool {
         kotlin: {
             filename: 'ListUtils.kt',
             command: 'poly-glot comment ListUtils.kt',
+            commandWhy: 'poly-glot why ListUtils.kt',
+            summaryWhy: {
+                lines: 3,
+                focus: 'filterEven()',
+                style: 'inline // why-comments'
+            },
+            afterWhy: `fun filterEven(numbers: List<Int>): List<Int> {
+    // require() over if/throw — it produces a clear IllegalArgumentException
+    // with the message, which is the idiomatic Kotlin contract-check pattern
+    require(numbers.isNotEmpty()) {
+        "Input list cannot be empty"
+    }
+
+    // filter {} instead of a manual loop — the stdlib implementation
+    // is optimised and avoids intermediate list allocations
+    return numbers.filter { it % 2 == 0 }
+}`,
             summary: {
                 blocks: 1,
                 functions: 'filterEven()',
@@ -493,9 +782,11 @@ fun filterEven(numbers: List<Int>): List<Int> {
         if (isRunning) return;
         isRunning = true;
         
-        // Get selected language
+        // Get selected language and mode
         const langSelect = document.getElementById('cliDemoLanguage');
+        const modeToggle = document.getElementById('cliDemoMode');
         const selectedLang = langSelect ? langSelect.value : 'javascript';
+        const isWhyMode = modeToggle ? modeToggle.value === 'why' : false;
         const langData = DEMO_CODE[selectedLang] || DEMO_CODE.javascript;
         
         const commandEl = document.getElementById('terminalCommand');
@@ -510,8 +801,12 @@ fun filterEven(numbers: List<Int>): List<Int> {
         codeDisplayEl.innerHTML = '';
         cursorEl.classList.remove('hidden');
         
+        // Pick command + output based on mode
+        const command = isWhyMode ? (langData.commandWhy || langData.command) : langData.command;
+        const afterCode = isWhyMode ? (langData.afterWhy || langData.after) : langData.after;
+        const summary = isWhyMode ? (langData.summaryWhy || langData.summary) : langData.summary;
+        
         // Step 1: Type the command
-        const command = langData.command;
         for (let char of command) {
             commandEl.textContent += char;
             await sleep(50);
@@ -524,24 +819,31 @@ fun filterEven(numbers: List<Int>): List<Int> {
         outputEl.textContent = `✨ Processing ${langData.filename}...\n`;
         await sleep(600);
         
-        outputEl.textContent += '📝 Analyzing code structure...\n';
-        await sleep(600);
-        
-        // Step 3: Show success message
-        outputEl.textContent += '✅ Comments added successfully!\n';
-        await sleep(400);
-        
-        // Step 4: Show summary
-        outputEl.textContent += '\nSummary:\n';
-        await sleep(300);
-        
-        outputEl.textContent += `  • Added ${langData.summary.blocks} documentation block${langData.summary.blocks > 1 ? 's' : ''}\n`;
-        await sleep(200);
-        
-        outputEl.textContent += `  • Documented function: ${langData.summary.functions}\n`;
-        await sleep(200);
-        
-        outputEl.textContent += `  • Added tags: ${langData.summary.tags}\n`;
+        if (isWhyMode) {
+            outputEl.textContent += '🔍 Identifying non-obvious decisions...\n';
+            await sleep(600);
+            outputEl.textContent += '✅ Why-comments added successfully!\n';
+            await sleep(400);
+            outputEl.textContent += '\nSummary:\n';
+            await sleep(300);
+            outputEl.textContent += `  • Added ${summary.lines} why-comment${summary.lines > 1 ? 's' : ''}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Focus: ${summary.focus}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Style: ${summary.style}\n`;
+        } else {
+            outputEl.textContent += '📝 Analyzing code structure...\n';
+            await sleep(600);
+            outputEl.textContent += '✅ Comments added successfully!\n';
+            await sleep(400);
+            outputEl.textContent += '\nSummary:\n';
+            await sleep(300);
+            outputEl.textContent += `  • Added ${summary.blocks} documentation block${summary.blocks > 1 ? 's' : ''}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Documented function: ${summary.functions}\n`;
+            await sleep(200);
+            outputEl.textContent += `  • Added tags: ${summary.tags}\n`;
+        }
         await sleep(400);
         
         // Step 5: Show file updated message
@@ -555,7 +857,8 @@ fun filterEven(numbers: List<Int>): List<Int> {
         if (codeOutputSection && codeOutputBody) {
             // Update header with filename
             if (codeOutputHeader) {
-                codeOutputHeader.textContent = `📄 ${langData.filename} (after documentation)`;
+                const headerLabel = isWhyMode ? 'after why-comments' : 'after documentation';
+                codeOutputHeader.textContent = `📄 ${langData.filename} (${headerLabel})`;
             }
             
             // Clear previous output
@@ -565,7 +868,7 @@ fun filterEven(numbers: List<Int>): List<Int> {
             codeOutputSection.style.display = 'block';
             
             // Add all code lines with highlighting
-            const lines = langData.after.split('\n');
+            const lines = afterCode.split('\n');
             const commentLines = identifyCommentLines(lines, selectedLang);
             
             // Create and add all lines
@@ -592,60 +895,57 @@ fun filterEven(numbers: List<Int>): List<Int> {
     
     function identifyCommentLines(lines, lang) {
         const commentLines = [];
-        let inComment = false;
-        
+        let inBlockComment = false;
+
+        // Languages that use # for comments
+        const hashCommentLangs = new Set(['python', 'ruby']);
+        // Languages that use // for comments
+        const slashCommentLangs = new Set(['javascript', 'typescript', 'java', 'cpp', 'csharp', 'go', 'rust', 'php', 'swift', 'kotlin']);
+
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // JSDoc-style (JavaScript, TypeScript, Java, C++, C#, PHP)
-            if (lang === 'javascript' || lang === 'typescript' || lang === 'java' || 
-                lang === 'cpp' || lang === 'csharp' || lang === 'php' || lang === 'kotlin') {
-                if (line.startsWith('/**') || line.startsWith('///') || line.startsWith('//!')) {
-                    inComment = true;
-                    commentLines.push(i);
-                } else if (inComment && (line.includes('*/') || line.startsWith('*') || line.startsWith('///'))) {
-                    commentLines.push(i);
-                    if (line.includes('*/')) inComment = false;
-                } else if (inComment) {
-                    commentLines.push(i);
-                }
+            const raw  = lines[i];
+            const line = raw.trim();
+
+            // Block comment open (/** ... */)
+            if (line.startsWith('/**') || line.startsWith('/*')) {
+                inBlockComment = true;
+                commentLines.push(i);
+                if (line.includes('*/') && !line.startsWith('/**')) inBlockComment = false;
+                continue;
             }
-            // Python docstrings
-            else if (lang === 'python') {
-                if (line.startsWith('"""') || line.includes('"""')) {
-                    commentLines.push(i);
-                    if (!inComment && line.startsWith('"""')) inComment = true;
-                    else if (inComment && line.includes('"""')) inComment = false;
-                } else if (inComment) {
-                    commentLines.push(i);
-                }
+            if (inBlockComment) {
+                commentLines.push(i);
+                if (line.includes('*/')) inBlockComment = false;
+                continue;
             }
-            // Go comments
-            else if (lang === 'go') {
+
+            // Python / Ruby triple-quote docstrings
+            if (lang === 'python' && (line.startsWith('"""') || line.startsWith("'''"))) {
+                commentLines.push(i);
+                continue;
+            }
+
+            // Single-line // comment (leading or inline trailing)
+            if (slashCommentLangs.has(lang)) {
                 if (line.startsWith('//')) {
                     commentLines.push(i);
-                }
-            }
-            // Rust doc comments
-            else if (lang === 'rust') {
-                if (line.startsWith('///') || line.startsWith('//!')) {
+                } else if (raw.includes(' // ')) {
+                    // inline why-comment at end of line — highlight the whole line
                     commentLines.push(i);
                 }
+                continue;
             }
-            // Ruby comments
-            else if (lang === 'ruby') {
+
+            // Hash comment languages
+            if (hashCommentLangs.has(lang)) {
                 if (line.startsWith('#')) {
                     commentLines.push(i);
-                }
-            }
-            // Swift doc comments
-            else if (lang === 'swift') {
-                if (line.startsWith('///')) {
+                } else if (raw.includes(' # ')) {
                     commentLines.push(i);
                 }
             }
         }
-        
+
         return commentLines;
     }
     
@@ -661,10 +961,20 @@ fun filterEven(numbers: List<Int>): List<Int> {
         let html = '';
         let remaining = line;
         
-        // Handle inline comments first
-        const commentMatch = remaining.match(/^(.*)\/\/ (.*)$/);
-        if (commentMatch) {
-            html = highlightCodePart(commentMatch[1]) + '<span class="code-comment">// ' + escapeHtml(commentMatch[2]) + '</span>';
+        // Handle inline // comments (both leading and trailing)
+        const leadingSlash = remaining.match(/^(\s*\/\/.*)$/);
+        if (leadingSlash) {
+            return `<span class="code-comment">${escapeHtml(remaining)}</span>`;
+        }
+        const trailingSlash = remaining.match(/^(.*?)( \/\/ .*)$/);
+        if (trailingSlash) {
+            html = highlightCodePart(trailingSlash[1]) + '<span class="code-comment">' + escapeHtml(trailingSlash[2]) + '</span>';
+            return html;
+        }
+        // Handle inline # comments (Python / Ruby)
+        const trailingHash = remaining.match(/^(.*?)( # .*)$/);
+        if (trailingHash) {
+            html = highlightCodePart(trailingHash[1]) + '<span class="code-comment">' + escapeHtml(trailingHash[2]) + '</span>';
             return html;
         }
         

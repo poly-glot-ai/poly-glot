@@ -244,7 +244,7 @@
                         Run one command, and AI analyzes your code to generate comprehensive comments — no typing required!
                     </p>
                     <div class="cli-demo-language-selector-inline">
-                        <label for="cliDemoLanguage">Choose Language:</label>
+                        <label for="cliDemoLanguage">Language:</label>
                         <select id="cliDemoLanguage" class="cli-demo-language-select">
                             <option value="javascript">JavaScript</option>
                             <option value="python">Python</option>
@@ -258,6 +258,11 @@
                             <option value="php">PHP</option>
                             <option value="swift">Swift</option>
                             <option value="kotlin">Kotlin</option>
+                        </select>
+                        <label for="cliDemoMode">Mode:</label>
+                        <select id="cliDemoMode" class="cli-demo-language-select">
+                            <option value="comment">🤖 Comment</option>
+                            <option value="why">💬 Why</option>
                         </select>
                     </div>
                     <button id="cliDemoBtn" class="cli-demo-button">
@@ -917,7 +922,7 @@
     <script src="ai-generator.js?v=99"></script>
     <script src="scorer.js?v=9"></script>
     <script src="app.js?v=99"></script>
-    <script src="cli-terminal-demo.js?v=9"></script>
+    <script src="cli-terminal-demo.js?v=99"></script>
 
     <!-- Enterprise Form Handler -->
     <script>
