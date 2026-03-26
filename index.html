@@ -235,11 +235,45 @@
                 </div>
                 <div class="cli-demo-cta">
                     <h3 class="cli-demo-heading">🎬 Try Before You Install</h3>
-                    <p class="cli-demo-description">Experience the CLI with interactive examples — no installation required!</p>
+                    <p class="cli-demo-description">Watch poly-glot automatically add documentation to your code:</p>
                     <button id="cliDemoBtn" class="cli-demo-button">
                         <span class="demo-button-icon">▶️</span>
                         See CLI Demo in Action
                     </button>
+                </div>
+                
+                <!-- Inline Terminal Demo -->
+                <div class="cli-terminal-demo" id="cliTerminalDemo" style="display: none;">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <span class="terminal-btn terminal-btn-close"></span>
+                                <span class="terminal-btn terminal-btn-minimize"></span>
+                                <span class="terminal-btn terminal-btn-maximize"></span>
+                            </div>
+                            <div class="terminal-title">Terminal — poly-glot demo</div>
+                        </div>
+                        <div class="terminal-body">
+                            <div class="terminal-prompt">
+                                <span class="terminal-user">user@poly-glot</span>
+                                <span class="terminal-separator">:</span>
+                                <span class="terminal-path">~/project</span>
+                                <span class="terminal-symbol">$</span>
+                                <span class="terminal-command" id="terminalCommand"></span>
+                                <span class="terminal-cursor"></span>
+                            </div>
+                            <div class="terminal-output" id="terminalOutput"></div>
+                            <div class="terminal-code-display" id="terminalCodeDisplay"></div>
+                        </div>
+                    </div>
+                    <div class="terminal-controls">
+                        <button class="terminal-control-btn" id="replayDemo">
+                            <span>🔄</span> Replay
+                        </button>
+                        <button class="terminal-control-btn" id="closeDemo">
+                            <span>✕</span> Close
+                        </button>
+                    </div>
                 </div>
                 <div class="cli-links">
                     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener noreferrer" class="cli-link-btn cli-link-npm">
@@ -770,7 +804,7 @@
     <script src="ai-generator.js?v=8"></script>
     <script src="scorer.js?v=8"></script>
     <script src="app.js?v=8"></script>
-    <script src="cli-demo.js?v=1"></script>
+    <script src="cli-terminal-demo.js?v=1"></script>
 
     <!-- ── Footer ── -->
     <div class="site-footer">

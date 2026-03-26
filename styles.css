@@ -3583,6 +3583,201 @@ kbd {
     }
 }
 
+/* Inline Terminal Demo */
+.cli-terminal-demo {
+    margin: 2rem 0;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.cli-terminal-demo.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.terminal-window {
+    background: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+.terminal-header {
+    background: #323232;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid #444;
+}
+
+.terminal-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.terminal-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.terminal-btn-close {
+    background: #ff5f56;
+}
+
+.terminal-btn-minimize {
+    background: #ffbd2e;
+}
+
+.terminal-btn-maximize {
+    background: #27c93f;
+}
+
+.terminal-title {
+    color: #999;
+    font-size: 0.875rem;
+    flex: 1;
+    text-align: center;
+}
+
+.terminal-body {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1.5rem;
+    min-height: 400px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.terminal-prompt {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.terminal-user {
+    color: #4ec9b0;
+    font-weight: 600;
+}
+
+.terminal-separator {
+    color: #808080;
+}
+
+.terminal-path {
+    color: #569cd6;
+}
+
+.terminal-symbol {
+    color: #ce9178;
+    margin-left: 0.25rem;
+}
+
+.terminal-command {
+    color: #dcdcaa;
+    margin-left: 0.5rem;
+}
+
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: #4ec9b0;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+}
+
+.terminal-cursor.hidden {
+    opacity: 0;
+}
+
+.terminal-output {
+    color: #808080;
+    margin: 1rem 0;
+}
+
+.terminal-code-display {
+    margin-top: 1.5rem;
+}
+
+.terminal-code-line {
+    margin: 0.2rem 0;
+    white-space: pre-wrap;
+}
+
+.code-comment {
+    color: #6a9955;
+}
+
+.code-keyword {
+    color: #569cd6;
+}
+
+.code-function {
+    color: #dcdcaa;
+}
+
+.code-string {
+    color: #ce9178;
+}
+
+.code-number {
+    color: #b5cea8;
+}
+
+.code-added {
+    background: rgba(16, 185, 129, 0.15);
+    border-left: 3px solid #10b981;
+    padding-left: 0.5rem;
+    animation: fadeInGreen 0.5s ease;
+}
+
+@keyframes fadeInGreen {
+    from {
+        background: rgba(16, 185, 129, 0.3);
+    }
+    to {
+        background: rgba(16, 185, 129, 0.15);
+    }
+}
+
+.terminal-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.terminal-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.terminal-control-btn:hover {
+    border-color: var(--accent-primary);
+    background: rgba(79, 209, 197, 0.1);
+    transform: translateY(-2px);
+}
+
+.terminal-control-btn:active {
+    transform: translateY(0);
+}
+
 /* CLI Demo Modal */
 .cli-demo-modal {
     position: fixed;
