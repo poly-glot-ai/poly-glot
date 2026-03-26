@@ -655,6 +655,10 @@ textarea:focus {
     color: #ce9178;
 }
 
+.syntax-number {
+    color: #b5cea8;
+}
+
 .syntax-class {
     color: #4ec9b0;
 }

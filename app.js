@@ -1045,7 +1045,7 @@ function renderFunctionTemplate(lang) {
                 <span class="code-block-title">Well-Documented Function Example</span>
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
-            <pre><code>${highlightCode(lang.functionExample)}</code></pre>
+            <pre><code>${highlightCode(lang.functionExample, currentLanguage)}</code></pre>
         </div>
     `;
 }
@@ -1057,7 +1057,7 @@ function renderClassTemplate(lang) {
                 <span class="code-block-title">Well-Documented Class Example</span>
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
-            <pre><code>${highlightCode(lang.classExample)}</code></pre>
+            <pre><code>${highlightCode(lang.classExample, currentLanguage)}</code></pre>
         </div>
     `;
 }
@@ -1114,22 +1114,221 @@ function renderFavorites() {
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
             </div>
-            <pre><code>${highlightCode(fav.code)}</code></pre>
+            <pre><code>${highlightCode(fav.code, fav.language || currentLanguage)}</code></pre>
         </div>
     `).join('');
 }
 
-function highlightCode(code) {
-    return code
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\/\/.*$/gm, match => `<span class="syntax-comment">${match}</span>`)
-        .replace(/#.*$/gm, match => `<span class="syntax-comment">${match}</span>`)
-        .replace(/\/\*[\s\S]*?\*\//g, match => `<span class="syntax-comment">${match}</span>`)
-        .replace(/"""[\s\S]*?"""/g, match => `<span class="syntax-comment">${match}</span>`)
-        .replace(/\/\*\*[\s\S]*?\*\//g, match => `<span class="syntax-comment">${match}</span>`)
-        .replace(/\b(def|class|function|const|let|var|public|private|static|async|await|return|if|else|for|while|try|catch|throw|import|from)\b/g, match => `<span class="syntax-keyword">${match}</span>`)
-        .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, match => `<span class="syntax-string">${match}</span>`);
+// ── Syntax Highlighter ────────────────────────────────────────────────────────
+// Token-based: classifies every character span into one token type, then
+// emits HTML exactly once. Never runs regexes on already-injected HTML so
+// span/class attributes can never be corrupted by keyword or string passes.
+function highlightCode(code, lang) {
+    // ── Per-language keyword sets ──────────────────────────────────────────
+    const KEYWORDS = {
+        javascript: ['const','let','var','function','return','if','else','for','while',
+                     'do','switch','case','break','continue','new','delete','typeof',
+                     'instanceof','in','of','try','catch','finally','throw','class',
+                     'extends','super','import','export','default','async','await',
+                     'yield','null','undefined','true','false','this','static','get','set'],
+        typescript: ['const','let','var','function','return','if','else','for','while',
+                     'do','switch','case','break','continue','new','delete','typeof',
+                     'instanceof','in','of','try','catch','finally','throw','class',
+                     'extends','super','import','export','default','async','await',
+                     'yield','null','undefined','true','false','this','static','get','set',
+                     'interface','type','enum','namespace','abstract','implements',
+                     'readonly','declare','as','keyof','infer','never','unknown','any',
+                     'void','string','number','boolean','object','symbol'],
+        python:     ['def','class','return','if','elif','else','for','while','in','not',
+                     'and','or','is','import','from','as','try','except','finally',
+                     'raise','with','lambda','yield','pass','break','continue','del',
+                     'global','nonlocal','assert','True','False','None','self','super'],
+        java:       ['public','private','protected','static','final','abstract','class',
+                     'interface','enum','extends','implements','new','return','if','else',
+                     'for','while','do','switch','case','break','continue','try','catch',
+                     'finally','throw','throws','import','package','void','int','long',
+                     'double','float','boolean','char','byte','short','null','true','false',
+                     'this','super','instanceof','synchronized','volatile','transient'],
+        csharp:     ['public','private','protected','internal','static','abstract','sealed',
+                     'class','interface','struct','enum','namespace','using','new','return',
+                     'if','else','for','foreach','while','do','switch','case','break',
+                     'continue','try','catch','finally','throw','void','int','long','double',
+                     'float','bool','string','char','byte','short','decimal','object','var',
+                     'null','true','false','this','base','override','virtual','readonly',
+                     'const','event','delegate','async','await','get','set','value','out',
+                     'ref','params','in','is','as','typeof','nameof','default','where'],
+        cpp:        ['auto','void','int','long','short','double','float','char','bool',
+                     'unsigned','signed','const','static','extern','register','volatile',
+                     'inline','virtual','explicit','mutable','class','struct','union',
+                     'enum','namespace','template','typename','typedef','using','new',
+                     'delete','return','if','else','for','while','do','switch','case',
+                     'break','continue','try','catch','throw','nullptr','true','false',
+                     'this','public','private','protected','friend','operator','sizeof',
+                     'decltype','constexpr','override','final','noexcept','static_cast',
+                     'dynamic_cast','reinterpret_cast','const_cast','include','define'],
+        go:         ['func','var','const','type','struct','interface','map','chan','package',
+                     'import','return','if','else','for','range','switch','case','default',
+                     'break','continue','goto','fallthrough','defer','go','select','nil',
+                     'true','false','make','new','len','cap','append','copy','delete',
+                     'close','panic','recover','print','println','error','int','int8',
+                     'int16','int32','int64','uint','uint8','uint16','uint32','uint64',
+                     'float32','float64','complex64','complex128','byte','rune','string',
+                     'bool','any','error'],
+        rust:       ['fn','let','mut','const','static','struct','enum','trait','impl',
+                     'use','mod','pub','crate','super','self','return','if','else','for',
+                     'while','loop','match','break','continue','in','where','type','as',
+                     'ref','move','box','dyn','unsafe','extern','async','await','yield',
+                     'true','false','null','None','Some','Ok','Err','Vec','String','bool',
+                     'i8','i16','i32','i64','i128','u8','u16','u32','u64','u128',
+                     'f32','f64','usize','isize','str','char'],
+        ruby:       ['def','end','class','module','require','include','extend','return',
+                     'if','elsif','else','unless','then','case','when','while','until',
+                     'for','in','do','begin','rescue','ensure','raise','yield','lambda',
+                     'proc','nil','true','false','self','super','attr_accessor',
+                     'attr_reader','attr_writer','private','protected','public','new',
+                     'puts','print','p'],
+        php:        ['function','class','interface','trait','extends','implements','return',
+                     'if','elseif','else','for','foreach','while','do','switch','case',
+                     'break','continue','try','catch','finally','throw','new','echo','print',
+                     'include','require','include_once','require_once','namespace','use',
+                     'public','private','protected','static','abstract','final','const',
+                     'null','true','false','this','self','parent','array','list','match',
+                     'fn','yield','void','int','float','string','bool','object','mixed'],
+        swift:      ['func','var','let','class','struct','enum','protocol','extension',
+                     'init','deinit','return','if','else','guard','for','in','while',
+                     'repeat','switch','case','default','break','continue','fallthrough',
+                     'do','try','catch','throw','throws','rethrows','import','typealias',
+                     'associatedtype','subscript','override','final','required','convenience',
+                     'lazy','weak','unowned','static','class','mutating','nonmutating',
+                     'inout','nil','true','false','self','super','where','some','any',
+                     'async','await','actor','isolated','nonisolated','open','public',
+                     'internal','fileprivate','private','as','is','in','get','set','willSet',
+                     'didSet','String','Int','Double','Float','Bool','Array','Dictionary'],
+        kotlin:     ['fun','val','var','class','interface','object','companion','data',
+                     'sealed','abstract','open','override','final','init','constructor',
+                     'return','if','else','when','for','while','do','in','is','as','break',
+                     'continue','try','catch','finally','throw','import','package','by',
+                     'typealias','suspend','inline','reified','crossinline','noinline',
+                     'null','true','false','this','super','it','let','run','apply','also',
+                     'with','to','and','or','not','xor','shl','shr','ushr','String','Int',
+                     'Long','Double','Float','Boolean','Char','Byte','Short','Any','Unit',
+                     'Nothing','Array','List','Map','Set','Pair','Triple'],
+    };
+
+    // Detect language from currentLanguage global if not passed
+    const activeLang = lang || (typeof currentLanguage !== 'undefined' ? currentLanguage : 'javascript');
+    const keywords   = new Set(KEYWORDS[activeLang] || KEYWORDS.javascript);
+
+    // ── Tokeniser ──────────────────────────────────────────────────────────
+    // Produces array of {type, value} tokens. Types:
+    //   comment | string | keyword | number | decorator | type | code
+    const tokens = [];
+    let i = 0;
+    const len = code.length;
+
+    while (i < len) {
+        // ── Block comments: /** ... */ and /* ... */ ──────────────────────
+        if (code[i] === '/' && code[i+1] === '*') {
+            const end = code.indexOf('*/', i + 2);
+            const finish = end === -1 ? len : end + 2;
+            tokens.push({ type: 'comment', value: code.slice(i, finish) });
+            i = finish; continue;
+        }
+        // ── C# / Rust / C++ triple-slash: /// ────────────────────────────
+        if (code[i] === '/' && code[i+1] === '/' && code[i+2] === '/') {
+            const end = code.indexOf('\n', i);
+            const finish = end === -1 ? len : end;
+            tokens.push({ type: 'comment', value: code.slice(i, finish) });
+            i = finish; continue;
+        }
+        // ── Line comments: // ─────────────────────────────────────────────
+        if (code[i] === '/' && code[i+1] === '/') {
+            const end = code.indexOf('\n', i);
+            const finish = end === -1 ? len : end;
+            tokens.push({ type: 'comment', value: code.slice(i, finish) });
+            i = finish; continue;
+        }
+        // ── Hash comments: # (Python, Ruby, PHP, shell) ──────────────────
+        // Don't treat # inside strings — only at start of token
+        if (code[i] === '#' && (activeLang === 'python' || activeLang === 'ruby' ||
+            activeLang === 'php' || activeLang === 'cpp')) {
+            if (activeLang === 'cpp') {
+                // C++ preprocessor directives (#include, #define, etc.)
+                const end = code.indexOf('\n', i);
+                const finish = end === -1 ? len : end;
+                tokens.push({ type: 'comment', value: code.slice(i, finish) });
+                i = finish; continue;
+            }
+            const end = code.indexOf('\n', i);
+            const finish = end === -1 ? len : end;
+            tokens.push({ type: 'comment', value: code.slice(i, finish) });
+            i = finish; continue;
+        }
+        // ── Python/Ruby decorators / annotations: @name ───────────────────
+        if (code[i] === '@' && /[a-zA-Z_]/.test(code[i+1] || '')) {
+            let j = i + 1;
+            while (j < len && /[\w.]/.test(code[j])) j++;
+            tokens.push({ type: 'decorator', value: code.slice(i, j) });
+            i = j; continue;
+        }
+        // ── Triple-quoted strings: """ or ''' (Python) ────────────────────
+        if ((code[i] === '"' && code[i+1] === '"' && code[i+2] === '"') ||
+            (code[i] === "'" && code[i+1] === "'" && code[i+2] === "'")) {
+            const q = code.slice(i, i+3);
+            const end = code.indexOf(q, i + 3);
+            const finish = end === -1 ? len : end + 3;
+            tokens.push({ type: 'string', value: code.slice(i, finish) });
+            i = finish; continue;
+        }
+        // ── Regular strings: " ' ` ────────────────────────────────────────
+        if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+            const q = code[i];
+            let j = i + 1;
+            while (j < len) {
+                if (code[j] === '\\') { j += 2; continue; } // skip escaped
+                if (code[j] === q)    { j++;    break;     }
+                j++;
+            }
+            tokens.push({ type: 'string', value: code.slice(i, j) });
+            i = j; continue;
+        }
+        // ── Numbers ───────────────────────────────────────────────────────
+        if (/[0-9]/.test(code[i]) &&
+            (i === 0 || /[\s,;:([\-+*/%=!<>&|^~]/.test(code[i-1]))) {
+            let j = i;
+            while (j < len && /[0-9a-fA-FxX_.eE]/.test(code[j])) j++;
+            tokens.push({ type: 'number', value: code.slice(i, j) });
+            i = j; continue;
+        }
+        // ── Identifiers and keywords ──────────────────────────────────────
+        if (/[a-zA-Z_$]/.test(code[i])) {
+            let j = i;
+            while (j < len && /[\w$]/.test(code[j])) j++;
+            const word = code.slice(i, j);
+            tokens.push({ type: keywords.has(word) ? 'keyword' : 'code', value: word });
+            i = j; continue;
+        }
+        // ── Everything else: operators, punctuation, whitespace ───────────
+        tokens.push({ type: 'code', value: code[i] });
+        i++; continue;
+    }
+
+    // ── Emit HTML (escape once here, never again) ─────────────────────────
+    function esc(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    return tokens.map(tok => {
+        const v = esc(tok.value);
+        switch (tok.type) {
+            case 'comment':   return `<span class="syntax-comment">${v}</span>`;
+            case 'string':    return `<span class="syntax-string">${v}</span>`;
+            case 'keyword':   return `<span class="syntax-keyword">${v}</span>`;
+            case 'number':    return `<span class="syntax-number">${v}</span>`;
+            case 'decorator': return `<span class="syntax-decorator">${v}</span>`;
+            default:          return v;
+        }
+    }).join('');
 }
 
 function copyCode(button) {
@@ -1165,7 +1364,7 @@ function loadExample(example) {
                 <span class="code-block-title">${example.title}</span>
                 <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
-            <pre><code>${highlightCode(example.code)}</code></pre>
+            <pre><code>${highlightCode(example.code, currentLanguage)}</code></pre>
         </div>
     `;
 }
