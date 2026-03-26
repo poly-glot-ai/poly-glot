@@ -3159,6 +3159,55 @@ kbd {
 .pg-key-status.ok  { color: var(--pg-green); }
 .pg-key-status.err { color: #f87171; }
 
+/* ── Mobile API key field ── */
+@media (max-width: 768px) {
+    /* Key field takes full row width */
+    .pg-field-key {
+        width: 100%;
+        min-width: 0;
+        flex: none;
+    }
+
+    /* Input fills full width, larger tap target, bigger font */
+    .pg-key-input {
+        font-size: 14px;
+        padding: 10px 12px;
+        letter-spacing: 0.04em;
+        width: 100%;
+    }
+
+    /* Eye + Save buttons stay right-aligned, bigger tap targets */
+    .pg-key-row {
+        gap: 8px;
+    }
+    .pg-icon-btn {
+        padding: 9px 12px;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .pg-save-btn {
+        padding: 9px 18px;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    /* Settings row stacks vertically on mobile */
+    .pg-settings-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Each field full width */
+    .pg-field {
+        width: 100%;
+    }
+    .pg-select {
+        width: 100%;
+        font-size: 14px;
+        padding: 9px 10px;
+    }
+}
+
 /* ── Main tool layout: sidebar + panels ── */
 .pg-main-tool {
     display: flex;
