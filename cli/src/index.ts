@@ -1,22 +1,26 @@
 #!/usr/bin/env node
 /**
- * Poly-Glot CLI
+ * Poly-Glot CLI v1.5.0
  * AI-powered code comment generation from the command line.
  *
  * Usage:
- *   polyglot comment <file>                     # Comment a single file (inline)
- *   polyglot comment <file> --output <out>      # Write to a different file
- *   polyglot comment --dir <dir>                # Comment all supported files in a directory
- *   polyglot comment --dir <dir> --ext js,ts    # Limit to specific extensions
- *   polyglot comment --stdin --lang python      # Read from stdin
- *   polyglot explain <file>                     # Explain / analyse a file
- *   polyglot config                             # Set API key and provider interactively
- *   polyglot config --key <key> --provider openai --model gpt-4o-mini
+ *   poly-glot comment <file>                        # Doc-comment a file (default mode)
+ *   poly-glot comment <file> --why                  # Add why-comments instead
+ *   poly-glot comment <file> --both                 # Doc + why in one two-pass run
+ *   poly-glot comment <file> --dry-run              # Preview changes without writing
+ *   poly-glot comment <file> --diff                 # Show unified diff of changes
+ *   poly-glot comment <file> --backup               # Save .orig backup before overwriting
+ *   poly-glot comment --dir <dir>                   # Comment all supported files
+ *   poly-glot comment --dir <dir> --yes             # Skip confirmation prompt
+ *   poly-glot why <file>                            # Shorthand for --why
+ *   poly-glot explain <file>                        # Deep code analysis
+ *   poly-glot config                                # Interactive setup
+ *   poly-glot config --key <key> --provider openai  # Non-interactive setup
  */
 
-import * as fs   from 'fs';
-import * as path from 'path';
-import * as os   from 'os';
+import * as fs       from 'fs';
+import * as path     from 'path';
+import * as os       from 'os';
 import * as readline from 'readline';
 import { PolyGlotGenerator, WhyResult, BothResult } from './generator';
 import { CommentMode } from './config';
@@ -26,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.4.2';  // one-time what's-new notice + generic provider step in setup
+const VERSION = '1.5.0';  // --dry-run, --diff, --backup, --dir confirm+summary, Cmd+Enter web shortcut
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -43,6 +47,8 @@ const COLORS = {
     cyan:   '\x1b[36m',
     dim:    '\x1b[2m',
     bold:   '\x1b[1m',
+    blue:   '\x1b[34m',
+    magenta:'\x1b[35m',
 };
 
 // ─── What's New notice (shown once per major feature release) ─────────────────
@@ -50,13 +56,16 @@ const COLORS = {
 function showWhatsNew(cfg: Config): void {
     const last = cfg.lastSeenVersion || '0.0.0';
 
-    // Show notice when upgrading from any version before 1.3.0 (pre-why-comments)
-    const isOld = last === '' || last === '0.0.0' ||
+    const needsV14Notice = last === '' || last === '0.0.0' ||
         last.startsWith('1.0') || last.startsWith('1.1') || last.startsWith('1.2');
 
-    if (!isOld) return;
+    const needsV15Notice = needsV14Notice ||
+        last.startsWith('1.3') || last.startsWith('1.4');
 
-    console.log(`
+    if (!needsV15Notice) return;
+
+    if (needsV14Notice) {
+        console.log(`
 ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 
   ${COLORS.cyan}Three comment modes${COLORS.reset} are now available:
@@ -73,6 +82,25 @@ ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 
   Set your default so you never have to type the flag:
   ${COLORS.dim}poly-glot config --mode both${COLORS.reset}
+`);
+    }
+
+    console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.5${COLORS.reset}
+
+  ${COLORS.bold}--dry-run${COLORS.reset}   Preview exactly what would change — no files written
+           ${COLORS.dim}poly-glot comment src/auth.js --dry-run${COLORS.reset}
+
+  ${COLORS.bold}--diff${COLORS.reset}      Show a unified diff of every change before committing
+           ${COLORS.dim}poly-glot comment src/auth.js --diff${COLORS.reset}
+
+  ${COLORS.bold}--backup${COLORS.reset}    Save a .orig copy of every file before overwriting
+           ${COLORS.dim}poly-glot comment src/auth.js --backup${COLORS.reset}
+
+  ${COLORS.bold}--dir confirm${COLORS.reset}  Now asks "About to modify N files. Continue?" before running
+           ${COLORS.dim}poly-glot comment --dir src/ --yes${COLORS.reset}  ${COLORS.dim}(skip prompt)${COLORS.reset}
+
+  ${COLORS.bold}--dir summary${COLORS.reset}  After a directory run: files, skipped, cost, time
+           ${COLORS.dim}✓ 12 commented · 2 skipped · ~$0.04 · 18s${COLORS.reset}
 
 ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
@@ -81,8 +109,8 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-    const args  = process.argv.slice(2);
-    const cmd   = args[0];
+    const args = process.argv.slice(2);
+    const cmd  = args[0];
 
     if (!cmd || cmd === '--help' || cmd === '-h') { printHelp(); process.exit(0); }
     if (cmd === '--version' || cmd === '-v')      { console.log(VERSION); process.exit(0); }
@@ -90,12 +118,12 @@ async function main(): Promise<void> {
     // ── Load config ───────────────────────────────────────────────────────
     const cfg = loadConfig();
 
-    // ── One-time what's-new notice (only for users upgrading from < v1.3.0) ─
+    // ── One-time what's-new notice (only for upgraders, skipped in CI/pipes) ─
     if (cmd !== 'config' && !process.env.CI && process.stdout.isTTY) {
         showWhatsNew(cfg);
     }
 
-    // ── Stamp the current version so notice won't show again ─────────────
+    // ── Stamp current version so notice won't show again ─────────────────
     if (cfg.lastSeenVersion !== VERSION) {
         cfg.lastSeenVersion = VERSION;
         saveConfig(cfg);
@@ -118,7 +146,6 @@ async function main(): Promise<void> {
 
 // ── Telemetry consent prompt ───────────────────────────────────────────────────
 async function askTelemetryConsent(cfg: Config): Promise<void> {
-    // Skip in non-interactive environments (CI, pipes, etc.)
     if (!process.stdout.isTTY || process.env.CI) {
         cfg.telemetry = false;
         saveConfig(cfg);
@@ -137,20 +164,9 @@ ${COLORS.dim}──────────────────────�
     const answer = await promptLine('Enable anonymous telemetry? (Y/n) ');
     cfg.telemetry = answer.trim().toLowerCase() !== 'n';
     saveConfig(cfg);
-
-    if (cfg.telemetry) {
-        console.log(`${COLORS.dim}  ✓ Thanks! You can opt out anytime: poly-glot config --no-telemetry${COLORS.reset}`);
-    } else {
-        console.log(`${COLORS.dim}  ✓ No problem. Telemetry disabled.${COLORS.reset}`);
-    }
-    console.log();
-}
-
-function promptLine(question: string): Promise<string> {
-    return new Promise(resolve => {
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        rl.question(`  ${question}`, ans => { rl.close(); resolve(ans); });
-    });
+    console.log(cfg.telemetry
+        ? `${COLORS.green}✓${COLORS.reset} Telemetry enabled — thank you!\n`
+        : `${COLORS.dim}Telemetry disabled. You can re-enable anytime: poly-glot config --telemetry${COLORS.reset}\n`);
 }
 
 // ─── Command: config ──────────────────────────────────────────────────────────
@@ -159,7 +175,6 @@ async function runConfig(args: string[]): Promise<void> {
     const flags = parseFlags(args);
     const cfg   = loadConfig();
 
-    // Telemetry opt-out / opt-in flags
     if ('--no-telemetry' in flags) {
         cfg.telemetry = false;
         saveConfig(cfg);
@@ -194,7 +209,7 @@ async function runConfig(args: string[]): Promise<void> {
     }
 
     // Interactive mode
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const rl  = readline.createInterface({ input: process.stdin, output: process.stdout });
     const ask = (q: string): Promise<string> => new Promise(res => rl.question(q, res));
 
     console.log(`\n${COLORS.bold}${COLORS.cyan}Poly-Glot CLI — Configuration${COLORS.reset}\n`);
@@ -213,11 +228,8 @@ async function runConfig(args: string[]): Promise<void> {
     const modeAnswer = await ask(`  Default mode [comment/why/both] (current: ${cfg.defaultMode || 'comment'}): `);
     if (modeAnswer.trim()) {
         const m = modeAnswer.trim().toLowerCase();
-        if (['comment', 'why', 'both'].includes(m)) {
-            cfg.defaultMode = m as CommentMode;
-        } else {
-            warn(`Unknown mode "${m}" — keeping "${cfg.defaultMode}"`);
-        }
+        if (['comment', 'why', 'both'].includes(m)) cfg.defaultMode = m as CommentMode;
+        else warn(`Unknown mode "${m}" — keeping "${cfg.defaultMode}"`);
     }
 
     rl.close();
@@ -234,15 +246,20 @@ async function runComment(args: string[]): Promise<void> {
     assertConfigured(cfg);
 
     // ── Resolve effective mode ─────────────────────────────────────────────────
-    // Priority: --both flag > --why flag > --mode <value> > cfg.defaultMode
+    // Priority: --both > --why > --mode <value> > cfg.defaultMode > 'comment'
     let effectiveMode: CommentMode = cfg.defaultMode || 'comment';
-    if ('--both' in flags)                        effectiveMode = 'both';
-    else if ('--why' in flags)                    effectiveMode = 'why';
+    if ('--both' in flags)    effectiveMode = 'both';
+    else if ('--why' in flags) effectiveMode = 'why';
     else if (flags['--mode']) {
         const m = (flags['--mode'] as string).toLowerCase();
         if (['comment', 'why', 'both'].includes(m)) effectiveMode = m as CommentMode;
         else { error(`Invalid --mode "${m}". Use: comment, why, or both`); process.exit(1); }
     }
+
+    const isDryRun = '--dry-run' in flags;
+    const isDiff   = '--diff' in flags;
+    const isBackup = '--backup' in flags;
+    const isYes    = '--yes' in flags || '-y' in flags;
 
     const modeLabel: Record<CommentMode, string> = {
         comment: '📝 doc-comments',
@@ -276,7 +293,15 @@ async function runComment(args: string[]): Promise<void> {
         const output = await processCode(code, lang);
         stopSpin();
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
-        process.stdout.write(output + '\n');
+
+        if (isDryRun) {
+            warn('[dry-run] No output written. Result preview:');
+            console.log(output);
+        } else if (isDiff) {
+            printDiff('stdin', code, output);
+        } else {
+            process.stdout.write(output + '\n');
+        }
         return;
     }
 
@@ -292,9 +317,29 @@ async function runComment(args: string[]): Promise<void> {
         const files = collectFiles(dir, exts);
         if (!files.length) { warn(`No supported files found in ${dir}`); return; }
 
-        console.log(`\n${COLORS.cyan}${COLORS.bold}Poly-Glot${COLORS.reset} — ${modeLabel[effectiveMode]} on ${files.length} file(s) in ${COLORS.dim}${dir}${COLORS.reset}\n`);
+        const outputDir = flags['--output-dir'] as string | undefined;
+        const verb      = isDryRun ? 'Would process' : 'About to process';
 
-        let ok = 0, fail = 0;
+        console.log(`\n${COLORS.bold}${COLORS.cyan}Poly-Glot${COLORS.reset} — ${modeLabel[effectiveMode]}`);
+        console.log(`${COLORS.dim}${verb} ${files.length} file(s) in ${dir}${outputDir ? ` → ${outputDir}` : ' (in-place)'}${COLORS.reset}`);
+        if (isDryRun) console.log(`${COLORS.yellow}  ⚡ dry-run — no files will be written${COLORS.reset}`);
+        if (isBackup) console.log(`${COLORS.cyan}  💾 backup — .orig files will be saved${COLORS.reset}`);
+
+        // ── Confirmation prompt (skipped in CI, pipes, --yes, or --dry-run) ──
+        if (!isDryRun && !isYes && process.stdout.isTTY && !process.env.CI) {
+            const answer = await promptLine(`\nContinue? (Y/n) `);
+            if (answer.trim().toLowerCase() === 'n') {
+                console.log(`${COLORS.dim}Aborted.${COLORS.reset}`);
+                return;
+            }
+        }
+
+        console.log('');
+
+        let ok = 0, skipped = 0, fail = 0;
+        let totalCost = 0;
+        const failures: string[] = [];
+        const startTime = Date.now();
 
         for (const file of files) {
             const rel  = path.relative(dir, file);
@@ -305,21 +350,54 @@ async function runComment(args: string[]): Promise<void> {
             process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
             try {
                 const output  = await processCode(code, lang);
-                const outPath = flags['--output-dir']
-                    ? path.join(flags['--output-dir'] as string, rel)
-                    : file;
-                if (flags['--output-dir']) fs.mkdirSync(path.dirname(outPath), { recursive: true });
-                fs.writeFileSync(outPath, output, 'utf8');
-                ok++;
-                console.log(`${COLORS.green}✓${COLORS.reset}`);
+                const outPath = outputDir ? path.join(outputDir, rel) : file;
+
+                if (isDryRun) {
+                    skipped++;
+                    console.log(`${COLORS.yellow}○ dry-run${COLORS.reset}`);
+                } else {
+                    if (outputDir) fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                    if (isBackup && !outputDir) fs.writeFileSync(file + '.orig', code, 'utf8');
+                    if (isDiff)  printDiff(rel, code, output);
+                    fs.writeFileSync(outPath, output, 'utf8');
+                    ok++;
+                    console.log(`${COLORS.green}✓${COLORS.reset}`);
+                }
             } catch (e: unknown) {
                 fail++;
-                console.log(`${COLORS.red}✗ ${e instanceof Error ? e.message : String(e)}${COLORS.reset}`);
+                const msg = e instanceof Error ? e.message : String(e);
+                failures.push(`  ${COLORS.red}✗${COLORS.reset} ${rel}: ${msg}`);
+                console.log(`${COLORS.red}✗${COLORS.reset}`);
+            }
+        }
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const costStr = totalCost > 0 ? ` · ~$${totalCost.toFixed(4)}` : '';
+
+        console.log('');
+        if (isDryRun) {
+            console.log(`${COLORS.yellow}[dry-run]${COLORS.reset} Would have processed ${files.length} file(s). No changes made.\n`);
+        } else {
+            // ── Summary line ─────────────────────────────────────────────
+            const parts: string[] = [];
+            if (ok)      parts.push(`${COLORS.green}✓ ${ok} commented${COLORS.reset}`);
+            if (skipped) parts.push(`${COLORS.dim}${skipped} skipped${COLORS.reset}`);
+            if (fail)    parts.push(`${COLORS.red}✗ ${fail} failed${COLORS.reset}`);
+            console.log(`  ${parts.join(' · ')}${costStr} · ${elapsed}s\n`);
+
+            // ── Failure detail ────────────────────────────────────────────
+            if (failures.length) {
+                console.log(`${COLORS.red}Failures:${COLORS.reset}`);
+                failures.forEach(f => console.log(f));
+                console.log('');
+            }
+
+            if (isBackup && ok > 0) {
+                console.log(`${COLORS.dim}  💾 .orig backups saved alongside each modified file${COLORS.reset}\n`);
             }
         }
 
         ping({ cmd: 'comment', lang: 'multi', provider: cfg.provider, mode: 'dir', version: VERSION }, !!cfg.telemetry);
-        console.log(`\n${ok} done, ${fail} failed\n`);
         return;
     }
 
@@ -336,20 +414,27 @@ async function runComment(args: string[]): Promise<void> {
     const outPath = flags['--output'] ? path.resolve(flags['--output'] as string) : absPath;
 
     if (effectiveMode === 'both') {
-        spin(`Adding doc-comments to ${path.basename(absPath)} (${lang})…`);
-        // show two-pass progress for 'both'
+        spin(`Pass 1/2 — adding doc-comments to ${path.basename(absPath)} (${lang})…`);
         const docResult = await gen.generateComments(code, lang);
         stopSpin();
         success(`Pass 1 complete — doc-comments added`);
 
-        spin(`Adding why-comments to ${path.basename(absPath)} (${lang})…`);
-        const whyPrompt = await gen.generateWhyComments(docResult.commentedCode, lang);
+        spin(`Pass 2/2 — adding why-comments to ${path.basename(absPath)} (${lang})…`);
+        const whyResult = await gen.generateWhyComments(docResult.commentedCode, lang);
         stopSpin();
 
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-        fs.writeFileSync(outPath, whyPrompt.commentedCode, 'utf8');
-        success(`Pass 2 complete — why-comments added`);
-        success(`${path.basename(outPath)} fully commented (doc + why)`);
+
+        if (isDryRun) {
+            warn(`[dry-run] Would write ${path.basename(outPath)} — no changes made.`);
+            if (isDiff) printDiff(path.basename(absPath), code, whyResult.commentedCode);
+        } else {
+            if (isBackup) fs.writeFileSync(absPath + '.orig', code, 'utf8');
+            if (isDiff)   printDiff(path.basename(absPath), code, whyResult.commentedCode);
+            fs.writeFileSync(outPath, whyResult.commentedCode, 'utf8');
+            success(`Pass 2 complete — why-comments added`);
+            success(`${path.basename(outPath)} fully commented (doc + why)${isBackup ? ' · backup saved' : ''}`);
+        }
     } else {
         const spinLabel = effectiveMode === 'why'
             ? `Adding why-comments to ${path.basename(absPath)} (${lang}, ${cfg.model})…`
@@ -360,103 +445,24 @@ async function runComment(args: string[]): Promise<void> {
         stopSpin();
 
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-        fs.writeFileSync(outPath, output, 'utf8');
-        success(`${path.basename(outPath)} commented [${effectiveMode}]`);
+
+        if (isDryRun) {
+            warn(`[dry-run] Would write ${path.basename(outPath)} — no changes made.`);
+            if (isDiff) printDiff(path.basename(absPath), code, output);
+        } else {
+            if (isBackup) fs.writeFileSync(absPath + '.orig', code, 'utf8');
+            if (isDiff)   printDiff(path.basename(absPath), code, output);
+            fs.writeFileSync(outPath, output, 'utf8');
+            success(`${path.basename(outPath)} commented [${effectiveMode}]${isBackup ? ' · backup saved as .orig' : ''}`);
+        }
     }
 }
 
 // ─── Command: why ─────────────────────────────────────────────────────────────
 
 async function runWhy(args: string[]): Promise<void> {
-    const flags   = parseFlags(args);
-    const cfg     = loadConfig();
-
-    assertConfigured(cfg);
-
-    const gen = new PolyGlotGenerator(cfg);
-
-    // ── stdin mode ──
-    if (flags['--stdin']) {
-        const lang = (flags['--lang'] as string) || 'javascript';
-        const code = await readStdin();
-        if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
-
-        spin(`Adding why-comments for stdin (${lang})…`);
-        const result = await gen.generateWhyComments(code, lang);
-        stopSpin();
-        ping({ cmd: 'why', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
-        process.stdout.write(result.commentedCode + '\n');
-        return;
-    }
-
-    // ── directory mode ──
-    if (flags['--dir']) {
-        const dir  = path.resolve(flags['--dir'] as string);
-        const exts = flags['--ext']
-            ? (flags['--ext'] as string).split(',').map(e => e.trim().replace(/^\./, ''))
-            : Object.keys(SUPPORTED_EXTENSIONS);
-
-        if (!fs.existsSync(dir)) { error(`Directory not found: ${dir}`); process.exit(1); }
-
-        const files = collectFiles(dir, exts);
-        if (!files.length) { warn(`No supported files found in ${dir}`); return; }
-
-        console.log(`\n${COLORS.cyan}${COLORS.bold}Poly-Glot${COLORS.reset} — why-commenting ${files.length} file(s) in ${COLORS.dim}${dir}${COLORS.reset}\n`);
-
-        let ok = 0;
-        let fail = 0;
-
-        for (const file of files) {
-            const rel  = path.relative(dir, file);
-            const ext  = file.split('.').pop()!.toLowerCase();
-            const lang = SUPPORTED_EXTENSIONS[ext] || 'javascript';
-            const code = fs.readFileSync(file, 'utf8');
-
-            process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
-            try {
-                const result = await gen.generateWhyComments(code, lang);
-                const outPath = flags['--output-dir']
-                    ? path.join(flags['--output-dir'] as string, rel)
-                    : file;
-
-                if (flags['--output-dir']) {
-                    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-                }
-                fs.writeFileSync(outPath, result.commentedCode, 'utf8');
-                ok++;
-                console.log(`${COLORS.green}✓${COLORS.reset}`);
-            } catch (e: unknown) {
-                fail++;
-                console.log(`${COLORS.red}✗ ${e instanceof Error ? e.message : String(e)}${COLORS.reset}`);
-            }
-        }
-
-        ping({ cmd: 'why', lang: 'multi', provider: cfg.provider, mode: 'dir', version: VERSION }, !!cfg.telemetry);
-        console.log(`\n${ok} done, ${fail} failed\n`);
-        return;
-    }
-
-    // ── single file mode ──
-    const filePath = args.find(a => !a.startsWith('-'));
-    if (!filePath) { error('Specify a file, --dir, or --stdin. Run poly-glot --help for usage.'); process.exit(1); }
-
-    const absPath = path.resolve(filePath);
-    if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
-
-    const ext     = absPath.split('.').pop()!.toLowerCase();
-    const lang    = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
-    const code    = fs.readFileSync(absPath, 'utf8');
-    const outPath = flags['--output']
-        ? path.resolve(flags['--output'] as string)
-        : absPath;
-
-    spin(`Why-commenting ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
-    const result = await gen.generateWhyComments(code, lang);
-    stopSpin();
-
-    ping({ cmd: 'why', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    fs.writeFileSync(outPath, result.commentedCode, 'utf8');
-    success(`${path.basename(outPath)} why-commented`);
+    // Delegate to runComment with --why injected
+    return runComment(['--why', ...args]);
 }
 
 // ─── Command: explain ─────────────────────────────────────────────────────────
@@ -489,22 +495,22 @@ async function runExplain(args: string[]): Promise<void> {
     console.log(`  ${result.summary}\n`);
 
     console.log(`${COLORS.bold}📊 Metrics${COLORS.reset}`);
-    console.log(`  Complexity:    ${complexityLabel(result.complexityScore)} (${result.complexityScore}/10)`);
-    console.log(`  Doc Quality:   ${result.docQuality.label} (${result.docQuality.score}/100)`);
-    console.log(`  Functions:     ${result.functions.length}`);
+    console.log(`  Complexity:     ${complexityLabel(result.complexityScore)} (${result.complexityScore}/10)`);
+    console.log(`  Doc Quality:    ${result.docQuality.label} (${result.docQuality.score}/100)`);
+    console.log(`  Functions:      ${result.functions.length}`);
     console.log(`  Potential bugs: ${result.potentialBugs.length}\n`);
 
     if (result.functions.length) {
         console.log(`${COLORS.bold}⚙️  Functions${COLORS.reset}`);
         result.functions.forEach((fn: { name: string; purpose: string; params: string[]; returns: string }) => {
             console.log(`  ${COLORS.cyan}${fn.name}${COLORS.reset}(${fn.params.join(', ')}) → ${fn.returns}`);
-            console.log(`    ${COLORS.dim}${fn.purpose}${COLORS.reset}`);
+            console.log(`  ${COLORS.dim}${fn.purpose}${COLORS.reset}`);
         });
         console.log('');
     }
 
     if (result.potentialBugs.length) {
-        console.log(`${COLORS.bold}🐛 Potential Bugs${COLORS.reset}`);
+        console.log(`${COLORS.bold}${COLORS.red}🐛 Potential Bugs${COLORS.reset}`);
         result.potentialBugs.forEach((b: string) => console.log(`  ${COLORS.red}•${COLORS.reset} ${b}`));
         console.log('');
     }
@@ -514,76 +520,55 @@ async function runExplain(args: string[]): Promise<void> {
         result.suggestions.forEach((s: string) => console.log(`  ${COLORS.yellow}•${COLORS.reset} ${s}`));
         console.log('');
     }
+
+    if (result.docQuality.issues.length) {
+        console.log(`${COLORS.bold}📝 Doc Quality Issues${COLORS.reset}`);
+        result.docQuality.issues.forEach((i: string) => console.log(`  ${COLORS.dim}•${COLORS.reset} ${i}`));
+        console.log('');
+    }
 }
 
 // ─── Command: demo ────────────────────────────────────────────────────────────
 
 async function runDemo(args: string[]): Promise<void> {
-    const flags = parseFlags(args);
-    
-    console.log(`\n${COLORS.bold}${COLORS.cyan}🎬 Poly-Glot Demo — See It In Action${COLORS.reset}\n`);
-    console.log(`Watch how Poly-Glot transforms code with professional comments\n`);
-    
-    // Get available languages
+    const flags     = parseFlags(args);
     const languages = getSampleLanguages();
-    
-    // If --lang specified, use that directly
-    let selectedLang = flags['--lang'] as string;
-    
-    // Interactive language selection if not specified
-    if (!selectedLang) {
-        console.log(`${COLORS.bold}Available languages:${COLORS.reset}`);
-        languages.forEach((lang, idx) => {
-            const sample = DEMO_SAMPLES[lang];
-            console.log(`  ${COLORS.cyan}${idx + 1}.${COLORS.reset} ${sample.displayName} ${COLORS.dim}(${sample.description})${COLORS.reset}`);
-        });
-        console.log('');
-        
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const ask = (q: string): Promise<string> => new Promise(res => rl.question(q, res));
-        
-        const choice = await ask(`Select a language [1-${languages.length}] or name: `);
-        rl.close();
-        
-        // Parse selection
-        const choiceNum = parseInt(choice.trim());
-        if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= languages.length) {
-            selectedLang = languages[choiceNum - 1];
-        } else {
-            selectedLang = choice.trim().toLowerCase();
-        }
+
+    console.log(`\n${COLORS.bold}${COLORS.cyan}Poly-Glot Demo${COLORS.reset} — See the magic before using it on your own code\n`);
+
+    let language = (flags['--lang'] as string)?.toLowerCase();
+
+    if (!language) {
+        console.log(`Available languages: ${languages.join(', ')}\n`);
+        language = await promptLine(`Choose a language (default: javascript): `);
+        language = language.trim().toLowerCase() || 'javascript';
     }
-    
-    // Get the sample
-    const sample = DEMO_SAMPLES[selectedLang];
+
+    const sample = DEMO_SAMPLES[language];
     if (!sample) {
-        error(`Language '${selectedLang}' not found in demo samples.`);
+        error(`Language "${language}" not found.`);
         console.log(`Available: ${languages.join(', ')}`);
         process.exit(1);
     }
-    
+
     console.log(`\n${COLORS.bold}${COLORS.green}✓${COLORS.reset} Selected: ${sample.displayName}\n`);
     console.log(`${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
-    
-    // Show BEFORE
+
     console.log(`${COLORS.bold}${COLORS.yellow}BEFORE:${COLORS.reset} ${COLORS.dim}Inconsistent or minimal comments${COLORS.reset}\n`);
     console.log(sample.before);
     console.log(`\n${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
-    
-    // Option to generate live or show static
-    const cfg = loadConfig();
+
+    const cfg       = loadConfig();
     const hasApiKey = cfg.apiKey && cfg.apiKey.length >= 10;
-    
+
     if (flags['--live'] && hasApiKey) {
-        // Generate live comments using API
         console.log(`${COLORS.cyan}Generating live comments with ${cfg.provider} (${cfg.model})...${COLORS.reset}\n`);
         const gen = new PolyGlotGenerator(cfg);
-        
+
         spin('Generating comments...');
         try {
             const result = await gen.generateComments(sample.before, sample.language);
             stopSpin();
-            
             console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
             console.log(result.commentedCode);
             console.log(`\n${COLORS.dim}Cost: $${result.cost.toFixed(5)} | Tokens: ${result.tokensUsed}${COLORS.reset}\n`);
@@ -593,39 +578,31 @@ async function runDemo(args: string[]): Promise<void> {
             console.log(`\nShowing pre-generated example instead:\n`);
             console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
             console.log(sample.after);
-            console.log('');
         }
     } else {
-        // Show static after example
         console.log(`${COLORS.bold}${COLORS.green}AFTER:${COLORS.reset} ${COLORS.dim}Standardized professional documentation${COLORS.reset}\n`);
         console.log(sample.after);
-        console.log('');
-        
         if (!hasApiKey && flags['--live']) {
             warn('API key not configured. Showing pre-generated example.');
             console.log(`Run ${COLORS.cyan}poly-glot config${COLORS.reset} to set up live demo.\n`);
         }
     }
-    
+
     console.log(`${COLORS.dim}${'─'.repeat(80)}${COLORS.reset}\n`);
-    
-    // Show benefits
+
     console.log(`${COLORS.bold}✨ Key Improvements:${COLORS.reset}`);
     console.log(`  ${COLORS.green}✓${COLORS.reset} Standardized documentation format (JSDoc, PyDoc, etc.)`);
     console.log(`  ${COLORS.green}✓${COLORS.reset} Complete parameter and return type descriptions`);
     console.log(`  ${COLORS.green}✓${COLORS.reset} Error handling and edge cases documented`);
     console.log(`  ${COLORS.green}✓${COLORS.reset} Usage examples included`);
     console.log(`  ${COLORS.green}✓${COLORS.reset} Better searchability and AI comprehension\n`);
-    
-    // CTA
+
     console.log(`${COLORS.bold}${COLORS.cyan}Ready to try it on your code?${COLORS.reset}`);
     console.log(`  ${COLORS.dim}poly-glot comment your-file.js${COLORS.reset}`);
     console.log(`  ${COLORS.dim}poly-glot comment --dir src/${COLORS.reset}`);
-    
     if (!hasApiKey) {
         console.log(`\n${COLORS.yellow}⚠${COLORS.reset}  Set up your API key first: ${COLORS.cyan}poly-glot config${COLORS.reset}`);
     }
-    
     console.log('');
 }
 
@@ -635,9 +612,9 @@ function parseFlags(args: string[]): Record<string, string | boolean> {
     const out: Record<string, string | boolean> = {};
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
-        if (a.startsWith('--')) {
+        if (a.startsWith('--') || a === '-y') {
             const next = args[i + 1];
-            if (next && !next.startsWith('--')) { out[a] = next; i++; }
+            if (next && !next.startsWith('-')) { out[a] = next; i++; }
             else { out[a] = true; }
         }
     }
@@ -670,38 +647,83 @@ function readStdin(): Promise<string> {
     });
 }
 
-function assertConfigured(cfg: Config): void {
-    if (!cfg.apiKey || cfg.apiKey.length < 10) {
-        error('API key not configured. Run: polyglot config');
-        process.exit(1);
+function promptLine(q: string): Promise<string> {
+    return new Promise(resolve => {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        rl.question(q, ans => { rl.close(); resolve(ans); });
+    });
+}
+
+// ── Unified diff printer ───────────────────────────────────────────────────────
+function printDiff(label: string, before: string, after: string): void {
+    const beforeLines = before.split('\n');
+    const afterLines  = after.split('\n');
+    const maxLen      = Math.max(beforeLines.length, afterLines.length);
+
+    console.log(`\n${COLORS.bold}${COLORS.cyan}── diff: ${label} ──────────────────────────────────────${COLORS.reset}`);
+
+    let i = 0, j = 0;
+    while (i < beforeLines.length || j < afterLines.length) {
+        const bLine = beforeLines[i];
+        const aLine = afterLines[j];
+
+        if (bLine === aLine) {
+            // unchanged context (show up to 2 lines of context)
+            console.log(`${COLORS.dim}  ${bLine ?? ''}${COLORS.reset}`);
+            i++; j++;
+        } else if (bLine !== undefined && (aLine === undefined || !afterLines.slice(j).includes(bLine))) {
+            console.log(`${COLORS.red}- ${bLine}${COLORS.reset}`);
+            i++;
+        } else {
+            console.log(`${COLORS.green}+ ${aLine ?? ''}${COLORS.reset}`);
+            j++;
+        }
+    }
+
+    console.log(`${COLORS.dim}────────────────────────────────────────────────────${COLORS.reset}\n`);
+    void maxLen; // suppress unused warning
+}
+
+let spinTimer: ReturnType<typeof setInterval> | null = null;
+let spinMsg = '';
+
+function spin(msg: string): void {
+    if (!process.stdout.isTTY) { process.stdout.write(msg + '\n'); return; }
+    spinMsg = msg;
+    const frames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+    let i = 0;
+    process.stdout.write('\x1b[?25l'); // hide cursor
+    spinTimer = setInterval(() => {
+        process.stdout.write(`\r${COLORS.cyan}${frames[i++ % frames.length]}${COLORS.reset}  ${spinMsg}   `);
+    }, 80);
+}
+
+function stopSpin(): void {
+    if (spinTimer) { clearInterval(spinTimer); spinTimer = null; }
+    if (process.stdout.isTTY) {
+        process.stdout.write('\r\x1b[K'); // clear line
+        process.stdout.write('\x1b[?25h'); // show cursor
     }
 }
 
-let _spinTimer: NodeJS.Timeout | null = null;
-function spin(msg: string): void {
-    const frames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
-    let i = 0;
-    process.stdout.write('  ');
-    _spinTimer = setInterval(() => {
-        process.stdout.write(`\r  ${COLORS.cyan}${frames[i % frames.length]}${COLORS.reset} ${msg}`);
-        i++;
-    }, 80);
-}
-function stopSpin(): void {
-    if (_spinTimer) { clearInterval(_spinTimer); _spinTimer = null; }
-    process.stdout.write('\r' + ' '.repeat(80) + '\r');
-}
+function success(msg: string): void { console.log(`${COLORS.green}✓${COLORS.reset}  ${msg}`); }
+function warn(msg: string):    void { console.log(`${COLORS.yellow}⚠${COLORS.reset}  ${msg}`); }
+function error(msg: string):   void { console.error(`${COLORS.red}✗${COLORS.reset}  ${msg}`); }
 
-function success(msg: string): void { console.log(`  ${COLORS.green}✓${COLORS.reset} ${msg}`); }
-function warn(msg: string):    void { console.log(`  ${COLORS.yellow}⚠${COLORS.reset}  ${msg}`); }
-function error(msg: string):   void { console.error(`  ${COLORS.red}✗${COLORS.reset} ${msg}`); }
-function dim(msg: string):     void { console.log(`${COLORS.dim}${msg}${COLORS.reset}`); }
+function assertConfigured(cfg: Config): void {
+    if (!cfg.apiKey) {
+        error('No API key configured. Run: poly-glot config');
+        process.exit(1);
+    }
+}
 
 function complexityLabel(score: number): string {
     if (score <= 3) return `${COLORS.green}Low${COLORS.reset}`;
     if (score <= 6) return `${COLORS.yellow}Medium${COLORS.reset}`;
     return `${COLORS.red}High${COLORS.reset}`;
 }
+
+// ─── Help ─────────────────────────────────────────────────────────────────────
 
 function printHelp(): void {
     console.log(`
@@ -715,13 +737,15 @@ ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}comment${COLORS.reset} <file>                    Add doc-comments to a file (default mode)
   ${COLORS.cyan}comment${COLORS.reset} <file> --why              Add why-comments instead of doc-comments
   ${COLORS.cyan}comment${COLORS.reset} <file> --both             Add doc-comments AND why-comments in one pass
-  ${COLORS.cyan}comment${COLORS.reset} <file> --mode <m>         Explicit mode: comment | why | both
+  ${COLORS.cyan}comment${COLORS.reset} <file> --dry-run          Preview changes without writing any files
+  ${COLORS.cyan}comment${COLORS.reset} <file> --diff             Show a unified diff of changes
+  ${COLORS.cyan}comment${COLORS.reset} <file> --backup           Save a .orig backup before overwriting
   ${COLORS.cyan}comment${COLORS.reset} --dir <dir>               Comment all supported files in a directory
-  ${COLORS.cyan}comment${COLORS.reset} --dir <dir> --both        Both comment types across a whole directory
+  ${COLORS.cyan}comment${COLORS.reset} --dir <dir> --yes         Skip the confirmation prompt
+  ${COLORS.cyan}comment${COLORS.reset} --dir <dir> --dry-run     Preview what would change across a directory
   ${COLORS.cyan}comment${COLORS.reset} --stdin --lang <l>        Read from stdin, write to stdout
   ${COLORS.cyan}why${COLORS.reset} <file>                        Shorthand: add why-comments to a file
   ${COLORS.cyan}why${COLORS.reset} --dir <dir>                   Shorthand: why-comment a whole directory
-  ${COLORS.cyan}why${COLORS.reset} --stdin --lang <l>            Shorthand: why-comment from stdin
   ${COLORS.cyan}explain${COLORS.reset} <file>                    Analyse a file (complexity, bugs, quality)
   ${COLORS.cyan}config${COLORS.reset}                            Configure API key, provider, and default mode
 
@@ -730,44 +754,74 @@ ${COLORS.bold}Comment modes:${COLORS.reset}
   ${COLORS.cyan}why${COLORS.reset}       Inline reasoning — trade-offs, intent, non-obvious decisions
   ${COLORS.cyan}both${COLORS.reset}      Two-pass: doc-comments first, then why-comments on the result
 
-${COLORS.bold}Options:${COLORS.reset}
+${COLORS.bold}Safety flags:${COLORS.reset}
+  ${COLORS.cyan}--dry-run${COLORS.reset}           Preview exactly what would change — no files written
+  ${COLORS.cyan}--diff${COLORS.reset}              Show a unified diff of every change before committing
+  ${COLORS.cyan}--backup${COLORS.reset}            Save a .orig copy of every file before overwriting
+
+${COLORS.bold}Mode flags:${COLORS.reset}
   --why                 Use why-comment mode (shorthand for --mode why)
   --both                Use both modes in sequence (shorthand for --mode both)
   --mode <m>            Set mode explicitly: comment | why | both
+
+${COLORS.bold}I/O flags:${COLORS.reset}
   --lang <lang>         Override language detection (e.g. python, javascript)
   --output <file>       Output file for single-file mode
   --output-dir <dir>    Output directory for --dir mode (preserves structure)
   --ext <list>          Comma-separated extensions to include in --dir mode
+  --stdin               Read code from stdin
+
+${COLORS.bold}Directory flags:${COLORS.reset}
+  --yes, -y             Skip the "About to modify N files" confirmation prompt
+  --dry-run             Show what would be processed — no files written
+  --diff                Show unified diffs for every file
+
+${COLORS.bold}Config flags:${COLORS.reset}
+  --key <key>           Set API key non-interactively
   --provider <name>     Override provider (openai | anthropic)
   --model <name>        Override model (e.g. gpt-4.1-mini, claude-sonnet-4-5)
-  --key <key>           Set API key non-interactively (use with config command)
   --mode <m>            Set default mode in config: comment | why | both
-  --telemetry           Enable anonymous usage stats (config command)
-  --no-telemetry        Disable anonymous usage stats (config command)
+  --telemetry           Enable anonymous usage stats
+  --no-telemetry        Disable anonymous usage stats
   --version, -v         Print version
   --help, -h            Show this help
 
 ${COLORS.bold}Examples:${COLORS.reset}
-  poly-glot config                                    # Interactive setup (sets API key + default mode)
+  ${COLORS.dim}# Setup${COLORS.reset}
+  poly-glot config                                    # Interactive setup
   poly-glot config --key sk-... --provider openai --mode both
-  poly-glot config --mode why                         # Set why-comments as your default
 
-  poly-glot comment src/auth.js                       # Doc-comments (or your configured default)
+  ${COLORS.dim}# Single file — safe preview first${COLORS.reset}
+  poly-glot comment src/auth.js --dry-run             # Preview without writing
+  poly-glot comment src/auth.js --diff                # See exactly what changes
+  poly-glot comment src/auth.js --backup              # Write + save .orig backup
   poly-glot comment src/auth.js --why                 # Why-comments this one time
   poly-glot comment src/auth.js --both                # Doc + why in one command
-  poly-glot comment src/auth.js --output src/auth.documented.js
 
-  poly-glot comment --dir src/ --ext js,ts            # Doc-comment entire directory
-  poly-glot comment --dir src/ --both                 # Doc + why entire directory
-  poly-glot comment --dir src/ --output-dir src-out/
+  ${COLORS.dim}# Directory — confirmation + summary built in${COLORS.reset}
+  poly-glot comment --dir src/                        # Prompts "Continue? (Y/n)"
+  poly-glot comment --dir src/ --yes                  # Skip prompt (great for scripts)
+  poly-glot comment --dir src/ --dry-run              # Preview all files, no writes
+  poly-glot comment --dir src/ --backup               # Write + .orig backups
+  poly-glot comment --dir src/ --output-dir src-out/  # Preserve originals
+  poly-glot comment --dir src/ --both --yes           # Doc + why, no prompt
 
-  cat main.py | poly-glot comment --stdin --lang python          # Doc-comments from stdin
-  cat main.py | poly-glot comment --stdin --lang python --why    # Why-comments from stdin
-  cat main.py | poly-glot comment --stdin --lang python --both   # Both from stdin
+  ${COLORS.dim}# stdin / stdout${COLORS.reset}
+  cat main.py | poly-glot comment --stdin --lang python
+  cat main.py | poly-glot comment --stdin --lang python --why
+  cat main.py | poly-glot comment --stdin --lang python --both
 
-  poly-glot why src/auth.js                           # Shorthand for --why
+  ${COLORS.dim}# Shorthands${COLORS.reset}
+  poly-glot why src/auth.js
   poly-glot why --dir src/ --output-dir src-why/
   poly-glot explain src/utils.ts
+
+${COLORS.bold}Environment variables:${COLORS.reset}
+  POLYGLOT_API_KEY      API key (overrides config file)
+  POLYGLOT_PROVIDER     Provider: openai | anthropic
+  POLYGLOT_MODEL        Model name
+  POLYGLOT_MODE         Default mode: comment | why | both
+  POLYGLOT_TELEMETRY    1 = enable, 0 = disable telemetry
 
 ${COLORS.bold}Supported languages:${COLORS.reset}
   JavaScript, TypeScript, Python, Java, C++, C, C#, Go, Rust, Ruby, PHP, Swift, Kotlin

@@ -4541,3 +4541,216 @@ kbd {
     border-color: #6366f1;
     color: #e0e7ff;
 }
+
+/* ── Keyboard shortcut badges on buttons ───────────────────────────────────── */
+kbd.btn-kbd {
+    display: inline-block;
+    font-family: -apple-system, 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.02em;
+    margin-left: 5px;
+    vertical-align: middle;
+    line-height: 1.5;
+    pointer-events: none;
+}
+
+/* ── CLI Flags Reference section ───────────────────────────────────────────── */
+.cli-flags-reference {
+    margin-top: 2.5rem;
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(99,102,241,0.03);
+}
+
+.cli-flags-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(99,102,241,0.06);
+    border-bottom: 1px solid rgba(99,102,241,0.12);
+    transition: background 0.15s;
+}
+.cli-flags-header:hover { background: rgba(99,102,241,0.1); }
+
+.cli-flags-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary, #e2e8f0);
+}
+.cli-flags-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    flex: 1;
+}
+.cli-flags-chevron {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #94a3b8);
+    transition: transform 0.25s;
+}
+.cli-flags-chevron.open { transform: rotate(180deg); }
+
+.cli-flags-body {
+    padding: 1.5rem;
+    display: none;
+}
+.cli-flags-body.open { display: block; }
+
+.flags-group {
+    margin-bottom: 2rem;
+}
+.flags-group:last-of-type { margin-bottom: 1rem; }
+
+.flags-group-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary, #e2e8f0);
+    margin: 0 0 0.35rem;
+}
+.flags-group-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    margin: 0 0 0.85rem;
+}
+
+.flags-table {
+    border: 1px solid rgba(99,102,241,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.82rem;
+}
+
+.flags-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr 2fr;
+    gap: 0;
+    border-bottom: 1px solid rgba(99,102,241,0.1);
+    align-items: center;
+}
+.flags-row.flags-row-2col {
+    grid-template-columns: 3fr 3fr;
+}
+.flags-row:last-child { border-bottom: none; }
+
+.flags-row > * {
+    padding: 0.55rem 0.85rem;
+    border-right: 1px solid rgba(99,102,241,0.1);
+}
+.flags-row > *:last-child { border-right: none; }
+
+.flags-row.flags-row-header {
+    background: rgba(99,102,241,0.08);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary, #94a3b8);
+}
+
+.flags-row:not(.flags-row-header):hover {
+    background: rgba(99,102,241,0.05);
+}
+
+.flags-code {
+    font-family: 'Fira Code', 'SF Mono', monospace;
+    font-size: 0.78rem;
+    color: #a5b4fc;
+    white-space: nowrap;
+}
+.flags-example {
+    font-family: 'Fira Code', 'SF Mono', monospace;
+    font-size: 0.74rem;
+    color: #6ee7b7;
+    white-space: nowrap;
+}
+
+.flags-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+.flags-badge-blue   { background: rgba(99,102,241,0.2);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); }
+.flags-badge-amber  { background: rgba(217,119, 6,0.2);  color: #fbbf24; border: 1px solid rgba(217,119,6,0.35); }
+.flags-badge-purple { background: rgba(168, 85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.35); }
+.flags-badge-gray   { background: rgba(148,163,184,0.15);color: #94a3b8; border: 1px solid rgba(148,163,184,0.25); }
+
+/* Mini terminal inside flags reference */
+.cli-flags-terminal {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(99,102,241,0.2);
+    font-family: 'Fira Code', 'SF Mono', monospace;
+    font-size: 0.8rem;
+}
+.cli-flags-terminal-bar {
+    background: #2d2d3a;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid rgba(99,102,241,0.15);
+}
+.cft-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.cft-red    { background: #ff5f57; }
+.cft-yellow { background: #febc2e; }
+.cft-green  { background: #28c840; }
+.cft-title  { font-size: 0.72rem; color: #6b7280; margin-left: 6px; }
+
+.cli-flags-terminal-body {
+    background: #1a1a2e;
+    padding: 14px 18px;
+    line-height: 1.85;
+}
+.cft-line { color: #e2e8f0; }
+.cft-prompt { color: #6ee7b7; margin-right: 8px; }
+.cft-cmd    { color: #a5b4fc; }
+.cft-output { color: #94a3b8; padding-left: 4px; }
+.cft-dim    { color: #4b5563; padding-left: 4px; }
+.cft-green  { color: #6ee7b7; }
+.cft-summary { color: #e2e8f0; font-weight: 600; padding-left: 4px; margin-top: 4px; }
+.cft-prompt-out { color: #d1d5db; }
+.cft-cursor { animation: blink 1s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.flags-cta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .flags-row {
+        grid-template-columns: 1fr;
+    }
+    .flags-row.flags-row-2col {
+        grid-template-columns: 1fr;
+    }
+    .flags-row > * {
+        border-right: none;
+        border-bottom: 1px solid rgba(99,102,241,0.1);
+        padding: 0.45rem 0.75rem;
+    }
+    .flags-row > *:last-child { border-bottom: none; }
+    .flags-row.flags-row-header { display: none; }
+    .cli-flags-header { flex-wrap: wrap; }
+    .cli-flags-subtitle { display: none; }
+    .flags-example { white-space: normal; word-break: break-all; }
+}

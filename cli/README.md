@@ -1,5 +1,10 @@
 # Poly-Glot CLI
 
+[![npm version](https://img.shields.io/npm/v/poly-glot-ai-cli?color=blue&label=npm)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![license](https://img.shields.io/npm/l/poly-glot-ai-cli)](https://github.com/hmoses/poly-glot/blob/main/LICENSE)
+[![node](https://img.shields.io/node/v/poly-glot-ai-cli)](https://nodejs.org)
+[![downloads](https://img.shields.io/npm/dm/poly-glot-ai-cli)](https://www.npmjs.com/package/poly-glot-ai-cli)
+
 AI-powered code comment generation from the command line.  
 Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://poly-glot.ai).
 
@@ -22,31 +27,34 @@ npx poly-glot-ai-cli comment src/auth.js
 ## Quick start
 
 ```bash
-# 1. Configure your API key (stored in ~/.config/polyglot/config.json)
-poly-glot config --key sk-... --provider openai
+# 1. Configure — works with OpenAI or Anthropic
+poly-glot config
 
-# 2. Add doc-comments to a file (JSDoc, PyDoc, Javadoc, etc.)
-poly-glot comment src/auth.js
+# 2. Preview before you commit (--dry-run is your safety net)
+poly-glot comment src/auth.js --dry-run
 
-# 3. Add why-comments — inline reasoning, trade-offs & intent
+# 3. See exactly what changes (unified diff)
+poly-glot comment src/auth.js --diff
+
+# 4. Write with a backup just in case
+poly-glot comment src/auth.js --backup
+
+# 5. Add why-comments — reasoning, trade-offs, intent
 poly-glot comment src/auth.js --why
 
-# 4. Add both doc-comments AND why-comments in one pass
+# 6. Both doc-comments AND why-comments in one pass
 poly-glot comment src/auth.js --both
 
-# 5. Write commented output to a new file
-poly-glot comment src/auth.js --output src/auth.documented.js
-
-# 6. Comment every JS/TS file in a directory
+# 7. Comment an entire directory (confirms before writing)
 poly-glot comment --dir src/
 
-# 7. Comment a directory and write output to a separate folder
-poly-glot comment --dir src/ --output-dir src-commented/
+# 8. Directory run, no prompt (great for CI)
+poly-glot comment --dir src/ --yes
 
-# 8. Pipe from stdin
+# 9. Pipe from stdin
 cat main.py | poly-glot comment --stdin --lang python > main_commented.py
 
-# 9. Analyse code quality
+# 10. Analyse code quality
 poly-glot explain src/utils.ts
 ```
 
@@ -54,52 +62,100 @@ poly-glot explain src/utils.ts
 
 ## Comment modes
 
-Poly-Glot supports three comment modes — choose the one that fits your workflow:
-
 | Mode | Flag | What it adds |
 |------|------|-------------|
-| **comment** | *(default)* | Standardized doc-comments — JSDoc, PyDoc, Javadoc, KDoc, etc. Parameters, return types, exceptions. |
-| **why** | `--why` | Inline comments explaining *why* decisions were made — reasoning, trade-offs, intent. Not what the code does. |
-| **both** | `--both` | Two sequential passes: doc-comments first, then why-comments applied to the result. Best of both worlds. |
-
-### Examples
+| **comment** | *(default)* | Standardized doc-comments — JSDoc, PyDoc, Javadoc, KDoc, etc. |
+| **why** | `--why` | Inline comments explaining *why* decisions were made — reasoning, trade-offs, intent. |
+| **both** | `--both` | Two sequential passes: doc-comments first, then why-comments. Best of both worlds. |
 
 ```bash
-# Doc-comments only (default)
-poly-glot comment src/auth.js
-
-# Why-comments only
-poly-glot comment src/auth.js --why
-
-# Both in one command (two-pass)
-poly-glot comment src/auth.js --both
-
-# Shorthand for why-comments
-poly-glot why src/auth.js
-
-# Set mode explicitly
-poly-glot comment src/auth.js --mode why
-
-# Set your default mode so you never have to type the flag
-poly-glot config --mode both
+poly-glot comment src/auth.js           # doc-comments (default)
+poly-glot comment src/auth.js --why     # why-comments
+poly-glot comment src/auth.js --both    # doc + why
+poly-glot why src/auth.js               # shorthand for --why
+poly-glot comment src/auth.js --mode both  # explicit mode flag
 ```
 
-### Setting a default mode
-
-Your preferred mode is saved to `~/.config/polyglot/config.json` and used automatically on every run:
+### Set a default mode
 
 ```bash
-# Set default to "both" — all future runs use doc + why
-poly-glot config --mode both
-
-# Or interactively
-poly-glot config
-# → Prompts: Default mode [comment/why/both] (current: comment)
+poly-glot config --mode both   # all future runs use doc + why
+poly-glot config               # interactive — prompts for mode
 ```
-
-Override the default for a single run with any flag (`--why`, `--both`, `--mode <m>`).
 
 **Priority order:** `--both` > `--why` > `--mode <value>` > saved `defaultMode` > `comment`
+
+---
+
+## Safety flags
+
+These flags give you full control before anything is written to disk.
+
+### `--dry-run` — preview without writing
+
+```bash
+poly-glot comment src/auth.js --dry-run
+poly-glot comment --dir src/ --dry-run   # shows what would be processed
+```
+
+No files are created or modified. Use this to see what poly-glot *would* do before committing.
+
+### `--diff` — unified diff of every change
+
+```bash
+poly-glot comment src/auth.js --diff
+poly-glot comment --dir src/ --diff --yes
+```
+
+Shows a `+/-` unified diff for every file before writing. Combine with `--dry-run` to see the diff without writing:
+
+```bash
+poly-glot comment src/auth.js --dry-run --diff
+```
+
+### `--backup` — save `.orig` files before overwriting
+
+```bash
+poly-glot comment src/auth.js --backup
+# → writes src/auth.js (commented) + src/auth.js.orig (original)
+
+poly-glot comment --dir src/ --backup --yes
+# → saves .orig alongside every modified file
+```
+
+Restore any file instantly: `mv src/auth.js.orig src/auth.js`
+
+---
+
+## Directory mode
+
+Running on a directory prompts for confirmation before writing anything:
+
+```
+Poly-Glot — 📝 doc-comments
+About to process 23 file(s) in /src (in-place)
+
+Continue? (Y/n)
+```
+
+After the run, a summary line shows exactly what happened:
+
+```
+  ✓ 21 commented · 2 skipped · ~$0.06 · 22s
+```
+
+If any files fail, the failures are listed with their error messages after the summary — no silent drops.
+
+### Directory flags
+
+| Flag | Description |
+|------|-------------|
+| `--yes`, `-y` | Skip the confirmation prompt (use in scripts / CI) |
+| `--dry-run` | Show what would be processed — no files written |
+| `--diff` | Show unified diffs for every file |
+| `--backup` | Save `.orig` alongside each modified file |
+| `--output-dir <dir>` | Write to a separate directory (preserves structure, originals untouched) |
+| `--ext <list>` | Comma-separated extensions to include, e.g. `js,ts,py` |
 
 ---
 
@@ -107,45 +163,26 @@ Override the default for a single run with any flag (`--why`, `--both`, `--mode 
 
 ### `poly-glot demo`
 
-**See Poly-Glot in action** with interactive code examples before using it on your own files.
+See Poly-Glot in action with interactive code examples before using it on your own files.
 
 ```bash
-# Interactive demo — choose a language
-poly-glot demo
-
-# View a specific language example
-poly-glot demo --lang javascript
-poly-glot demo --lang python
-
-# Generate live comments using your API key (requires configuration)
-poly-glot demo --lang rust --live
+poly-glot demo                    # interactive — choose a language
+poly-glot demo --lang python      # jump straight to Python example
+poly-glot demo --lang rust --live # generate live using your API key
 ```
-
-**Features:**
-- 📚 Pre-built examples for 12 languages
-- 🎯 See before/after transformations instantly
-- ⚡ No API key required for static examples
-- 🔴 Optional `--live` mode to test with your configured API
-- 💡 Learn what Poly-Glot can do for your codebase
-
----
 
 ### `poly-glot config`
 
-Set your API key, preferred provider/model, and default comment mode.
+Configure your API key, provider, model, and default comment mode.
 
 ```bash
 # Interactive
 poly-glot config
 
-# Non-interactive (great for CI/CD)
+# Non-interactive
 poly-glot config --key sk-... --provider openai --model gpt-4o-mini
 poly-glot config --key sk-ant-... --provider anthropic --model claude-sonnet-4-5
-
-# Set default comment mode
 poly-glot config --mode both
-poly-glot config --mode why
-poly-glot config --mode comment
 ```
 
 **Environment variables** (override config file — ideal for CI):
@@ -154,11 +191,9 @@ poly-glot config --mode comment
 export POLYGLOT_API_KEY=sk-...
 export POLYGLOT_PROVIDER=openai
 export POLYGLOT_MODEL=gpt-4o-mini
-export POLYGLOT_MODE=both        # comment | why | both
+export POLYGLOT_MODE=both         # comment | why | both
 poly-glot comment src/auth.js
 ```
-
----
 
 ### `poly-glot comment`
 
@@ -173,28 +208,29 @@ Comment a file, directory, or stdin.
 | `--ext <list>` | Comma-separated extensions to include, e.g. `js,ts,py` |
 | `--stdin` | Read from stdin (must also set `--lang`) |
 | `--lang <lang>` | Override language detection |
-| `--why` | Add why-comments (reasoning & intent) instead of doc-comments |
+| `--why` | Add why-comments instead of doc-comments |
 | `--both` | Add doc-comments AND why-comments in one two-pass run |
 | `--mode <m>` | Explicit mode: `comment`, `why`, or `both` |
+| `--dry-run` | Preview changes — no files written |
+| `--diff` | Show unified diff of changes |
+| `--backup` | Save `.orig` backup before overwriting |
+| `--yes`, `-y` | Skip `--dir` confirmation prompt |
 | `--provider <name>` | Override provider for this run |
 | `--model <name>` | Override model for this run |
 
----
-
 ### `poly-glot why`
 
-Shorthand for `poly-glot comment <file> --why`.
+Shorthand for `poly-glot comment <file> --why`. Accepts all the same flags.
 
 ```bash
 poly-glot why src/auth.js
 poly-glot why src/auth.js --output src/auth.why.js
+poly-glot why --dir src/ --output-dir src-why/
 ```
-
----
 
 ### `poly-glot explain`
 
-Analyse a file for complexity, bugs, documentation quality, and more.
+Deep analysis: complexity, bugs, documentation quality, and improvement suggestions.
 
 ```bash
 poly-glot explain src/auth.js
@@ -202,8 +238,8 @@ poly-glot explain src/auth.js
 
 Output includes:
 - Summary
-- Complexity score (1–10)
-- All functions with purpose and parameters
+- Complexity score (1–10) and label
+- All functions with purpose, parameters, and return type
 - Potential bugs
 - Documentation quality score (0–100)
 - Improvement suggestions
@@ -236,10 +272,10 @@ Output includes:
     POLYGLOT_API_KEY: ${{ secrets.POLYGLOT_API_KEY }}
     POLYGLOT_PROVIDER: openai
     POLYGLOT_MODEL: gpt-4o-mini
-    POLYGLOT_MODE: both           # doc + why in one pass
+    POLYGLOT_MODE: both
   run: |
     npm install -g poly-glot-ai-cli
-    poly-glot comment --dir src/ --output-dir src-commented/
+    poly-glot comment --dir src/ --output-dir src-commented/ --yes
 ```
 
 ---

@@ -3367,3 +3367,43 @@ if (document.readyState === 'loading') {
 
 // Expose sample loader globally (called from onclick in HTML)
 window.loadSample = loadSample;
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// Cmd+Enter (Mac) / Ctrl+Enter (Win/Linux) → Generate Comments
+// Cmd+Shift+Enter / Ctrl+Shift+Enter       → Why Comments
+document.addEventListener('keydown', function(e) {
+    const isMac    = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+    if (!modifier) return;
+
+    // Only fire when focus is inside the code editor area or on body
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    const isInput = tag === 'INPUT' || tag === 'SELECT';
+    if (isInput) return;
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const btn = document.getElementById('generateBtn');
+        if (btn && !btn.disabled) btn.click();
+    }
+
+    if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        const btn = document.getElementById('whyBtn');
+        if (btn && !btn.disabled) btn.click();
+    }
+});
+
+// ── CLI Flags Reference toggle ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle  = document.getElementById('cliFlagsToggle');
+    const body    = document.getElementById('cliFlagsBody');
+    const chevron = document.getElementById('cliFlagsChevron');
+    if (!toggle || !body || !chevron) return;
+
+    toggle.addEventListener('click', function() {
+        const isOpen = body.classList.contains('open');
+        body.classList.toggle('open', !isOpen);
+        chevron.classList.toggle('open', !isOpen);
+    });
+});

@@ -1,6 +1,6 @@
 {
   "name": "poly-glot-ai-cli",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "AI-powered code comment generation from the command line — Poly-Glot CLI",
   "author": "Harold Moses",
   "license": "MIT",

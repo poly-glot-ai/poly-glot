@@ -4,6 +4,52 @@ All notable changes to Poly-Glot will be documented in this file.
 
 ---
 
+## [v1.5.0] — 2026-04-02
+
+### 🚀 New Features
+
+#### 🛡️ Safety Flags — `--dry-run`, `--diff`, `--backup`
+
+- **`--dry-run`** — Preview exactly what poly-glot *would* do without writing a single byte. Works on files, `--dir`, and `--stdin`. The single biggest trust barrier for new users, now removed.
+- **`--diff`** — Shows a `+/-` unified diff of every change inline before committing. Combine with `--dry-run` to see the diff without writing: `poly-glot comment auth.js --dry-run --diff`
+- **`--backup`** — Saves a `.orig` copy of every file before overwriting. Restore anytime with `mv auth.js.orig auth.js`. Works on single files and across `--dir` runs.
+- All three safety flags work with every mode (`comment`, `why`, `both`) and every input type (file, `--dir`, `--stdin`)
+
+#### 📁 Directory Mode — Confirmation Prompt + Run Summary
+
+- **Confirmation prompt** — `poly-glot comment --dir src/` now shows *"About to process N file(s). Continue? (Y/n)"* before writing anything. Automatically skipped in CI (`process.env.CI`), non-TTY environments (pipes, scripts), and when `--yes` / `-y` is passed.
+- **`--yes` / `-y` flag** — Skip the prompt for scripts, CI, and power users: `poly-glot comment --dir src/ --yes`
+- **Run summary** — After every directory run: `✓ 21 commented · 2 skipped · ~$0.06 · 22s`
+- **Failure detail** — If any files fail, a full list of failures with error messages is printed after the summary. No silent drops.
+
+#### ⌨️ Web UI Keyboard Shortcuts
+
+- **`Cmd+Enter` / `Ctrl+Enter`** — Generate Comments (doc mode)
+- **`Cmd+Shift+Enter` / `Ctrl+Shift+Enter`** — Why Comments
+- Keyboard hints shown directly on the buttons so users discover them immediately
+- Skipped when focus is on an input or select element to avoid conflicts
+
+#### 📋 CLI Flags Reference Panel (Web UI)
+
+- New collapsible **"📋 CLI Flags Reference"** section on poly-glot.ai inside the CLI Tool section
+- Four groups: Comment Modes, Safety Flags, Directory Mode, Shorthands & Stdin
+- Each flag shown with a badge, plain-English description, and a copy-ready example command
+- Directory mode group includes a live-look mini terminal showing the confirmation prompt and summary line
+- Fully responsive — collapses to stacked layout on mobile
+
+### 🔧 Improvements
+
+- `runWhy()` now delegates to `runComment(['--why', ...args])` — single code path, zero duplication
+- `--both` single-file progress now shows `Pass 1/2` and `Pass 2/2` labels for clarity
+- Help text (`poly-glot --help`) reorganised into labelled flag groups: Safety, Mode, I/O, Directory, Config
+- Environment variables section added to help text
+- COLORS map gains `blue` and `magenta` for future use
+
+### 📦 Published
+- `poly-glot-ai-cli@1.5.0` — [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+
+---
+
 ## [v1.4.0] — 2026-04-01
 
 ### 🚀 New Features
