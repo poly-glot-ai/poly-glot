@@ -2,10 +2,10 @@
 
 > **A comprehensive, AI-powered library of coding comment patterns and best practices for 12+ programming languages.**
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-hmoses.github.io%2Fpoly--glot-blue?style=for-the-badge)](https://hmoses.github.io/poly-glot/)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-poly--glot.ai-blue?style=for-the-badge)](https://poly-glot.ai/)
 [![Built with Goose](https://img.shields.io/badge/Built_with-Goose_AI-6366f1?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/block/goose)
-[![MIT License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/Hosted_on-GitHub_Pages-222?style=for-the-badge&logo=github)](https://hmoses.github.io/poly-glot/)
+[![AGPL-3.0 License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/Hosted_on-GitHub_Pages-222?style=for-the-badge&logo=github)](https://poly-glot.ai/)
 
 ---
 
@@ -278,7 +278,27 @@ Found a bug or have a suggestion? Please open an issue with:
 
 ## 📝 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Poly-Glot AI is licensed under **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+### What This Means:
+
+✅ **Free to use** - For personal, educational, and open-source projects  
+✅ **Free to modify** - Fork, customize, and improve  
+✅ **Network copyleft** - If you run modified versions as a service, you must share source code  
+
+### 💼 Commercial & Enterprise Licensing
+
+Need to integrate Poly-Glot into proprietary software or offer it as a service without open-sourcing your modifications?
+
+**Commercial licenses available for:**
+- 🏢 **Enterprise Integration** - Embed Poly-Glot in your commercial product
+- ☁️ **SaaS/Hosting** - Run Poly-Glot as a service without AGPL obligations
+- 🎯 **Custom Features** - Priority development and support
+- 🔒 **White-label** - Rebrand and resell
+
+**Contact:** hwmoses2@icloud.com
+
+See [LICENSE](LICENSE) for full terms.
 
 ---
 

@@ -28,7 +28,6 @@
 
     <!-- ══ Twitter / X Card ═════════════════════════════════════════════════ -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:site" content="@polyglotai">
     <meta name="twitter:title" content="Poly-Glot — AI Code Comment Generator for 12 Languages">
     <meta name="twitter:description" content="Instantly generate JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments with AI. Free web UI + npm CLI.">
     <meta name="twitter:image" content="https://poly-glot.ai/apple-touch-icon.png">
@@ -46,11 +45,7 @@
           "description": "AI-powered code comment generator. Instantly add JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments to code in 12 programming languages.",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Any",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
           "featureList": [
             "JSDoc generation for JavaScript and TypeScript",
             "PyDoc generation for Python",
@@ -63,25 +58,15 @@
             "Directory-wide batch commenting",
             "OpenAI and Anthropic provider support"
           ],
-          "screenshot": "https://poly-glot.ai/apple-touch-icon.png",
           "softwareVersion": "1.5.2",
-          "author": {
-            "@type": "Organization",
-            "name": "Poly-Glot",
-            "url": "https://poly-glot.ai/"
-          }
+          "author": { "@type": "Organization", "name": "Poly-Glot", "url": "https://poly-glot.ai/" }
         },
         {
           "@type": "WebSite",
           "@id": "https://poly-glot.ai/#website",
           "url": "https://poly-glot.ai/",
           "name": "Poly-Glot",
-          "description": "AI code comment generator for 12 programming languages",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://poly-glot.ai/",
-            "query-input": "required name=search_term_string"
-          }
+          "description": "AI code comment generator for 12 programming languages"
         },
         {
           "@type": "SoftwareApplication",
@@ -90,11 +75,7 @@
           "description": "CLI tool to auto-generate code comments using AI for 12 programming languages. Supports JSDoc, PyDoc, Javadoc, KDoc, Doxygen, why-comments and more.",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Windows, macOS, Linux",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
           "softwareVersion": "1.5.2",
           "downloadUrl": "https://www.npmjs.com/package/poly-glot-ai-cli"
         },
@@ -104,42 +85,27 @@
             {
               "@type": "Question",
               "name": "What programming languages does Poly-Glot support?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Poly-Glot supports 12 languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, and Kotlin."
-              }
+              "acceptedAnswer": { "@type": "Answer", "text": "Poly-Glot supports 12 languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, and Kotlin." }
             },
             {
               "@type": "Question",
               "name": "What AI providers does Poly-Glot use?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Poly-Glot supports OpenAI (GPT-4o-mini default) and Anthropic (Claude). You bring your own API key — your code never touches Poly-Glot servers."
-              }
+              "acceptedAnswer": { "@type": "Answer", "text": "Poly-Glot supports OpenAI (GPT-4o-mini default) and Anthropic (Claude). You bring your own API key — your code never touches Poly-Glot servers." }
             },
             {
               "@type": "Question",
               "name": "What is the difference between comment mode and why mode?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Comment mode generates standardized doc comments like JSDoc, PyDoc, Javadoc, and KDoc with params, returns, and exceptions. Why mode adds inline comments explaining the reasoning, trade-offs, and intent behind the code. Both mode runs two sequential AI passes to add both types."
-              }
+              "acceptedAnswer": { "@type": "Answer", "text": "Comment mode generates standardized doc comments like JSDoc, PyDoc, Javadoc, and KDoc with params, returns, and exceptions. Why mode adds inline comments explaining the reasoning, trade-offs, and intent behind the code. Both mode runs two sequential AI passes to add both types." }
             },
             {
               "@type": "Question",
               "name": "Is there a CLI tool?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes. Install with: npm install -g poly-glot-ai-cli. Then run: poly-glot comment yourfile.js. Supports --dry-run, --diff, --backup safety flags and --dir for batch processing entire directories."
-              }
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Install with: npm install -g poly-glot-ai-cli. Then run: poly-glot comment yourfile.js. Supports --dry-run, --diff, --backup safety flags and --dir for batch processing entire directories." }
             },
             {
               "@type": "Question",
               "name": "Is Poly-Glot free?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The web UI and CLI tool are free and open source. You pay only for the AI API calls to OpenAI or Anthropic — typically fractions of a cent per file."
-              }
+              "acceptedAnswer": { "@type": "Answer", "text": "The web UI and CLI tool are free and open source. You pay only for the AI API calls to OpenAI or Anthropic — typically fractions of a cent per file." }
             }
           ]
         }
@@ -155,8 +121,8 @@
         gtag('js', new Date());
         gtag('config', 'G-ECY2XSHS9F');
     </script>
-
-    <!-- ══ Favicons ══════════════════════════════════════════════════════════ -->
+    
+    <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -164,7 +130,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=207">
+    <link rel="stylesheet" href="styles.css?v=210">
 </head>
 <body>
     <div class="container">
@@ -172,7 +138,7 @@
             <div class="header-top">
                 <h1>Poly-Glot Code Comment Library</h1>
                 <div class="header-badges">
-                    <span class="version-badge">v1.5.1</span>
+                    <span class="version-badge">v1.5.2</span>
                     <a href="https://github.com/hmoses/poly-glot/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="changelog-btn" title="View changelog">
                         📝 What's New
                     </a>
@@ -260,7 +226,7 @@
                     <span class="feature-badge">🔒 Privacy-First</span>
                     <span class="feature-badge">🪿 Built with Goose</span>
                     <span class="feature-badge feature-badge-new">💻 VS Code Extension</span>
-                    <span class="feature-badge feature-badge-new">⌨️ CLI Tool</span>
+                    <span class="feature-badge feature-badge-new feature-badge-cli-green">⌨️ CLI Tool</span>
                 </div>
             </div>
 
@@ -1210,11 +1176,11 @@
         </div>
     </section>
 
-    <script src="analytics.js?v=207"></script>
-    <script src="ai-generator.js?v=207"></script>
-    <script src="scorer.js?v=207"></script>
-    <script src="app.js?v=207"></script>
-    <script src="cli-terminal-demo.js?v=207"></script>
+    <script src="analytics.js?v=210"></script>
+    <script src="ai-generator.js?v=210"></script>
+    <script src="scorer.js?v=210"></script>
+    <script src="app.js?v=210"></script>
+    <script src="cli-terminal-demo.js?v=210"></script>
 
     <!-- Enterprise Form Handler -->
     <script>
