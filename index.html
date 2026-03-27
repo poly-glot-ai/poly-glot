@@ -6,10 +6,148 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poly-Glot - Code Comment Library</title>
-    <meta name="description" content="A comprehensive library of coding comment patterns and best practices for 12 programming languages">
-    
-    <!-- Google Analytics 4 -->
+
+    <!-- ══ Primary SEO ══════════════════════════════════════════════════════ -->
+    <title>Poly-Glot — AI Code Comment Generator for 12 Languages</title>
+    <meta name="description" content="Poly-Glot uses AI to instantly generate JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments for JavaScript, TypeScript, Python, Java, Go, Rust, Swift, Kotlin and more. Free web UI + npm CLI.">
+    <meta name="keywords" content="AI code comments, JSDoc generator, code documentation, auto comment code, Python docstring generator, Javadoc AI, TypeScript docs, code comment tool, poly-glot, polyglot ai">
+    <meta name="author" content="Poly-Glot">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <link rel="canonical" href="https://poly-glot.ai/">
+
+    <!-- ══ Open Graph (Facebook, LinkedIn, Slack previews) ══════════════════ -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://poly-glot.ai/">
+    <meta property="og:site_name" content="Poly-Glot">
+    <meta property="og:title" content="Poly-Glot — AI Code Comment Generator for 12 Languages">
+    <meta property="og:description" content="Instantly generate JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments with AI. Supports JavaScript, TypeScript, Python, Java, Go, Rust, Swift, Kotlin and more. Free web UI + npm CLI.">
+    <meta property="og:image" content="https://poly-glot.ai/apple-touch-icon.png">
+    <meta property="og:image:width" content="180">
+    <meta property="og:image:height" content="180">
+    <meta property="og:locale" content="en_US">
+
+    <!-- ══ Twitter / X Card ═════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@polyglotai">
+    <meta name="twitter:title" content="Poly-Glot — AI Code Comment Generator for 12 Languages">
+    <meta name="twitter:description" content="Instantly generate JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments with AI. Free web UI + npm CLI.">
+    <meta name="twitter:image" content="https://poly-glot.ai/apple-touch-icon.png">
+
+    <!-- ══ JSON-LD Structured Data (Google Rich Results) ═══════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://poly-glot.ai/#app",
+          "name": "Poly-Glot",
+          "url": "https://poly-glot.ai/",
+          "description": "AI-powered code comment generator. Instantly add JSDoc, PyDoc, Javadoc, KDoc, Doxygen and why-comments to code in 12 programming languages.",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Any",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "JSDoc generation for JavaScript and TypeScript",
+            "PyDoc generation for Python",
+            "Javadoc generation for Java",
+            "KDoc generation for Kotlin",
+            "Doxygen comments for C++ and C#",
+            "Why-comments explaining code reasoning",
+            "Both doc and why comments in one pass",
+            "CLI tool with --dry-run, --diff, --backup safety flags",
+            "Directory-wide batch commenting",
+            "OpenAI and Anthropic provider support"
+          ],
+          "screenshot": "https://poly-glot.ai/apple-touch-icon.png",
+          "softwareVersion": "1.5.2",
+          "author": {
+            "@type": "Organization",
+            "name": "Poly-Glot",
+            "url": "https://poly-glot.ai/"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://poly-glot.ai/#website",
+          "url": "https://poly-glot.ai/",
+          "name": "Poly-Glot",
+          "description": "AI code comment generator for 12 programming languages",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://poly-glot.ai/",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "poly-glot-ai-cli",
+          "url": "https://www.npmjs.com/package/poly-glot-ai-cli",
+          "description": "CLI tool to auto-generate code comments using AI for 12 programming languages. Supports JSDoc, PyDoc, Javadoc, KDoc, Doxygen, why-comments and more.",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Windows, macOS, Linux",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "softwareVersion": "1.5.2",
+          "downloadUrl": "https://www.npmjs.com/package/poly-glot-ai-cli"
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What programming languages does Poly-Glot support?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Poly-Glot supports 12 languages: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, and Kotlin."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What AI providers does Poly-Glot use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Poly-Glot supports OpenAI (GPT-4o-mini default) and Anthropic (Claude). You bring your own API key — your code never touches Poly-Glot servers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the difference between comment mode and why mode?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Comment mode generates standardized doc comments like JSDoc, PyDoc, Javadoc, and KDoc with params, returns, and exceptions. Why mode adds inline comments explaining the reasoning, trade-offs, and intent behind the code. Both mode runs two sequential AI passes to add both types."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is there a CLI tool?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Install with: npm install -g poly-glot-ai-cli. Then run: poly-glot comment yourfile.js. Supports --dry-run, --diff, --backup safety flags and --dir for batch processing entire directories."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Poly-Glot free?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The web UI and CLI tool are free and open source. You pay only for the AI API calls to OpenAI or Anthropic — typically fractions of a cent per file."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <!-- ══ Google Analytics 4 ════════════════════════════════════════════════ -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ECY2XSHS9F"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -17,8 +155,8 @@
         gtag('js', new Date());
         gtag('config', 'G-ECY2XSHS9F');
     </script>
-    
-    <!-- Favicons -->
+
+    <!-- ══ Favicons ══════════════════════════════════════════════════════════ -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -26,7 +164,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=206">
+    <link rel="stylesheet" href="styles.css?v=207">
 </head>
 <body>
     <div class="container">
@@ -1072,11 +1210,11 @@
         </div>
     </section>
 
-    <script src="analytics.js?v=206"></script>
-    <script src="ai-generator.js?v=206"></script>
-    <script src="scorer.js?v=206"></script>
-    <script src="app.js?v=206"></script>
-    <script src="cli-terminal-demo.js?v=206"></script>
+    <script src="analytics.js?v=207"></script>
+    <script src="ai-generator.js?v=207"></script>
+    <script src="scorer.js?v=207"></script>
+    <script src="app.js?v=207"></script>
+    <script src="cli-terminal-demo.js?v=207"></script>
 
     <!-- Enterprise Form Handler -->
     <script>
