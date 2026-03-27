@@ -52,10 +52,42 @@ body {
 .header-top {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 20px;
     margin-bottom: 8px;
     flex-wrap: wrap;
+}
+
+/* Parrot + title lockup */
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.header-parrot {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    flex-shrink: 0;
+    /* Subtle drop shadow so the parrot pops on the dark header */
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    transition: transform 0.3s ease;
+}
+.header-parrot:hover {
+    transform: rotate(-6deg) scale(1.08);
+}
+
+/* "Code Comment Library" — secondary line under "Poly-Glot" */
+.header-h1-sub {
+    display: block;
+    font-size: 0.56em;
+    font-weight: 500;
+    color: #94a3b8;
+    letter-spacing: 0.01em;
+    margin-top: 2px;
+    line-height: 1.2;
 }
 
 .header-badges {
@@ -1077,8 +1109,21 @@ textarea:focus {
         padding: 12px;
     }
 
+    .header-brand {
+        gap: 8px;
+    }
+
+    .header-parrot {
+        width: 38px;
+        height: 38px;
+    }
+
     .header h1 {
         font-size: 18px;
+    }
+
+    .header-h1-sub {
+        font-size: 0.6em;
     }
 
     .header-description {
