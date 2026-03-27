@@ -2614,13 +2614,19 @@ button.why-btn:hover {
 
 /* ── Feature badge "new" variant ──────────────────────────────────────── */
 .feature-badge-new {
-    background: rgba(16, 185, 129, 0.12);
-    border-color: rgba(16, 185, 129, 0.35);
-    color: #34d399;
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.35);
+    color: #fbbf24;
 }
 .feature-badge-new:hover {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: rgba(16, 185, 129, 0.6);
+    background: rgba(251, 191, 36, 0.25);
+    border-color: rgba(251, 191, 36, 0.6);
+}
+
+/* ── Goose badge with yellow emoji ───────────────────────────────── */
+.feature-badge:has-text("🪿"),
+.feature-badge:nth-child(6) {
+    filter: hue-rotate(180deg) saturate(2);
 }
 
 /* ── Status badges (Coming Soon / Live) ───────────────────────────────── */
