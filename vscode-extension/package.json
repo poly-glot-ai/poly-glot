@@ -1,7 +1,7 @@
 {
   "name": "poly-glot",
   "displayName": "Poly-Glot Code Comment Library",
-  "description": "AI-powered code comment generation for 12+ languages — JSDoc, Javadoc, PyDoc, Doxygen, and more.",
+  "description": "AI-powered code comment generation for 12 languages — JSDoc, Javadoc, PyDoc, Doxygen, and more.",
   "version": "1.2.0",
   "publisher": "hmoses",
   "icon": "icon.png",

@@ -172,7 +172,7 @@
 | WHAT comments | ✅ | ✅ | ✅ |
 | WHY comments | ❌ | ❌ | ✅ ⭐ |
 | CLI automation | ❌ | ❌ | ✅ |
-| 12+ languages | ✅ | ✅ | ✅ |
+| 12 languages | ✅ | ✅ | ✅ |
 | Standardization | ❌ | ❌ | ✅ |
 | Free tier | ❌ | Limited | ✅ |
 | Open source | ❌ | ❌ | ✅ (AGPL) |

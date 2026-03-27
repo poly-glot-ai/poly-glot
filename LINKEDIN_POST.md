@@ -42,7 +42,7 @@ ChatGPT, GitHub Copilot, and Claude are amazing at generating code... but their 
 
 ### 🔥 Features
 
-- **12+ Programming Languages** (Python, JavaScript, Java, C++, Go, Rust, and more)
+- **12 Programming Languages** (Python, JavaScript, Java, C++, Go, Rust, and more)
 - **AI-Powered Generation** (OpenAI GPT-4o, Anthropic Claude 3.5)
 - **Code Analysis Tool** (Find undocumented functions automatically)
 - **Interactive Demo** (See it transform code in real-time)
@@ -134,7 +134,7 @@ Drop a comment or DM me! 👇
 **Footer Bar:**
 - Stats: "12% → 85% Coverage | +73% Improvement"
 - CTA: "hmoses.github.io/poly-glot"
-- Tech badges: OpenAI | Anthropic | 12+ Languages
+- Tech badges: OpenAI | Anthropic | 12 Languages
 
 **Color Scheme:**
 - Dark theme background (#1e1e2e, #2d2d44)

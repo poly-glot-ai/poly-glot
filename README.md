@@ -1,6 +1,6 @@
 # 🌐 Poly-Glot — Code Comment Library
 
-> **A comprehensive, AI-powered library of coding comment patterns and best practices for 12+ programming languages.**
+> **A comprehensive, AI-powered library of coding comment patterns and best practices for 12 programming languages.**
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-poly--glot.ai-blue?style=for-the-badge)](https://poly-glot.ai/)
 [![Built with Goose](https://img.shields.io/badge/Built_with-Goose_AI-6366f1?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/block/goose)
