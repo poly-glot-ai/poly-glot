@@ -6,6 +6,10 @@
 [![Built with Goose](https://img.shields.io/badge/Built_with-Goose_AI-6366f1?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/block/goose)
 [![AGPL-3.0 License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/Hosted_on-GitHub_Pages-222?style=for-the-badge&logo=github)](https://poly-glot.ai/)
+[![GitHub stars](https://img.shields.io/github/stars/hmoses/poly-glot?style=for-the-badge&logo=github&color=yellow)](https://github.com/hmoses/poly-glot)
+
+> ⭐ **922 installs on Day 1. If Poly-Glot saves you time, a star helps other developers find it.**  
+> → [**Star this repo**](https://github.com/hmoses/poly-glot)
 
 ---
 
