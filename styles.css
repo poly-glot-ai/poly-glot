@@ -67,16 +67,22 @@ body {
 }
 
 .header-parrot {
-    width: 52px;
+    /* Height is the constraint — width scales to preserve aspect ratio */
     height: 52px;
+    width: auto;
     object-fit: contain;
     flex-shrink: 0;
-    /* Subtle drop shadow so the parrot pops on the dark header */
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
-    transition: transform 0.3s ease;
+    display: block;
+    /* Crisp upscaling for small source */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    /* Subtle drop shadow so parrot pops on dark bg */
+    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.6));
+    transition: transform 0.3s ease, filter 0.3s ease;
 }
 .header-parrot:hover {
-    transform: rotate(-6deg) scale(1.08);
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 16px rgba(59,130,246,0.4));
 }
 
 /* "Code Comment Library" — secondary line under "Poly-Glot" */
@@ -1114,8 +1120,8 @@ textarea:focus {
     }
 
     .header-parrot {
-        width: 38px;
-        height: 38px;
+        height: 36px;
+        width: auto;
     }
 
     .header h1 {
