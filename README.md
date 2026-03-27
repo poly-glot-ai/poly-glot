@@ -15,7 +15,7 @@
 > 📦 **npm install stats** *(updated daily)*
 > | Period | Downloads |
 > |--------|-----------|
-> | Yesterday | **922** |
+> | Yesterday | **846** |
 > | Last 7 days | **922** |
 > | All time | **922** |
 >
