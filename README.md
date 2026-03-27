@@ -11,6 +11,17 @@
 > ⭐ **922 installs on Day 1. If Poly-Glot saves you time, a star helps other developers find it.**  
 > → [**Star this repo**](https://github.com/hmoses/poly-glot)
 
+<!-- npm-stats-start -->
+> 📦 **npm install stats** *(updated daily)*
+> | Period | Downloads |
+> |--------|-----------|
+> | Yesterday | **922** |
+> | Last 7 days | **922** |
+> | All time | **922** |
+>
+> *Last updated: 2026-03-27*
+<!-- npm-stats-end -->
+
 ---
 
 **Before:** Inconsistent AI comments → **After:** Professional JSDoc standard

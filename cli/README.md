@@ -13,6 +13,17 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 > It helps other developers discover Poly-Glot and keeps the project growing.  
 > → [**Star on GitHub**](https://github.com/hmoses/poly-glot)
 
+<!-- npm-stats-start -->
+> 📦 **npm install stats** *(updated daily)*
+> | Period | Downloads |
+> |--------|-----------|
+> | Yesterday | **922** |
+> | Last 7 days | **922** |
+> | All time | **922** |
+>
+> *Last updated: 2026-03-27*
+<!-- npm-stats-end -->
+
 ---
 
 ## At a glance

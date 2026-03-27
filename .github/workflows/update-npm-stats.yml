@@ -1,0 +1,165 @@
+name: Update npm Install Stats
+
+on:
+  schedule:
+    # Runs daily at 08:00 UTC (3am ET / midnight PT)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write  # needed to commit back to the repo
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch npm download stats
+        id: npm
+        run: |
+          # Last-day downloads
+          LAST_DAY=$(curl -s "https://api.npmjs.org/downloads/point/last-day/poly-glot-ai-cli" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['downloads'])")
+
+          # Last-week downloads
+          LAST_WEEK=$(curl -s "https://api.npmjs.org/downloads/point/last-week/poly-glot-ai-cli" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['downloads'])")
+
+          # All-time (point range from package publish date)
+          ALL_TIME=$(curl -s "https://api.npmjs.org/downloads/range/2026-01-01:$(date +%Y-%m-%d)/poly-glot-ai-cli" \
+            | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          total = sum(day['downloads'] for day in d.get('downloads', []))
+          print(total)
+          ")
+
+          echo "last_day=$LAST_DAY"   >> $GITHUB_OUTPUT
+          echo "last_week=$LAST_WEEK" >> $GITHUB_OUTPUT
+          echo "all_time=$ALL_TIME"   >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+          echo "📦 Last day:  $LAST_DAY"
+          echo "📦 Last week: $LAST_WEEK"
+          echo "📦 All time:  $ALL_TIME"
+
+      - name: Update README.md
+        run: |
+          LAST_DAY=${{ steps.npm.outputs.last_day }}
+          LAST_WEEK=${{ steps.npm.outputs.last_week }}
+          ALL_TIME=${{ steps.npm.outputs.all_time }}
+          DATE=${{ steps.npm.outputs.date }}
+
+          # Format numbers with commas using Python
+          FMT_DAY=$(python3   -c "print(f'{$LAST_DAY:,}')")
+          FMT_WEEK=$(python3  -c "print(f'{$LAST_WEEK:,}')")
+          FMT_TOTAL=$(python3 -c "print(f'{$ALL_TIME:,}')")
+
+          # Replace the stats block between the markers in README.md
+          python3 << 'PYEOF'
+          import re, os
+
+          readme_path = 'README.md'
+          with open(readme_path, 'r') as f:
+              content = f.read()
+
+          new_block = f"""<!-- npm-stats-start -->
+> 📦 **npm install stats** *(updated daily)*
+> | Period | Downloads |
+> |--------|-----------|
+> | Yesterday | **{os.environ['FMT_DAY']}** |
+> | Last 7 days | **{os.environ['FMT_WEEK']}** |
+> | All time | **{os.environ['FMT_TOTAL']}** |
+>
+> *Last updated: {os.environ['DATE']}*
+<!-- npm-stats-end -->"""
+
+          # Replace existing block if present, otherwise insert after the star CTA line
+          if '<!-- npm-stats-start -->' in content:
+              content = re.sub(
+                  r'<!-- npm-stats-start -->.*?<!-- npm-stats-end -->',
+                  new_block,
+                  content,
+                  flags=re.DOTALL
+              )
+          else:
+              # Insert after the "Star this repo" line
+              content = content.replace(
+                  '> → [**Star this repo**](https://github.com/hmoses/poly-glot)',
+                  '> → [**Star this repo**](https://github.com/hmoses/poly-glot)\n\n' + new_block
+              )
+
+          with open(readme_path, 'w') as f:
+              f.write(content)
+
+          print('README.md updated.')
+          PYEOF
+        env:
+          FMT_DAY:   ${{ steps.npm.outputs.last_day }}
+          FMT_WEEK:  ${{ steps.npm.outputs.last_week }}
+          FMT_TOTAL: ${{ steps.npm.outputs.all_time }}
+          DATE:      ${{ steps.npm.outputs.date }}
+
+      - name: Update cli/README.md
+        run: |
+          python3 << 'PYEOF'
+          import re, os
+
+          readme_path = 'cli/README.md'
+          with open(readme_path, 'r') as f:
+              content = f.read()
+
+          new_block = f"""<!-- npm-stats-start -->
+> 📦 **npm install stats** *(updated daily)*
+> | Period | Downloads |
+> |--------|-----------|
+> | Yesterday | **{os.environ['FMT_DAY']}** |
+> | Last 7 days | **{os.environ['FMT_WEEK']}** |
+> | All time | **{os.environ['FMT_TOTAL']}** |
+>
+> *Last updated: {os.environ['DATE']}*
+<!-- npm-stats-end -->"""
+
+          if '<!-- npm-stats-start -->' in content:
+              content = re.sub(
+                  r'<!-- npm-stats-start -->.*?<!-- npm-stats-end -->',
+                  new_block,
+                  content,
+                  flags=re.DOTALL
+              )
+          else:
+              # Insert after the star CTA block
+              content = content.replace(
+                  '> → [**Star on GitHub**](https://github.com/hmoses/poly-glot)',
+                  '> → [**Star on GitHub**](https://github.com/hmoses/poly-glot)\n\n' + new_block
+              )
+
+          with open(readme_path, 'w') as f:
+              f.write(content)
+
+          print('cli/README.md updated.')
+          PYEOF
+        env:
+          FMT_DAY:   ${{ steps.npm.outputs.last_day }}
+          FMT_WEEK:  ${{ steps.npm.outputs.last_week }}
+          FMT_TOTAL: ${{ steps.npm.outputs.all_time }}
+          DATE:      ${{ steps.npm.outputs.date }}
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md cli/README.md
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit — stats unchanged."
+          else
+            git commit -m "chore: update npm download stats [$(date +'%Y-%m-%d')]"
+            git push
+            echo "✅ Stats committed and pushed."
+          fi
