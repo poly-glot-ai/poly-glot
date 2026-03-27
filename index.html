@@ -1013,6 +1013,879 @@
 
     </div><!-- /container -->
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         INTERACTIVE AI RESPONSE DEMO
+         Shows real-time comparison of AI responses before/after Poly-Glot
+         ══════════════════════════════════════════════════════════════════ -->
+    <section class="interactive-demo-section" id="interactiveDemo">
+        <div class="interactive-demo-container">
+            <h2 class="interactive-demo-title">
+                <span class="demo-icon">🚀</span>
+                Interactive Demo: See AI Improvements in Real-Time
+            </h2>
+            <p class="interactive-demo-subtitle">
+                Click any scenario below to see how Poly-Glot transforms inconsistent AI responses into standardized, production-ready documentation
+            </p>
+
+            <!-- Scenario Selector -->
+            <div class="scenario-selector">
+                <button class="scenario-btn active" data-scenario="function">
+                    <span class="scenario-emoji">⚡</span>
+                    <span class="scenario-name">Function Docs</span>
+                </button>
+                <button class="scenario-btn" data-scenario="class">
+                    <span class="scenario-emoji">🏗️</span>
+                    <span class="scenario-name">Class Docs</span>
+                </button>
+                <button class="scenario-btn" data-scenario="api">
+                    <span class="scenario-emoji">🌐</span>
+                    <span class="scenario-name">API Endpoint</span>
+                </button>
+                <button class="scenario-btn" data-scenario="async">
+                    <span class="scenario-emoji">⏱️</span>
+                    <span class="scenario-name">Async Function</span>
+                </button>
+            </div>
+
+            <!-- Comparison Panels -->
+            <div class="comparison-wrapper">
+                <!-- Before Panel -->
+                <div class="comparison-panel before-panel">
+                    <div class="panel-header">
+                        <span class="panel-badge bad">❌ Without Poly-Glot</span>
+                        <h3 class="panel-title">Inconsistent AI Output</h3>
+                    </div>
+                    <div class="code-container" id="codeBeforeContainer">
+                        <pre><code class="language-javascript" id="codeBefore"></code></pre>
+                    </div>
+                    <div class="issues-list" id="issuesList">
+                        <div class="issue-title">⚠️ Issues Found:</div>
+                        <!-- Issues will be dynamically added -->
+                    </div>
+                </div>
+
+                <!-- Transformation Arrow -->
+                <div class="transformation-arrow">
+                    <div class="arrow-icon">→</div>
+                    <div class="arrow-label">Poly-Glot</div>
+                </div>
+
+                <!-- After Panel -->
+                <div class="comparison-panel after-panel">
+                    <div class="panel-header">
+                        <span class="panel-badge good">✅ With Poly-Glot</span>
+                        <h3 class="panel-title">Standardized Documentation</h3>
+                    </div>
+                    <div class="code-container" id="codeAfterContainer">
+                        <pre><code class="language-javascript" id="codeAfter"></code></pre>
+                    </div>
+                    <div class="benefits-list" id="benefitsList">
+                        <div class="benefit-title">✨ Improvements:</div>
+                        <!-- Benefits will be dynamically added -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Metrics Dashboard -->
+            <div class="metrics-dashboard" id="metricsDashboard">
+                <h3 class="metrics-title">📊 Impact Metrics</h3>
+                <div class="metrics-grid-layout">
+                    <div class="metric-card">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-value" id="accuracyMetric">0%</div>
+                        <div class="metric-label">Documentation Accuracy</div>
+                        <div class="metric-bar">
+                            <div class="metric-bar-fill" id="accuracyBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🔍</div>
+                        <div class="metric-value" id="searchMetric">0%</div>
+                        <div class="metric-label">Search Discoverability</div>
+                        <div class="metric-bar">
+                            <div class="metric-bar-fill" id="searchBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-value" id="timeMetric">0%</div>
+                        <div class="metric-label">Dev Time Saved</div>
+                        <div class="metric-bar">
+                            <div class="metric-bar-fill" id="timeBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-value" id="consistencyMetric">0%</div>
+                        <div class="metric-label">Team Consistency</div>
+                        <div class="metric-bar">
+                            <div class="metric-bar-fill" id="consistencyBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Try It Button -->
+            <div class="interactive-demo-cta">
+                <button class="interactive-cta-btn" id="tryInteractiveBtn">
+                    <span class="cta-icon">✨</span>
+                    <span class="cta-text">Try It With Your Own Code</span>
+                    <span class="cta-arrow">↓</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           Interactive Demo Section Styles
+           ═══════════════════════════════════════════════════════════════ */
+        .interactive-demo-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 20px;
+            margin: 60px 0 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .interactive-demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .interactive-demo-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .interactive-demo-title {
+            font-size: 42px;
+            font-weight: 800;
+            color: white;
+            text-align: center;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+        }
+
+        .interactive-demo-subtitle {
+            font-size: 18px;
+            color: rgba(255,255,255,0.95);
+            text-align: center;
+            margin-bottom: 50px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        /* Scenario Selector */
+        .scenario-selector {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .scenario-btn {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 14px 24px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scenario-btn:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .scenario-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .scenario-emoji {
+            font-size: 20px;
+        }
+
+        /* Comparison Wrapper */
+        .comparison-wrapper {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 30px;
+            margin-bottom: 50px;
+            align-items: start;
+        }
+
+        .comparison-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel-header {
+            margin-bottom: 20px;
+        }
+
+        .panel-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .panel-badge.bad {
+            background: #fee;
+            color: #c33;
+        }
+
+        .panel-badge.good {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .code-container {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-container pre {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-container code {
+            font-family: 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            color: #1a1a1a;
+            white-space: pre;
+        }
+
+        /* Issues and Benefits Lists */
+        .issues-list, .benefits-list {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .issue-title, .benefit-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #495057;
+        }
+
+        .issue-item, .benefit-item {
+            display: flex;
+            align-items: start;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            animation: slideIn 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .issue-item {
+            color: #d32f2f;
+            transform: translateX(-10px);
+        }
+
+        .benefit-item {
+            color: #2e7d32;
+            transform: translateX(10px);
+        }
+
+        .issue-icon, .benefit-icon {
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+
+        /* Transformation Arrow */
+        .transformation-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding-top: 80px;
+        }
+
+        .arrow-icon {
+            font-size: 48px;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .arrow-label {
+            background: white;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Metrics Dashboard */
+        .metrics-dashboard {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            margin-bottom: 40px;
+        }
+
+        .metrics-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .metrics-grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .metric-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 8px;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .metric-bar {
+            background: #dee2e6;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* CTA Button */
+        .interactive-demo-cta {
+            text-align: center;
+        }
+
+        .interactive-cta-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .interactive-cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .cta-icon {
+            font-size: 24px;
+        }
+
+        .cta-arrow {
+            font-size: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+            60% { transform: translateY(-3px); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .comparison-wrapper {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .transformation-arrow {
+                padding-top: 0;
+                flex-direction: row;
+            }
+
+            .arrow-icon {
+                transform: rotate(90deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .interactive-demo-title {
+                font-size: 32px;
+            }
+
+            .interactive-demo-subtitle {
+                font-size: 16px;
+            }
+
+            .scenario-selector {
+                gap: 8px;
+            }
+
+            .scenario-btn {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+
+            .metrics-grid-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .interactive-demo-section {
+                padding: 40px 15px;
+            }
+        }
+    </style>
+
+    <script>
+        // Interactive Demo Data and Logic
+        (function() {
+            const demoScenarios = {
+                function: {
+                    before: `// This function calculates user data
+function processUser(user, options) {
+    if (!user) return null;
+    const result = {
+        name: user.name,
+        age: user.age,
+        premium: options?.premium || false
+    };
+    return result;
+}`,
+                    after: `/**
+ * Processes user data and returns a formatted user object.
+ * 
+ * @param {Object} user - The user object to process
+ * @param {string} user.name - User's full name
+ * @param {number} user.age - User's age in years
+ * @param {Object} [options] - Optional configuration
+ * @param {boolean} [options.premium=false] - Premium status flag
+ * @returns {Object|null} Formatted user object or null if input is invalid
+ * @throws {TypeError} If user.name is not a string
+ * @example
+ * const result = processUser({name: 'John', age: 30}, {premium: true});
+ * // Returns: {name: 'John', age: 30, premium: true}
+ */
+function processUser(user, options) {
+    if (!user) return null;
+    const result = {
+        name: user.name,
+        age: user.age,
+        premium: options?.premium || false
+    };
+    return result;
+}`,
+                    issues: [
+                        'Missing parameter documentation',
+                        'No return type specified',
+                        'Unclear null handling behavior',
+                        'No usage examples provided',
+                        'Missing error documentation'
+                    ],
+                    benefits: [
+                        'Complete JSDoc standard format',
+                        'Detailed parameter types and descriptions',
+                        'Clear return value documentation',
+                        'Real-world usage example',
+                        'Exception handling documented'
+                    ],
+                    metrics: { accuracy: 92, search: 88, time: 65, consistency: 95 }
+                },
+                class: {
+                    before: `// User manager class
+class UserManager {
+    constructor(db) {
+        this.db = db;
+    }
+    
+    async getUser(id) {
+        return await this.db.findOne({id});
+    }
+}`,
+                    after: `/**
+ * Manages user data operations and database interactions.
+ * Provides methods for CRUD operations on user records.
+ * 
+ * @class UserManager
+ * @example
+ * const manager = new UserManager(database);
+ * const user = await manager.getUser('user123');
+ */
+class UserManager {
+    /**
+     * Creates a new UserManager instance.
+     * 
+     * @param {Object} db - Database connection object
+     * @param {Function} db.findOne - Database query method
+     * @throws {Error} If database connection is invalid
+     */
+    constructor(db) {
+        this.db = db;
+    }
+    
+    /**
+     * Retrieves a user by their unique identifier.
+     * 
+     * @async
+     * @param {string} id - The unique user identifier
+     * @returns {Promise<Object|null>} User object or null if not found
+     * @throws {DatabaseError} If database query fails
+     */
+    async getUser(id) {
+        return await this.db.findOne({id});
+    }
+}`,
+                    issues: [
+                        'No class-level documentation',
+                        'Constructor parameters not documented',
+                        'Async behavior not indicated',
+                        'Missing error cases',
+                        'No class usage examples'
+                    ],
+                    benefits: [
+                        'Comprehensive class documentation',
+                        'Constructor parameters fully documented',
+                        '@async tag for async methods',
+                        'Complete error documentation',
+                        'Practical usage examples'
+                    ],
+                    metrics: { accuracy: 94, search: 91, time: 70, consistency: 93 }
+                },
+                api: {
+                    before: `// Endpoint to create a new post
+app.post('/api/posts', async (req, res) => {
+    const post = await Post.create(req.body);
+    res.json(post);
+});`,
+                    after: `/**
+ * Creates a new blog post.
+ * 
+ * @route POST /api/posts
+ * @group Posts - Operations for blog posts
+ * @param {Object} req.body - Post data
+ * @param {string} req.body.title - Post title (required)
+ * @param {string} req.body.content - Post content (required)
+ * @param {string[]} [req.body.tags] - Optional post tags
+ * @returns {Object} 200 - Created post object
+ * @returns {Object} 400 - Validation error
+ * @returns {Object} 401 - Unauthorized
+ * @returns {Object} 500 - Server error
+ * @security JWT
+ * @example
+ * POST /api/posts
+ * {
+ *   "title": "My First Post",
+ *   "content": "Hello World!",
+ *   "tags": ["javascript", "tutorial"]
+ * }
+ */
+app.post('/api/posts', async (req, res) => {
+    const post = await Post.create(req.body);
+    res.json(post);
+});`,
+                    issues: [
+                        'No API route documentation',
+                        'Request body structure undefined',
+                        'HTTP status codes not documented',
+                        'Authentication requirements missing',
+                        'No request/response examples'
+                    ],
+                    benefits: [
+                        'OpenAPI/Swagger compatible format',
+                        'Complete request body schema',
+                        'All HTTP responses documented',
+                        'Security requirements specified',
+                        'Request/response examples included'
+                    ],
+                    metrics: { accuracy: 96, search: 94, time: 75, consistency: 97 }
+                },
+                async: {
+                    before: `// Fetch and process data
+async function getData(url) {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.items.map(item => item.value);
+}`,
+                    after: `/**
+ * Fetches data from a remote URL and extracts item values.
+ * 
+ * @async
+ * @param {string} url - The URL to fetch data from (must be valid HTTP/HTTPS)
+ * @returns {Promise<Array<any>>} Array of extracted values from items
+ * @throws {TypeError} If URL is not a string
+ * @throws {NetworkError} If fetch request fails
+ * @throws {JSONError} If response is not valid JSON
+ * @throws {Error} If response doesn't contain 'items' array
+ * @example
+ * const values = await getData('https://api.example.com/data');
+ * // Returns: [1, 2, 3, 4, 5]
+ * 
+ * @example
+ * // Handle errors
+ * try {
+ *   const values = await getData(url);
+ * } catch (error) {
+ *   console.error('Failed to fetch data:', error);
+ * }
+ */
+async function getData(url) {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.items.map(item => item.value);
+}`,
+                    issues: [
+                        'Async behavior not documented',
+                        'Potential error cases ignored',
+                        'No error handling guidance',
+                        'URL format not specified',
+                        'Missing usage examples'
+                    ],
+                    benefits: [
+                        '@async tag clearly indicates promise',
+                        'All potential errors documented',
+                        'Error handling examples provided',
+                        'URL validation requirements',
+                        'Multiple real-world examples'
+                    ],
+                    metrics: { accuracy: 90, search: 86, time: 68, consistency: 92 }
+                }
+            };
+
+            // Initialize interactive demo when DOM is ready
+            function initInteractiveDemo() {
+                let currentScenario = 'function';
+
+                function renderScenario(scenarioKey) {
+                    const scenario = demoScenarios[scenarioKey];
+                    
+                    // Render code
+                    document.getElementById('codeBefore').textContent = scenario.before;
+                    document.getElementById('codeAfter').textContent = scenario.after;
+
+                    // Render issues
+                    const issuesList = document.getElementById('issuesList');
+                    issuesList.innerHTML = '<div class="issue-title">⚠️ Issues Found:</div>';
+                    scenario.issues.forEach((issue, index) => {
+                        setTimeout(() => {
+                            const div = document.createElement('div');
+                            div.className = 'issue-item';
+                            div.innerHTML = '<span class="issue-icon">❌</span><span>' + issue + '</span>';
+                            issuesList.appendChild(div);
+                        }, index * 100);
+                    });
+
+                    // Render benefits
+                    const benefitsList = document.getElementById('benefitsList');
+                    benefitsList.innerHTML = '<div class="benefit-title">✨ Improvements:</div>';
+                    scenario.benefits.forEach((benefit, index) => {
+                        setTimeout(() => {
+                            const div = document.createElement('div');
+                            div.className = 'benefit-item';
+                            div.innerHTML = '<span class="benefit-icon">✅</span><span>' + benefit + '</span>';
+                            benefitsList.appendChild(div);
+                        }, index * 100);
+                    });
+
+                    // Animate metrics
+                    setTimeout(function() {
+                        animateMetrics(scenario.metrics);
+                    }, 500);
+                }
+
+                function animateMetrics(metrics) {
+                    // Animate each metric value
+                    animateValue('accuracyMetric', 0, metrics.accuracy, 1500, '%');
+                    animateValue('searchMetric', 0, metrics.search, 1500, '%');
+                    animateValue('timeMetric', 0, metrics.time, 1500, '%');
+                    animateValue('consistencyMetric', 0, metrics.consistency, 1500, '%');
+
+                    // Animate bars
+                    setTimeout(function() {
+                        document.getElementById('accuracyBar').style.width = metrics.accuracy + '%';
+                        document.getElementById('searchBar').style.width = metrics.search + '%';
+                        document.getElementById('timeBar').style.width = metrics.time + '%';
+                        document.getElementById('consistencyBar').style.width = metrics.consistency + '%';
+                    }, 200);
+                }
+
+                function animateValue(elementId, start, end, duration, suffix) {
+                    suffix = suffix || '';
+                    const element = document.getElementById(elementId);
+                    if (!element) return;
+                    
+                    const range = end - start;
+                    const increment = range / (duration / 16);
+                    let current = start;
+
+                    const timer = setInterval(function() {
+                        current += increment;
+                        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                            current = end;
+                            clearInterval(timer);
+                        }
+                        element.textContent = Math.round(current) + suffix;
+                    }, 16);
+                }
+
+                // Scenario button handlers
+                const scenarioBtns = document.querySelectorAll('.scenario-btn');
+                scenarioBtns.forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        scenarioBtns.forEach(function(b) {
+                            b.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        currentScenario = this.dataset.scenario;
+                        
+                        // Add fade effect
+                        const panels = document.querySelectorAll('.comparison-panel');
+                        panels.forEach(function(p) {
+                            p.style.opacity = '0';
+                        });
+                        
+                        setTimeout(function() {
+                            renderScenario(currentScenario);
+                            panels.forEach(function(p) {
+                                p.style.opacity = '1';
+                            });
+                        }, 300);
+                    });
+                });
+
+                // CTA button handler
+                const tryBtn = document.getElementById('tryInteractiveBtn');
+                if (tryBtn) {
+                    tryBtn.addEventListener('click', function() {
+                        const commentGenerator = document.getElementById('commentGenerator');
+                        if (commentGenerator) {
+                            commentGenerator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
+                }
+
+                // Initialize first scenario
+                renderScenario(currentScenario);
+            }
+
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initInteractiveDemo);
+            } else {
+                initInteractiveDemo();
+            }
+        })();
+    </script>
+
+
     <!-- ── Enterprise Demo Request Section ── -->
     <section class="enterprise-section">
         <div class="enterprise-content">
@@ -1066,13 +1939,13 @@
                     ✅ Thanks! We'll contact you within 24 hours.
                 </p>
                 <p class="form-error" id="formError" style="display: none;">
-                    ❌ Something went wrong. Please try again or email hwmoses2@icloud.com directly.
+                    ❌ Something went wrong. Please try again or email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0f677862607c6a7c3d4f666c63607a6b216c6062">[email&#160;protected]</a> directly.
                 </p>
             </form>
         </div>
     </section>
 
-    <script src="analytics.js?v=206"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="analytics.js?v=206"></script>
     <script src="ai-generator.js?v=206"></script>
     <script src="scorer.js?v=206"></script>
     <script src="app.js?v=206"></script>
