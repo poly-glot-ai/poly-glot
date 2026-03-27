@@ -1141,13 +1141,11 @@
            Interactive Demo Section Styles
            ═══════════════════════════════════════════════════════════════ */
         .interactive-demo-section {
-            background: #1a1d27;
-            padding: 60px 30px;
-            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 20px;
+            margin: 60px 0 0 0;
             position: relative;
             overflow: hidden;
-            border-bottom: 2px solid rgba(125,211,252,0.15);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .interactive-demo-section::before {
@@ -1158,8 +1156,8 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(125,211,252,0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(16,185,129,0.03) 0%, transparent 50%);
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
             pointer-events: none;
         }
 
@@ -1171,18 +1169,19 @@
         }
 
         .interactive-demo-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: #e2e8f0;
+            font-size: 42px;
+            font-weight: 800;
+            color: white;
             text-align: center;
             margin-bottom: 16px;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
         }
 
         .interactive-demo-subtitle {
-            font-size: 16px;
-            color: #b4b4c8;
+            font-size: 18px;
+            color: rgba(255,255,255,0.95);
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
             max-width: 800px;
             margin-left: auto;
             margin-right: auto;
@@ -1199,12 +1198,13 @@
         }
 
         .scenario-btn {
-            background: rgba(125,211,252,0.1);
-            border: 2px solid rgba(125,211,252,0.3);
-            border-radius: 8px;
-            padding: 12px 20px;
-            color: #7dd3fc;
-            font-size: 14px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 14px 24px;
+            color: white;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1214,15 +1214,17 @@
         }
 
         .scenario-btn:hover {
-            background: rgba(125,211,252,0.2);
-            border-color: rgba(125,211,252,0.6);
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
 
         .scenario-btn.active {
-            background: rgba(125,211,252,0.25);
-            color: #7dd3fc;
-            border-color: #7dd3fc;
+            background: white;
+            color: #667eea;
+            border-color: white;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
         }
 
         .scenario-emoji {
@@ -1369,7 +1371,8 @@
 
         .arrow-icon {
             font-size: 48px;
-            color: #7dd3fc;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
             animation: pulse 2s ease-in-out infinite;
         }
 
@@ -1379,13 +1382,13 @@
         }
 
         .arrow-label {
-            background: rgba(125,211,252,0.2);
-            color: #7dd3fc;
+            background: white;
+            color: #667eea;
             padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 20px;
+            font-size: 14px;
             font-weight: 700;
-            border: 1px solid rgba(125,211,252,0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         /* Metrics Dashboard */
@@ -1429,31 +1432,31 @@
         }
 
         .metric-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #10b981;
+            font-size: 32px;
+            font-weight: 800;
+            color: #667eea;
             margin-bottom: 8px;
             transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .metric-label {
-            font-size: 13px;
+            font-size: 14px;
             color: #495057;
             font-weight: 600;
             margin-bottom: 12px;
         }
 
         .metric-bar {
-            background: rgba(16,185,129,0.1);
-            height: 6px;
-            border-radius: 3px;
+            background: #dee2e6;
+            height: 8px;
+            border-radius: 4px;
             overflow: hidden;
         }
 
         .metric-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #10b981, #059669);
-            border-radius: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
             transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -1463,23 +1466,24 @@
         }
 
         .interactive-cta-btn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: #fff;
+            background: white;
+            color: #667eea;
             border: none;
-            border-radius: 8px;
-            padding: 14px 28px;
-            font-size: 15px;
-            font-weight: 600;
+            border-radius: 50px;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: 700;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .interactive-cta-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(16,185,129,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
         }
 
         .cta-icon {
