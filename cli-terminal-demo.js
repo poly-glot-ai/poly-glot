@@ -1190,6 +1190,12 @@ fun filterEven(numbers: List<Int>): List<Int> {
             
             // Scroll output into view
             codeOutputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // ── RAG & GEO scores — always called directly so language is
+            //    guaranteed correct regardless of observer timing or re-runs
+            if (typeof window.pgShowScores === 'function') {
+                window.pgShowScores(selectedLang);
+            }
         }
         
         isRunning = false;
