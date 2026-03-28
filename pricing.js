@@ -51,7 +51,7 @@
         { text: 'Web UI',                     check: true  },
         { text: 'JSDoc, PyDoc, Javadoc',      check: true  },
         { text: 'BYOK (bring your own key)',  check: true  },
-        { text: 'CLI tool',                   check: false },
+        { text: 'CLI tool (3 languages)',     check: true  },
         { text: 'Why comments',               check: false },
         { text: 'Confidence scoring',         check: false },
       ],
