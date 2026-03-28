@@ -468,14 +468,25 @@
 
     const formData = new FormData();
     formData.append('access_key', WEB3_KEY);
-    formData.append('subject', 'Poly-Glot Pro Waitlist — ' + (name || email));
-    formData.append('name',      name || 'Not provided');
-    formData.append('email',     email);
-    formData.append('use_case',  useCase || 'Not specified');
-    formData.append('top_language', topLang);
-    formData.append('generate_count', genCount);
-    formData.append('source',    'pro_waitlist');
-    formData.append('from_name', 'Poly-Glot Waitlist');
+    formData.append('subject',    '🦜 New Pro Waitlist Signup — ' + (name || email));
+    formData.append('from_name',  'Poly-Glot Waitlist');
+    formData.append('replyto',    email);
+    formData.append('name',       name || 'Not provided');
+    formData.append('email',      email);
+    formData.append('use_case',   useCase || 'Not specified');
+    formData.append('top_language',    topLang);
+    formData.append('generate_count',  genCount);
+    formData.append('source',     'pro_waitlist_modal');
+    formData.append('message',
+      '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
+      'Name:           ' + (name || 'Not provided') + '\n' +
+      'Email:          ' + email + '\n' +
+      'Use Case:       ' + (useCase || 'Not specified') + '\n' +
+      'Top Language:   ' + topLang + '\n' +
+      'Generate Count: ' + genCount + '\n' +
+      'Source:         Pro Waitlist Modal\n' +
+      'Time:           ' + new Date().toUTCString()
+    );
 
     fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
       .then(r => r.json())
@@ -703,10 +714,18 @@
 
       const fd = new FormData();
       fd.append('access_key', WEB3_KEY);
-      fd.append('subject',    'Poly-Glot Pro Waitlist (inline) — ' + email);
+      fd.append('subject',    '🦜 New Pro Waitlist Signup — ' + email);
+      fd.append('from_name',  'Poly-Glot Waitlist');
+      fd.append('replyto',    email);
+      fd.append('name',       email);
       fd.append('email',      email);
       fd.append('source',     'inline_section');
-      fd.append('from_name',  'Poly-Glot Waitlist');
+      fd.append('message',
+        '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
+        'Email:  ' + email + '\n' +
+        'Source: Inline Section\n' +
+        'Time:   ' + new Date().toUTCString()
+      );
 
       fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
         .then(r => r.json())
