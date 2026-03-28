@@ -332,7 +332,7 @@ All notable changes to Poly-Glot will be documented in this file.
 ### 📚 Core Features (v1.0)
 
 **Language Support:**
-- 12+ programming languages: Python, JavaScript, TypeScript, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
+- 12 programming languages: Python, JavaScript, TypeScript, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
 - Language-specific documentation standards (JSDoc, Javadoc, PyDoc, Doxygen, XML docs, GoDoc, Rustdoc, RDoc, PHPDoc, TSDoc, Swift Markup, KDoc)
 
 **Documentation Tools:**
@@ -453,7 +453,7 @@ All notable changes to Poly-Glot will be documented in this file.
 - 1,500+ lines of code added
 - 19 commits to main branch
 - 8 major features shipped
-- 12+ languages supported
+- 12 languages supported
 - 2 AI providers integrated
 - 9 AI models available
 - 100% mobile responsive

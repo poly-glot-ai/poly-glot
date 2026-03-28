@@ -1,0 +1,77 @@
+name: Update npm Install Stats
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch stats and update READMEs
+        run: |
+          python3 << 'EOF'
+          import urllib.request, json, re, datetime
+
+          def fetch(url):
+              with urllib.request.urlopen(url) as r:
+                  return json.loads(r.read())
+
+          day  = fetch("https://api.npmjs.org/downloads/point/last-day/poly-glot-ai-cli")["downloads"]
+          week = fetch("https://api.npmjs.org/downloads/point/last-week/poly-glot-ai-cli")["downloads"]
+          data = fetch("https://api.npmjs.org/downloads/range/2026-01-01:2099-01-01/poly-glot-ai-cli")
+          total = sum(d["downloads"] for d in data.get("downloads", []))
+          date  = datetime.date.today().strftime("%Y-%m-%d")
+
+          block = f"""<!-- npm-stats-start -->
+          > \U0001f4e6 **npm install stats** *(updated daily)*
+          > | Period | Downloads |
+          > |--------|-----------|
+          > | Yesterday | **{day:,}** |
+          > | Last 7 days | **{week:,}** |
+          > | All time | **{total:,}** |
+          >
+          > *Last updated: {date}*
+          <!-- npm-stats-end -->"""
+
+          # Strip leading spaces from heredoc indentation
+          block = "\n".join(line.strip() for line in block.splitlines())
+
+          pattern = re.compile(
+              r'<!-- npm-stats-start -->.*?<!-- npm-stats-end -->',
+              re.DOTALL
+          )
+
+          for path in ["README.md", "cli/README.md"]:
+              with open(path, "r") as f:
+                  content = f.read()
+              if "<!-- npm-stats-start -->" in content:
+                  content = pattern.sub(block, content)
+              with open(path, "w") as f:
+                  f.write(content)
+              print(f"Updated {path}: day={day:,} week={week:,} total={total:,}")
+
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md cli/README.md
+          if git diff --staged --quiet; then
+            echo "No changes."
+          else
+            git commit -m "chore: npm stats $(date +'%Y-%m-%d') [skip ci]"
+            git push
+          fi

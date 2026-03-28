@@ -4,9 +4,25 @@
 [![license](https://img.shields.io/npm/l/poly-glot-ai-cli)](https://github.com/hmoses/poly-glot/blob/main/LICENSE)
 [![node](https://img.shields.io/node/v/poly-glot-ai-cli)](https://nodejs.org)
 [![downloads](https://img.shields.io/npm/dm/poly-glot-ai-cli)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![GitHub stars](https://img.shields.io/github/stars/hmoses/poly-glot?style=social)](https://github.com/hmoses/poly-glot)
 
 AI-powered code comment generation from the command line.  
 Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://poly-glot.ai).
+
+> ⭐ **If this saves you time, a GitHub star goes a long way.**  
+> It helps other developers discover Poly-Glot and keeps the project growing.  
+> → [**Star on GitHub**](https://github.com/hmoses/poly-glot)
+
+<!-- npm-stats-start -->
+> 📦 **npm install stats** *(updated daily)*
+> | Period | Downloads |
+> |--------|-----------|
+> | Yesterday | **846** |
+> | Last 7 days | **922** |
+> | All time | **922** |
+>
+> *Last updated: 2026-03-27*
+<!-- npm-stats-end -->
 
 ---
 

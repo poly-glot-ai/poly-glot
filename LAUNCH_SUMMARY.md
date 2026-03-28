@@ -27,7 +27,7 @@
 - ✅ Copy/replace generated code options
 
 **Template Library:**
-- ✅ 12+ programming languages
+- ✅ 12 programming languages
 - ✅ Multiple documentation standards (JSDoc, Javadoc, PyDoc, Doxygen, etc.)
 - ✅ Function and class examples
 - ✅ Best practices guides
@@ -187,7 +187,7 @@ poly-glot/
    - Transparent codebase
    - Educational value
 
-6. ✅ **12+ Languages**
+6. ✅ **12 Languages**
    - More than most competitors
    - Language-specific standards
    - Comprehensive templates
