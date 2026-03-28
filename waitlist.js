@@ -27,7 +27,7 @@
 
   /* Cache-bust v2: clear any stale count from previous seed (247) */
   const LS_COUNT_VER   = 'pg_waitlist_count_ver';
-  const COUNT_VER      = '2';
+  const COUNT_VER      = '3'; /* v3: removes fake pulse timer, resets inflated counts */
   if (localStorage.getItem(LS_COUNT_VER) !== COUNT_VER) {
     localStorage.removeItem(LS_COUNT);
     localStorage.setItem(LS_COUNT_VER, COUNT_VER);
@@ -967,15 +967,7 @@
     attachAppHooks();
     printConsoleTips();
 
-    /* Periodic count pulse every 45–90 s (simulates live activity) */
-    if (!hasJoined()) {
-      setInterval(() => {
-        if (Math.random() > 0.5) {
-          const c = incrementCount();
-          updateCountDisplays(c);
-        }
-      }, 60000);
-    }
+    /* No fake activity simulation — counter reflects real signups only */
   }
 
   if (document.readyState === 'loading') {
