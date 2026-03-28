@@ -20,8 +20,8 @@
   const LS_EMAIL       = 'pg_waitlist_email';
   const LS_USAGE       = 'pg_feature_usage';
 
-  /* Seed count — start credible, increment locally */
-  const SEED_COUNT     = 247;
+  /* Seed count — honest, starts at 0 */
+  const SEED_COUNT     = 0;
 
   /* ── Utilities ─────────────────────────────────────────── */
   function getCount() {
