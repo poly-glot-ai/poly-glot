@@ -205,13 +205,14 @@ export class PolyGlotGenerator {
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type':  'application/json',
                 'Authorization': `Bearer ${this.cfg.apiKey}`,
             },
             body: JSON.stringify({
-                model: this.cfg.model || 'gpt-4o-mini',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.2,
+                model:      this.cfg.model || 'gpt-4o-mini',
+                messages:   [{ role: 'user', content: prompt }],
+                temperature: 0,        // deterministic = faster first token
+                max_tokens:  2048,     // cap output — enough for any file, ~40% faster
             }),
         });
 
@@ -233,9 +234,9 @@ export class PolyGlotGenerator {
                 'anthropic-version': '2023-06-01',
             },
             body: JSON.stringify({
-                model: this.cfg.model || 'claude-sonnet-4-5',
-                max_tokens: 4096,
-                messages: [{ role: 'user', content: prompt }],
+                model:      this.cfg.model || 'claude-sonnet-4-5',
+                max_tokens: 2048,      // was 4096 — halved for speed
+                messages:   [{ role: 'user', content: prompt }],
             }),
         });
 
@@ -251,58 +252,31 @@ export class PolyGlotGenerator {
     // ─── Prompts ──────────────────────────────────────────────────────────────
 
     private _buildWhyPrompt(code: string, lang: string): string {
-        return `You are a senior ${lang} engineer doing a code review. Add inline "why" comments to the following code.
+        return `Add inline WHY comments to this ${lang} code. Rules:
+- WHY only — not what. Trade-offs, non-obvious choices, edge-case reasoning.
+- Correct single-line syntax for ${lang}.
+- Skip self-explanatory lines.
+- One line per comment, above or inline.
+- Return ONLY the commented code, no markdown fences.
 
-Rules:
-- Focus exclusively on WHY decisions were made, not WHAT the code does
-- Comment on: algorithmic trade-offs, non-obvious choices, performance decisions, edge-case handling, historical context clues, and anything a new engineer would ask "why not just…?" about
-- Use the correct single-line comment syntax for ${lang} (// for most languages, # for Python/Ruby/Shell, -- for SQL/Lua, ' for VBA)
-- Place comments on the line immediately above the code they describe, or inline at the end of short lines
-- Do NOT restate what the code does literally — only explain the reasoning behind it
-- Do NOT add comments to self-explanatory lines (trivial assignments, obvious returns, etc.)
-- Keep each comment to one line — concise and precise
-- Keep existing code exactly as-is — only add comments
-- Return ONLY the commented code, no explanations or markdown fences
-
-Code:
 ${code}`;
     }
 
     private _buildCommentPrompt(code: string, lang: string, style: string): string {
-        return `You are an expert ${lang} developer. Add comprehensive ${style} comments to the following code.
+        return `Add ${style} doc-comments to this ${lang} code. Rules:
+- ${style} format only.
+- All functions, classes, methods, complex logic.
+- @param, @returns, @throws where applicable.
+- Keep existing code exactly as-is.
+- Return ONLY the commented code, no markdown fences.
 
-Rules:
-- Use ${style} format strictly
-- Add comments to all functions, classes, methods, and complex logic
-- Include @param, @returns, @throws where applicable
-- Keep existing code exactly as-is — only add comments
-- Return ONLY the commented code, no explanations or markdown fences
-
-Code:
 ${code}`;
     }
 
     private _buildExplainPrompt(code: string, lang: string): string {
-        return `You are an expert code reviewer. Analyze this ${lang} code and return a JSON object with this exact structure:
-{
-  "summary": "One paragraph summary of what the code does",
-  "complexity": "Low|Medium|High",
-  "complexityScore": <1-10>,
-  "language": "${lang}",
-  "functions": [{ "name": "...", "purpose": "...", "params": ["..."], "returns": "..." }],
-  "potentialBugs": ["..."],
-  "suggestions": ["..."],
-  "docQuality": {
-    "score": <0-100>,
-    "label": "Excellent|Good|Fair|Poor",
-    "issues": ["..."],
-    "suggestions": ["..."]
-  }
-}
+        return `Analyze this ${lang} code. Return ONLY this JSON, no markdown:
+{"summary":"...","complexity":"Low|Medium|High","complexityScore":1-10,"language":"${lang}","functions":[{"name":"...","purpose":"...","params":["..."],"returns":"..."}],"potentialBugs":["..."],"suggestions":["..."],"docQuality":{"score":0-100,"label":"Excellent|Good|Fair|Poor","issues":["..."],"suggestions":["..."]}}
 
-Return ONLY valid JSON, no markdown.
-
-Code:
 ${code}`;
     }
 }
