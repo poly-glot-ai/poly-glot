@@ -13,13 +13,14 @@
   'use strict';
 
   /* ── Constants ─────────────────────────────────────────── */
-  const WEB3_KEY       = '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d'; // registered to hwmoses2@icloud.com
+  const WEB3_KEY       = '6c8b494a-b8eb-4c6b-ac68-4481e9845530'; // Poly-Glot Pro Waitlist — hwmoses2@icloud.com
   const NOTIFY_EMAIL   = 'hwmoses2@icloud.com';
   const LS_JOINED      = 'pg_waitlist_joined';
   const LS_DISMISSED   = 'pg_waitlist_dismissed';
   const LS_COUNT       = 'pg_waitlist_count';
   const LS_EMAIL       = 'pg_waitlist_email';
   const LS_USAGE       = 'pg_feature_usage';
+  const LS_SIGNUPS     = 'pg_waitlist_signups'; // full signup log
 
   /* Seed count — honest, starts at 0 */
   const SEED_COUNT     = 0;
@@ -31,6 +32,135 @@
     localStorage.removeItem(LS_COUNT);
     localStorage.setItem(LS_COUNT_VER, COUNT_VER);
   }
+
+  /* ── Signup Tracker ────────────────────────────────────── */
+  const SignupTracker = {
+    /**
+     * Save a signup record to localStorage
+     */
+    save(data) {
+      try {
+        const signups = this.getAll();
+        const record = {
+          id:        Date.now(),
+          ts:        new Date().toISOString(),
+          name:      data.name      || '',
+          email:     data.email     || '',
+          use_case:  data.use_case  || '',
+          language:  data.language  || '',
+          gen_count: data.gen_count || 0,
+          source:    data.source    || '',
+        };
+        signups.push(record);
+        localStorage.setItem(LS_SIGNUPS, JSON.stringify(signups));
+        return record;
+      } catch (e) { return null; }
+    },
+
+    /**
+     * Get all signups stored in this browser
+     */
+    getAll() {
+      try {
+        return JSON.parse(localStorage.getItem(LS_SIGNUPS) || '[]');
+      } catch (e) { return []; }
+    },
+
+    /**
+     * Count signups
+     */
+    count() {
+      return this.getAll().length;
+    },
+
+    /**
+     * Format all signups as a plain-text summary for email
+     */
+    toEmailBody() {
+      const signups = this.getAll();
+      if (!signups.length) return 'No signups recorded in this browser session.';
+      let body = '🦜 Poly-Glot Pro Waitlist — Full Signup List\n';
+      body += '═══════════════════════════════════════════\n\n';
+      signups.forEach((s, i) => {
+        body += `#${i + 1}  ${s.name || '(no name)'} <${s.email}>\n`;
+        body += `    Use Case:  ${s.use_case  || 'not specified'}\n`;
+        body += `    Language:  ${s.language  || 'unknown'}\n`;
+        body += `    Gen Count: ${s.gen_count}\n`;
+        body += `    Source:    ${s.source}\n`;
+        body += `    Signed up: ${s.ts}\n\n`;
+      });
+      body += `═══════════════════════════════════════════\n`;
+      body += `Total: ${signups.length} signup(s)\n`;
+      body += `Exported: ${new Date().toUTCString()}\n`;
+      return body;
+    },
+
+    /**
+     * Email the full list to Harold via Web3Forms
+     */
+    emailListToHarold() {
+      const body  = this.toEmailBody();
+      const count = this.count();
+      const fd    = new FormData();
+      fd.append('access_key', WEB3_KEY);
+      fd.append('subject',    '🦜 Poly-Glot Waitlist Export — ' + count + ' signup(s)');
+      fd.append('from_name',  'Poly-Glot Waitlist Tracker');
+      fd.append('replyto',    NOTIFY_EMAIL);
+      fd.append('name',       'Poly-Glot System');
+      fd.append('email',      NOTIFY_EMAIL);
+      fd.append('message',    body);
+
+      return fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            console.log('%c🦜 Waitlist export emailed to ' + NOTIFY_EMAIL, 'color:#10b981;font-weight:bold');
+          } else {
+            /* Fallback: open mailto */
+            const subj = encodeURIComponent('🦜 Poly-Glot Waitlist Export — ' + count + ' signup(s)');
+            const mbody = encodeURIComponent(body);
+            window.open('mailto:' + NOTIFY_EMAIL + '?subject=' + subj + '&body=' + mbody);
+          }
+          return d;
+        })
+        .catch(() => {
+          const subj  = encodeURIComponent('🦜 Poly-Glot Waitlist Export');
+          const mbody = encodeURIComponent(body);
+          window.open('mailto:' + NOTIFY_EMAIL + '?subject=' + subj + '&body=' + mbody);
+        });
+    },
+
+    /**
+     * Export signups as a downloadable CSV file
+     */
+    exportCSV() {
+      const signups = this.getAll();
+      if (!signups.length) { alert('No signups to export yet.'); return; }
+      const headers = ['#','Timestamp','Name','Email','Use Case','Language','Gen Count','Source'];
+      const rows    = signups.map((s, i) => [
+        i + 1,
+        s.ts,
+        '"' + (s.name     || '').replace(/"/g, '""') + '"',
+        s.email,
+        '"' + (s.use_case || '').replace(/"/g, '""') + '"',
+        s.language  || '',
+        s.gen_count || 0,
+        s.source    || '',
+      ]);
+      const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'poly-glot-waitlist-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      console.log('%c🦜 CSV downloaded: ' + signups.length + ' signups', 'color:#10b981;font-weight:bold');
+    }
+  };
+
+  /* Expose tracker publicly for console access */
+  window.PolyGlotWaitlistTracker = SignupTracker;
 
   /* ── Utilities ─────────────────────────────────────────── */
   function getCount() {
@@ -542,6 +672,16 @@
     localStorage.setItem(LS_EMAIL, email);
     FeatureUsage.record('waitlist_joined', useCase || 'unspecified');
 
+    /* Track full signup record */
+    SignupTracker.save({
+      name:      name,
+      email:     email,
+      use_case:  useCase,
+      language:  FeatureUsage.topLanguage() || 'unknown',
+      gen_count: (FeatureUsage.get()['generate_comments'] || {}).count || 0,
+      source:    'pro_waitlist_modal',
+    });
+
     /* Increment counter */
     const newCount = incrementCount();
     updateCountDisplays(newCount);
@@ -754,6 +894,7 @@
           localStorage.setItem(LS_EMAIL, email);
           FeatureUsage.record('waitlist_joined', 'inline_section');
           ga('waitlist_joined', { source: 'inline_section' });
+          SignupTracker.save({ email: email, source: 'inline_section' });
 
           if (successEl) {
             successEl.innerHTML = `🎉 You're in! We'll email <strong>${escapeHtml(email)}</strong> when Pro launches.`;
@@ -772,6 +913,7 @@
           const newCount = incrementCount();
           updateCountDisplays(newCount);
           ga('waitlist_joined', { source: 'inline_section', offline: true });
+          SignupTracker.save({ email: email, source: 'inline_section_offline' });
           if (successEl) {
             successEl.innerHTML = `🎉 You're in! We'll email <strong>${escapeHtml(email)}</strong> when Pro launches.`;
             successEl.style.display = 'block';
@@ -792,10 +934,29 @@
 
   /* ── Public API ────────────────────────────────────────── */
   window.PolyGlotWaitlist = {
-    open:    openWaitlistModal,
-    close:   closeWaitlistModal,
-    usage:   FeatureUsage,
+    open:        openWaitlistModal,
+    close:       closeWaitlistModal,
+    usage:       FeatureUsage,
+    tracker:     SignupTracker,
+    emailList:   () => SignupTracker.emailListToHarold(),
+    exportCSV:   () => SignupTracker.exportCSV(),
+    listSignups: () => {
+      const s = SignupTracker.getAll();
+      console.table(s);
+      return s;
+    },
   };
+
+  /* ── Console Tips ──────────────────────────────────────── */
+  function printConsoleTips() {
+    console.log('%c🦜 Poly-Glot Waitlist — Owner Commands', 'color:#a78bfa;font-size:14px;font-weight:bold;');
+    console.log('%c─────────────────────────────────────────', 'color:#4b5563');
+    console.log('%c PolyGlotWaitlist.listSignups()  %c← view all signups in a table',   'color:#7dd3fc;font-weight:600', 'color:#64748b');
+    console.log('%c PolyGlotWaitlist.emailList()    %c← email full list to hwmoses2@icloud.com', 'color:#7dd3fc;font-weight:600', 'color:#64748b');
+    console.log('%c PolyGlotWaitlist.exportCSV()    %c← download signups as .csv file', 'color:#7dd3fc;font-weight:600', 'color:#64748b');
+    console.log('%c─────────────────────────────────────────', 'color:#4b5563');
+    console.log('%c Signups in this browser: ' + SignupTracker.count(), 'color:#10b981;font-weight:600');
+  }
 
   /* ── Boot ──────────────────────────────────────────────── */
   function init() {
@@ -804,6 +965,7 @@
     addHeaderButton();
     addInlineSection();
     attachAppHooks();
+    printConsoleTips();
 
     /* Periodic count pulse every 45–90 s (simulates live activity) */
     if (!hasJoined()) {
