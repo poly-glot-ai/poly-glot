@@ -34,6 +34,24 @@ export default {
       return handleCliPing(request, env, ctx);
     }
 
+    // ── Stats endpoint (owner only) ───────────────────────────────────────────
+    if (request.method === 'GET' && url.pathname === '/stats') {
+      const secret = url.searchParams.get('secret');
+      if (secret !== STATS_SECRET) {
+        return corsResponse(401, { error: 'unauthorized' });
+      }
+      const totalCommands  = parseInt(await env.MILESTONES.get('total_commands') || '0', 10);
+      const lastMilestone  = parseInt(await env.MILESTONES.get('last_milestone') || '0', 10);
+      const next           = nextMilestone(totalCommands);
+      return corsResponse(200, {
+        total_commands:  totalCommands,
+        last_milestone:  lastMilestone,
+        next_milestone:  next,
+        npm_downloads:   957,   // last known npm count (manual update)
+        note:            'total_commands = real CLI runs by users who opted into telemetry'
+      });
+    }
+
     // ── Everything else → 404 ────────────────────────────────────────────────
     return corsResponse(404, { error: 'not found' });
   },
@@ -101,6 +119,7 @@ async function writeAnalytics(dataset, event) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NOTIFY_EMAIL   = 'hwmoses2@icloud.com';
+const STATS_SECRET   = 'polyglot-stats-2026';   // change this anytime
 const FROM_EMAIL     = 'milestones@poly-glot.ai';
 const FROM_NAME      = 'Poly-Glot';
 

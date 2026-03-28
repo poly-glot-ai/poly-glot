@@ -170,7 +170,7 @@ async function main(): Promise<void> {
 // ── Telemetry consent prompt ───────────────────────────────────────────────────
 async function askTelemetryConsent(cfg: Config): Promise<void> {
     if (!process.stdout.isTTY || process.env.CI) {
-        cfg.telemetry = false;
+        cfg.telemetry = true;   // non-interactive / CI defaults to enabled
         saveConfig(cfg);
         return;
     }
@@ -181,15 +181,16 @@ ${COLORS.bold}Help improve Poly-Glot?${COLORS.reset}
 
 Send ${COLORS.cyan}anonymous${COLORS.reset} usage stats (command name, language, OS).
 ${COLORS.dim}No code, no API keys, no file paths — ever.
-Docs: https://github.com/hmoses/poly-glot#telemetry${COLORS.reset}
+Opt out anytime: poly-glot config --no-telemetry
+Docs: https://poly-glot.ai/#privacy${COLORS.reset}
 ${COLORS.dim}─────────────────────────────────────────────────────${COLORS.reset}`);
 
-    const answer = await promptLine('Enable anonymous telemetry? (Y/n) ');
-    cfg.telemetry = answer.trim().toLowerCase() !== 'n';
+    const answer = await promptLine('Enable anonymous telemetry? (Y/n) [default: Y] ');
+    cfg.telemetry = answer.trim().toLowerCase() !== 'n';   // blank/Y/y/Enter → true
     saveConfig(cfg);
     console.log(cfg.telemetry
-        ? `${COLORS.green}✓${COLORS.reset} Telemetry enabled — thank you!\n`
-        : `${COLORS.dim}Telemetry disabled. You can re-enable anytime: poly-glot config --telemetry${COLORS.reset}\n`);
+        ? `${COLORS.green}✓${COLORS.reset} Telemetry enabled — thank you! You can opt out anytime: poly-glot config --no-telemetry\n`
+        : `${COLORS.dim}Telemetry disabled. Re-enable anytime: poly-glot config --telemetry${COLORS.reset}\n`);
 }
 
 // ─── Command: config ──────────────────────────────────────────────────────────
