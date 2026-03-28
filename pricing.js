@@ -15,14 +15,14 @@
      after running: node setup-lemonsqueezy.js
   ──────────────────────────────────────────────────────── */
   const CHECKOUT = {
-    pro_monthly:       'https://poly-glot.lemonsqueezy.com/checkout/buy/pro-monthly',
-    pro_yearly:        'https://poly-glot.lemonsqueezy.com/checkout/buy/pro-yearly',
-    team5_monthly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/team5-monthly',
-    team5_yearly:      'https://poly-glot.lemonsqueezy.com/checkout/buy/team5-yearly',
-    team15_monthly:    'https://poly-glot.lemonsqueezy.com/checkout/buy/team15-monthly',
-    team15_yearly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/team15-yearly',
-    enterprise_monthly:'https://poly-glot.lemonsqueezy.com/checkout/buy/enterprise-monthly',
-    enterprise_yearly: 'https://poly-glot.lemonsqueezy.com/checkout/buy/enterprise-yearly',
+    pro_monthly:       'https://poly-glot.lemonsqueezy.com/checkout/buy/1459809',
+    pro_yearly:        'https://poly-glot.lemonsqueezy.com/checkout/buy/1459821',
+    team5_monthly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/1459834',
+    team5_yearly:      'https://poly-glot.lemonsqueezy.com/checkout/buy/1459831',
+    team15_monthly:    'https://poly-glot.lemonsqueezy.com/checkout/buy/1459834',
+    team15_yearly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/1459831',
+    enterprise_monthly:'#',
+    enterprise_yearly: '#',
   };
 
   const PROMO = 'EARLYBIRD3';

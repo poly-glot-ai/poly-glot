@@ -1,0 +1,39 @@
+{
+  "store_id": "329358",
+  "variants": [
+    {
+      "product": "Poly-Glot Pro Monthly",
+      "variant": "Default",
+      "id": "1459809",
+      "price": 900,
+      "interval": "month",
+      "checkout_url": "https://poly-glot.lemonsqueezy.com/checkout/buy/1459809?checkout[discount_code]=EARLYBIRD3"
+    },
+    {
+      "product": "Poly-Glot Pro Yearly",
+      "variant": "Default",
+      "id": "1459821",
+      "price": 7900,
+      "interval": "year",
+      "checkout_url": "https://poly-glot.lemonsqueezy.com/checkout/buy/1459821?checkout[discount_code]=EARLYBIRD3"
+    },
+    {
+      "product": "Poly-Glot Team Monthly",
+      "variant": "Default",
+      "id": "1459834",
+      "price": 2900,
+      "interval": "month",
+      "checkout_url": "https://poly-glot.lemonsqueezy.com/checkout/buy/1459834?checkout[discount_code]=EARLYBIRD3"
+    },
+    {
+      "product": "Poly-Glot Team Yearly",
+      "variant": "Default",
+      "id": "1459831",
+      "price": 24900,
+      "interval": "year",
+      "checkout_url": "https://poly-glot.lemonsqueezy.com/checkout/buy/1459831?checkout[discount_code]=EARLYBIRD3"
+    }
+  ],
+  "promo_code": "EARLYBIRD3",
+  "discount_id": "977965"
+}
