@@ -26,12 +26,9 @@
   const SEED_COUNT     = 0;
 
   /* Cache-bust v2: clear any stale count from previous seed (247) */
-  const LS_COUNT_VER   = 'pg_waitlist_count_ver';
-  const COUNT_VER      = '3'; /* v3: removes fake pulse timer, resets inflated counts */
-  if (localStorage.getItem(LS_COUNT_VER) !== COUNT_VER) {
-    localStorage.removeItem(LS_COUNT);
-    localStorage.setItem(LS_COUNT_VER, COUNT_VER);
-  }
+  /* Hard reset — wipe ALL waitlist count keys unconditionally */
+  localStorage.removeItem(LS_COUNT);
+  localStorage.removeItem('pg_waitlist_count_ver');
 
   /* ── Signup Tracker ────────────────────────────────────── */
   const SignupTracker = {
