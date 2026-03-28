@@ -39,6 +39,25 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
     php:   'php',        swift:'swift',      kt:  'kotlin',
 };
 
+// ─── Free tier language gate ──────────────────────────────────────────────────
+// Only Python, JavaScript, and Java are available on the free tier.
+// All other languages require a Pro subscription (coming soon).
+const FREE_LANGUAGES = ['python', 'javascript', 'java'];
+
+function assertFreeLanguage(lang: string): void {
+    const normalised = lang.toLowerCase().trim();
+    if (!FREE_LANGUAGES.includes(normalised)) {
+        const label = normalised.charAt(0).toUpperCase() + normalised.slice(1);
+        console.error(
+            `\n  \x1b[33m⚠️  ${label} is a Pro language\x1b[0m\n` +
+            `\n  Free tier supports: \x1b[36mPython · JavaScript · Java\x1b[0m` +
+            `\n  All 12 languages unlock with Poly-Glot Pro (coming soon).` +
+            `\n  Join the waitlist → \x1b[36mhttps://poly-glot.ai/#pricing\x1b[0m\n`
+        );
+        process.exit(1);
+    }
+}
+
 const COLORS = {
     reset:  '\x1b[0m',
     green:  '\x1b[32m',
@@ -290,6 +309,7 @@ async function runComment(args: string[]): Promise<void> {
     // ── stdin mode ────────────────────────────────────────────────────────────
     if (flags['--stdin']) {
         const lang = (flags['--lang'] as string) || 'javascript';
+        assertFreeLanguage(lang);
         const code = await readStdin();
         if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
 
@@ -349,6 +369,7 @@ async function runComment(args: string[]): Promise<void> {
             const rel  = path.relative(dir, file);
             const ext  = file.split('.').pop()!.toLowerCase();
             const lang = SUPPORTED_EXTENSIONS[ext] || 'javascript';
+            assertFreeLanguage(lang);
             const code = fs.readFileSync(file, 'utf8');
 
             process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
@@ -414,6 +435,7 @@ async function runComment(args: string[]): Promise<void> {
 
     const ext     = absPath.split('.').pop()!.toLowerCase();
     const lang    = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    assertFreeLanguage(lang);
     const code    = fs.readFileSync(absPath, 'utf8');
     const outPath = flags['--output'] ? path.resolve(flags['--output'] as string) : absPath;
 
@@ -491,6 +513,7 @@ async function runExplain(args: string[]): Promise<void> {
 
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    assertFreeLanguage(lang);
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
