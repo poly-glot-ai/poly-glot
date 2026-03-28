@@ -3601,3 +3601,49 @@ document.addEventListener('DOMContentLoaded', function() {
     document.removeEventListener('keydown', handleShortcut);
     document.addEventListener('keydown', handleShortcut);
 })();
+
+// ── OS-aware keyboard shortcut labels ────────────────────────────────────────
+(function () {
+    var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    if (isMac) return; // Mac is already correct — do nothing
+
+    // Map of Mac symbol → PC equivalent
+    var swap = {
+        '⌘↵':   'Ctrl+Enter',
+        '⌘⇧↵':  'Ctrl+Shift+Enter',
+        '⌘⌥↵':  'Ctrl+Alt+Enter',
+        '⌘E':   'Ctrl+E',
+        '⌘K':   'Ctrl+K',
+        '⌘Z':   'Ctrl+Z',
+    };
+
+    // Swap button kbd badges
+    document.querySelectorAll('kbd.btn-kbd').forEach(function (kbd) {
+        var txt = kbd.textContent.trim();
+        if (swap[txt]) kbd.textContent = swap[txt];
+    });
+
+    // Swap VS Code section inline kbd elements
+    var vscodeSwaps = {
+        'Cmd+Shift+/':     'Ctrl+Shift+/',
+        'Cmd+Shift+Alt+/': 'Ctrl+Shift+Alt+/',
+        'Cmd+Shift+E':     'Ctrl+Shift+E',
+        'Cmd+Shift+X':     'Ctrl+Shift+X',
+    };
+    document.querySelectorAll('kbd').forEach(function (kbd) {
+        var txt = kbd.textContent.trim();
+        if (vscodeSwaps[txt]) kbd.textContent = vscodeSwaps[txt];
+    });
+
+    // Swap button title tooltips (already show both, but clean up for PC)
+    var tooltipSwaps = {
+        'generateBtn': 'Generate AI-powered doc-comments (Ctrl+Enter)',
+        'whyBtn':      'Add inline why-comments explaining decisions & intent (Ctrl+Shift+Enter)',
+        'bothBtn':     'Add doc-comments AND why-comments in one two-pass run (Ctrl+Alt+Enter)',
+        'explainBtn':  'Get a deep analysis of your code (Ctrl+E)',
+    };
+    Object.keys(tooltipSwaps).forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.title = tooltipSwaps[id];
+    });
+})();
