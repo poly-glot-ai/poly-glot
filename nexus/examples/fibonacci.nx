@@ -1,0 +1,14 @@
+// Fibonacci Sequence in Nexus
+// Demonstrates recursion
+
+fn fib(n) {
+    if n <= 1 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+print("Fibonacci sequence (first 15 numbers):")
+for i in 0..15 {
+    print("fib(" + str(i) + ") = " + str(fib(i)))
+}
