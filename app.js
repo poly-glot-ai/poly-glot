@@ -1550,17 +1550,16 @@ function setupEventListeners() {
 // DEMO SECTION FUNCTIONALITY
 // ============================================
 
-function initializeDemo() {
-    const playBtn = document.getElementById('playDemoBtn');
-    const resetBtn = document.getElementById('resetDemoBtn');
-    const tryItBtn = document.getElementById('tryItNowBtn');
-    const demoStats = document.getElementById('demoStats');
-    const demoPanels = document.querySelectorAll('.demo-panel');
-    
-    let isPlaying = false;
-    
-    // Code snippets for typing animation
-    const beforeCode = `// calculates user age
+// ─── Per-language demo data ────────────────────────────────────────────────
+// Each entry: before code, after code, doc standard label,
+// RAG before/after scores, GEO before/after scores, and 6 metric pills.
+const DEMO_DATA = {
+    javascript: {
+        docStandard: 'JSDoc Standard',
+        ragBefore: 11, ragAfter: 89,
+        geoBefore: 9,  geoAfter: 86,
+        pills: ['📋 JSDoc Standard','🔖 @param Types','↩️ @returns Docs','💡 @example Added','⚠️ @throws Noted','📈 85% Coverage'],
+        before: `// calculates user age
 function calculateAge(birthDate) {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -1571,15 +1570,15 @@ function calculateAge(birthDate) {
         age--;
     }
     return age;
-}`;
-
-    const afterCode = `/**
- * Calculates a person's age based on their birth date
- * 
- * @param {string} birthDate - The birth date in ISO format (YYYY-MM-DD)
+}`,
+        after: `/**
+ * Calculates the age of a person from their birth date.
+ * Uses calendar-aware subtraction to handle partial years correctly.
+ *
+ * @param {string} birthDate - ISO 8601 date string (e.g. '1990-05-15')
  * @returns {number} The calculated age in years
  * @throws {Error} If birthDate is invalid or in the future
- * 
+ *
  * @example
  * const age = calculateAge('1990-05-15');
  * console.log(age); // 35 (in 2025)
@@ -1587,182 +1586,561 @@ function calculateAge(birthDate) {
 function calculateAge(birthDate) {
     const today = new Date();
     const birth = new Date(birthDate);
-    
-    if (isNaN(birth.getTime())) {
-        throw new Error('Invalid birth date format');
-    }
-    
-    if (birth > today) {
-        throw new Error('Birth date cannot be in the future');
-    }
-    
+    if (isNaN(birth.getTime())) throw new Error('Invalid birth date format');
+    if (birth > today)          throw new Error('Birth date cannot be in the future');
     let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
     return age;
-}`;
+}`
+    },
+    typescript: {
+        docStandard: 'TSDoc Standard',
+        ragBefore: 12, ragAfter: 93,
+        geoBefore: 10, geoAfter: 91,
+        pills: ['📋 TSDoc Standard','🔖 @param Types','↩️ @returns Typed','💡 @example Added','⚠️ @throws Noted','📈 90% Coverage'],
+        before: `// fetches user profile from API
+async function fetchUserProfile(userId) {
+    const resp = await fetch('/api/users/' + userId);
+    if (!resp.ok) throw new Error('not found');
+    return resp.json();
+}`,
+        after: `/**
+ * Fetches a user profile from the REST API by ID.
+ * Uses native fetch; caller is responsible for auth headers.
+ *
+ * @param userId - The unique numeric identifier for the user
+ * @returns A promise resolving to the user profile object
+ * @throws {Error} When the HTTP response is not OK (e.g. 404, 500)
+ *
+ * @example
+ * const profile = await fetchUserProfile(42);
+ * console.log(profile.name);
+ */
+async function fetchUserProfile(userId: number): Promise<UserProfile> {
+    const resp = await fetch(\`/api/users/\${userId}\`);
+    if (!resp.ok) throw new Error(\`User \${userId} not found\`);
+    return resp.json() as Promise<UserProfile>;
+}`
+    },
+    python: {
+        docStandard: 'Google Docstring',
+        ragBefore: 10, ragAfter: 94,
+        geoBefore: 8,  geoAfter: 91,
+        pills: ['📋 Google Docstring','🔖 Args: section','↩️ Returns: typed','💡 Example: block','⚠️ Raises: noted','📈 92% Coverage'],
+        before: `# compute fibonacci number
+def fibonacci(n):
+    if n < 0:
+        raise ValueError("negative input")
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)`,
+        after: `def fibonacci(n: int) -> int:
+    """Compute the nth Fibonacci number recursively.
 
-    // Function to type code line by line
-    async function typeCode(codeElement, code, speed = 30) {
-        codeElement.textContent = '';
-        const lines = code.split('\n');
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            let currentLine = '';
-            
-            // Type each character in the line
-            for (let char of line) {
-                currentLine += char;
-                codeElement.textContent = lines.slice(0, i).join('\n') + 
-                    (i > 0 ? '\n' : '') + currentLine;
-                await sleep(speed);
-            }
-            
-            // Add newline if not last line
-            if (i < lines.length - 1) {
-                codeElement.textContent += '\n';
-            }
-        }
+    Uses the mathematical definition F(n) = F(n-1) + F(n-2).
+    Note: not suitable for large n due to O(2^n) time complexity.
+
+    Args:
+        n: Index in the Fibonacci sequence (0-indexed, non-negative).
+
+    Returns:
+        The nth Fibonacci number as an integer.
+
+    Raises:
+        ValueError: If n is negative.
+
+    Example:
+        >>> fibonacci(7)
+        13
+    """
+    if n < 0:
+        raise ValueError(f"Expected non-negative int, got {n}")
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)`
+    },
+    java: {
+        docStandard: 'Javadoc Standard',
+        ragBefore: 12, ragAfter: 92,
+        geoBefore: 10, geoAfter: 88,
+        pills: ['📋 Javadoc Standard','🔖 @param Tags','↩️ @return Typed','💡 @since Added','⚠️ @throws Noted','📈 88% Coverage'],
+        before: `// reverses a string
+public static String reverseString(String input) {
+    if (input == null) throw new IllegalArgumentException("null input");
+    return new StringBuilder(input).reverse().toString();
+}`,
+        after: `/**
+ * Reverses the characters of the given string.
+ *
+ * <p>Uses {@link StringBuilder#reverse()} for O(n) in-place reversal.
+ * Null inputs are rejected early to prevent NullPointerExceptions downstream.
+ *
+ * @param input the string to reverse; must not be {@code null}
+ * @return a new string with characters in reverse order
+ * @throws IllegalArgumentException if {@code input} is {@code null}
+ * @since 1.0
+ *
+ * <pre>
+ * reverseString("hello") // returns "olleh"
+ * reverseString("")       // returns ""
+ * </pre>
+ */
+public static String reverseString(String input) {
+    if (input == null) throw new IllegalArgumentException("Input must not be null");
+    return new StringBuilder(input).reverse().toString();
+}`
+    },
+    go: {
+        docStandard: 'GoDoc Standard',
+        ragBefore: 11, ragAfter: 87,
+        geoBefore: 9,  geoAfter: 84,
+        pills: ['📋 GoDoc Format','🔖 Param Context','↩️ Return Noted','💡 Example_() Added','⚠️ Error Handling','📈 85% Coverage'],
+        before: `// splits a slice into chunks
+func chunkSlice(s []int, size int) [][]int {
+    var chunks [][]int
+    for size < len(s) {
+        s, chunks = s[size:], append(chunks, s[0:size:size])
     }
-    
-    // Play demo animation
-    playBtn.addEventListener('click', async () => {
-        if (isPlaying) return;
-        isPlaying = true;
-        playBtn.disabled = true;
-        playBtn.textContent = '⏸️ Playing...';
-        
-        // Track demo play
-        if (window.polyglotAnalytics) {
-            window.polyglotAnalytics.trackEvent('demo_played', {
-                source: 'demo_section'
-            });
-        }
-        
-        // Get badge containers
-        const beforeIssues = demoPanels[0].querySelector('.demo-issues');
-        const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
-        
-        // Hide badges initially
-        beforeIssues.style.opacity = '0';
-        afterBenefits.style.opacity = '0';
-        
-        // Step 1: Activate "Before" panel and type code — 8ms/char (was 20ms)
-        demoPanels[0].classList.add('active');
-        const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
-        await typeCode(beforeCodeElement, beforeCode, 8);
-        
-        // Show red warning badges after code completes
-        await sleep(120);   // was 300
-        beforeIssues.style.transition = 'opacity 0.3s ease-in';
-        beforeIssues.style.opacity = '1';
-        await sleep(500);   // was 1500
-        
-        // Step 2: Activate "After" panel and type improved code — 6ms/char (was 15ms)
-        demoPanels[1].classList.add('active');
-        const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
-        await typeCode(afterCodeElement, afterCode, 6);
-        
-        // Show green success badges after code completes
-        await sleep(120);   // was 300
-        afterBenefits.style.transition = 'opacity 0.3s ease-in';
-        afterBenefits.style.opacity = '1';
-        await sleep(500);   // was 1500
-        
-        // Step 3: Show animated scores
-        demoStats.style.display = 'flex';
-        await sleep(100);   // was 200
-        await animateDemoScores();
-        await sleep(500);   // was 1500
-        
-        // Reset button
-        playBtn.textContent = '✓ Demo Complete';
-        playBtn.disabled = false;
-        resetBtn.style.display = 'inline-block';
-        isPlaying = false;
-    });
-    
-    // Reset demo
-    resetBtn.addEventListener('click', () => {
-        demoPanels.forEach(panel => panel.classList.remove('active'));
+    return append(chunks, s)
+}`,
+        after: `// ChunkSlice splits a slice of integers into sub-slices of the given size.
+// The last chunk may be smaller than size if len(s) is not evenly divisible.
+//
+// ChunkSlice panics if size is less than or equal to zero.
+//
+// Example:
+//
+//	ChunkSlice([]int{1,2,3,4,5}, 2) // [[1 2] [3 4] [5]]
+func ChunkSlice(s []int, size int) [][]int {
+    if size <= 0 {
+        panic("chunkSlice: size must be > 0")
+    }
+    var chunks [][]int
+    for size < len(s) {
+        s, chunks = s[size:], append(chunks, s[0:size:size])
+    }
+    return append(chunks, s)
+}`
+    },
+    rust: {
+        docStandard: 'Rustdoc Standard',
+        ragBefore: 10, ragAfter: 88,
+        geoBefore: 8,  geoAfter: 85,
+        pills: ['📋 Rustdoc Format','🔖 # Arguments','↩️ # Returns','💡 # Examples','⚠️ # Panics Noted','📈 87% Coverage'],
+        before: `// divides two numbers safely
+fn safe_divide(a: f64, b: f64) -> Option<f64> {
+    if b == 0.0 { None } else { Some(a / b) }
+}`,
+        after: `/// Divides \`a\` by \`b\`, returning \`None\` if \`b\` is zero.
+///
+/// Avoids floating-point division by zero by explicitly checking the divisor.
+/// Returns \`Some(result)\` on success or \`None\` when division is undefined.
+///
+/// # Arguments
+///
+/// * \`a\` - The dividend (numerator)
+/// * \`b\` - The divisor (denominator); must not be \`0.0\`
+///
+/// # Returns
+///
+/// * \`Some(f64)\` — the quotient when \`b != 0.0\`
+/// * \`None\` — when \`b == 0.0\`
+///
+/// # Examples
+///
+/// \`\`\`
+/// assert_eq!(safe_divide(10.0, 2.0), Some(5.0));
+/// assert_eq!(safe_divide(1.0, 0.0), None);
+/// \`\`\`
+fn safe_divide(a: f64, b: f64) -> Option<f64> {
+    if b == 0.0 { None } else { Some(a / b) }
+}`
+    },
+    cpp: {
+        docStandard: 'Doxygen Standard',
+        ragBefore: 11, ragAfter: 85,
+        geoBefore: 9,  geoAfter: 82,
+        pills: ['📋 Doxygen Format','🔖 @param Typed','↩️ @return Noted','💡 @code Example','⚠️ @throws Tagged','📈 83% Coverage'],
+        before: `// binary search implementation
+int binarySearch(vector<int>& arr, int target) {
+    int lo = 0, hi = arr.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}`,
+        after: `/**
+ * @brief Performs binary search on a sorted integer vector.
+ *
+ * Searches for @p target using the divide-and-conquer approach.
+ * Uses midpoint formula \`lo + (hi-lo)/2\` to prevent integer overflow.
+ *
+ * @param arr    Reference to a sorted vector of integers (ascending order)
+ * @param target The integer value to search for
+ * @return       Index of @p target in @p arr, or -1 if not found
+ *
+ * @code
+ * vector<int> v = {1, 3, 5, 7, 9};
+ * int idx = binarySearch(v, 5); // returns 2
+ * @endcode
+ */
+int binarySearch(vector<int>& arr, int target) {
+    int lo = 0, hi = arr.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}`
+    },
+    csharp: {
+        docStandard: 'XML Doc Standard',
+        ragBefore: 12, ragAfter: 91,
+        geoBefore: 10, geoAfter: 87,
+        pills: ['📋 XML Doc Tags','🔖 <param> Types','↩️ <returns> Docs','💡 <example> Added','⚠️ <exception> Tag','📈 89% Coverage'],
+        before: `// sends email notification
+public async Task SendEmailAsync(string to, string subject, string body) {
+    using var client = new SmtpClient(_host, _port);
+    var msg = new MailMessage(_from, to, subject, body);
+    await client.SendMailAsync(msg);
+}`,
+        after: `/// <summary>
+/// Sends an email notification asynchronously using the configured SMTP server.
+/// </summary>
+/// <remarks>
+/// Disposes the <see cref="SmtpClient"/> after each send to avoid connection pooling issues.
+/// Ensure <c>_host</c> and <c>_port</c> are configured before calling this method.
+/// </remarks>
+/// <param name="to">Recipient email address (RFC 5321 compliant)</param>
+/// <param name="subject">Email subject line; should not exceed 78 characters</param>
+/// <param name="body">Plain-text or HTML email body content</param>
+/// <returns>A task that completes when the email has been sent</returns>
+/// <exception cref="SmtpException">Thrown when the SMTP server is unreachable</exception>
+/// <example>
+/// <code>
+/// await SendEmailAsync("user@example.com", "Welcome!", "Thanks for signing up.");
+/// </code>
+/// </example>
+public async Task SendEmailAsync(string to, string subject, string body) {
+    using var client = new SmtpClient(_host, _port);
+    var msg = new MailMessage(_from, to, subject, body);
+    await client.SendMailAsync(msg);
+}`
+    },
+    ruby: {
+        docStandard: 'YARD Standard',
+        ragBefore: 10, ragAfter: 84,
+        geoBefore: 8,  geoAfter: 81,
+        pills: ['📋 YARD Format','🔖 @param Typed','↩️ @return Typed','💡 @example Added','⚠️ @raise Noted','📈 82% Coverage'],
+        before: `# formats currency amount
+def format_currency(amount, currency = 'USD')
+    symbol = currency == 'USD' ? '$' : currency
+    "#{symbol}#{sprintf('%.2f', amount.abs)}"
+end`,
+        after: `# Formats a numeric amount as a currency string.
+#
+# Converts the absolute value of +amount+ to a 2-decimal string prefixed
+# with the appropriate currency symbol. Negative amounts are displayed
+# as positive (use sign logic upstream if needed).
+#
+# @param amount [Numeric] The monetary value to format
+# @param currency [String] ISO 4217 currency code (default: 'USD')
+# @return [String] Formatted currency string, e.g. "$12.50"
+# @raise [ArgumentError] If +amount+ cannot be coerced to a float
+#
+# @example Basic usage
+#   format_currency(12.5)        #=> "$12.50"
+#   format_currency(9.99, 'EUR') #=> "EUR9.99"
+def format_currency(amount, currency = 'USD')
+    symbol = currency == 'USD' ? '$' : currency
+    "#{symbol}#{sprintf('%.2f', amount.abs)}"
+end`
+    },
+    php: {
+        docStandard: 'PHPDoc Standard',
+        ragBefore: 11, ragAfter: 83,
+        geoBefore: 9,  geoAfter: 80,
+        pills: ['📋 PHPDoc Format','🔖 @param Typed','↩️ @return Typed','💡 @example Added','⚠️ @throws Noted','📈 80% Coverage'],
+        before: `// sanitize user input
+function sanitizeInput($input, $maxLen = 255) {
+    $clean = trim(strip_tags($input));
+    return substr($clean, 0, $maxLen);
+}`,
+        after: `/**
+ * Sanitizes user-supplied input for safe storage or display.
+ *
+ * Strips HTML/PHP tags, trims whitespace, then truncates to \$maxLen
+ * characters. Does NOT escape for SQL — use prepared statements separately.
+ *
+ * @param string $input   Raw user input to sanitize
+ * @param int    $maxLen  Maximum character length to retain (default: 255)
+ *
+ * @return string Sanitized and truncated string
+ *
+ * @throws \\InvalidArgumentException If \$maxLen is less than 1
+ *
+ * @example
+ * $safe = sanitizeInput('<b>Hello</b> World!', 10);
+ * // Returns: "Hello Worl"
+ */
+function sanitizeInput(string $input, int $maxLen = 255): string {
+    if ($maxLen < 1) throw new \\InvalidArgumentException('maxLen must be >= 1');
+    $clean = trim(strip_tags($input));
+    return substr($clean, 0, $maxLen);
+}`
+    },
+    swift: {
+        docStandard: 'Swift Markup',
+        ragBefore: 10, ragAfter: 86,
+        geoBefore: 8,  geoAfter: 84,
+        pills: ['📋 Swift Markup','🔖 - Parameter:','↩️ - Returns:','💡 - Note: Added','⚠️ - Throws: Noted','📈 84% Coverage'],
+        before: `// clamps value between min and max
+func clamp<T: Comparable>(_ value: T, min minVal: T, max maxVal: T) -> T {
+    return Swift.max(minVal, Swift.min(maxVal, value))
+}`,
+        after: `/// Clamps a comparable value to a closed range [minVal, maxVal].
+///
+/// Returns \`minVal\` if \`value\` is below range, \`maxVal\` if above,
+/// or \`value\` itself if already within bounds. Works with any \`Comparable\` type.
+///
+/// - Parameters:
+///   - value: The value to clamp
+///   - minVal: The lower bound of the clamped range (inclusive)
+///   - maxVal: The upper bound of the clamped range (inclusive)
+/// - Returns: The clamped value within [minVal, maxVal]
+/// - Note: Behavior is undefined if \`minVal > maxVal\`.
+///
+/// - Example:
+/// \`\`\`swift
+/// clamp(15, min: 0, max: 10)  // 10
+/// clamp(-5, min: 0, max: 10)  // 0
+/// clamp(7,  min: 0, max: 10)  // 7
+/// \`\`\`
+func clamp<T: Comparable>(_ value: T, min minVal: T, max maxVal: T) -> T {
+    return Swift.max(minVal, Swift.min(maxVal, value))
+}`
+    },
+    kotlin: {
+        docStandard: 'KDoc Standard',
+        ragBefore: 11, ragAfter: 88,
+        geoBefore: 9,  geoAfter: 85,
+        pills: ['📋 KDoc Format','🔖 @param Typed','↩️ @return Noted','💡 @sample Added','⚠️ @throws Noted','📈 86% Coverage'],
+        before: `// retry a suspending block on failure
+suspend fun <T> retry(times: Int, block: suspend () -> T): T {
+    repeat(times - 1) {
+        try { return block() } catch (e: Exception) { /* ignore */ }
+    }
+    return block()
+}`,
+        after: `/**
+ * Retries a suspending [block] up to [times] attempts on any exception.
+ *
+ * Attempts execute sequentially. All exceptions from the first (times-1)
+ * attempts are swallowed. The final attempt propagates its exception to
+ * the caller, preserving the original stack trace.
+ *
+ * @param T      The return type of the suspending block
+ * @param times  Total number of attempts to make (must be >= 1)
+ * @param block  The suspending lambda to execute and retry
+ * @return       The result of the first successful invocation
+ * @throws Exception Re-throws whatever the final attempt throws
+ *
+ * @sample
+ * val result = retry(3) { fetchFromApi() }
+ */
+suspend fun <T> retry(times: Int, block: suspend () -> T): T {
+    repeat(times - 1) {
+        try { return block() } catch (e: Exception) { /* retry */ }
+    }
+    return block()
+}`
+    }
+};
+
+function initializeDemo() {
+    const playBtn    = document.getElementById('playDemoBtn');
+    const resetBtn   = document.getElementById('resetDemoBtn');
+    const tryItBtn   = document.getElementById('tryItNowBtn');
+    const demoStats  = document.getElementById('demoStats');
+    const langSelect = document.getElementById('demoDemoLang');
+    const demoPanels = document.querySelectorAll('.demo-panel');
+
+    let isPlaying = false;
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    // Return current demo data for the selected language (fallback: javascript)
+    function currentData() {
+        const lang = langSelect ? langSelect.value : 'javascript';
+        return DEMO_DATA[lang] || DEMO_DATA.javascript;
+    }
+
+    // Update "After: <DocStandard>" heading and metric pill text for selected lang
+    function applyLanguageLabels() {
+        const data = currentData();
+        const docEl = document.getElementById('demoDocStandard');
+        if (docEl) docEl.textContent = data.docStandard;
+        data.pills.forEach((text, i) => {
+            const pill = document.getElementById('metricPill' + i);
+            if (pill) pill.textContent = text;
+        });
+    }
+
+    // Reset all visual state (bars, numbers, pills, panels, code)
+    function resetDemo() {
+        demoPanels.forEach(p => p.classList.remove('active'));
         demoStats.style.display = 'none';
         resetBtn.style.display  = 'none';
-        playBtn.textContent = '▶️ Play Demo';
-        playBtn.disabled = false;
-        isPlaying = false;
-        
-        // Clear code content
-        const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
-        const afterCodeElement  = demoPanels[1].querySelector('.demo-code code');
-        beforeCodeElement.textContent = '';
-        afterCodeElement.textContent  = '';
-        
+        playBtn.textContent     = '▶️ Play Demo';
+        playBtn.disabled        = false;
+        isPlaying               = false;
+
+        // Clear typed code
+        demoPanels[0].querySelector('.demo-code code').textContent = '';
+        demoPanels[1].querySelector('.demo-code code').textContent = '';
+
         // Reset badge visibility
+        demoPanels[0].querySelector('.demo-issues').style.opacity   = '0';
+        demoPanels[1].querySelector('.demo-benefits').style.opacity = '0';
+
+        // Reset score numbers
+        ['ragBefore','ragAfter','geoBefore','geoAfter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '0';
+        });
+        // Reset deltas
+        ['ragDelta','geoDelta'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.opacity = '0';
+        });
+        ['ragDeltaNum','geoDeltaNum'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '0';
+        });
+        // Reset bars
+        ['ragBarBefore','ragBarAfter','geoBarBefore','geoBarAfter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.transition = 'none'; el.style.width = '0%'; }
+        });
+        // Reset metric pills
+        for (let i = 0; i < 6; i++) {
+            const pill = document.getElementById('metricPill' + i);
+            if (pill) pill.style.opacity = '0';
+        }
+
+        // Reapply labels for currently selected language
+        applyLanguageLabels();
+    }
+
+    // ── language change → auto-reset ─────────────────────────────────────────
+    if (langSelect) {
+        langSelect.addEventListener('change', () => {
+            resetDemo();
+        });
+    }
+
+    // ── play button ───────────────────────────────────────────────────────────
+    playBtn.addEventListener('click', async () => {
+        if (isPlaying) return;
+        isPlaying        = true;
+        playBtn.disabled = true;
+        playBtn.textContent = '⏸️ Playing...';
+
+        const data = currentData();
+
+        // Ensure labels are fresh before animation
+        applyLanguageLabels();
+
+        if (window.polyglotAnalytics) {
+            window.polyglotAnalytics.trackEvent('demo_played', {
+                source: 'demo_section',
+                language: langSelect ? langSelect.value : 'javascript'
+            });
+        }
+
         const beforeIssues  = demoPanels[0].querySelector('.demo-issues');
         const afterBenefits = demoPanels[1].querySelector('.demo-benefits');
         beforeIssues.style.opacity  = '0';
         afterBenefits.style.opacity = '0';
 
-        // Reset all score elements
-        ['ragAfter','geoAfter'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '0';
-        });
-        ['ragDelta','geoDelta'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.opacity = '0';
-        });
-        ['ragBarBefore','ragBarAfter',
-         'geoBarBefore','geoBarAfter'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) { el.style.transition = 'none'; el.style.width = '0%'; }
-        });
-        ['metricJSDoc','metricParams','metricReturns',
-         'metricExamples','metricThrows','metricCoverage'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.opacity = '0';
-        });
-        
-        // Track demo reset
-        if (window.polyglotAnalytics) {
-            window.polyglotAnalytics.trackEvent('demo_reset', {
-                source: 'demo_section'
-            });
-        }
-    });
-    
-    // Try it now - scroll to API Settings section
-    tryItBtn.addEventListener('click', () => {
-        const apiSettings = document.getElementById('commentGenerator');
-        if (apiSettings) {
-            // Use scrollIntoView for broad device support
-            apiSettings.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Step 1: Before panel + type code
+        demoPanels[0].classList.add('active');
+        await typeCode(demoPanels[0].querySelector('.demo-code code'), data.before, 8);
+        await sleep(120);
+        beforeIssues.style.transition = 'opacity 0.3s ease-in';
+        beforeIssues.style.opacity    = '1';
+        await sleep(500);
 
-            // Fallback for browsers that don't support smooth scrollIntoView
-            // (e.g. older Safari/iOS) — manual scroll with offset
-            try {
-                const rect = apiSettings.getBoundingClientRect();
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const targetY = rect.top + scrollTop - 24; // 24px breathing room
-                window.scrollTo({ top: targetY, behavior: 'smooth' });
-            } catch (e) {
-                // silent — scrollIntoView already fired above
+        // Step 2: After panel + type improved code
+        demoPanels[1].classList.add('active');
+        await typeCode(demoPanels[1].querySelector('.demo-code code'), data.after, 6);
+        await sleep(120);
+        afterBenefits.style.transition = 'opacity 0.3s ease-in';
+        afterBenefits.style.opacity    = '1';
+        await sleep(500);
+
+        // Step 3: Animated scores for this language
+        demoStats.style.display = 'flex';
+        await sleep(100);
+        await animateDemoScores(data);
+        await sleep(500);
+
+        playBtn.textContent      = '✓ Demo Complete';
+        playBtn.disabled         = false;
+        resetBtn.style.display   = 'inline-block';
+        isPlaying                = false;
+    });
+
+    // ── reset button ─────────────────────────────────────────────────────────
+    resetBtn.addEventListener('click', resetDemo);
+
+    // ── try it now ───────────────────────────────────────────────────────────
+    if (tryItBtn) {
+        tryItBtn.addEventListener('click', () => {
+            const apiSettings = document.getElementById('commentGenerator');
+            if (apiSettings) {
+                apiSettings.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                try {
+                    const rect      = apiSettings.getBoundingClientRect();
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    window.scrollTo({ top: rect.top + scrollTop - 24, behavior: 'smooth' });
+                } catch (e) { /* silent */ }
             }
-        }
+            if (window.polyglotAnalytics) {
+                window.polyglotAnalytics.trackEvent('demo_cta_clicked', {
+                    source: 'demo_section', action: 'try_it_now'
+                });
+            }
+        });
+    }
 
-        // Track CTA click
-        if (window.polyglotAnalytics) {
-            window.polyglotAnalytics.trackEvent('demo_cta_clicked', {
-                source: 'demo_section',
-                action: 'try_it_now'
-            });
+    // Apply initial labels on load
+    applyLanguageLabels();
+
+    // ── typeCode helper (defined inside scope for closure access) ─────────────
+    async function typeCode(codeElement, code, speed = 8) {
+        codeElement.textContent = '';
+        const lines = code.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            let currentLine = '';
+            for (const char of line) {
+                currentLine += char;
+                codeElement.textContent =
+                    lines.slice(0, i).join('\n') + (i > 0 ? '\n' : '') + currentLine;
+                await sleep(speed);
+            }
+            if (i < lines.length - 1) codeElement.textContent += '\n';
         }
-    });
+    }
+
+    // Apply initial labels on load (already called above; safe to remove duplication)
 }
 
 function sleep(ms) {
@@ -1802,32 +2180,49 @@ function fadeInEl(elementId, delay = 0) {
     }, delay);
 }
 
-// Animate all score sections sequentially — matches markdown.poly-glot.ai pattern
-async function animateDemoScores() {
-    // RAG: 11 → 91 (+727%)
-    animateBar('ragBarBefore', 11, 400);   // was 600
-    await sleep(150);                       // was 400
-    animateBar('ragBarAfter', 91, 800);    // was 1200
-    countUp('ragAfter', 0, 91, 800);
+// Animate all score sections sequentially using language-specific data
+// data = one entry from DEMO_DATA (ragBefore, ragAfter, geoBefore, geoAfter)
+async function animateDemoScores(data) {
+    const ragB  = data ? data.ragBefore  : 11;
+    const ragA  = data ? data.ragAfter   : 89;
+    const geoB  = data ? data.geoBefore  : 9;
+    const geoA  = data ? data.geoAfter   : 86;
+
+    // % improvement (rounded)
+    const ragDelta = Math.round(((ragA - ragB) / Math.max(ragB, 1)) * 100);
+    const geoDelta = Math.round(((geoA - geoB) / Math.max(geoB, 1)) * 100);
+
+    // ── RAG ──────────────────────────────────────────────────────────────────
+    // Set "Before" static number immediately (no animation — it's the baseline)
+    const ragBeforeEl = document.getElementById('ragBefore');
+    if (ragBeforeEl) ragBeforeEl.textContent = ragB;
+
+    animateBar('ragBarBefore', ragB, 400);
+    await sleep(150);
+    animateBar('ragBarAfter', ragA, 800);
+    countUp('ragAfter', 0, ragA, 800);
     fadeInEl('ragDelta', 600);
-    setTimeout(() => countUp('ragDeltaNum', 0, 727, 800), 150);
+    setTimeout(() => countUp('ragDeltaNum', 0, ragDelta, 800), 150);
 
-    await sleep(250);                       // was 700
+    await sleep(250);
 
-    // GEO: 9 → 84 (+833%)
-    animateBar('geoBarBefore', 9, 400);    // was 600
-    await sleep(150);                       // was 400
-    animateBar('geoBarAfter', 84, 800);    // was 1200
-    countUp('geoAfter', 0, 84, 800);
+    // ── GEO ──────────────────────────────────────────────────────────────────
+    const geoBeforeEl = document.getElementById('geoBefore');
+    if (geoBeforeEl) geoBeforeEl.textContent = geoB;
+
+    animateBar('geoBarBefore', geoB, 400);
+    await sleep(150);
+    animateBar('geoBarAfter', geoA, 800);
+    countUp('geoAfter', 0, geoA, 800);
     fadeInEl('geoDelta', 600);
-    setTimeout(() => countUp('geoDeltaNum', 0, 833, 800), 150);
+    setTimeout(() => countUp('geoDeltaNum', 0, geoDelta, 800), 150);
 
-    await sleep(300);                       // was 800
+    await sleep(300);
 
-    // Stagger metric pills — faster stagger (was 130ms each)
-    ['metricJSDoc','metricParams','metricReturns',
-     'metricExamples','metricThrows','metricCoverage'
-    ].forEach((id, i) => fadeInEl(id, i * 60));   // was 130
+    // ── Metric pills — staggered fade-in ────────────────────────────────────
+    for (let i = 0; i < 6; i++) {
+        fadeInEl('metricPill' + i, i * 60);
+    }
 }
 
 // Initialize demo when DOM is ready

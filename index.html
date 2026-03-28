@@ -879,6 +879,23 @@
                 <p class="demo-subtitle">Watch how Poly-Glot transforms inconsistent AI-generated comments into standardized documentation</p>
                 
                 <div class="demo-controls">
+                    <div class="demo-lang-wrap">
+                        <label class="demo-lang-label" for="demoDemoLang">Language:</label>
+                        <select id="demoDemoLang" class="demo-lang-select">
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="go">Go</option>
+                            <option value="rust">Rust</option>
+                            <option value="cpp">C++</option>
+                            <option value="csharp">C#</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="php">PHP</option>
+                            <option value="swift">Swift</option>
+                            <option value="kotlin">Kotlin</option>
+                        </select>
+                    </div>
                     <button id="playDemoBtn" class="demo-btn primary">▶️ Play Demo</button>
                     <button id="resetDemoBtn" class="demo-btn">↻ Reset</button>
                 </div>
@@ -902,7 +919,7 @@
                     <div class="demo-panel">
                         <div class="demo-panel-header">
                             <span class="demo-step">Step 2</span>
-                            <h3>After: JSDoc Standard</h3>
+                            <h3>After: <span id="demoDocStandard">JSDoc Standard</span></h3>
                         </div>
                         <div class="demo-code" id="demoCodeAfter">
 <pre><code class="language-javascript"></code></pre>
@@ -920,7 +937,7 @@
                         <div class="score-title">🤖 RAG Retrieval Score</div>
                         <div class="score-meter-row">
                             <div class="score-before-wrap">
-                                <div class="score-num before" id="ragBefore">11</div>
+                                <div class="score-num before" id="ragBefore">0</div>
                                 <div class="score-sublabel">Before</div>
                                 <div class="score-bar-track">
                                     <div class="score-bar before" id="ragBarBefore" style="width:0%"></div>
@@ -945,7 +962,7 @@
                         <div class="score-title">🌐 GEO Discoverability Score</div>
                         <div class="score-meter-row">
                             <div class="score-before-wrap">
-                                <div class="score-num before" id="geoBefore">9</div>
+                                <div class="score-num before" id="geoBefore">0</div>
                                 <div class="score-sublabel">Before</div>
                                 <div class="score-bar-track">
                                     <div class="score-bar before" id="geoBarBefore" style="width:0%"></div>
@@ -965,16 +982,16 @@
 
                     <div class="score-divider"></div>
 
-                    <!-- Improvement pills -->
+                    <!-- Improvement pills — text populated dynamically per language -->
                     <div class="score-block metrics-block">
                         <div class="score-title">✨ Improvements Applied</div>
                         <div class="metrics-grid">
-                            <div class="metric-pill" id="metricJSDoc"    style="opacity:0">📋 JSDoc Standard</div>
-                            <div class="metric-pill" id="metricParams"   style="opacity:0">🔖 @param Types</div>
-                            <div class="metric-pill" id="metricReturns"  style="opacity:0">↩️ @returns Docs</div>
-                            <div class="metric-pill" id="metricExamples" style="opacity:0">💡 @example Added</div>
-                            <div class="metric-pill" id="metricThrows"   style="opacity:0">⚠️ @throws Noted</div>
-                            <div class="metric-pill" id="metricCoverage" style="opacity:0">📈 85% Coverage</div>
+                            <div class="metric-pill" id="metricPill0" style="opacity:0"></div>
+                            <div class="metric-pill" id="metricPill1" style="opacity:0"></div>
+                            <div class="metric-pill" id="metricPill2" style="opacity:0"></div>
+                            <div class="metric-pill" id="metricPill3" style="opacity:0"></div>
+                            <div class="metric-pill" id="metricPill4" style="opacity:0"></div>
+                            <div class="metric-pill" id="metricPill5" style="opacity:0"></div>
                         </div>
                     </div>
 
