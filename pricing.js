@@ -63,7 +63,7 @@
       monthly:   9,
       yearly:    79,
       desc:      'For individual developers who ship fast.',
-      cta:       'Start Pro →',
+      cta:       'Coming Soon',
       ctaClass:  'pg-cta-pro',
       ctaAction: 'checkout_pro',
       popular:   true,
@@ -87,7 +87,7 @@
       monthlyLarge: 59,
       yearlyLarge:  499,
       desc:      'For engineering teams. 5 or 15 seats.',
-      cta:       'Start Team →',
+      cta:       'Coming Soon',
       ctaClass:  'pg-cta-team',
       ctaAction: 'checkout_team',
       popular:   false,
@@ -355,13 +355,27 @@
         document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'scroll_enterprise') {
         document.querySelector('.enterprise-section')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (action === 'checkout_pro') {
-        const key = isYearly ? 'pro_yearly' : 'pro_monthly';
-        window.open(checkoutUrl(key), '_blank', 'noopener');
-      } else if (action === 'checkout_team') {
-        const prefix = teamSize === 15 ? 'team15' : 'team5';
-        const key    = prefix + (isYearly ? '_yearly' : '_monthly');
-        window.open(checkoutUrl(key), '_blank', 'noopener');
+      } else if (action === 'checkout_pro' || action === 'checkout_team') {
+        /* ── PAYMENTS COMING SOON — re-enable after LemonSqueezy approval ── */
+        const existing = document.getElementById('pg-coming-soon-toast');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.id = 'pg-coming-soon-toast';
+        toast.style.cssText = [
+          'position:fixed','bottom:32px','left:50%','transform:translateX(-50%)',
+          'background:#1a1d27','border:1px solid #7dd3fc','color:#f0f9ff',
+          'padding:14px 28px','border-radius:10px','font-size:14px','font-weight:500',
+          'box-shadow:0 8px 32px rgba(0,0,0,0.4)','z-index:99999',
+          'display:flex','align-items:center','gap:10px','white-space:nowrap'
+        ].join(';');
+        toast.innerHTML = '🔜 <span>Payments launching very soon — <strong>join the waitlist</strong> for early access!</span>';
+        toast.style.cursor = 'pointer';
+        toast.addEventListener('click', function () {
+          toast.remove();
+          if (window.PolyGlotWaitlist) window.PolyGlotWaitlist.open('pricing_toast');
+        });
+        document.body.appendChild(toast);
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
       }
     });
 
