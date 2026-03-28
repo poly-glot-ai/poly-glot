@@ -1202,54 +1202,87 @@ fun filterEven(numbers: List<Int>): List<Int> {
     }
     
     function identifyCommentLines(lines, lang) {
-        const commentLines = [];
-        let inBlockComment = false;
+        const commentLines   = [];
+        let inBlockComment   = false;   // /* ... */
+        let inTripleDouble   = false;   // Python """ docstring
+        let inTripleSingle   = false;   // Python ''' docstring
 
-        // Languages that use # for comments
-        const hashCommentLangs = new Set(['python', 'ruby']);
-        // Languages that use // for comments
-        const slashCommentLangs = new Set(['javascript', 'typescript', 'java', 'cpp', 'csharp', 'go', 'rust', 'php', 'swift', 'kotlin']);
+        const hashLangs  = new Set(['python', 'ruby']);
+        const slashLangs = new Set(['javascript','typescript','java','cpp','csharp',
+                                    'go','rust','php','swift','kotlin']);
 
         for (let i = 0; i < lines.length; i++) {
             const raw  = lines[i];
             const line = raw.trim();
 
-            // Block comment open (/** ... */)
-            if (line.startsWith('/**') || line.startsWith('/*')) {
-                inBlockComment = true;
-                commentLines.push(i);
-                if (line.includes('*/') && !line.startsWith('/**')) inBlockComment = false;
-                continue;
+            // ── /* ... */ block comments (Java, JS, C++, C#, PHP, Swift, Kotlin…) ──
+            if (!inTripleDouble && !inTripleSingle) {
+                if (line.startsWith('/**') || line.startsWith('/*')) {
+                    inBlockComment = true;
+                    commentLines.push(i);
+                    // single-line block  /* foo */
+                    if (line.includes('*/') && line.indexOf('*/') > 1) inBlockComment = false;
+                    continue;
+                }
+                if (inBlockComment) {
+                    commentLines.push(i);
+                    if (line.includes('*/')) inBlockComment = false;
+                    continue;
+                }
             }
-            if (inBlockComment) {
+
+            // ── Python / Ruby triple-quote docstrings ──────────────────────────
+            if (lang === 'python' || lang === 'ruby') {
+                // Opening """ on its own line (e.g. '    """')
+                if (!inTripleDouble && !inTripleSingle) {
+                    if (line === '"""' || line.startsWith('"""')) {
+                        inTripleDouble = true;
+                        commentLines.push(i);
+                        // Closed on same line:  """one-liner"""
+                        const rest = line.slice(3);
+                        if (rest.includes('"""')) inTripleDouble = false;
+                        continue;
+                    }
+                    if (line === "'''" || line.startsWith("'''")) {
+                        inTripleSingle = true;
+                        commentLines.push(i);
+                        const rest = line.slice(3);
+                        if (rest.includes("'''")) inTripleSingle = false;
+                        continue;
+                    }
+                } else if (inTripleDouble) {
+                    commentLines.push(i);
+                    if (line.includes('"""')) inTripleDouble = false;
+                    continue;
+                } else if (inTripleSingle) {
+                    commentLines.push(i);
+                    if (line.includes("'''")) inTripleSingle = false;
+                    continue;
+                }
+            }
+
+            // ── /// Rust / C# XML doc comments ────────────────────────────────
+            if ((lang === 'rust' || lang === 'csharp') && line.startsWith('///')) {
                 commentLines.push(i);
-                if (line.includes('*/')) inBlockComment = false;
                 continue;
             }
 
-            // Python / Ruby triple-quote docstrings
-            if (lang === 'python' && (line.startsWith('"""') || line.startsWith("'''"))) {
-                commentLines.push(i);
-                continue;
-            }
-
-            // Single-line // comment (leading or inline trailing)
-            if (slashCommentLangs.has(lang)) {
+            // ── // single-line comments ────────────────────────────────────────
+            if (slashLangs.has(lang)) {
                 if (line.startsWith('//')) {
                     commentLines.push(i);
                 } else if (raw.includes(' // ')) {
-                    // inline why-comment at end of line — highlight the whole line
-                    commentLines.push(i);
+                    commentLines.push(i);   // inline why-comment
                 }
                 continue;
             }
 
-            // Hash comment languages
-            if (hashCommentLangs.has(lang)) {
+            // ── # hash comments (Python, Ruby) ─────────────────────────────────
+            if (hashLangs.has(lang)) {
                 if (line.startsWith('#')) {
                     commentLines.push(i);
                 } else if (raw.includes(' # ')) {
-                    commentLines.push(i);
+                    commentLines.push(i);   // inline why-comment
                 }
             }
         }
@@ -1257,58 +1290,93 @@ fun filterEven(numbers: List<Int>): List<Int> {
         return commentLines;
     }
     
-    function highlightCode(line) {
-        // Simple syntax highlighting - build HTML safely
-        
-        // Comments - handle separately
-        if (line.trim().startsWith('/**') || line.trim().startsWith('*') || line.trim().startsWith('*/')) {
+    // Per-language keyword sets for syntax highlighting
+    const LANG_KEYWORDS = {
+        javascript: /\b(function|const|let|var|if|else|return|throw|new|typeof|instanceof|async|await|class|import|export|default|for|while|of|in|true|false|null|undefined)\b/g,
+        typescript: /\b(function|const|let|var|if|else|return|throw|new|typeof|instanceof|async|await|class|import|export|default|for|while|of|in|type|interface|enum|implements|extends|public|private|protected|readonly|string|number|boolean|void|null|undefined|true|false)\b/g,
+        python:     /\b(def|class|import|from|return|if|elif|else|for|while|in|not|and|or|is|raise|try|except|finally|with|as|pass|None|True|False|self|lambda|yield|async|await|global|del)\b/g,
+        java:       /\b(public|private|protected|static|final|class|interface|extends|implements|return|if|else|for|while|new|throws|throw|try|catch|finally|void|int|long|double|boolean|String|null|true|false|import|package)\b/g,
+        go:         /\b(func|package|import|var|const|type|struct|interface|return|if|else|for|range|switch|case|default|go|defer|chan|map|make|new|nil|true|false|error|string|int|bool|byte)\b/g,
+        rust:       /\b(fn|let|mut|pub|use|mod|impl|struct|enum|trait|return|if|else|for|while|match|Some|None|Ok|Err|true|false|self|Self|super|crate|type|where|async|await|move|ref|in)\b/g,
+        cpp:        /\b(int|double|float|char|bool|void|auto|const|static|class|struct|public|private|protected|return|if|else|for|while|new|delete|nullptr|true|false|namespace|using|template|typename)\b/g,
+        csharp:     /\b(public|private|protected|static|class|interface|return|if|else|for|while|new|throw|try|catch|finally|void|int|double|bool|string|null|true|false|var|using|namespace|async|await|override|virtual|abstract|decimal)\b/g,
+        ruby:       /\b(def|end|class|module|return|if|elsif|else|unless|while|for|do|begin|rescue|ensure|raise|nil|true|false|self|super|require|include|extend|attr_accessor|attr_reader|puts|p)\b/g,
+        php:        /\b(function|class|return|if|else|elseif|for|while|foreach|echo|new|throw|try|catch|finally|null|true|false|public|private|protected|static|abstract|interface|extends|implements|namespace|use)\b/g,
+        swift:      /\b(func|class|struct|enum|protocol|extension|var|let|return|if|else|guard|for|while|switch|case|default|throw|throws|try|catch|init|self|super|nil|true|false|import|override|mutating|async|await|in|where)\b/g,
+        kotlin:     /\b(fun|class|object|interface|val|var|return|if|else|when|for|while|do|try|catch|finally|throw|null|true|false|is|as|in|out|override|open|data|sealed|companion|suspend|coroutine|by|import|package|init|constructor)\b/g,
+    };
+
+    function highlightCode(line, lang) {
+        const trimmed = line.trim();
+
+        // ── Full-line comment detection (always wrap entire line) ────────────
+        // /* */ block lines
+        if (trimmed.startsWith('/**') || trimmed.startsWith('/*') ||
+            trimmed.startsWith('* ')  || trimmed === '*' || trimmed.startsWith('*/')) {
             return `<span class="code-comment">${escapeHtml(line)}</span>`;
         }
-        
-        // Build highlighted HTML by tokenizing the line
-        let html = '';
-        let remaining = line;
-        
-        // Handle inline // comments (both leading and trailing)
-        const leadingSlash = remaining.match(/^(\s*\/\/.*)$/);
-        if (leadingSlash) {
-            return `<span class="code-comment">${escapeHtml(remaining)}</span>`;
+        // /// Rust / C# XML doc comments
+        if (trimmed.startsWith('///')) {
+            return `<span class="code-comment">${escapeHtml(line)}</span>`;
         }
-        const trailingSlash = remaining.match(/^(.*?)( \/\/ .*)$/);
+        // // leading comment
+        if (trimmed.startsWith('//')) {
+            return `<span class="code-comment">${escapeHtml(line)}</span>`;
+        }
+        // # leading comment (Python, Ruby) — but not shebang confusion with PHP <?php
+        if ((lang === 'python' || lang === 'ruby') && trimmed.startsWith('#')) {
+            return `<span class="code-comment">${escapeHtml(line)}</span>`;
+        }
+        // Python / Ruby triple-quote docstring lines (entire line is comment)
+        if ((lang === 'python' || lang === 'ruby') &&
+            (trimmed === '"""' || trimmed === "'''" ||
+             trimmed.startsWith('"""') || trimmed.startsWith("'''"))) {
+            return `<span class="code-comment">${escapeHtml(line)}</span>`;
+        }
+
+        // ── Inline trailing // why-comment ──────────────────────────────────
+        const trailingSlash = line.match(/^(.*?)( \/\/ .+)$/);
         if (trailingSlash) {
-            html = highlightCodePart(trailingSlash[1]) + '<span class="code-comment">' + escapeHtml(trailingSlash[2]) + '</span>';
-            return html;
+            return highlightCodePart(trailingSlash[1], lang) +
+                   `<span class="code-comment">${escapeHtml(trailingSlash[2])}</span>`;
         }
-        // Handle inline # comments (Python / Ruby)
-        const trailingHash = remaining.match(/^(.*?)( # .*)$/);
-        if (trailingHash) {
-            html = highlightCodePart(trailingHash[1]) + '<span class="code-comment">' + escapeHtml(trailingHash[2]) + '</span>';
-            return html;
+
+        // ── Inline trailing # why-comment (Python / Ruby) ───────────────────
+        if (lang === 'python' || lang === 'ruby') {
+            const trailingHash = line.match(/^(.*?)( # .+)$/);
+            if (trailingHash) {
+                return highlightCodePart(trailingHash[1], lang) +
+                       `<span class="code-comment">${escapeHtml(trailingHash[2])}</span>`;
+            }
         }
-        
-        return highlightCodePart(remaining);
+
+        return highlightCodePart(line, lang);
     }
-    
-    function highlightCodePart(code) {
-        // Escape the whole thing first
+
+    function highlightCodePart(code, lang) {
         let html = escapeHtml(code);
-        
-        // Replace strings (look for both &quot; and &#39; from escapeHtml)
-        html = html.replace(/&#39;([^&#39;]*)&#39;/g, '<span class="code-string">&#39;$1&#39;</span>');
-        html = html.replace(/&quot;([^&quot;]*)&quot;/g, '<span class="code-string">&quot;$1&quot;</span>');
-        
-        // Replace keywords
-        html = html.replace(/\b(function|const|let|var|if|return|throw|new|isNaN|else)\b/g, 
+
+        // Strings — single and double quoted
+        html = html.replace(/&#39;([^&#39;]*)&#39;/g,
+            '<span class="code-string">&#39;$1&#39;</span>');
+        html = html.replace(/&quot;([^&quot;]*)&quot;/g,
+            '<span class="code-string">&quot;$1&quot;</span>');
+
+        // Language-specific keywords (fall back to JS set if unknown)
+        const kwRe = LANG_KEYWORDS[lang] || LANG_KEYWORDS.javascript;
+        // Clone regex to reset lastIndex each call
+        const kwReClone = new RegExp(kwRe.source, kwRe.flags);
+        html = html.replace(kwReClone,
             '<span class="code-keyword">$1</span>');
-        
-        // Replace function calls
-        html = html.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, 
+
+        // Function / method calls
+        html = html.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g,
             '<span class="code-function">$1</span>(');
-        
-        // Replace numbers
-        html = html.replace(/\b(\d+)\b/g, 
+
+        // Numbers
+        html = html.replace(/\b(\d+(?:\.\d+)?)\b/g,
             '<span class="code-number">$1</span>');
-        
+
         return html;
     }
     
