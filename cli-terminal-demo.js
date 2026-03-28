@@ -1092,65 +1092,65 @@ fun filterEven(numbers: List<Int>): List<Int> {
                         : selectedMode === 'both' ? (langData.summaryBoth || langData.summary)
                         : langData.summary;
 
-        // Step 1: Type the command
+        // Step 1: Type the command — fast (20ms/char, was 50ms)
         for (let char of command) {
             commandEl.textContent += char;
-            await sleep(50);
+            await sleep(20);
         }
-        await sleep(500);
+        await sleep(180);  // was 500
         cursorEl.classList.add('hidden');
 
-        // Step 2: Animated terminal output per mode
+        // Step 2: Animated terminal output per mode — all delays cut ~65%
         outputEl.textContent = `✨ Processing ${langData.filename}...\n`;
-        await sleep(600);
+        await sleep(200);  // was 600
 
         if (selectedMode === 'both') {
             outputEl.textContent += '📝 Pass 1 — adding doc-comments...\n';
-            await sleep(700);
+            await sleep(250);  // was 700
             outputEl.textContent += '  ✓ Doc-comments complete\n';
-            await sleep(400);
+            await sleep(150);  // was 400
             outputEl.textContent += '💬 Pass 2 — adding why-comments...\n';
-            await sleep(700);
+            await sleep(250);  // was 700
             outputEl.textContent += '  ✓ Why-comments complete\n';
-            await sleep(400);
+            await sleep(150);  // was 400
             outputEl.textContent += '✅ Both passes complete!\n';
-            await sleep(400);
+            await sleep(150);  // was 400
             outputEl.textContent += '\nSummary:\n';
-            await sleep(300);
+            await sleep(100);  // was 300
             outputEl.textContent += `  • Pass 1: ${summary.pass1}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Pass 2: ${summary.pass2}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Function: ${summary.focus}\n`;
         } else if (selectedMode === 'why') {
             outputEl.textContent += '🔍 Identifying non-obvious decisions...\n';
-            await sleep(600);
+            await sleep(200);  // was 600
             outputEl.textContent += '✅ Why-comments added successfully!\n';
-            await sleep(400);
+            await sleep(150);  // was 400
             outputEl.textContent += '\nSummary:\n';
-            await sleep(300);
+            await sleep(100);  // was 300
             outputEl.textContent += `  • Added ${summary.lines} why-comment${summary.lines > 1 ? 's' : ''}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Focus: ${summary.focus}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Style: ${summary.style}\n`;
         } else {
             outputEl.textContent += '📝 Analyzing code structure...\n';
-            await sleep(600);
+            await sleep(200);  // was 600
             outputEl.textContent += '✅ Comments added successfully!\n';
-            await sleep(400);
+            await sleep(150);  // was 400
             outputEl.textContent += '\nSummary:\n';
-            await sleep(300);
+            await sleep(100);  // was 300
             outputEl.textContent += `  • Added ${summary.blocks} documentation block${summary.blocks > 1 ? 's' : ''}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Documented function: ${summary.functions}\n`;
-            await sleep(200);
+            await sleep(80);   // was 200
             outputEl.textContent += `  • Added tags: ${summary.tags}\n`;
         }
-        await sleep(400);
+        await sleep(150);  // was 400
 
         outputEl.textContent += `\n💾 File updated: ${langData.filename}\n`;
-        await sleep(600);
+        await sleep(200);  // was 600
 
         const codeOutputSection = document.getElementById('codeOutputSection');
         const codeOutputBody    = document.getElementById('codeOutputBody');

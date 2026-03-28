@@ -1652,33 +1652,33 @@ function calculateAge(birthDate) {
         beforeIssues.style.opacity = '0';
         afterBenefits.style.opacity = '0';
         
-        // Step 1: Activate "Before" panel and type code
+        // Step 1: Activate "Before" panel and type code — 8ms/char (was 20ms)
         demoPanels[0].classList.add('active');
         const beforeCodeElement = demoPanels[0].querySelector('.demo-code code');
-        await typeCode(beforeCodeElement, beforeCode, 20);
+        await typeCode(beforeCodeElement, beforeCode, 8);
         
         // Show red warning badges after code completes
-        await sleep(300);
-        beforeIssues.style.transition = 'opacity 0.5s ease-in';
+        await sleep(120);   // was 300
+        beforeIssues.style.transition = 'opacity 0.3s ease-in';
         beforeIssues.style.opacity = '1';
-        await sleep(1500);
+        await sleep(500);   // was 1500
         
-        // Step 2: Activate "After" panel and type improved code
+        // Step 2: Activate "After" panel and type improved code — 6ms/char (was 15ms)
         demoPanels[1].classList.add('active');
         const afterCodeElement = demoPanels[1].querySelector('.demo-code code');
-        await typeCode(afterCodeElement, afterCode, 15);
+        await typeCode(afterCodeElement, afterCode, 6);
         
         // Show green success badges after code completes
-        await sleep(300);
-        afterBenefits.style.transition = 'opacity 0.5s ease-in';
+        await sleep(120);   // was 300
+        afterBenefits.style.transition = 'opacity 0.3s ease-in';
         afterBenefits.style.opacity = '1';
-        await sleep(1500);
+        await sleep(500);   // was 1500
         
         // Step 3: Show animated scores
         demoStats.style.display = 'flex';
-        await sleep(200);
+        await sleep(100);   // was 200
         await animateDemoScores();
-        await sleep(1500);
+        await sleep(500);   // was 1500
         
         // Reset button
         playBtn.textContent = '✓ Demo Complete';
@@ -1805,29 +1805,29 @@ function fadeInEl(elementId, delay = 0) {
 // Animate all score sections sequentially — matches markdown.poly-glot.ai pattern
 async function animateDemoScores() {
     // RAG: 11 → 91 (+727%)
-    animateBar('ragBarBefore', 11, 600);
-    await sleep(400);
-    animateBar('ragBarAfter', 91, 1200);
-    countUp('ragAfter', 0, 91, 1200);
-    fadeInEl('ragDelta', 900);
-    setTimeout(() => countUp('ragDeltaNum', 0, 727, 1200), 400);
+    animateBar('ragBarBefore', 11, 400);   // was 600
+    await sleep(150);                       // was 400
+    animateBar('ragBarAfter', 91, 800);    // was 1200
+    countUp('ragAfter', 0, 91, 800);
+    fadeInEl('ragDelta', 600);
+    setTimeout(() => countUp('ragDeltaNum', 0, 727, 800), 150);
 
-    await sleep(700);
+    await sleep(250);                       // was 700
 
     // GEO: 9 → 84 (+833%)
-    animateBar('geoBarBefore', 9, 600);
-    await sleep(400);
-    animateBar('geoBarAfter', 84, 1200);
-    countUp('geoAfter', 0, 84, 1200);
-    fadeInEl('geoDelta', 900);
-    setTimeout(() => countUp('geoDeltaNum', 0, 833, 1200), 400);
+    animateBar('geoBarBefore', 9, 400);    // was 600
+    await sleep(150);                       // was 400
+    animateBar('geoBarAfter', 84, 800);    // was 1200
+    countUp('geoAfter', 0, 84, 800);
+    fadeInEl('geoDelta', 600);
+    setTimeout(() => countUp('geoDeltaNum', 0, 833, 800), 150);
 
-    await sleep(800);
+    await sleep(300);                       // was 800
 
-    // Stagger metric pills
+    // Stagger metric pills — faster stagger (was 130ms each)
     ['metricJSDoc','metricParams','metricReturns',
      'metricExamples','metricThrows','metricCoverage'
-    ].forEach((id, i) => fadeInEl(id, i * 130));
+    ].forEach((id, i) => fadeInEl(id, i * 60));   // was 130
 }
 
 // Initialize demo when DOM is ready
