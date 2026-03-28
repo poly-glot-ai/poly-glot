@@ -955,6 +955,114 @@ body.pg-modal-open {
   }
 }
 
+/* ── Why vs What Callout ───────────────────────────────────────────────────── */
+.pg-why-callout {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.08), rgba(125, 211, 252, 0.06));
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-left: 4px solid #a78bfa;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 20px 0 24px;
+}
+
+.pg-why-callout-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 1rem;
+  color: #f0f9ff;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.pg-why-callout-header span {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.pg-why-callout-header em {
+  color: #a78bfa;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pg-why-callout-sub {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 16px 0;
+  padding-left: 28px;
+  line-height: 1.5;
+}
+
+.pg-why-callout-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pg-why-col {
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.pg-why-col-bad {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.pg-why-col-good {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.pg-why-col-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #94a3b8;
+}
+
+.pg-why-col code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  line-height: 1.6;
+  display: block;
+}
+
+.pg-code-comment {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.pg-why-col-good .pg-code-comment {
+  color: #86efac;
+}
+
+.pg-why-callout-note {
+  font-size: 0.83rem;
+  color: #94a3b8;
+  margin: 12px 0 0;
+  line-height: 1.5;
+  border-top: 1px solid rgba(167, 139, 250, 0.15);
+  padding-top: 12px;
+}
+
+.pg-why-callout-note strong {
+  color: #c4b5fd;
+}
+
+@media (max-width: 640px) {
+  .pg-why-callout-cols {
+    grid-template-columns: 1fr;
+  }
+  .pg-why-callout-sub {
+    padding-left: 0;
+  }
+}
+
 /* ── Privacy Trust Bar ─────────────────────────────────────────────────────── */
 .pg-privacy-bar {
   display: flex;

@@ -131,7 +131,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=215">
-    <link rel="stylesheet" href="phase1.css?v=3">
+    <link rel="stylesheet" href="phase1.css?v=4">
     <link rel="stylesheet" href="pricing.css?v=3">
 </head>
 <body>
@@ -188,12 +188,33 @@
                     </div>
                 </div>
 
+                <!-- Why vs What callout -->
+                <div class="pg-why-callout">
+                    <div class="pg-why-callout-header">
+                        <span>💬</span>
+                        <strong>Unlike other AI tools, Poly-Glot adds <em>why</em> comments — not just <em>what</em>. That's what actually makes AI smarter.</strong>
+                    </div>
+                    <p class="pg-why-callout-sub">GitHub Copilot, ChatGPT, and Cursor tell you <em>what</em> your code does. Poly-Glot explains <em>why</em> it was written that way — the trade-offs, decisions, and intent behind every line.</p>
+                    <div class="pg-why-callout-cols">
+                        <div class="pg-why-col pg-why-col-bad">
+                            <div class="pg-why-col-label">❌ What comment (useless to AI)</div>
+                            <code><span class="pg-code-comment">// Loop through users</span><br>for (const u of users) &#123;…&#125;</code>
+                        </div>
+                        <div class="pg-why-col pg-why-col-good">
+                            <div class="pg-why-col-label">✅ Why comment (AI gold)</div>
+                            <code><span class="pg-code-comment">// Skip inactive users early — reduces downstream DB calls by ~60%</span><br>for (const u of users) &#123;…&#125;</code>
+                        </div>
+                    </div>
+                    <p class="pg-why-callout-note">Why comments give AI coding assistants <strong>intent, trade-offs, and context</strong> — the exact signal needed for better autocomplete, smarter PR reviews, and accurate RAG retrieval.</p>
+                </div>
+
                 <p class="overview-text"><strong>Well-documented code is:</strong></p>
                 <ul class="overview-list">
                     <li>📚 <strong>Searchable</strong> — better RAG retrieval</li>
-                    <li>🧠 <strong>Understandable</strong> — AI grasps intent</li>
+                    <li>🧠 <strong>Understandable</strong> — AI grasps intent, not just syntax</li>
                     <li>🎯 <strong>Discoverable</strong> — GEO optimized</li>
-                    <li>🛡️ <strong>Safer</strong> — preserves critical context</li>
+                    <li>🛡️ <strong>Safer</strong> — preserves critical context across refactors</li>
+                    <li>💬 <strong>Why-first</strong> — trains better LLMs, improves fine-tune datasets</li>
                 </ul>
             </div>
 
