@@ -23,6 +23,14 @@
   /* Seed count — honest, starts at 0 */
   const SEED_COUNT     = 0;
 
+  /* Cache-bust v2: clear any stale count from previous seed (247) */
+  const LS_COUNT_VER   = 'pg_waitlist_count_ver';
+  const COUNT_VER      = '2';
+  if (localStorage.getItem(LS_COUNT_VER) !== COUNT_VER) {
+    localStorage.removeItem(LS_COUNT);
+    localStorage.setItem(LS_COUNT_VER, COUNT_VER);
+  }
+
   /* ── Utilities ─────────────────────────────────────────── */
   function getCount() {
     const stored = parseInt(localStorage.getItem(LS_COUNT), 10);
