@@ -13,7 +13,8 @@
   'use strict';
 
   /* ── Constants ─────────────────────────────────────────── */
-  const WEB3_KEY       = '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d'; // reuse existing key
+  const WEB3_KEY       = '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d'; // registered to hwmoses2@icloud.com
+  const NOTIFY_EMAIL   = 'hwmoses2@icloud.com';
   const LS_JOINED      = 'pg_waitlist_joined';
   const LS_DISMISSED   = 'pg_waitlist_dismissed';
   const LS_COUNT       = 'pg_waitlist_count';
@@ -500,7 +501,23 @@
       })
       .catch(() => {
         resetBtn(submitBtn, btnText, btnLoad);
-        /* Save locally even if submission failed */
+        /* Mailto fallback — guarantee Harold gets notified even if Web3Forms fails */
+        try {
+          const subj = encodeURIComponent('🦜 New Pro Waitlist Signup — ' + (name || email));
+          const body = encodeURIComponent(
+            '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
+            'Name:     ' + (name || 'Not provided') + '\n' +
+            'Email:    ' + email + '\n' +
+            'Use Case: ' + (useCase || 'Not specified') + '\n' +
+            'Source:   Pro Waitlist Modal (offline fallback)\n' +
+            'Time:     ' + new Date().toUTCString()
+          );
+          const mailto = 'mailto:' + NOTIFY_EMAIL + '?subject=' + subj + '&body=' + body;
+          const a = document.createElement('a');
+          a.href = mailto; a.style.display = 'none';
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a);
+        } catch (e) { /* silent */ }
         onWaitlistSuccess(email, useCase, successEl, true);
       });
   }
