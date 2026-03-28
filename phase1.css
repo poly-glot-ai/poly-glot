@@ -955,6 +955,146 @@ body.pg-modal-open {
   }
 }
 
+/* ── RAG & GEO Scores Section ─────────────────────────────────────────────── */
+.pg-rs-section {
+  padding: 48px 0 32px;
+}
+
+.pg-rs-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.pg-rs-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #f0f9ff;
+  margin: 0 0 10px;
+}
+
+.pg-rs-subtitle {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.pg-rs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pg-rs-card {
+  background: #1a1d27;
+  border: 1px solid rgba(125, 211, 252, 0.12);
+  border-radius: 12px;
+  padding: 16px 18px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.pg-rs-card:hover {
+  border-color: rgba(125, 211, 252, 0.3);
+  transform: translateY(-2px);
+}
+
+.pg-rs-lang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pg-rs-icon {
+  font-size: 1.3rem;
+}
+
+.pg-rs-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.pg-rs-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pg-rs-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pg-rs-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  width: 28px;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.pg-rs-track {
+  flex: 1;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.pg-rs-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0s;
+  width: 0%;
+}
+
+.pg-rs-score {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-rs-why {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 10px;
+  font-style: italic;
+}
+
+.pg-rs-note {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #64748b;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.5;
+  padding: 16px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+@media (max-width: 640px) {
+  .pg-rs-grid {
+    grid-template-columns: 1fr;
+  }
+  .pg-rs-title {
+    font-size: 1.3rem;
+  }
+}
+
 /* ── Why vs What Callout ───────────────────────────────────────────────────── */
 .pg-why-callout {
   background: linear-gradient(135deg, rgba(167, 139, 250, 0.08), rgba(125, 211, 252, 0.06));
