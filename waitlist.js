@@ -15,6 +15,7 @@
   /* ── Constants ─────────────────────────────────────────── */
   const WEB3_KEY       = '6c8b494a-b8eb-4c6b-ac68-4481e9845530'; // Poly-Glot Pro Waitlist — hwmoses2@icloud.com
   const NOTIFY_EMAIL   = 'hwmoses2@icloud.com';
+  const COUNTER_URL    = 'https://poly-glot.ai/api/counter';
   const LS_JOINED      = 'pg_waitlist_joined';
   const LS_DISMISSED   = 'pg_waitlist_dismissed';
   const LS_COUNT       = 'pg_waitlist_count';
@@ -160,13 +161,51 @@
   window.PolyGlotWaitlistTracker = SignupTracker;
 
   /* ── Utilities ─────────────────────────────────────────── */
-  function getCount() {
+
+  /* Fetch real global count from Cloudflare Worker */
+  function fetchGlobalCount() {
+    return fetch(COUNTER_URL + '/count')
+      .then(r => r.json())
+      .then(d => {
+        const count = typeof d.count === 'number' ? d.count : 0;
+        localStorage.setItem(LS_COUNT, count); // cache locally
+        return count;
+      })
+      .catch(() => {
+        // Fallback to local cache if API unreachable
+        const stored = parseInt(localStorage.getItem(LS_COUNT), 10);
+        return isNaN(stored) ? SEED_COUNT : stored;
+      });
+  }
+
+  /* Increment global count on Cloudflare Worker + update all displays */
+  function incrementGlobalCount() {
+    return fetch(COUNTER_URL + '/increment', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        const count = typeof d.count === 'number' ? d.count : getLocalCount() + 1;
+        localStorage.setItem(LS_COUNT, count);
+        updateCountDisplays(count);
+        return count;
+      })
+      .catch(() => {
+        // Fallback: increment locally
+        const next = getLocalCount() + 1;
+        localStorage.setItem(LS_COUNT, next);
+        updateCountDisplays(next);
+        return next;
+      });
+  }
+
+  function getLocalCount() {
     const stored = parseInt(localStorage.getItem(LS_COUNT), 10);
     return isNaN(stored) ? SEED_COUNT : stored;
   }
 
+  /* Legacy alias — used for initial render before API responds */
+  function getCount() { return getLocalCount(); }
   function incrementCount() {
-    const next = getCount() + 1;
+    const next = getLocalCount() + 1;
     localStorage.setItem(LS_COUNT, next);
     return next;
   }
@@ -679,10 +718,6 @@
       source:    'pro_waitlist_modal',
     });
 
-    /* Increment counter */
-    const newCount = incrementCount();
-    updateCountDisplays(newCount);
-
     /* GA */
     ga('waitlist_joined', { use_case: useCase, offline: !!offline });
 
@@ -704,8 +739,8 @@
       wireShareButtons();
     }
 
-    /* Update banner to joined state */
-    updateBannerToJoined(newCount);
+    /* Increment global counter + update banner */
+    incrementGlobalCount().then(newCount => updateBannerToJoined(newCount));
   }
 
   function onWaitlistError(errorEl) {
@@ -885,14 +920,11 @@
         .then(r => r.json())
         .then(data => {
           resetBtn(submitBtn, btnText, btnLoad);
-          const newCount = incrementCount();
-          updateCountDisplays(newCount);
           localStorage.setItem(LS_JOINED, '1');
           localStorage.setItem(LS_EMAIL, email);
           FeatureUsage.record('waitlist_joined', 'inline_section');
           ga('waitlist_joined', { source: 'inline_section' });
           SignupTracker.save({ email: email, source: 'inline_section' });
-
           if (successEl) {
             successEl.innerHTML = `🎉 You're in! We'll email <strong>${escapeHtml(email)}</strong> when Pro launches.`;
             successEl.style.display = 'block';
@@ -901,14 +933,12 @@
             const row = form.querySelector('.pg-wis-form-row');
             if (row) row.style.display = 'none';
           }
-          updateBannerToJoined(newCount);
+          incrementGlobalCount().then(c => updateBannerToJoined(c));
         })
         .catch(() => {
           resetBtn(submitBtn, btnText, btnLoad);
           localStorage.setItem(LS_JOINED, '1');
           localStorage.setItem(LS_EMAIL, email);
-          const newCount = incrementCount();
-          updateCountDisplays(newCount);
           ga('waitlist_joined', { source: 'inline_section', offline: true });
           SignupTracker.save({ email: email, source: 'inline_section_offline' });
           if (successEl) {
@@ -919,7 +949,7 @@
             const row = form.querySelector('.pg-wis-form-row');
             if (row) row.style.display = 'none';
           }
-          updateBannerToJoined(newCount);
+          incrementGlobalCount().then(c => updateBannerToJoined(c));
         });
     });
   }
@@ -963,6 +993,9 @@
     addInlineSection();
     attachAppHooks();
     printConsoleTips();
+
+    /* Fetch real global count and update all displays */
+    fetchGlobalCount().then(count => updateCountDisplays(count));
 
     /* No fake activity simulation — counter reflects real signups only */
   }
