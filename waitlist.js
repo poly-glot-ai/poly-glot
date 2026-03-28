@@ -254,16 +254,49 @@
     }
   };
 
+  /* ── Free tier language gating ────────────────────────── */
+  var FREE_LANGUAGES = ['python', 'javascript', 'java'];
+
+  function isProLanguage(lang) {
+    return FREE_LANGUAGES.indexOf(lang) === -1;
+  }
+
+  function gateLangSelector(sel) {
+    if (!sel) return;
+    var lastFreeVal = FREE_LANGUAGES.indexOf(sel.value) !== -1 ? sel.value : FREE_LANGUAGES[0];
+
+    sel.addEventListener('change', function () {
+      var chosen = this.value;
+      FeatureUsage.record('language_used', chosen);
+      ga('feature_language_change', { language: chosen });
+
+      if (isProLanguage(chosen) && !hasJoined()) {
+        /* Revert to last free value immediately */
+        this.value = lastFreeVal;
+        /* Show modal with language-specific message */
+        var langLabel = chosen.charAt(0).toUpperCase() + chosen.slice(1);
+        ga('language_gate_triggered', { language: chosen });
+        openWaitlistModal('language_gate');
+        /* Inject contextual subtitle after modal opens */
+        setTimeout(function () {
+          var sub = document.querySelector('#pg-waitlist-modal .pg-wm-subtitle');
+          if (sub) {
+            sub.textContent = langLabel + ' + 9 more languages unlock with Pro. Join the waitlist — 3 months free.';
+          }
+        }, 50);
+      } else if (!isProLanguage(chosen)) {
+        lastFreeVal = chosen;
+      }
+    });
+  }
+
   /* ── Hook into existing app events ────────────────────── */
   function attachAppHooks() {
-    /* Language selector (toolbar) */
-    const langSel = document.getElementById('language') || document.getElementById('cgLanguage');
-    if (langSel) {
-      langSel.addEventListener('change', function () {
-        FeatureUsage.record('language_used', this.value);
-        ga('feature_language_change', { language: this.value });
-      });
-    }
+    /* Language selector — gated to 3 free languages */
+    var mainLangSel = document.getElementById('language');
+    var cgLangSel   = document.getElementById('cgLanguage');
+    gateLangSelector(mainLangSel);
+    gateLangSelector(cgLangSel);
 
     /* Generate Comments button */
     const generateBtn = document.getElementById('generateBtn') || document.getElementById('cgGenerateBtn');
