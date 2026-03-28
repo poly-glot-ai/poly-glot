@@ -954,3 +954,68 @@ body.pg-modal-open {
     padding: 16px 18px 12px;
   }
 }
+
+/* ── Privacy Trust Bar ─────────────────────────────────────────────────────── */
+.pg-privacy-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.08), rgba(167, 139, 250, 0.08));
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin: 20px 0 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pg-privacy-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.pg-privacy-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.pg-privacy-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pg-privacy-item strong {
+  font-size: 0.9rem;
+  color: #7dd3fc;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pg-privacy-item span {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.pg-privacy-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(125, 211, 252, 0.2);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@media (max-width: 640px) {
+  .pg-privacy-bar {
+    flex-direction: column;
+    padding: 16px;
+  }
+  .pg-privacy-divider {
+    width: 100%;
+    height: 1px;
+  }
+}
