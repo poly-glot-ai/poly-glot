@@ -261,7 +261,7 @@
             <span class="pg-ea-icon">🎁</span>
             <div class="pg-ea-text">
               <strong>On the waitlist? Get 3 months free.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> at checkout — applied automatically for waitlist members.</span>
+              <span>Use code <strong>EARLYBIRD3</strong> at checkout.</span>
             </div>
           </div>
           <button class="pg-ea-cta" id="pg-ea-join-btn">Join Waitlist Free →</button>
