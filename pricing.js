@@ -202,11 +202,27 @@
       <div class="pg-pricing-inner">
 
         <div class="pg-pricing-eyebrow">
-          <span>💰 Simple, Transparent Pricing</span>
+          <span class="pg-pricing-eyebrow-live">
+            <svg class="pg-eyebrow-parrot" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <ellipse cx="14" cy="17" rx="7" ry="8" fill="#22c55e"/>
+              <ellipse cx="10" cy="18" rx="3" ry="5" fill="#16a34a" transform="rotate(-10 10 18)"/>
+              <ellipse cx="18" cy="18" rx="3" ry="5" fill="#4ade80" transform="rotate(10 18 18)"/>
+              <circle cx="14" cy="9" r="5.5" fill="#22c55e"/>
+              <circle cx="16" cy="8" r="2" fill="#fff"/>
+              <circle cx="16.4" cy="8" r="1.1" fill="#1e293b"/>
+              <path d="M12.5 10.5 Q11 12.5 12.8 13 Q14 13.4 14.5 11.5 Z" fill="#facc15"/>
+              <ellipse cx="12" cy="6.5" rx="2.5" ry="1.5" fill="#4ade80" opacity="0.6"/>
+              <path d="M11 23 Q9 26 7.5 25.5 Q9 23 11 22 Z" fill="#16a34a"/>
+              <path d="M14 24 Q13.5 27 12 26.5 Q13 24 14 23 Z" fill="#22c55e"/>
+              <path d="M17 23 Q19 26 20.5 25.5 Q19 23 17 22 Z" fill="#4ade80"/>
+            </svg>
+            <span class="pg-eyebrow-dot"></span>
+            Poly-Glot AI is Live — Subscriptions Now Open
+          </span>
         </div>
-        <h2 class="pg-pricing-heading">Start free. Grow when ready.</h2>
+        <h2 class="pg-pricing-heading">Simple pricing. Real results.</h2>
         <p class="pg-pricing-sub">
-          All plans include a free trial for waitlist members.<br>
+          Start free, no credit card required.<br>
           Upgrade, downgrade, or cancel anytime.
         </p>
 
@@ -224,16 +240,19 @@
           </span>
         </div>
 
-        <!-- Early access note -->
+        <!-- Launch promo note -->
         <div class="pg-early-access-note">
           <div class="pg-ea-left">
             <span class="pg-ea-icon">🎁</span>
             <div class="pg-ea-text">
-              <strong>Join the waitlist — get 3 months free at launch.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> when you sign up.</span>
+              <strong>Early bird offer — get 3 months free on any paid plan.</strong>
+              <span>Use code <strong>EARLYBIRD3</strong> at checkout. Limited to first 5,000 subscribers.</span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn">Join Waitlist Free →</button>
+          <button class="pg-ea-cta" id="pg-ea-join-btn" onclick="
+            var el = document.getElementById('pg-pricing-grid');
+            if(el) el.scrollIntoView({behavior:'smooth'});
+          ">Get Started Free →</button>
         </div>
 
         <!-- Cards -->
@@ -263,7 +282,7 @@
             </div>
             <div class="pg-faq-item">
               <div class="pg-faq-q">What payment methods do you accept?</div>
-              <div class="pg-faq-a">All major credit cards, PayPal, and more — via <strong>LemonSqueezy</strong>, which handles all billing and tax compliance globally.</div>
+              <div class="pg-faq-a">All major credit cards, Apple Pay, Google Pay, and more — via <strong>Stripe</strong>, which handles all billing and tax compliance globally.</div>
             </div>
             <div class="pg-faq-item">
               <div class="pg-faq-q">Do you offer refunds?</div>

@@ -146,7 +146,42 @@
                     <h1>Poly-Glot <span class="header-h1-sub">Code Comment Library</span></h1>
                 </div>
                 <div class="header-badges">
-                    <span class="live-status-badge"><span class="live-dot"></span>Now Live</span>
+                    <span class="pg-live-badge">
+                        <span class="pg-live-badge__rings">
+                            <span class="pg-live-badge__ring pg-live-badge__ring--1"></span>
+                            <span class="pg-live-badge__ring pg-live-badge__ring--2"></span>
+                            <svg class="pg-live-badge__parrot" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <!-- body -->
+                                <ellipse cx="18" cy="22" rx="9" ry="10" fill="#22c55e"/>
+                                <!-- wing highlight -->
+                                <ellipse cx="13" cy="23" rx="4" ry="6" fill="#16a34a" transform="rotate(-10 13 23)"/>
+                                <ellipse cx="23" cy="23" rx="4" ry="6" fill="#4ade80" transform="rotate(10 23 23)"/>
+                                <!-- head -->
+                                <circle cx="18" cy="11" r="7" fill="#22c55e"/>
+                                <!-- eye -->
+                                <circle cx="20.5" cy="10" r="2.5" fill="#fff"/>
+                                <circle cx="21" cy="10" r="1.3" fill="#1e293b"/>
+                                <circle cx="21.5" cy="9.4" r="0.5" fill="#fff"/>
+                                <!-- beak top -->
+                                <path d="M16.5 13 Q14.5 15.5 16.5 16 Q18 16.5 18.5 14.5 Z" fill="#facc15"/>
+                                <!-- beak bottom -->
+                                <path d="M16.5 14.5 Q15 16.5 16.8 16.8 Q18 17 18.2 15.5 Z" fill="#eab308"/>
+                                <!-- forehead flash -->
+                                <ellipse cx="16" cy="8" rx="3" ry="2" fill="#4ade80" opacity="0.6"/>
+                                <!-- tail feathers -->
+                                <path d="M14 30 Q11 34 9 33 Q11 29 14 28 Z" fill="#16a34a"/>
+                                <path d="M18 31 Q17 36 15 35 Q16 31 18 30 Z" fill="#22c55e"/>
+                                <path d="M22 30 Q25 34 27 33 Q25 29 22 28 Z" fill="#4ade80"/>
+                                <!-- feet -->
+                                <path d="M15 31 L13 33 M15 31 L15 33 M15 31 L17 33" stroke="#eab308" stroke-width="1.2" stroke-linecap="round"/>
+                                <path d="M21 31 L19 33 M21 31 L21 33 M21 31 L23 33" stroke="#eab308" stroke-width="1.2" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="pg-live-badge__text">
+                            <span class="pg-live-badge__title">Poly-Glot AI is Live!</span>
+                            <span class="pg-live-badge__sub">Subscriptions open</span>
+                        </span>
+                    </span>
                     <button class="header-signin-btn" id="headerSignInBtn" onclick="
                         if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header');
                     ">Sign In</button>

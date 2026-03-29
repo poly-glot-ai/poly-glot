@@ -116,36 +116,142 @@ body {
     border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-/* ── Live status badge ── */
-.live-status-badge {
+/* ══════════════════════════════════════════
+   Poly-Glot AI is Live! badge
+   ══════════════════════════════════════════ */
+.pg-live-badge {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    padding: 6px 14px;
-    background: rgba(16, 185, 129, 0.12);
-    color: #34d399;
-    font-size: 13px;
-    font-weight: 700;
-    border-radius: 20px;
-    border: 1.5px solid rgba(52, 211, 153, 0.35);
-    letter-spacing: 0.02em;
+    gap: 10px;
+    padding: 6px 16px 6px 6px;
+    background: linear-gradient(135deg, rgba(20, 40, 28, 0.95) 0%, rgba(15, 30, 20, 0.95) 100%);
+    border: 1.5px solid rgba(52, 211, 153, 0.45);
+    border-radius: 100px;
+    box-shadow:
+        0 0 0 1px rgba(52, 211, 153, 0.1),
+        0 2px 16px rgba(34, 197, 94, 0.2),
+        inset 0 1px 0 rgba(255,255,255,0.05);
     white-space: nowrap;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
 }
 
-.live-dot {
-    width: 8px;
-    height: 8px;
+/* shimmer sweep */
+.pg-live-badge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg,
+        transparent 20%,
+        rgba(52, 211, 153, 0.07) 50%,
+        transparent 80%);
+    background-size: 200% 100%;
+    animation: pg-badge-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes pg-badge-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* pulsing rings container */
+.pg-live-badge__rings {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pg-live-badge__ring {
+    position: absolute;
+    inset: 0;
     border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
-    animation: live-pulse 2s ease-in-out infinite;
+    border: 1.5px solid rgba(52, 211, 153, 0.5);
+    animation: pg-ring-pulse 2.4s ease-out infinite;
+}
+.pg-live-badge__ring--2 {
+    animation-delay: 1.2s;
+}
+
+@keyframes pg-ring-pulse {
+    0%   { transform: scale(0.7); opacity: 0.8; }
+    100% { transform: scale(1.7); opacity: 0; }
+}
+
+.pg-live-badge__parrot {
+    width: 36px;
+    height: 36px;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 1px 4px rgba(34, 197, 94, 0.5));
+    animation: pg-parrot-bob 3s ease-in-out infinite;
+}
+
+@keyframes pg-parrot-bob {
+    0%, 100% { transform: translateY(0px) rotate(-2deg); }
+    50%       { transform: translateY(-3px) rotate(2deg); }
+}
+
+/* text stack */
+.pg-live-badge__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    position: relative;
+    z-index: 1;
+}
+
+.pg-live-badge__title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #4ade80;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+}
+
+.pg-live-badge__sub {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(74, 222, 128, 0.65);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+/* ── Pricing eyebrow live variant ── */
+.pg-pricing-eyebrow-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: #4ade80;
+}
+
+.pg-eyebrow-parrot {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 1px 3px rgba(34,197,94,0.4));
+    animation: pg-parrot-bob 3s ease-in-out infinite;
+}
+
+.pg-eyebrow-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+    animation: pg-dot-pulse 2s ease-in-out infinite;
     flex-shrink: 0;
 }
 
-@keyframes live-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
-    50%  { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+@keyframes pg-dot-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6); }
+    50%  { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
 }
 
 .changelog-btn {
