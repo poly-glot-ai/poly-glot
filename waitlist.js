@@ -430,10 +430,7 @@
   }
 
   function updateCountDisplays(count) {
-    ['pg-banner-count', 'pg-modal-count', 'pg-wis-count'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = formatCount(count);
-    });
+    /* Counter displays removed — no developer count shown to users */
   }
 
   /* ── Notification to Harold on every new signup ─────────── */
@@ -518,7 +515,7 @@
             <span class="pg-banner-fire">🔥</span>
             <span class="pg-banner-msg">
               <strong>Poly-Glot Pro — Early Access</strong>
-              <span class="pg-banner-sub"> Join <strong id="pg-banner-count">${formatCount(count)}</strong> developers on the early-access waitlist — get 3 months free at launch.</span>
+              <span class="pg-banner-sub"> Join the early-access waitlist — get 3 months free at launch.</span>
             </span>
           </div>
           <div class="pg-banner-right">
@@ -596,7 +593,7 @@
             <span class="pg-avatar">👩‍💻</span>
           </div>
           <span class="pg-wm-social-text">
-            <strong id="pg-modal-count">${formatCount(count)}</strong> developers already on the list
+            Be among the first to get early access 🚀
           </span>
         </div>
 
@@ -923,7 +920,7 @@
         <span class="pg-banner-fire">✅</span>
         <span class="pg-banner-msg">
           <strong>You're on the Pro waitlist!</strong>
-          <span class="pg-banner-sub"> You and <strong>${formatCount(count - 1)}</strong> others will get early access + 3 months free.</span>
+          <span class="pg-banner-sub"> You'll get early access + 3 months free at launch.</span>
         </span>
       </div>
       <div class="pg-banner-right">
