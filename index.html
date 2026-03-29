@@ -147,6 +147,11 @@
                 </div>
                 <div class="header-badges">
                     <span class="version-badge">v1.5.2</span>
+                    <button class="header-pricing-cta" id="headerPricingBtn" onclick="
+                        if(typeof gtag==='function') gtag('event','header_pricing_cta_click');
+                        var el = document.getElementById('pg-pricing-section');
+                        if(el) el.scrollIntoView({behavior:'smooth'});
+                    ">⭐ See Plans</button>
                 </div>
             </div>
             <!-- ── Section 1: What is Poly-Glot Code Comment Library ── -->
