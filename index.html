@@ -1280,7 +1280,10 @@
                     </select>
                 </div>
                 <textarea name="message" id="formMessage" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
-                
+                <div class="form-row">
+                    <input type="text" name="promo_code" id="formPromo" placeholder="Promo Code (optional — e.g. EARLYBIRD3)" class="form-input" autocomplete="off" style="text-transform:uppercase;">
+                </div>
+
                 <button type="submit" class="btn-enterprise" id="submitBtn">
                     <span id="btnText">Request Enterprise Demo →</span>
                     <span id="btnLoading" style="display: none;">⏳ Sending...</span>
@@ -1289,9 +1292,7 @@
                 <p class="form-success" id="formSuccess" style="display: none;">
                     ✅ Thanks! We'll contact you within 24 hours.
                 </p>
-                <p class="form-error" id="formError" style="display: none;">
-                    ❌ Something went wrong. Please try again or email hwmoses2@icloud.com directly.
-                </p>
+                <p class="form-error" id="formError" style="display: none;"></p>
             </form>
         </div>
     </section>
@@ -1302,366 +1303,121 @@
     <script src="app.js?v=217"></script>
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
-    <script src="waitlist.js?v=10"></script>
+    <script src="waitlist.js?v=11"></script>
     <script src="pricing.js?v=5"></script>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-    <!-- Firebase Configuration & Initialization -->
+    <!-- Enterprise / Teams Form Handler
+         NOTE: Global email deduplication + EARLYBIRD3 promo tracking are handled
+         by patchEnterpriseForm() inside waitlist.js (runs before this handler via
+         capture-phase listener). This handler only handles Web3Forms submission. -->
     <script>
-        // Firebase configuration for Poly-Glot waitlist
-        var firebaseConfig = {
-            apiKey: "AIzaSyDPlaceholder_REPLACE_WITH_YOUR_KEY",
-            authDomain: "poly-glot-waitlist.firebaseapp.com",
-            projectId: "poly-glot-waitlist",
-            storageBucket: "poly-glot-waitlist.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:placeholder"
-        };
-        
-        // Initialize Firebase
-        var app;
-        var db;
-        var firebaseEnabled = false;
-        
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            firebaseEnabled = true;
-            console.log('🔥 Firebase initialized successfully');
-        } catch (error) {
-            console.warn('⚠️ Firebase initialization failed, falling back to localStorage:', error);
-            firebaseEnabled = false;
-        }
-    </script>
-
-    <!-- Enterprise Form Handler with Global Email Deduplication -->
-    <script>
-        // Global Waitlist Manager with Firebase + localStorage fallback
-        var WaitlistManager = {
-            STORAGE_KEY: 'poly_glot_waitlist_emails',
-            COLLECTION_NAME: 'waitlist',
-            
-            // Initialize and get current count
-            init: function(callback) {
-                if (firebaseEnabled) {
-                    this.getCountFromFirebase(callback);
-                } else {
-                    callback(this.getCountFromLocalStorage());
-                }
-            },
-            
-            // Get count from Firebase
-            getCountFromFirebase: function(callback) {
-                db.collection(this.COLLECTION_NAME)
-                    .get()
-                    .then(function(querySnapshot) {
-                        callback(querySnapshot.size);
-                    })
-                    .catch(function(error) {
-                        console.error('Error getting count from Firebase:', error);
-                        callback(0);
-                    });
-            },
-            
-            // Get emails from localStorage (fallback)
-            getEmailsFromLocalStorage: function() {
-                try {
-                    var emails = localStorage.getItem(this.STORAGE_KEY);
-                    return emails ? JSON.parse(emails) : [];
-                } catch (e) {
-                    console.error('Error reading waitlist emails:', e);
-                    return [];
-                }
-            },
-            
-            // Get count from localStorage (fallback)
-            getCountFromLocalStorage: function() {
-                return this.getEmailsFromLocalStorage().length;
-            },
-            
-            // Check if email exists in Firebase
-            emailExistsInFirebase: function(email, callback) {
-                var normalizedEmail = email.toLowerCase().trim();
-                db.collection(this.COLLECTION_NAME)
-                    .doc(normalizedEmail)
-                    .get()
-                    .then(function(doc) {
-                        callback(doc.exists);
-                    })
-                    .catch(function(error) {
-                        console.error('Error checking email in Firebase:', error);
-                        callback(false);
-                    });
-            },
-            
-            // Check if email exists in localStorage (fallback)
-            emailExistsInLocalStorage: function(email) {
-                var normalizedEmail = email.toLowerCase().trim();
-                var emails = this.getEmailsFromLocalStorage();
-                return emails.indexOf(normalizedEmail) !== -1;
-            },
-            
-            // Check if email exists (unified method)
-            emailExists: function(email, callback) {
-                if (firebaseEnabled) {
-                    this.emailExistsInFirebase(email, callback);
-                } else {
-                    callback(this.emailExistsInLocalStorage(email));
-                }
-            },
-            
-            // Add email to Firebase
-            addEmailToFirebase: function(email, userData, callback) {
-                var normalizedEmail = email.toLowerCase().trim();
-                var data = {
-                    email: normalizedEmail,
-                    name: userData.name || '',
-                    company: userData.company || '',
-                    teamSize: userData.teamSize || '',
-                    message: userData.message || '',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    submittedAt: new Date().toISOString()
-                };
-                
-                db.collection(this.COLLECTION_NAME)
-                    .doc(normalizedEmail)
-                    .set(data)
-                    .then(function() {
-                        // Get updated count
-                        db.collection(this.COLLECTION_NAME).get()
-                            .then(function(querySnapshot) {
-                                callback(true, querySnapshot.size);
-                            });
-                    })
-                    .catch(function(error) {
-                        console.error('Error adding email to Firebase:', error);
-                        callback(false, 0);
-                    });
-            },
-            
-            // Add email to localStorage (fallback)
-            addEmailToLocalStorage: function(email) {
-                var normalizedEmail = email.toLowerCase().trim();
-                var emails = this.getEmailsFromLocalStorage();
-                
-                if (emails.indexOf(normalizedEmail) === -1) {
-                    emails.push(normalizedEmail);
-                    try {
-                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(emails));
-                        return true;
-                    } catch (e) {
-                        console.error('Error saving email to localStorage:', e);
-                        return false;
-                    }
-                }
-                return false;
-            },
-            
-            // Add email (unified method)
-            addEmail: function(email, userData, callback) {
-                if (firebaseEnabled) {
-                    this.addEmailToFirebase(email, userData, callback);
-                } else {
-                    var added = this.addEmailToLocalStorage(email);
-                    var count = this.getCountFromLocalStorage();
-                    callback(added, count);
-                }
-            },
-            
-            // Reset counter (admin only)
-            reset: function(callback) {
-                if (firebaseEnabled) {
-                    console.warn('⚠️ Firebase reset must be done through Firebase Console for security');
-                    callback(false);
-                } else {
-                    try {
-                        localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
-                        callback(true);
-                    } catch (e) {
-                        console.error('Error resetting waitlist:', e);
-                        callback(false);
-                    }
-                }
-            }
-        };
-        
         document.addEventListener('DOMContentLoaded', function() {
             var form = document.getElementById('enterpriseForm');
-            if (!form) {
-                console.error('Form not found!');
-                return;
+            if (!form) { console.error('enterpriseForm not found'); return; }
+
+            // Auto-uppercase promo code field as user types
+            var promoInput = document.getElementById('formPromo');
+            if (promoInput) {
+                promoInput.addEventListener('input', function() {
+                    var pos = promoInput.selectionStart;
+                    promoInput.value = promoInput.value.toUpperCase();
+                    promoInput.setSelectionRange(pos, pos);
+                });
             }
-            
+
+            // Main submit handler — email dedup fires first (capture phase in waitlist.js)
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
-                var submitBtn = document.getElementById('submitBtn');
-                var btnText = document.getElementById('btnText');
+
+                var submitBtn  = document.getElementById('submitBtn');
+                var btnText    = document.getElementById('btnText');
                 var btnLoading = document.getElementById('btnLoading');
                 var successMsg = document.getElementById('formSuccess');
-                var errorMsg = document.getElementById('formError');
-                
-                // Hide previous messages
+                var errorMsg   = document.getElementById('formError');
+
                 if (successMsg) successMsg.style.display = 'none';
-                if (errorMsg) errorMsg.style.display = 'none';
-                
-                // Get form values
-                var name = document.getElementById('formName') ? document.getElementById('formName').value : '';
-                var email = document.getElementById('formEmail') ? document.getElementById('formEmail').value : '';
-                var company = document.getElementById('formCompany') ? document.getElementById('formCompany').value : '';
-                var teamSize = document.getElementById('formTeamSize') ? document.getElementById('formTeamSize').value : '';
-                var message = document.getElementById('formMessage') ? document.getElementById('formMessage').value : '';
-                
-                // Show loading state immediately
-                if (submitBtn) submitBtn.disabled = true;
-                if (btnText) btnText.style.display = 'none';
+                if (errorMsg)   errorMsg.style.display   = 'none';
+
+                var name      = (document.getElementById('formName')     || {}).value || '';
+                var email     = (document.getElementById('formEmail')    || {}).value || '';
+                var company   = (document.getElementById('formCompany')  || {}).value || '';
+                var teamSize  = (document.getElementById('formTeamSize') || {}).value || '';
+                var message   = (document.getElementById('formMessage')  || {}).value || '';
+                var promoCode = ((document.getElementById('formPromo')   || {}).value || '').trim().toUpperCase();
+
+                if (submitBtn)  submitBtn.disabled       = true;
+                if (btnText)    btnText.style.display    = 'none';
                 if (btnLoading) btnLoading.style.display = 'inline';
-                
-                // CHECK FOR DUPLICATE EMAIL FIRST (async for Firebase)
-                WaitlistManager.emailExists(email, function(exists) {
-                    if (exists) {
-                        // Email already registered - show encouraging message
-                        if (errorMsg) {
-                            errorMsg.innerHTML = '🎉 Great news! You\'re already on our VIP waitlist and will receive early access + 3 free months when we launch. Keep an eye on your inbox!';
-                            errorMsg.style.display = 'block';
-                        }
-                        
-                        // Reset button state
-                        if (submitBtn) submitBtn.disabled = false;
-                        if (btnText) btnText.style.display = 'inline';
-                        if (btnLoading) btnLoading.style.display = 'none';
-                        
-                        // Log for debugging
-                        console.log('✅ Email already registered:', email, '- VIP waitlist member');
-                        
-                        return; // Don't continue with submission
-                    }
-                    
-                    // Email is unique, proceed with submission
-                    submitToWeb3Forms();
-                });
-                
-                // Function to handle Web3Forms submission
-                function submitToWeb3Forms() {
-                    // Simple mailto fallback - ALWAYS WORKS
-                    var subject = encodeURIComponent('Poly-Glot Enterprise Demo Request from ' + company);
-                    var body = encodeURIComponent(
-                        'Name: ' + name + '\n' +
-                        'Email: ' + email + '\n' +
-                        'Company: ' + company + '\n' +
-                        'Team Size: ' + (teamSize || 'Not specified') + '\n' +
-                        'Message: ' + (message || 'No additional message')
-                    );
-                    
-                    // Try Web3Forms first, fallback to mailto
-                    var formData = new FormData();
-                    formData.append('access_key', '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
-                    formData.append('name', name);
-                    formData.append('email', email);
-                    formData.append('company', company);
-                    formData.append('team_size', teamSize || 'Not specified');
-                    formData.append('message', message || 'No additional message');
-                    formData.append('promo_eligible', '✅ VIP Waitlist - 3 Free Months');
-                    formData.append('signup_timestamp', new Date().toISOString());
-                    formData.append('subject', '🎁 VIP Waitlist Signup - ' + company + ' (' + email + ')');
-                    
-                    fetch('https://api.web3forms.com/submit', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(function(response) {
-                        return response.json();
-                    })
+
+                var isPromo     = promoCode === 'EARLYBIRD3';
+                var subjectLine = (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') +
+                                  'Teams Waitlist — ' + (company || email);
+
+                // mailto fallback (always pre-built)
+                var mailSubj = encodeURIComponent(subjectLine);
+                var mailBody = encodeURIComponent(
+                    'Name: '       + name    + '\n' +
+                    'Email: '      + email   + '\n' +
+                    'Company: '    + company + '\n' +
+                    'Team Size: '  + (teamSize  || 'Not specified') + '\n' +
+                    'Promo Code: ' + (promoCode || 'none') + '\n' +
+                    'Message: '    + (message   || 'No additional message')
+                );
+
+                var formData = new FormData();
+                formData.append('access_key',       '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
+                formData.append('name',             name);
+                formData.append('email',            email);
+                formData.append('company',          company);
+                formData.append('team_size',        teamSize  || 'Not specified');
+                formData.append('message',          message   || 'No additional message');
+                formData.append('promo_code',       promoCode || 'none');
+                formData.append('promo_perk',       isPromo   ? '3 months free' : 'standard');
+                formData.append('signup_timestamp', new Date().toISOString());
+                formData.append('subject',          subjectLine);
+
+                fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
+                    .then(function(r) { return r.json(); })
                     .then(function(data) {
+                        if (submitBtn)  submitBtn.disabled       = false;
+                        if (btnText)    btnText.style.display    = 'inline';
+                        if (btnLoading) btnLoading.style.display = 'none';
+
                         if (data.success) {
-                            // Add email to waitlist ONLY after successful Web3Forms submission
-                            var userData = {
-                                name: name,
-                                company: company,
-                                teamSize: teamSize,
-                                message: message
-                            };
-                            
-                            WaitlistManager.addEmail(email, userData, function(added, count) {
-                                // Reset button state
-                                if (submitBtn) submitBtn.disabled = false;
-                                if (btnText) btnText.style.display = 'inline';
-                                if (btnLoading) btnLoading.style.display = 'none';
-                                
-                                // Success!
-                                form.reset();
-                                if (successMsg) {
-                                    successMsg.innerHTML = '🎉 Welcome to the VIP waitlist! You\'ll receive early access + 3 free months when we launch. Check your email soon!';
-                                    successMsg.style.display = 'block';
-                                }
-                                
-                                // Track in Google Analytics
-                                if (typeof gtag !== 'undefined') {
-                                    gtag('event', 'waitlist_signup', {
-                                        'event_category': 'Waitlist',
-                                        'event_label': 'VIP Early Access',
-                                        'company': company
-                                    });
-                                }
-                                
-                                // Hide success message after 10 seconds
-                                setTimeout(function() {
-                                    if (successMsg) {
-                                        successMsg.style.display = 'none';
-                                    }
-                                }, 10000);
-                                
-                                // Log for debugging (includes promo eligibility)
-                                console.log('✅ VIP Waitlist signup successful!');
-                                console.log('📧 Email sent to hwmoses2@icloud.com');
-                                console.log('🎁 Promo eligible:', { name: name, email: email, company: company });
-                                console.log('💾 Stored securely for 3-month promo tracking');
-                            });
+                            form.reset();
+                            if (successMsg) {
+                                successMsg.innerHTML = isPromo
+                                    ? '🎉 You\'re on the VIP list + <strong>EARLYBIRD3</strong> is saved — enjoy <strong>3 months free</strong> at launch! We\'ll be in touch within 24 hours. 🚀'
+                                    : '🎉 You\'re on the VIP waitlist! We\'ll reach out within 24 hours.';
+                                successMsg.style.display = 'block';
+                            }
+                            if (typeof gtag !== 'undefined') {
+                                gtag('event', 'teams_waitlist_signup', {
+                                    event_category: 'Waitlist',
+                                    event_label:    isPromo ? 'EARLYBIRD3' : 'standard',
+                                    company:        company
+                                });
+                            }
+                            setTimeout(function() {
+                                if (successMsg) successMsg.style.display = 'none';
+                            }, 12000);
+                            console.log('✅ Teams form submitted to hwmoses2@icloud.com. Promo:', promoCode || 'none');
                         } else {
                             throw new Error(data.message || 'Submission failed');
                         }
                     })
-                    .catch(function(error) {
-                        // Web3Forms failed - use mailto fallback
-                        console.warn('Web3Forms failed, opening email client as fallback');
-                        console.error('Error:', error);
-                        
-                        // Open email client
-                        window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + subject + '&body=' + body;
-                        
-                        // Reset button state
-                        if (submitBtn) submitBtn.disabled = false;
-                        if (btnText) btnText.style.display = 'inline';
+                    .catch(function(err) {
+                        if (submitBtn)  submitBtn.disabled       = false;
+                        if (btnText)    btnText.style.display    = 'inline';
                         if (btnLoading) btnLoading.style.display = 'none';
-                        
-                        // Show success message (email client opened)
+                        window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + mailSubj + '&body=' + mailBody;
                         if (successMsg) {
-                            successMsg.innerHTML = '✅ Opening your email client... Please send the pre-filled message.';
+                            successMsg.innerHTML = '✅ Opening your email client — please send the pre-filled message.';
                             successMsg.style.display = 'block';
-                            
-                            setTimeout(function() {
-                                successMsg.style.display = 'none';
-                                successMsg.innerHTML = '✅ Thanks! We\'ll contact you within 24 hours.';
-                            }, 8000);
+                            setTimeout(function() { successMsg.style.display = 'none'; }, 8000);
                         }
+                        console.warn('Teams form Web3Forms fallback triggered', err);
                     });
-                }
-            });
-            
-            // Expose WaitlistManager to window for debugging/admin
-            window.WaitlistManager = WaitlistManager;
-            
-            // Log current waitlist count on page load
-            WaitlistManager.init(function(count) {
-                console.log('📊 Current waitlist:', count, 'developers');
-                if (firebaseEnabled) {
-                    console.log('🔥 Using Firebase for global waitlist tracking');
-                } else {
-                    console.log('💾 Using localStorage fallback (per-browser tracking)');
-                }
             });
         });
     </script>
