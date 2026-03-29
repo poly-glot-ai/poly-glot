@@ -512,7 +512,7 @@
           <span class="pg-banner-dot"></span>
           <span class="pg-banner-msg">
             <strong>Poly-Glot AI is Live!</strong>
-            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — limited to first 50 subscribers.</span>
+            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — <span id="pg-banner-countdown">limited to first 50 subscribers</span>.</span>
           </span>
         </div>
         <div class="pg-banner-right">
@@ -524,6 +524,22 @@
       </div>`;
 
     document.body.insertBefore(banner, document.body.firstChild);
+
+    // Live promo countdown
+    fetch('https://poly-glot.ai/api/auth/promo-count', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el        = document.getElementById('pg-banner-countdown');
+        var remaining = data.remaining != null ? data.remaining : (data.limit - data.count);
+        if (!el) return;
+        if (remaining <= 0) {
+          banner.style.display = 'none'; // offer exhausted — hide banner
+        } else {
+          el.textContent = remaining + ' of 50 spots remaining';
+          if (remaining <= 10) el.style.color = '#f87171'; // red urgency
+        }
+      })
+      .catch(function() { /* silent — static text already shown */ });
 
     const ctaBtn = document.getElementById('pg-banner-cta-btn');
     if (ctaBtn) {

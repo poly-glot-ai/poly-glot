@@ -550,3 +550,17 @@
   .pg-faq-grid { grid-template-columns: 1fr; }
   .pg-early-access-note { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Promo countdown ── */
+.pg-promo-countdown {
+  color: #34d399;
+  font-weight: 600;
+}
+.pg-promo-countdown--urgent {
+  color: #f87171;
+  animation: pg-promo-urgent-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pg-promo-urgent-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}

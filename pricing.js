@@ -241,12 +241,12 @@
         </div>
 
         <!-- Launch promo note -->
-        <div class="pg-early-access-note">
+        <div class="pg-early-access-note" id="pg-promo-banner">
           <div class="pg-ea-left">
             <span class="pg-ea-icon">🎁</span>
             <div class="pg-ea-text">
               <strong>Early bird offer — get 3 months free on any paid plan.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> at checkout. Limited to first 50 subscribers.</span>
+              <span>Use code <strong>EARLYBIRD3</strong> at checkout. <span id="pg-promo-countdown" class="pg-promo-countdown">Loading spots…</span></span>
             </div>
           </div>
           <button class="pg-ea-cta" id="pg-ea-join-btn" onclick="
@@ -418,9 +418,43 @@
     if (yLabel) yLabel.classList.toggle('active',  isYearly);
   }
 
+  /* ── Promo countdown ────────────────────────────────────── */
+  function loadPromoCount() {
+    fetch('https://poly-glot.ai/api/auth/promo-count', { cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var banner    = document.getElementById('pg-promo-banner');
+        var countdown = document.getElementById('pg-promo-countdown');
+        if (!banner || !countdown) return;
+
+        var remaining = data.remaining != null ? data.remaining : (data.limit - data.count);
+
+        if (remaining <= 0) {
+          // Hide banner entirely — offer exhausted
+          banner.style.display = 'none';
+          return;
+        }
+
+        // Update text with live count
+        countdown.textContent = remaining + ' of 50 spots remaining.';
+        countdown.classList.add('pg-promo-countdown--live');
+
+        // Pulse urgency colours
+        if (remaining <= 10) {
+          countdown.classList.add('pg-promo-countdown--urgent');
+        }
+      })
+      .catch(function() {
+        // Network failure — show static fallback, don't break
+        var countdown = document.getElementById('pg-promo-countdown');
+        if (countdown) countdown.textContent = 'Limited spots remaining.';
+      });
+  }
+
   /* ── Init ───────────────────────────────────────────────── */
   function init() {
     renderSection();
+    loadPromoCount();
   }
 
   if (document.readyState === 'loading') {

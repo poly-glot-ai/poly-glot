@@ -411,24 +411,62 @@
   /* ─────────────────────────────────────────────
      Plan gating
   ───────────────────────────────────────────── */
-  var PAID_PLANS = ['pro', 'team', 'enterprise'];
+  var PAID_PLANS     = ['pro', 'team', 'enterprise'];
+  var FREE_LANGUAGES = ['python', 'javascript', 'java'];
 
   function applyPlanGating(plan) {
     plan = (plan || '').toLowerCase();
+    var isPaid = PAID_PLANS.indexOf(plan) !== -1;
 
-    if (PAID_PLANS.indexOf(plan) === -1) return; // free / unknown — do nothing
+    // ── Language selector — lock non-free languages for free users ──
+    var langSelect = document.getElementById('language');
+    if (langSelect) {
+      var options = langSelect.querySelectorAll('option');
+      for (var i = 0; i < options.length; i++) {
+        var opt = options[i];
+        var lang = opt.value.toLowerCase();
+        if (isPaid) {
+          // Paid: unlock everything
+          opt.disabled = false;
+          opt.textContent = opt.textContent.replace(' 🔒', '').replace(' (Pro)', '');
+        } else {
+          // Free: lock non-free languages
+          if (FREE_LANGUAGES.indexOf(lang) === -1) {
+            opt.disabled = true;
+            if (opt.textContent.indexOf('🔒') === -1) {
+              opt.textContent = opt.textContent + ' 🔒';
+            }
+          }
+        }
+      }
+      // If current selection is locked, reset to python
+      if (!isPaid && langSelect.selectedOptions[0] && langSelect.selectedOptions[0].disabled) {
+        langSelect.value = 'python';
+      }
+    }
 
-    // ── Unlock download button
+    // ── Why Comments + Both buttons — Pro only ──
+    var whyBtn  = document.getElementById('whyBtn');
+    var bothBtn = document.getElementById('bothBtn');
+    if (isPaid) {
+      if (whyBtn)  { whyBtn.disabled  = false; whyBtn.title  = 'Add inline why-comments explaining decisions & intent'; whyBtn.classList.remove('btn-locked'); }
+      if (bothBtn) { bothBtn.disabled = false; bothBtn.title = 'Add doc-comments AND why-comments in one two-pass run'; bothBtn.classList.remove('btn-locked'); }
+    } else {
+      if (whyBtn  && !whyBtn.classList.contains('btn-locked'))  { whyBtn.disabled  = true; whyBtn.title  = 'Why Comments — Pro plan required. See Plans ↑'; whyBtn.classList.add('btn-locked'); }
+      if (bothBtn && !bothBtn.classList.contains('btn-locked')) { bothBtn.disabled = true; bothBtn.title = 'Both modes — Pro plan required. See Plans ↑'; bothBtn.classList.add('btn-locked'); }
+    }
+
+    if (!isPaid) return; // rest of gating only applies to paid users
+
+    // ── Unlock download button ──
     var dlBtn = document.getElementById('cgDownloadBtn');
     if (dlBtn) {
       dlBtn.classList.remove('action-btn--paid');
       dlBtn.removeAttribute('disabled');
 
-      // Remove paid badge span if present
       var badge = dlBtn.querySelector('.paid-badge');
       if (badge) badge.parentNode.removeChild(badge);
 
-      // Wire download handler (replace any existing listeners by cloning)
       var freshBtn = dlBtn.cloneNode(true);
       dlBtn.parentNode.replaceChild(freshBtn, dlBtn);
       freshBtn.addEventListener('click', function () {
@@ -436,13 +474,10 @@
       });
     }
 
-    // ── Header plan badge + hide "See Plans" button
+    // ── Header plan badge + hide "See Plans" button ──
     var pricingBtn = document.getElementById('headerPricingBtn');
     if (pricingBtn) {
-      // Hide the "See Plans" button
       pricingBtn.style.display = 'none';
-
-      // Insert plan badge adjacent to where the button was
       if (!document.querySelector('.pg-plan-badge')) {
         var planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
         var badgeEl = document.createElement('span');
@@ -572,10 +607,13 @@
     injectStyles();
     buildModal();
 
-    // 1. Check URL params first (highest priority)
+    // 1. Apply free-tier locks immediately so UI is correct before auth resolves
+    applyPlanGating('free');
+
+    // 2. Check URL params first (highest priority)
     handleUrlParams();
 
-    // 2. If no session came from URL, try localStorage token
+    // 3. If no session came from URL, try localStorage token
     if (!_token) {
       var storedToken = localStorage.getItem(LS_TOKEN_KEY);
       if (storedToken) {
