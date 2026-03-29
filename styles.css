@@ -98,9 +98,10 @@ body {
 
 .header-badges {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     flex-shrink: 0;
+    flex-wrap: nowrap;
 }
 
 .version-badge {
@@ -1150,6 +1151,51 @@ textarea:focus {
         z-index: 100;
     }
 
+    /* Tablet: keep header in one row, slightly compact badge */
+    .header-top {
+        flex-wrap: nowrap;
+        gap: 10px;
+    }
+
+    .header-badges {
+        flex-shrink: 0;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+
+    .pg-live-badge {
+        padding: 5px 12px 5px 5px;
+        gap: 7px;
+    }
+
+    .pg-live-badge__rings {
+        width: 30px;
+        height: 30px;
+    }
+
+    .pg-live-badge__parrot {
+        width: 30px;
+        height: 30px;
+    }
+
+    .pg-live-badge__title {
+        font-size: 12px;
+    }
+
+    .pg-live-badge__sub {
+        font-size: 9px;
+    }
+
+    .header-pricing-cta {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
+    .header-signin-btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
     .header h1 {
         font-size: 20px;
         flex-wrap: wrap;
@@ -1306,24 +1352,79 @@ textarea:focus {
 /* Small mobile devices */
 @media (max-width: 480px) {
     .header {
-        padding: 12px;
+        padding: 10px 12px;
     }
 
-    .header-brand {
+    .header-top {
+        flex-wrap: nowrap;
+        align-items: center;
         gap: 8px;
     }
 
+    .header-brand {
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .header-brand h1 {
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .header-parrot {
-        height: 36px;
+        height: 32px;
         width: auto;
+        flex-shrink: 0;
+    }
+
+    .header-h1-sub {
+        display: none; /* hide "Code Comment Library" on tiny screens */
+    }
+
+    /* Badge row becomes compact on mobile */
+    .header-badges {
+        flex-shrink: 0;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+
+    /* Live badge — compact on mobile: show parrot + title only, hide subtitle */
+    .pg-live-badge {
+        padding: 4px 10px 4px 4px;
+        gap: 6px;
+    }
+    .pg-live-badge__rings {
+        width: 28px;
+        height: 28px;
+    }
+    .pg-live-badge__parrot {
+        width: 28px;
+        height: 28px;
+    }
+    .pg-live-badge__title {
+        font-size: 11px;
+    }
+    .pg-live-badge__sub {
+        display: none; /* hide "Subscriptions open" on mobile */
+    }
+
+    /* See Plans — shorter text on mobile */
+    .header-pricing-cta {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    /* Sign In — shorter on mobile */
+    .header-signin-btn {
+        padding: 6px 10px;
+        font-size: 12px;
     }
 
     .header h1 {
         font-size: 18px;
-    }
-
-    .header-h1-sub {
-        font-size: 0.6em;
     }
 
     .header-description {

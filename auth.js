@@ -376,8 +376,24 @@
 
       /* ── Locked button state ── */
       .btn-locked {
-        opacity: 0.4 !important;
+        opacity: 0.38 !important;
         cursor: not-allowed !important;
+        position: relative;
+      }
+
+      /* ── Locked CLI demo language tile ── */
+      .cli-demo-lang--locked {
+        opacity: 0.38 !important;
+        cursor: not-allowed !important;
+        pointer-events: none;
+        position: relative;
+      }
+      .cli-demo-lang--locked::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: rgba(0,0,0,0.15);
       }
     `;
     document.head.appendChild(style);
@@ -678,42 +694,89 @@
     plan = (plan || '').toLowerCase();
     var isPaid = PAID_PLANS.indexOf(plan) !== -1;
 
-    // ── Language selector — lock non-free languages for free users ──
-    var langSelect = document.getElementById('language');
-    if (langSelect) {
-      var options = langSelect.querySelectorAll('option');
-      for (var i = 0; i < options.length; i++) {
-        var opt = options[i];
-        var lang = opt.value.toLowerCase();
+    // ── Helper: lock/unlock a <select>'s options ──────────────────────
+    function gateSelect(selectId, freeValues) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      var opts = sel.querySelectorAll('option');
+      for (var i = 0; i < opts.length; i++) {
+        var opt  = opts[i];
+        var val  = opt.value.toLowerCase();
+        var free = !freeValues || freeValues.indexOf(val) !== -1;
         if (isPaid) {
-          // Paid: unlock everything
-          opt.disabled = false;
+          opt.disabled    = false;
           opt.textContent = opt.textContent.replace(' 🔒', '').replace(' (Pro)', '');
-        } else {
-          // Free: lock non-free languages
-          if (FREE_LANGUAGES.indexOf(lang) === -1) {
-            opt.disabled = true;
-            if (opt.textContent.indexOf('🔒') === -1) {
-              opt.textContent = opt.textContent + ' 🔒';
-            }
-          }
+        } else if (!free) {
+          opt.disabled = true;
+          if (opt.textContent.indexOf('🔒') === -1) opt.textContent += ' 🔒';
         }
       }
-      // If current selection is locked, reset to python
-      if (!isPaid && langSelect.selectedOptions[0] && langSelect.selectedOptions[0].disabled) {
-        langSelect.value = 'python';
+      // If selected option is now locked, reset to first free value
+      if (!isPaid && sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+        sel.value = freeValues ? freeValues[0] : sel.querySelector('option:not([disabled])').value;
       }
     }
 
-    // ── Why Comments + Both buttons — Pro only ──
-    var whyBtn  = document.getElementById('whyBtn');
-    var bothBtn = document.getElementById('bothBtn');
-    if (isPaid) {
-      if (whyBtn)  { whyBtn.disabled  = false; whyBtn.title  = 'Add inline why-comments explaining decisions & intent'; whyBtn.classList.remove('btn-locked'); }
-      if (bothBtn) { bothBtn.disabled = false; bothBtn.title = 'Add doc-comments AND why-comments in one two-pass run'; bothBtn.classList.remove('btn-locked'); }
-    } else {
-      if (whyBtn  && !whyBtn.classList.contains('btn-locked'))  { whyBtn.disabled  = true; whyBtn.title  = 'Why Comments — Pro plan required. See Plans ↑'; whyBtn.classList.add('btn-locked'); }
-      if (bothBtn && !bothBtn.classList.contains('btn-locked')) { bothBtn.disabled = true; bothBtn.title = 'Both modes — Pro plan required. See Plans ↑'; bothBtn.classList.add('btn-locked'); }
+    // ── Helper: lock/unlock a button ─────────────────────────────────
+    function gateBtn(id, lockedTitle, unlockedTitle) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      if (isPaid) {
+        btn.disabled = false;
+        btn.title    = unlockedTitle;
+        btn.classList.remove('btn-locked');
+        // Remove any lock badge injected previously
+        var badge = btn.querySelector('.btn-pro-lock');
+        if (badge) badge.parentNode.removeChild(badge);
+      } else {
+        btn.disabled = true;
+        btn.title    = lockedTitle;
+        btn.classList.add('btn-locked');
+        // Inject a small 🔒 Pro badge if not already there
+        if (!btn.querySelector('.btn-pro-lock')) {
+          var span = document.createElement('span');
+          span.className   = 'btn-pro-lock';
+          span.textContent = ' 🔒';
+          span.style.cssText = 'font-size:11px;opacity:0.7;';
+          btn.appendChild(span);
+        }
+      }
+    }
+
+    // ── 1. Main language select (#language) ──────────────────────────
+    gateSelect('language', FREE_LANGUAGES);
+
+    // ── 2. Why Comments + Both buttons ───────────────────────────────
+    gateBtn('whyBtn',
+      'Why Comments — Pro plan required. See Plans ↑',
+      'Add inline why-comments explaining decisions & intent (⌘⇧↵)');
+    gateBtn('bothBtn',
+      'Both modes — Pro plan required. See Plans ↑',
+      'Add doc-comments AND why-comments in one two-pass run (⌘⌥↵)');
+
+    // ── 3. CLI demo language select (#cliDemoLanguage) ───────────────
+    gateSelect('cliDemoLanguage', FREE_LANGUAGES);
+
+    // ── 4. CLI demo mode select (#cliDemoMode) ───────────────────────
+    gateSelect('cliDemoMode', ['comment']); // why + both are Pro
+
+    // ── 5. CLI demo language grid tiles ──────────────────────────────
+    var grid = document.getElementById('cliDemoLanguageGrid');
+    if (grid) {
+      var tiles = grid.querySelectorAll('[data-language],[data-lang]');
+      for (var t = 0; t < tiles.length; t++) {
+        var tile = tiles[t];
+        var tileLang = (tile.getAttribute('data-language') || tile.getAttribute('data-lang') || '').toLowerCase();
+        var tileLabel = tile.querySelector('.cli-demo-lang-label') || tile;
+        if (isPaid) {
+          tile.classList.remove('cli-demo-lang--locked');
+          tile.removeAttribute('disabled');
+          tileLabel.textContent = tileLabel.textContent.replace(' 🔒', '');
+        } else if (FREE_LANGUAGES.indexOf(tileLang) === -1) {
+          tile.classList.add('cli-demo-lang--locked');
+          if (tileLabel.textContent.indexOf('🔒') === -1) tileLabel.textContent += ' 🔒';
+        }
+      }
     }
 
     if (!isPaid) {
