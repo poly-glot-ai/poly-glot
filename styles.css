@@ -1155,12 +1155,14 @@ textarea:focus {
     .header-top {
         flex-wrap: nowrap;
         gap: 10px;
+        align-items: center;
     }
 
     .header-badges {
         flex-shrink: 0;
         gap: 6px;
         flex-wrap: nowrap;
+        align-items: center;
     }
 
     .pg-live-badge {
@@ -1184,6 +1186,13 @@ textarea:focus {
 
     .pg-live-badge__sub {
         font-size: 9px;
+    }
+
+    /* Override the generic button { width: 100% } for header buttons */
+    .header-pricing-cta,
+    .header-signin-btn {
+        width: auto !important;
+        flex-shrink: 0;
     }
 
     .header-pricing-cta {
@@ -1411,16 +1420,25 @@ textarea:focus {
         display: none; /* hide "Subscriptions open" on mobile */
     }
 
-    /* See Plans — shorter text on mobile */
-    .header-pricing-cta {
-        padding: 6px 10px;
-        font-size: 12px;
+    /* Header buttons must NEVER stretch full width on mobile */
+    .header-pricing-cta,
+    .header-signin-btn {
+        width: auto !important;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
 
-    /* Sign In — shorter on mobile */
+    /* See Plans — compact on small phones */
+    .header-pricing-cta {
+        padding: 5px 9px;
+        font-size: 11px;
+        gap: 4px;
+    }
+
+    /* Sign In — compact on small phones */
     .header-signin-btn {
-        padding: 6px 10px;
-        font-size: 12px;
+        padding: 5px 9px;
+        font-size: 11px;
     }
 
     .header h1 {
@@ -1471,6 +1489,61 @@ textarea:focus {
         min-height: 250px;
         font-size: 11px;
         padding: 12px;
+    }
+}
+
+/* ──────────────────────────────────────────
+   Tiny phones (≤360px): iPhone SE, small Androids
+   Hide live badge text, keep just the parrot icon
+   ────────────────────────────────────────── */
+@media (max-width: 360px) {
+    .header {
+        padding: 8px 10px;
+    }
+
+    .header-top {
+        gap: 6px;
+    }
+
+    /* Hide the text part of the live badge — only parrot + rings remain */
+    .pg-live-badge__text {
+        display: none;
+    }
+
+    /* Shrink badge padding since it's icon-only now */
+    .pg-live-badge {
+        padding: 4px;
+        gap: 0;
+    }
+
+    .pg-live-badge__rings {
+        width: 26px;
+        height: 26px;
+    }
+    .pg-live-badge__parrot {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* Make buttons icon-only on tiniest screens */
+    .header-pricing-cta {
+        padding: 5px 8px;
+        font-size: 11px;
+        gap: 3px;
+    }
+
+    .header-signin-btn {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    /* Shrink brand parrot + title */
+    .header-parrot {
+        height: 26px;
+    }
+
+    .header-brand h1 {
+        font-size: 13px;
     }
 }
 
