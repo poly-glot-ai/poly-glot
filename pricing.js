@@ -255,11 +255,6 @@
           </span>
         </div>
 
-        <!-- Cards -->
-        <div class="pg-pricing-grid" id="pg-pricing-grid">
-          ${PLANS.map(renderCard).join('')}
-        </div>
-
         <!-- Early access note -->
         <div class="pg-early-access-note">
           <div class="pg-ea-left">
@@ -270,6 +265,11 @@
             </div>
           </div>
           <button class="pg-ea-cta" id="pg-ea-join-btn">Join Waitlist Free →</button>
+        </div>
+
+        <!-- Cards -->
+        <div class="pg-pricing-grid" id="pg-pricing-grid">
+          ${PLANS.map(renderCard).join('')}
         </div>
 
         <!-- FAQ -->
