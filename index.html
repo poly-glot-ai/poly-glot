@@ -130,7 +130,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.v219.css">
+    <link rel="stylesheet" href="styles.v220.css">
     <link rel="stylesheet" href="phase1.css?v=6">
     <link rel="stylesheet" href="pricing.css?v=5">
     <!-- ═══════════════════════════════════════════════════════
@@ -506,42 +506,81 @@
                     <span class="feature-badge">💾 Save Favorites</span>
                     <span class="feature-badge">🔒 Privacy-First</span>
                     <span class="feature-badge">🪿 Built with Goose</span>
-                    <span class="feature-badge feature-badge-new">💻 VS Code Extension</span>
+                    <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="feature-badge feature-badge-vscode">💻 VS Code Extension ↗</a>
                     <span class="feature-badge feature-badge-new feature-badge-cli-green">⌨️ CLI Tool</span>
+                </div>
+
+                <!-- ── VS Code Extension Launch Banner ── -->
+                <div class="vscode-launch-banner">
+                    <div class="vscode-launch-banner__left">
+                        <div class="vscode-launch-banner__icon">💻</div>
+                        <div class="vscode-launch-banner__text">
+                            <span class="vscode-launch-banner__title">
+                                <span class="vscode-live-dot"></span>VS Code Extension — Now Live on Marketplace
+                            </span>
+                            <span class="vscode-launch-banner__sub">Comment code without leaving your editor · Why-comments, Both mode &amp; Pro plan gating built in</span>
+                        </div>
+                    </div>
+                    <div class="vscode-launch-banner__actions">
+                        <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-install-btn">
+                            <span class="vscode-install-btn__icon">⚡</span>Install in VS Code
+                        </a>
+                        <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="vscode-marketplace-link">
+                            View on Marketplace ↗
+                        </a>
+                    </div>
                 </div>
             </div>
 
             <!-- ── Section 4: VS Code Extension ── -->
             <div class="overview-section overview-section-vscode">
-                <h2 class="overview-heading">
-                    <span class="vscode-icon">💻</span>
-                    VS Code Extension
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </h2>
+                <div class="vscode-heading-row">
+                    <h2 class="overview-heading">
+                        <span class="vscode-icon">💻</span>
+                        VS Code Extension
+                        <span class="live-badge">✓ Live on Marketplace</span>
+                    </h2>
+                    <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-heading-cta">⚡ Install Free</a>
+                </div>
                 <p class="overview-text">
                     Comment code without leaving your editor. The <strong>Poly-Glot VS Code Extension</strong> brings
-                    AI-powered comment generation directly into your workflow — no copy-pasting, no context switching.
+                    AI-powered comment generation directly into your workflow — inline results, no copy-pasting, no context switching.
+                    Supports <strong>OpenAI &amp; Anthropic</strong>. Free tier included.
                 </p>
                 <div class="integration-grid">
                     <div class="integration-card">
                         <div class="integration-card-icon">⌨️</div>
                         <div class="integration-card-body">
                             <strong>Comment Selection</strong>
-                            <span>Select any code → <kbd>Cmd+Shift+/</kbd> → comments inserted inline instantly</span>
+                            <span>Select any code → <kbd>Cmd+Shift+/</kbd> → doc-comments inserted inline instantly</span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">💡</div>
+                        <div class="integration-card-body">
+                            <strong>Why-Comments <span style="font-size:10px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:1px 6px;margin-left:4px;font-weight:600;">Pro</span></strong>
+                            <span><kbd>Cmd+Shift+W</kbd> → explains trade-offs, intent &amp; non-obvious decisions inline</span>
                         </div>
                     </div>
                     <div class="integration-card">
                         <div class="integration-card-icon">📄</div>
                         <div class="integration-card-body">
                             <strong>Comment Entire File</strong>
-                            <span>Press <kbd>Cmd+Shift+Alt+/</kbd> or right-click any file in Explorer → "Poly-Glot: Comment This File"</span>
+                            <span>Right-click any file in Explorer → "Poly-Glot: Comment This File" — or <kbd>Cmd+Shift+Alt+/</kbd></span>
+                        </div>
+                    </div>
+                    <div class="integration-card">
+                        <div class="integration-card-icon">🔀</div>
+                        <div class="integration-card-body">
+                            <strong>Both Mode <span style="font-size:10px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:1px 6px;margin-left:4px;font-weight:600;">Pro</span></strong>
+                            <span><kbd>Cmd+Shift+B</kbd> → doc-comments + why-comments in a single pass</span>
                         </div>
                     </div>
                     <div class="integration-card">
                         <div class="integration-card-icon">🔍</div>
                         <div class="integration-card-body">
                             <strong>Explain Code</strong>
-                            <span>Select code → <kbd>Cmd+Shift+E</kbd> → AI analysis panel with complexity, bugs, and doc quality score</span>
+                            <span>Select code → <kbd>Cmd+Shift+E</kbd> → AI analysis: complexity, bugs &amp; doc quality score</span>
                         </div>
                     </div>
                     <div class="integration-card">
@@ -555,7 +594,7 @@
                 <div class="integration-install">
                     <div class="install-step">
                         <span class="install-num">1</span>
-                        <span>Search <strong>"Poly-Glot"</strong> in VS Code Extensions panel (<kbd>Cmd+Shift+X</kbd>)</span>
+                        <span>Search <strong>"Poly-Glot"</strong> in VS Code Extensions panel (<kbd>Cmd+Shift+X</kbd>) — or click <strong>Install Free</strong> above</span>
                     </div>
                     <div class="install-arrow">→</div>
                     <div class="install-step">
@@ -565,8 +604,19 @@
                     <div class="install-arrow">→</div>
                     <div class="install-step">
                         <span class="install-num">3</span>
-                        <span>Select code and press <strong><kbd>Cmd+Shift+/</kbd></strong></span>
+                        <span>Select code and press <strong><kbd>Cmd+Shift+/</kbd></strong> — comments appear inline instantly</span>
                     </div>
+                </div>
+
+                <!-- CTA bar -->
+                <div class="vscode-cta-bar">
+                    <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-cta-bar__primary">
+                        ⚡ Install in VS Code — Free
+                    </a>
+                    <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="vscode-cta-bar__secondary">
+                        📦 View on VS Code Marketplace ↗
+                    </a>
+                    <span class="vscode-cta-bar__stat">v1.3.0 · MIT License · OpenAI &amp; Anthropic</span>
                 </div>
             </div>
 
@@ -1687,6 +1737,17 @@
 
     <!-- ── Footer ── -->
     <div class="site-footer">
+        <div class="site-footer__vscode-row">
+            <a href="vscode:extension/poly-glot-ai.poly-glot" class="footer-vscode-link">
+                💻 Install VS Code Extension — Free
+            </a>
+            <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="footer-vscode-link">
+                📦 VS Code Marketplace ↗
+            </a>
+            <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="footer-vscode-link" style="border-color:rgba(16,185,129,.3);color:#34d399;">
+                ⌨️ CLI on npm ↗
+            </a>
+        </div>
         <div class="site-footer__badges">
             <a href="https://producthot.com" target="_blank" rel="noopener noreferrer">
                 <img src="https://producthot.com/badages-awards.svg" alt="Featured on Product Hot" style="height:54px;width:auto;">
