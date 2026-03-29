@@ -804,7 +804,7 @@
 
     /* ── Step 1: fast local dedup (same device/browser) ─────────────────── */
     if (EmailRegistry.has(email)) {
-      showAlreadyOnList(email, errorEl);
+      showAlreadyOnList(email, successEl, errorEl);
       ga('duplicate_email_modal_local');
       return;
     }
@@ -826,7 +826,7 @@
         localStorage.setItem(LS_JOINED, '1');
         localStorage.setItem(LS_EMAIL, email);
         resetBtn(submitBtn, btnText, btnLoad);
-        showAlreadyOnList(email, errorEl);
+        showAlreadyOnList(email, successEl, errorEl);
         ga('duplicate_email_modal_kv');
         return;
       }
@@ -872,12 +872,23 @@
    * Show a friendly "you're already on the list" message.
    * Used by both local and cross-device dedup paths.
    */
-  function showAlreadyOnList(email, errorEl) {
-    if (errorEl) {
-      errorEl.innerHTML =
+  /**
+   * Show the "already on the list" confirmation.
+   * Always renders into the SUCCESS element (green) regardless of what's passed —
+   * this is a positive confirmation, never an error.
+   *
+   * @param {string}          email      - The email address to display.
+   * @param {HTMLElement|null} successEl - The green success <p> to write into.
+   * @param {HTMLElement|null} errorEl   - The red error <p> to hide (optional).
+   */
+  function showAlreadyOnList(email, successEl, errorEl) {
+    /* Hide the red error element if present */
+    if (errorEl) { errorEl.style.display = 'none'; errorEl.innerHTML = ''; }
+    if (successEl) {
+      successEl.innerHTML =
         '✅ <strong>' + escapeHtml(email) + '</strong> is already on our early-access list! ' +
         'We\'ll email you the moment Pro launches — and you\'ll get your first 3 months on us. 🚀';
-      errorEl.style.display = 'block';
+      successEl.style.display = 'block';
     }
   }
 
@@ -1071,7 +1082,7 @@
 
       /* ── Step 1: fast local dedup ───────────────────────────────────────── */
       if (EmailRegistry.has(email)) {
-        showAlreadyOnList(email, errorEl);
+        showAlreadyOnList(email, successEl, errorEl);
         ga('duplicate_email_inline_local');
         return;
       }
@@ -1090,7 +1101,7 @@
           localStorage.setItem(LS_JOINED, '1');
           localStorage.setItem(LS_EMAIL, email);
           resetBtn(submitBtn, btnText, btnLoad);
-          showAlreadyOnList(email, errorEl);
+          showAlreadyOnList(email, successEl, errorEl);
           ga('duplicate_email_inline_kv');
           return;
         }
