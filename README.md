@@ -177,7 +177,7 @@ php -S localhost:8000
 
 ## 📋 Usage Guide
 
-### 1. **Configure AI Settings** 🤖 (Optional but Recommended)
+### 1. **Add Your API Key** 🔑
 1. Click the **"⚙️ AI Settings"** button in the header
 2. Choose your AI provider (OpenAI or Anthropic)
 3. Select your preferred model (GPT-4o-mini recommended for cost)
@@ -187,26 +187,32 @@ php -S localhost:8000
 
 > **Privacy Note:** Your API key never leaves your browser and is stored in `localStorage`. All AI calls go directly from your browser to OpenAI/Anthropic.
 
-### 2. **Generate AI Comments** ⚡
-1. Select your programming language from the dropdown
-2. Paste your undocumented code into the editor
-3. Click **"🤖 Generate Comments"**
-4. Review the AI-generated comments with proper documentation format
-5. Click **"Apply"** to replace your code or **"Copy"** to use it elsewhere
+### 2. **Install the CLI, Paste, or Upload Your Code** ⚡
+- **CLI:** Install via `npm install -g poly-glot` and run `poly-glot` on any file
+- **Web:** Select your programming language from the dropdown and paste your undocumented code into the editor
+- **Upload:** Drag and drop or use the upload button to load a code file directly
 
-### 3. **Browse Templates**
+### 3. **Click "Generate Comments"** 🤖
+1. Click **"🤖 Generate Comments"**
+2. Review the AI-generated comments with proper documentation format
+3. Click **"Apply"** to replace your code or **"Copy"** to use it elsewhere
+
+### 4. **Get Standardized Docs Instantly** 📄
+Your code is returned with consistent, professional documentation comments — ready to ship.
+
+### 5. **Browse Templates**
 1. Select a language from the sidebar
 2. Choose a category (Syntax, Functions, Classes, Best Practices)
 3. Click any template to view it in full
 4. Use **"Copy"** to grab the snippet instantly
 
-### 4. **Analyze Your Code**
+### 6. **Analyze Your Code**
 1. Navigate to the **"Interactive Editor"** category
 2. Paste your code into the right panel
 3. Click **"Analyze"** to get a comment coverage report
 4. Review suggestions and apply templates as needed
 
-### 5. **Save Favorites** ⭐
+### 7. **Save Favorites** ⭐
 - Click the ⭐ on any template to save it
 - Access all saved templates under the **"⭐ Favorites"** sidebar item
 - Favorites persist across browser sessions via `localStorage`
