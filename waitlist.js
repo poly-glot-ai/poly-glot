@@ -512,7 +512,7 @@
           <span class="pg-banner-dot"></span>
           <span class="pg-banner-msg">
             <strong>Poly-Glot AI is Live!</strong>
-            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — limited to first 5,000 subscribers.</span>
+            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — limited to first 50 subscribers.</span>
           </span>
         </div>
         <div class="pg-banner-right">

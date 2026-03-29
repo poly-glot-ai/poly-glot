@@ -246,7 +246,7 @@
             <span class="pg-ea-icon">🎁</span>
             <div class="pg-ea-text">
               <strong>Early bird offer — get 3 months free on any paid plan.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> at checkout. Limited to first 5,000 subscribers.</span>
+              <span>Use code <strong>EARLYBIRD3</strong> at checkout. Limited to first 50 subscribers.</span>
             </div>
           </div>
           <button class="pg-ea-cta" id="pg-ea-join-btn" onclick="
