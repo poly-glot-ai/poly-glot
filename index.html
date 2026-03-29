@@ -1356,10 +1356,10 @@
 
                 // ── Global email deduplication (reads from EmailRegistry in waitlist.js) ──
                 if (window.PolyGlotEmailRegistry && window.PolyGlotEmailRegistry.has(email)) {
-                    if (errorMsg) {
-                        errorMsg.innerHTML =
+                    if (successMsg) {
+                        successMsg.innerHTML =
                             '🎉 You\'re already on our waitlist! We\'ll reach out to <strong>' + email + '</strong> soon. Talk to you within 24 hours! 🚀';
-                        errorMsg.style.display = 'block';
+                        successMsg.style.display = 'block';
                     }
                     console.log('✅ Duplicate email blocked (teams form):', email);
                     return; // stop — no fetch, no mailto
