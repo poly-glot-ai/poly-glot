@@ -1,3 +1,7 @@
 src/
 tsconfig.json
 *.map
+*.md
+!README.md
+migration/
+dist/*.map

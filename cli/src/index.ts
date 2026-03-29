@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.6.0';  // pro license token support
+const VERSION = '1.6.0';  // pro license token: --token flag, POLYGLOT_LICENSE_TOKEN env, plan-gated modes
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -39,60 +39,104 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
     php:   'php',        swift:'swift',      kt:  'kotlin',
 };
 
-// ─── Free tier language gate ──────────────────────────────────────────────────
-// Only Python, JavaScript, and Java are available on the free tier.
-// All other languages require a Pro subscription.
-const FREE_LANGUAGES = ['python', 'javascript', 'java'];
+// ─── Plan definitions ─────────────────────────────────────────────────────────
 
 const AUTH_API = 'https://poly-glot.ai/api/auth';
 
-// Plans that unlock pro features
-const PRO_PLANS = ['pro', 'team', 'enterprise'];
+// Free tier: Python, JavaScript, Java — doc-comments only
+const FREE_LANGUAGES  = ['python', 'javascript', 'java'];
+
+// Plans that unlock all pro features (language + mode)
+const PRO_PLANS       = ['pro', 'team', 'enterprise'];
+
+// ─── License verification ─────────────────────────────────────────────────────
 
 /**
- * Verify a license token against the auth API.
- * Returns the plan string or null if invalid/network error.
- * Uses a local cache (process-lifetime) to avoid repeated API calls.
+ * Process-lifetime cache so we hit the API at most once per CLI invocation.
+ * undefined  = not yet checked
+ * null       = checked and invalid / network error
+ * string     = valid plan name
  */
 let _cachedPlan: string | null | undefined = undefined;
 
+/**
+ * Verify a license token against the Poly-Glot auth API.
+ * - Returns the plan string ('pro' | 'team' | 'enterprise') on success.
+ * - Returns null if the token is invalid or the request fails.
+ * - Fails open on network errors so connectivity issues don't block paying users.
+ * - Hard 3-second timeout so the CLI never hangs waiting for the API.
+ */
 async function verifyLicense(token: string): Promise<string | null> {
     if (_cachedPlan !== undefined) return _cachedPlan;
     try {
         const res = await fetch(`${AUTH_API}/verify`, {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token }),
-            signal: AbortSignal.timeout(3000), // 3s timeout — don't block CLI
+            body:    JSON.stringify({ token }),
+            signal:  AbortSignal.timeout(3000),
         });
         if (!res.ok) { _cachedPlan = null; return null; }
         const data = await res.json() as { valid: boolean; plan?: string };
-        _cachedPlan = data.valid && data.plan ? data.plan : null;
+        _cachedPlan = (data.valid && data.plan) ? data.plan : null;
         return _cachedPlan;
     } catch {
-        // Network error — fail open (don't block paying users due to connectivity)
+        // Network unavailable — fail open. A bad actor without a token can't
+        // exploit this because we still require a non-empty token string.
         _cachedPlan = null;
         return null;
     }
 }
 
+/**
+ * Returns true if the config holds a token that resolves to a paid plan.
+ * Checks POLYGLOT_LICENSE_TOKEN env var first (for CI/CD), then cfg.licenseToken.
+ */
+async function hasPro(cfg: Config): Promise<boolean> {
+    const token = cfg.licenseToken || '';
+    if (!token) return false;
+    const plan = await verifyLicense(token);
+    return plan !== null && PRO_PLANS.includes(plan);
+}
+
+// ─── Plan gates ───────────────────────────────────────────────────────────────
+
+/**
+ * Gate: language must be in FREE_LANGUAGES or user must have a Pro plan.
+ * Called before every file/stdin operation.
+ */
 async function assertLanguageAllowed(lang: string, cfg: Config): Promise<void> {
     const normalised = lang.toLowerCase().trim();
-    if (FREE_LANGUAGES.includes(normalised)) return; // always allowed
+    if (FREE_LANGUAGES.includes(normalised)) return; // always allowed on free tier
 
-    // Check license token
-    if (cfg.licenseToken) {
-        const plan = await verifyLicense(cfg.licenseToken);
-        if (plan && PRO_PLANS.includes(plan)) return; // unlocked
-    }
+    if (await hasPro(cfg)) return; // Pro/Team/Enterprise unlocks all 12 languages
 
-    // Not unlocked
     const label = normalised.charAt(0).toUpperCase() + normalised.slice(1);
     console.error(
         `\n  \x1b[33m⚠️  ${label} requires a Pro subscription.\x1b[0m\n` +
         `\n  \x1b[2mFree tier includes:\x1b[0m  \x1b[36mPython · JavaScript · Java\x1b[0m` +
-        `\n  \x1b[2mPro unlocks:\x1b[0m         \x1b[36mAll 12 languages + unlimited files + why-comments\x1b[0m\n` +
-        `\n  Sign in at \x1b[36mhttps://poly-glot.ai\x1b[0m and run \x1b[36mpoly-glot config --token <your-token>\x1b[0m\n`
+        `\n  \x1b[2mPro unlocks:\x1b[0m         \x1b[36mAll 12 languages + why-comments + unlimited files\x1b[0m\n` +
+        `\n  Get Pro at \x1b[36mhttps://poly-glot.ai\x1b[0m` +
+        ` then run \x1b[36mpoly-glot config --token <your-token>\x1b[0m\n`
+    );
+    process.exit(1);
+}
+
+/**
+ * Gate: why-comments and both-mode require a Pro plan.
+ * Free tier only gets standard doc-comments (JSDoc, PyDoc, etc.).
+ */
+async function assertModeAllowed(mode: CommentMode, cfg: Config): Promise<void> {
+    if (mode === 'comment') return; // always allowed
+
+    if (await hasPro(cfg)) return; // Pro/Team/Enterprise unlocks why + both
+
+    const modeLabel = mode === 'why' ? 'Why-comments' : 'Both mode (doc + why)';
+    console.error(
+        `\n  \x1b[33m⚠️  ${modeLabel} requires a Pro subscription.\x1b[0m\n` +
+        `\n  \x1b[2mFree tier:\x1b[0m   \x1b[36mDoc-comments only (JSDoc, PyDoc, Javadoc, etc.)\x1b[0m` +
+        `\n  \x1b[2mPro unlocks:\x1b[0m \x1b[36mWhy-comments · Both mode · All 12 languages\x1b[0m\n` +
+        `\n  Get Pro at \x1b[36mhttps://poly-glot.ai\x1b[0m` +
+        ` then run \x1b[36mpoly-glot config --token <your-token>\x1b[0m\n`
     );
     process.exit(1);
 }
@@ -114,17 +158,19 @@ const COLORS = {
 function showWhatsNew(cfg: Config): void {
     const last = cfg.lastSeenVersion || '0.0.0';
 
-    const needsV14Notice = last === '' || last === '0.0.0' ||
-        last.startsWith('1.0') || last.startsWith('1.1') || last.startsWith('1.2');
+    // Parse semantic version for clean comparisons
+    const [lastMaj, lastMin] = last.split('.').map(Number);
+    const isOlderThan = (maj: number, min: number) =>
+        lastMaj < maj || (lastMaj === maj && lastMin < min);
 
-    const needsV15Notice = needsV14Notice ||
-        last.startsWith('1.3') || last.startsWith('1.4');
+    // Show each notice exactly once — only for users upgrading past that version
+    const showV14 = isOlderThan(1, 4);
+    const showV15 = isOlderThan(1, 5);
+    const showV16 = isOlderThan(1, 6);
 
-    const needsV16Notice = needsV15Notice || last.startsWith('1.5');
+    if (!showV14 && !showV15 && !showV16) return;
 
-    if (!needsV16Notice) return;
-
-    if (needsV14Notice) {
+    if (showV14) {
         console.log(`
 ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 
@@ -145,43 +191,44 @@ ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 `);
     }
 
-    if (needsV15Notice) {
+    if (showV15) {
         console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.5${COLORS.reset}
 
-  ${COLORS.bold}--dry-run${COLORS.reset}   Preview exactly what would change — no files written
-           ${COLORS.dim}poly-glot comment src/auth.js --dry-run${COLORS.reset}
+  ${COLORS.bold}--dry-run${COLORS.reset}      Preview exactly what would change — no files written
+             ${COLORS.dim}poly-glot comment src/auth.js --dry-run${COLORS.reset}
 
-  ${COLORS.bold}--diff${COLORS.reset}      Show a unified diff of every change before committing
-           ${COLORS.dim}poly-glot comment src/auth.js --diff${COLORS.reset}
+  ${COLORS.bold}--diff${COLORS.reset}         Show a unified diff of every change before committing
+             ${COLORS.dim}poly-glot comment src/auth.js --diff${COLORS.reset}
 
-  ${COLORS.bold}--backup${COLORS.reset}    Save a .orig copy of every file before overwriting
-           ${COLORS.dim}poly-glot comment src/auth.js --backup${COLORS.reset}
+  ${COLORS.bold}--backup${COLORS.reset}       Save a .orig copy of every file before overwriting
+             ${COLORS.dim}poly-glot comment src/auth.js --backup${COLORS.reset}
 
-  ${COLORS.bold}both${COLORS.reset}        New shorthand — doc + why in one command
-           ${COLORS.dim}poly-glot both src/auth.js${COLORS.reset}
+  ${COLORS.bold}both${COLORS.reset} shorthand  Doc + why in one command
+             ${COLORS.dim}poly-glot both src/auth.js${COLORS.reset}
 
-  ${COLORS.bold}--dir confirm${COLORS.reset}  Now asks "About to modify N files. Continue?" before running
-           ${COLORS.dim}poly-glot comment --dir src/ --yes${COLORS.reset}  ${COLORS.dim}(skip prompt)${COLORS.reset}
-
-  ${COLORS.bold}--dir summary${COLORS.reset}  After a directory run: files, skipped, cost, time
-           ${COLORS.dim}✓ 12 commented · 2 skipped · ~$0.04 · 18s${COLORS.reset}
+  ${COLORS.bold}--dir confirm${COLORS.reset}  "About to modify N files. Continue?" before running
+             ${COLORS.dim}poly-glot comment --dir src/ --yes  (skip prompt)${COLORS.reset}
 
 ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
     }
 
-    if (needsV16Notice && !needsV15Notice) {
-        console.log(`
-${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.6${COLORS.reset}
+    if (showV16) {
+        console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.6${COLORS.reset}
 
-  ${COLORS.cyan}Pro license support${COLORS.reset} — unlock all 12 languages and unlimited files.
+  ${COLORS.cyan}Pro plan support${COLORS.reset} — unlock all 12 languages, why-comments, and both mode.
 
-  1. Sign in or sign up at ${COLORS.cyan}https://poly-glot.ai${COLORS.reset}
-  2. Copy your license token from Settings
-  3. Run: ${COLORS.dim}poly-glot config --token <your-token>${COLORS.reset}
+  ${COLORS.bold}Free tier:${COLORS.reset}  Python · JavaScript · Java · doc-comments only
+  ${COLORS.bold}Pro tier:${COLORS.reset}   All 12 languages · why-comments · both mode · unlimited files
 
-  ${COLORS.dim}Free tier: Python · JavaScript · Java${COLORS.reset}
-  ${COLORS.dim}Pro tier:  All 12 languages + unlimited files + why-comments${COLORS.reset}
+  To activate your Pro license:
+    1. Get a plan at ${COLORS.cyan}https://poly-glot.ai${COLORS.reset}
+    2. Sign in → copy your license token
+    3. Run: ${COLORS.dim}poly-glot config --token <your-token>${COLORS.reset}
+
+  CI/CD? Set the ${COLORS.dim}POLYGLOT_LICENSE_TOKEN${COLORS.reset} environment variable instead.
+
+${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
     }
 }
@@ -287,7 +334,8 @@ async function runConfig(args: string[]): Promise<void> {
         if (!cfg.provider) cfg.provider = 'openai';
         if (!cfg.model)    cfg.model    = 'gpt-4o-mini';
         saveConfig(cfg);
-        success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}, default mode: ${cfg.defaultMode}`);
+        success(`Config saved — provider: ${cfg.provider}, model: ${cfg.model}, mode: ${cfg.defaultMode}`);
+        if (flags['--token']) success(`License token saved — run a command to verify your plan.`);
         return;
     }
 
@@ -341,6 +389,9 @@ async function runComment(args: string[]): Promise<void> {
         if (['comment', 'why', 'both'].includes(m)) effectiveMode = m as CommentMode;
         else { error(`Invalid --mode "${m}". Use: comment, why, or both`); process.exit(1); }
     }
+
+    // ── Plan gate: why/both modes require Pro ─────────────────────────────────
+    await assertModeAllowed(effectiveMode, cfg);
 
     const isDryRun = '--dry-run' in flags;
     const isDiff   = '--diff' in flags;
@@ -880,7 +931,7 @@ ${COLORS.bold}Config flags:${COLORS.reset}
   --provider <name>     Override provider (openai | anthropic)
   --model <name>        Override model (e.g. gpt-4.1-mini, claude-sonnet-4-5)
   --mode <m>            Set default mode in config: comment | why | both
-  --token <token>       Set your Pro license token from poly-glot.ai
+  --token <token>       Set your Pro license token (unlocks all 12 languages + why-comments)
   --telemetry           Enable anonymous usage stats
   --no-telemetry        Disable anonymous usage stats
   --version, -v         Print version
@@ -919,11 +970,12 @@ ${COLORS.bold}Examples:${COLORS.reset}
   poly-glot explain src/utils.ts
 
 ${COLORS.bold}Environment variables:${COLORS.reset}
-  POLYGLOT_API_KEY      API key (overrides config file)
-  POLYGLOT_PROVIDER     Provider: openai | anthropic
-  POLYGLOT_MODEL        Model name
-  POLYGLOT_MODE         Default mode: comment | why | both
-  POLYGLOT_TELEMETRY    1 = enable, 0 = disable telemetry
+  POLYGLOT_API_KEY          API key (overrides config file)
+  POLYGLOT_PROVIDER         Provider: openai | anthropic
+  POLYGLOT_MODEL            Model name
+  POLYGLOT_MODE             Default mode: comment | why | both
+  POLYGLOT_LICENSE_TOKEN    Pro license token — use in CI/CD instead of --token
+  POLYGLOT_TELEMETRY        1 = enable, 0 = disable telemetry
 
 ${COLORS.bold}Supported languages:${COLORS.reset}
   JavaScript, TypeScript, Python, Java, C++, C, C#, Go, Rust, Ruby, PHP, Swift, Kotlin

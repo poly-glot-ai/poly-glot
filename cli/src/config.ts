@@ -28,7 +28,8 @@ export function loadConfig(): Config {
             model:           process.env.POLYGLOT_MODEL    || 'gpt-4.1-mini',
             defaultMode:     validModes.includes(envMode!) ? envMode! : 'comment',
             lastSeenVersion: '',
-            licenseToken:    '',
+            // POLYGLOT_LICENSE_TOKEN — Pro license token for CI/CD environments
+            licenseToken:    process.env.POLYGLOT_LICENSE_TOKEN || '',
             // CI/CD: respect POLYGLOT_TELEMETRY=0 to disable, default off in CI
             telemetry: process.env.POLYGLOT_TELEMETRY === '1' ? true
                      : process.env.POLYGLOT_TELEMETRY === '0' ? false
