@@ -218,6 +218,56 @@
                 </ul>
             </div>
 
+            <!-- ── Section 1b: Legacy Codebases & Tech Debt ── -->
+            <div class="overview-section overview-section-legacy">
+                <div class="legacy-header">
+                    <span class="legacy-icon">🏗️</span>
+                    <h2 class="overview-heading overview-heading--legacy">Standardize Legacy Codebases &amp; Minimize Tech Debt</h2>
+                </div>
+                <p class="overview-text">
+                    Legacy codebases are a minefield of undocumented decisions, tribal knowledge locked in the heads of engineers who may have already left, and comment styles that vary wildly between files, teams, and decades of contributors.
+                    <strong>Poly-Glot gives engineering teams a repeatable, AI-powered workflow to bring legacy code up to modern documentation standards — without a costly rewrite.</strong>
+                </p>
+
+                <div class="legacy-grid">
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">📋</div>
+                        <h3 class="legacy-card-title">Enforce a Unified Comment Standard</h3>
+                        <p class="legacy-card-text">Run Poly-Glot across your entire codebase to normalize all comments to a single style — JSDoc, PyDoc, Javadoc, or Doxygen — regardless of how many authors or years of drift are baked in.</p>
+                    </div>
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">🧭</div>
+                        <h3 class="legacy-card-title">Surface Hidden Business Logic</h3>
+                        <p class="legacy-card-text">AI-generated <em>why</em> comments extract implicit reasoning buried in old code — turning opaque workarounds and forgotten edge-case handling into documented, searchable knowledge your whole team can trust.</p>
+                    </div>
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">⚠️</div>
+                        <h3 class="legacy-card-title">Reduce Onboarding &amp; Bug-Risk Debt</h3>
+                        <p class="legacy-card-text">Undocumented code slows new engineers down and breeds accidental regressions. Poly-Glot reduces both — new contributors understand intent faster, and reviewers catch context-breaking changes before they merge.</p>
+                    </div>
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">🤖</div>
+                        <h3 class="legacy-card-title">Make Legacy Code AI-Ready</h3>
+                        <p class="legacy-card-text">Copilot, Cursor, and RAG pipelines all perform better on well-commented code. Poly-Glot brings your legacy codebase up to the documentation density those tools need to give accurate, context-aware suggestions.</p>
+                    </div>
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">🔁</div>
+                        <h3 class="legacy-card-title">Integrate Into Your CI/CD Pipeline</h3>
+                        <p class="legacy-card-text">Use the <code>poly-glot-ai-cli</code> in pre-commit hooks or CI checks to enforce documentation standards on every new file — stopping tech debt before it accumulates in your next sprint.</p>
+                    </div>
+                    <div class="legacy-card">
+                        <div class="legacy-card-icon">📉</div>
+                        <h3 class="legacy-card-title">Measurable Debt Reduction</h3>
+                        <p class="legacy-card-text">Track documentation coverage before and after using Poly-Glot's built-in RAG &amp; GEO scoring. Watch your codebase's retrievability and AI-readiness scores improve file by file, sprint by sprint.</p>
+                    </div>
+                </div>
+
+                <div class="legacy-callout">
+                    <span class="legacy-callout-label">💡 Pro tip for teams</span>
+                    Start with your highest-churn, lowest-documented files first — Poly-Glot's CLI <code>--diff</code> flag lets you review every AI-generated comment before it lands, so your team stays in control throughout the migration.
+                </div>
+            </div>
+
             <!-- ── Section 2: How It Works ── -->
             <div class="overview-section">
                 <h2 class="overview-heading">How It Works</h2>
@@ -1156,7 +1206,9 @@
                         <div class="panel-actions">
                             <button id="cgScoreBtn" class="action-btn score-btn" disabled title="Compare RAG &amp; GEO scores before vs. after">📊 Score</button>
                             <button id="cgCopyBtn" class="action-btn" disabled>📋 Copy</button>
-                            <button id="cgDownloadBtn" class="action-btn" disabled>⬇️ Download</button>
+                            <span class="pg-download-wrap" title="Download is available in the Paid version — coming soon!">
+                                <button id="cgDownloadBtn" class="action-btn action-btn--paid" disabled>⬇️ Download <span class="paid-badge">Paid</span></button>
+                            </span>
                         </div>
                     </div>
                     <div id="cgOutputArea" class="pg-output-area">

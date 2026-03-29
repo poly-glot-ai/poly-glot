@@ -3662,7 +3662,7 @@ function initCommentGenerator() {
             }
 
             cgCopyBtn.disabled     = false;
-            cgDownloadBtn.disabled = false;
+            // cgDownloadBtn.disabled = false; // 🔒 Download locked until paid version is live
             cgScoreBtn.disabled    = false;
 
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
