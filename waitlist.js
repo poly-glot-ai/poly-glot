@@ -1128,21 +1128,127 @@
      window.PolyGlotEmailRegistry.has(email). No patch needed here.
   ── */
 
+  /* ── Free-tier language gating ────────────────────────── */
+
+  var FREE_LANGUAGES = ['python', 'javascript', 'java'];
+
+  function isProLanguage(lang) {
+    return FREE_LANGUAGES.indexOf(lang) === -1;
+  }
+
+  /**
+   * Stamp 🔒 on every Pro option in a <select> so users can see
+   * which languages are locked before they even try to pick one.
+   */
+  function markLockedOptions(sel) {
+    if (!sel) return;
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      if (isProLanguage(opt.value)) {
+        if (opt.text.indexOf('🔒') === -1) {
+          opt.text = '🔒 ' + opt.text + ' — Pro';
+        }
+      }
+    });
+  }
+
+  /**
+   * Gate a language <select> to the free tier.
+   *
+   * @param {HTMLSelectElement} sel        - The selector to gate.
+   * @param {boolean}           isDemoOnly - true = demo/CLI selector (no usage
+   *                                         tracking, still blocks + shows modal).
+   */
+  function gateLangSelector(sel, isDemoOnly) {
+    if (!sel) return;
+
+    /* Label every locked option immediately */
+    markLockedOptions(sel);
+
+    /* Remember the last valid free value so we can revert on Pro pick */
+    var lastFreeVal = FREE_LANGUAGES.indexOf(sel.value) !== -1 ? sel.value : FREE_LANGUAGES[0];
+
+    sel.addEventListener('change', function () {
+      var chosen = this.value;
+
+      if (!isDemoOnly) {
+        FeatureUsage.record('language_used', chosen);
+        ga('feature_language_change', { language: chosen });
+      }
+
+      if (isProLanguage(chosen) && !hasJoined()) {
+        /* Immediately revert the selector to the last valid free language */
+        this.value = lastFreeVal;
+
+        /* Build a friendly label from the raw value */
+        var rawLabel = chosen.charAt(0).toUpperCase() + chosen.slice(1);
+        ga('language_gate_triggered', { language: chosen });
+
+        /* Open the waitlist modal */
+        openWaitlistModal('language_gate');
+
+        /* Inject a contextual subtitle so users know exactly why */
+        setTimeout(function () {
+          var sub = document.querySelector('#pg-waitlist-modal .pg-wm-subtitle');
+          if (sub) {
+            sub.innerHTML =
+              '<strong>' + rawLabel + '</strong> unlocks with Pro — join the waitlist and get ' +
+              '<strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
+          }
+        }, 50);
+      } else if (!isProLanguage(chosen)) {
+        /* Update the safe-fallback value */
+        lastFreeVal = chosen;
+      }
+    });
+  }
+
   /* ── App usage hooks ───────────────────────────────────── */
 
   function attachAppHooks() {
-    /* Track feature usage to surface banner after 2nd use */
+    /* ── Language selectors — gate Pro languages to waitlist ── */
+    var mainLangSel  = document.getElementById('language');
+    var cgLangSel    = document.getElementById('cgLanguage');
+    var cliLangSel   = document.getElementById('cliDemoLanguage');
+    var demoLangSel  = document.getElementById('demoDemoLang');
+
+    /* Real generators — track usage */
+    gateLangSelector(mainLangSel, false);
+    gateLangSelector(cgLangSel,   false);
+
+    /* Demo/preview selectors — gate but don't count toward usage quota */
+    gateLangSelector(cliLangSel,  true);
+    gateLangSelector(demoLangSel, true);
+
+    /* ── Defence in depth: block Generate if a Pro lang somehow slips through ── */
     document.addEventListener('click', function (e) {
-      const btn = e.target.closest('#generateBtn, #cgGenerateBtn, #whyBtn, #bothBtn, #explainBtn');
+      var btn = e.target.closest('#generateBtn, #cgGenerateBtn, #whyBtn, #bothBtn, #explainBtn');
       if (!btn) return;
 
-      const lang = (document.getElementById('cgLanguage') || document.getElementById('language'));
-      FeatureUsage.record('generate_click', lang ? lang.value : 'unknown');
+      var langSel = document.getElementById('cgLanguage') || document.getElementById('language');
+      var lang    = langSel ? langSel.value : '';
+
+      if (isProLanguage(lang) && !hasJoined()) {
+        e.stopImmediatePropagation();
+        ga('generate_gate_triggered', { language: lang });
+        openWaitlistModal('generate_gate');
+        setTimeout(function () {
+          var sub = document.querySelector('#pg-waitlist-modal .pg-wm-subtitle');
+          if (sub) {
+            var rawLabel = lang.charAt(0).toUpperCase() + lang.slice(1);
+            sub.innerHTML =
+              '<strong>' + rawLabel + '</strong> unlocks with Pro — join the waitlist and get ' +
+              '<strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
+          }
+        }, 50);
+        return;
+      }
+
+      FeatureUsage.record('generate_click', lang);
 
       /* Show banner after 2nd use if not joined / not dismissed */
-      const total = FeatureUsage.totalUses();
+      var total = FeatureUsage.totalUses();
       if (total >= 2 && !hasJoined() && !localStorage.getItem(LS_DISMISSED)) {
-        const banner = document.getElementById('pg-waitlist-banner');
+        var banner = document.getElementById('pg-waitlist-banner');
         if (banner && banner.style.display === 'none') {
           banner.style.display = '';
           banner.classList.add('pg-banner-slide-in');

@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.5.1';  // poly-glot both shorthand + web: bothBtn, cost display, Cmd+E, copy on flags, README quick-ref
+const VERSION = '1.5.5';  // pro language gate: clearer error + web lock icons restored
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -49,10 +49,11 @@ function assertFreeLanguage(lang: string): void {
     if (!FREE_LANGUAGES.includes(normalised)) {
         const label = normalised.charAt(0).toUpperCase() + normalised.slice(1);
         console.error(
-            `\n  \x1b[33m⚠️  ${label} is a Pro language\x1b[0m\n` +
-            `\n  Free tier supports: \x1b[36mPython · JavaScript · Java\x1b[0m` +
-            `\n  All 12 languages unlock with Poly-Glot Pro (coming soon).` +
-            `\n  Join the waitlist → \x1b[36mhttps://poly-glot.ai/#pricing\x1b[0m\n`
+            `\n  \x1b[33m⚠️  ${label} requires a Pro subscription.\x1b[0m\n` +
+            `\n  \x1b[2mFree tier includes:\x1b[0m  \x1b[36mPython · JavaScript · Java\x1b[0m` +
+            `\n  \x1b[2mPro unlocks:\x1b[0m         \x1b[36mAll 12 languages + unlimited files + why-comments\x1b[0m\n` +
+            `\n  Join the waitlist and get \x1b[32m3 months free\x1b[0m with code \x1b[33mEARLYBIRD3\x1b[0m:` +
+            `\n  \x1b[36mhttps://poly-glot.ai/#pricing\x1b[0m\n`
         );
         process.exit(1);
     }
