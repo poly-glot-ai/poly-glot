@@ -1308,7 +1308,7 @@
     <script src="app.js?v=217"></script>
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
-    <script src="waitlist.js?v=16"></script>
+    <script src="waitlist.js?v=17"></script>
     <script src="pricing.js?v=7"></script>
 
     <!-- Enterprise / Teams Form Handler -->
@@ -1359,110 +1359,159 @@
                     }
                 }
 
-                // ── Global email deduplication (reads from EmailRegistry in waitlist.js) ──
+                // ── Step 1: fast local dedup (same device) ──
                 if (window.PolyGlotEmailRegistry && window.PolyGlotEmailRegistry.has(email)) {
                     if (successMsg) {
                         successMsg.innerHTML =
-                            '🎉 You\'re already on our waitlist! We\'ll reach out to <strong>' + email + '</strong> soon.';
+                            '✅ <strong>' + email + '</strong> is already on our waitlist! We\'ll reach out soon. 🚀';
                         successMsg.style.display = 'block';
                     }
-                    console.log('✅ Duplicate email blocked (teams form):', email);
-                    return; // stop — no fetch, no mailto
+                    return;
                 }
 
+                // ── Step 2: show loading while KV check runs (cross-device) ──
                 if (submitBtn)  submitBtn.disabled       = true;
                 if (btnText)    btnText.style.display    = 'none';
                 if (btnLoading) btnLoading.style.display = 'inline';
 
-                var isPromo     = promoCode === 'EARLYBIRD3';
-                var subjectLine = (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') +
-                                  'Teams Waitlist — ' + (company || email);
-
-                var mailSubj = encodeURIComponent(subjectLine);
-                var mailBody = encodeURIComponent(
-                    'Name: '       + name    + '\n' +
-                    'Email: '      + email   + '\n' +
-                    'Company: '    + company + '\n' +
-                    'Team Size: '  + (teamSize  || 'Not specified') + '\n' +
-                    'Promo Code: ' + (promoCode || 'none') + '\n' +
-                    'Message: '    + (message   || 'No additional message')
-                );
-
-                var formData = new FormData();
-                formData.append('access_key',       '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
-                formData.append('name',             name);
-                formData.append('email',            email);
-                formData.append('company',          company);
-                formData.append('team_size',        teamSize  || 'Not specified');
-                formData.append('message',          message   || 'No additional message');
-                formData.append('promo_code',       promoCode || 'none');
-                formData.append('promo_perk',       isPromo   ? '3 months free' : 'standard');
-                formData.append('signup_timestamp', new Date().toISOString());
-                formData.append('subject',          subjectLine);
-
-                fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
+                // ── Step 3: KV cross-device dedup ──
+                fetch('https://poly-glot.ai/api/counter/check-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(function(r) { return r.json(); })
+                .catch(function() { return { exists: false }; }) // network error → let through
+                .then(function(dedup) {
+                    if (dedup.exists) {
                         if (submitBtn)  submitBtn.disabled       = false;
                         if (btnText)    btnText.style.display    = 'inline';
                         if (btnLoading) btnLoading.style.display = 'none';
-
-                        if (data.success) {
-                            // Register email so future attempts on any form are blocked
-                            if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
-
-                            // Save to SignupTracker
-                            if (window.PolyGlotWaitlistTracker) {
-                                window.PolyGlotWaitlistTracker.save({
-                                    name: name, email: email, company: company,
-                                    team_size: teamSize, source: 'enterprise_form',
-                                    promo_code: promoCode
-                                });
-                            }
-
-                            // Save promo user if applicable
-                            if (isPromo && window.PolyGlotPromoTracker) {
-                                window.PolyGlotPromoTracker.save(email, 'enterprise_form', {
-                                    name: name, company: company, teamSize: teamSize
-                                });
-                            }
-
-                            form.reset();
-                            if (successMsg) {
-                                successMsg.innerHTML = isPromo
-                                    ? '🎉 You\'re on the VIP list + <strong>EARLYBIRD3</strong> is saved — enjoy <strong>3 months free</strong> at launch! We\'ll be in touch within 24 hours. 🚀'
-                                    : '🎉 You\'re on the VIP waitlist! We\'ll reach out within 24 hours.';
-                                successMsg.style.display = 'block';
-                            }
-                            if (typeof gtag !== 'undefined') {
-                                gtag('event', 'teams_waitlist_signup', {
-                                    event_category: 'Waitlist',
-                                    event_label:    isPromo ? 'EARLYBIRD3' : 'standard',
-                                    company:        company
-                                });
-                            }
-                            setTimeout(function() {
-                                if (successMsg) successMsg.style.display = 'none';
-                            }, 12000);
-                            console.log('✅ Teams form submitted. Promo:', promoCode || 'none');
-                        } else {
-                            throw new Error(data.message || 'Submission failed');
-                        }
-                    })
-                    .catch(function(err) {
-                        if (submitBtn)  submitBtn.disabled       = false;
-                        if (btnText)    btnText.style.display    = 'inline';
-                        if (btnLoading) btnLoading.style.display = 'none';
-                        window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + mailSubj + '&body=' + mailBody;
+                        if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
+                        localStorage.setItem('pg_waitlist_joined', '1');
+                        localStorage.setItem('pg_waitlist_email',  email);
                         if (successMsg) {
-                            successMsg.innerHTML = '✅ Opening your email client — please send the pre-filled message.';
+                            successMsg.innerHTML =
+                                '✅ <strong>' + email + '</strong> is already on our waitlist! We\'ll reach out soon. 🚀';
                             successMsg.style.display = 'block';
-                            setTimeout(function() { successMsg.style.display = 'none'; }, 8000);
                         }
-                        console.warn('Teams form Web3Forms fallback triggered', err);
-                    });
-            });
-        });
+                        return;
+                    }
+                    submitEnterpriseForm(
+                        name, email, company, teamSize, message, promoCode,
+                        submitBtn, btnText, btnLoading, successMsg, errorMsg
+                    );
+                });
+
+            }); // end form submit listener
+        }); // end DOMContentLoaded
+
+        /**
+         * Submit the enterprise form — called only after dedup checks pass.
+         * Sends exactly one email via web3forms, then registers the email in KV.
+         */
+        function submitEnterpriseForm(name, email, company, teamSize, message, promoCode,
+                                      submitBtn, btnText, btnLoading, successMsg, errorMsg) {
+            var isPromo     = promoCode === 'EARLYBIRD3';
+            var subjectLine = (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') +
+                              'Teams Waitlist — ' + (company || email);
+
+            var mailSubj = encodeURIComponent(subjectLine);
+            var mailBody = encodeURIComponent(
+                'Name: '       + name    + '\n' +
+                'Email: '      + email   + '\n' +
+                'Company: '    + company + '\n' +
+                'Team Size: '  + (teamSize  || 'Not specified') + '\n' +
+                'Promo Code: ' + (promoCode || 'none') + '\n' +
+                'Message: '    + (message   || 'No additional message')
+            );
+
+            var formData = new FormData();
+            formData.append('access_key',       '0b0e85a9-634a-4a99-895a-c56cf9e0ed9d');
+            formData.append('name',             name);
+            formData.append('email',            email);
+            formData.append('company',          company);
+            formData.append('team_size',        teamSize  || 'Not specified');
+            formData.append('message',          message   || 'No additional message');
+            formData.append('promo_code',       promoCode || 'none');
+            formData.append('promo_perk',       isPromo   ? '3 months free' : 'standard');
+            formData.append('signup_timestamp', new Date().toISOString());
+            formData.append('subject',          subjectLine);
+
+            fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (submitBtn)  submitBtn.disabled       = false;
+                    if (btnText)    btnText.style.display    = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+
+                    if (data.success) {
+                        // Register email in localStorage (fast local cache)
+                        if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
+
+                        // Register email in KV (cross-device dedup) — fire-and-forget
+                        fetch('https://poly-glot.ai/api/counter/register-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email })
+                        }).catch(function() { /* non-fatal */ });
+
+                        // Persist joined state locally
+                        localStorage.setItem('pg_waitlist_joined', '1');
+                        localStorage.setItem('pg_waitlist_email',  email);
+
+                        // Save to SignupTracker
+                        if (window.PolyGlotWaitlistTracker) {
+                            window.PolyGlotWaitlistTracker.save({
+                                name: name, email: email, company: company,
+                                team_size: teamSize, source: 'enterprise_form',
+                                promo_code: promoCode
+                            });
+                        }
+
+                        // Save promo user if applicable
+                        if (isPromo && window.PolyGlotPromoTracker) {
+                            window.PolyGlotPromoTracker.save(email, 'enterprise_form', {
+                                name: name, company: company, teamSize: teamSize
+                            });
+                        }
+
+                        var form = document.getElementById('enterpriseForm');
+                        if (form) form.reset();
+
+                        if (successMsg) {
+                            successMsg.innerHTML = isPromo
+                                ? '🎉 You\'re on the VIP list + <strong>EARLYBIRD3</strong> is saved — enjoy <strong>3 months free</strong> at launch! We\'ll be in touch within 24 hours. 🚀'
+                                : '🎉 You\'re on the VIP waitlist! We\'ll reach out within 24 hours.';
+                            successMsg.style.display = 'block';
+                        }
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'teams_waitlist_signup', {
+                                event_category: 'Waitlist',
+                                event_label:    isPromo ? 'EARLYBIRD3' : 'standard',
+                                company:        company
+                            });
+                        }
+                        setTimeout(function() {
+                            if (successMsg) successMsg.style.display = 'none';
+                        }, 12000);
+                    } else {
+                        throw new Error(data.message || 'Submission failed');
+                    }
+                })
+                .catch(function(err) {
+                    if (submitBtn)  submitBtn.disabled       = false;
+                    if (btnText)    btnText.style.display    = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    window.location.href = 'mailto:hwmoses2@icloud.com?subject=' + mailSubj + '&body=' + mailBody;
+                    if (successMsg) {
+                        successMsg.innerHTML = '✅ Opening your email client — please send the pre-filled message.';
+                        successMsg.style.display = 'block';
+                        setTimeout(function() { successMsg.style.display = 'none'; }, 8000);
+                    }
+                    console.warn('Teams form Web3Forms fallback triggered', err);
+                });
+        }
     </script>
 
     <!-- ── Footer ── -->

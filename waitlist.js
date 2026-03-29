@@ -410,6 +410,36 @@
       });
   }
 
+  /**
+   * Check KV (cross-device) whether an email is already on the waitlist.
+   * Falls back to false on network error so we never block a real submission.
+   * @param {string} email
+   * @returns {Promise<boolean>}
+   */
+  function checkEmailGlobal(email) {
+    return fetch(COUNTER_URL + '/check-email', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: email.trim().toLowerCase() }),
+    })
+      .then(r => r.json())
+      .then(d => d.exists === true)
+      .catch(() => false); // network error → assume new, let them through
+  }
+
+  /**
+   * Register an email in KV so every future device sees the duplicate.
+   * Fire-and-forget — failure is non-fatal.
+   * @param {string} email
+   */
+  function registerEmailGlobal(email) {
+    fetch(COUNTER_URL + '/register-email', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: email.trim().toLowerCase() }),
+    }).catch(() => { /* non-fatal */ });
+  }
+
   function getLocalCount() {
     const stored = parseInt(localStorage.getItem(LS_COUNT), 10);
     return isNaN(stored) ? SEED_COUNT : stored;
@@ -433,52 +463,8 @@
     /* Counter displays removed — no developer count shown to users */
   }
 
-  /* ── Notification to Harold on every new signup ─────────── */
-  /**
-   * Send an immediate email to hwmoses2@icloud.com for each new signup.
-   * @param {object} data — { name, email, company, teamSize, source, promoCode }
-   */
-  function notifyHarold(data) {
-    const isPromo   = (data.promoCode || '').toUpperCase() === PROMO_CODE;
-    const promoLine = isPromo ? '\n🎁 PROMO CODE: ' + PROMO_CODE + ' — 3 months free' : '';
-    const message   =
-      '🦜 New Poly-Glot Pro Waitlist Signup\n' +
-      '═══════════════════════════════════\n\n' +
-      'Name:       ' + (data.name     || 'not provided') + '\n' +
-      'Email:      ' + (data.email    || '') + '\n' +
-      'Company:    ' + (data.company  || 'not provided') + '\n' +
-      'Team Size:  ' + (data.teamSize || 'not provided') + '\n' +
-      'Source:     ' + (data.source   || 'unknown') + '\n' +
-      'Time:       ' + new Date().toUTCString() +
-      promoLine + '\n\n' +
-      '─── Total signups in this browser: ' + SignupTracker.count() + ' ───\n' +
-      '─── EARLYBIRD3 users:              ' + PromoTracker.count()  + ' ───';
-
-    const subjectTag = isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ';
-    const subject    = subjectTag + 'New Waitlist Signup — ' + (data.email || 'unknown');
-
-    const fd = new FormData();
-    fd.append('access_key', WEB3_KEY);
-    fd.append('subject',    subject);
-    fd.append('from_name',  'Poly-Glot Waitlist');
-    fd.append('replyto',    data.email || NOTIFY_EMAIL);
-    fd.append('name',       data.name  || 'Waitlist User');
-    fd.append('email',      NOTIFY_EMAIL);
-    fd.append('message',    message);
-
-    fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
-      .then(r => r.json())
-      .then(d => {
-        if (d.success) {
-          console.log('%c📧 Harold notified of new signup: ' + data.email, 'color:#10b981;font-weight:bold');
-        } else {
-          console.warn('notifyHarold: Web3Forms returned non-success', d);
-        }
-      })
-      .catch(err => {
-        console.warn('notifyHarold: fetch failed (network)', err);
-      });
-  }
+  /* notifyHarold() removed — web3forms submit already delivers the notification.
+     Calling it separately was the cause of the duplicate email bug.          */
 
   /* ── Banner ────────────────────────────────────────────── */
 
@@ -802,60 +788,82 @@
       return;
     }
 
-    /* ── Global email deduplication ── */
+    /* ── Step 1: fast local dedup (same device/browser) ─────────────────── */
     if (EmailRegistry.has(email)) {
-      if (errorEl) {
-        errorEl.innerHTML =
-          '🎉 Great news — you\'re already on our early-access list! ' +
-          'We\'ll email <strong>' + escapeHtml(email) + '</strong> the moment Pro launches, ' +
-          'and you\'ll get your first 3 months on us. Stay tuned! 🚀';
-        errorEl.style.display = 'block';
-      }
-      ga('duplicate_email_modal');
+      showAlreadyOnList(email, errorEl);
+      ga('duplicate_email_modal_local');
       return;
     }
 
+    /* ── Step 2: show loading state while we check KV (cross-device) ─────── */
     if (submitBtn) submitBtn.disabled = true;
     if (btnText)   btnText.style.display   = 'none';
     if (btnLoad)   btnLoad.style.display   = 'inline';
     if (successEl) successEl.style.display = 'none';
     if (errorEl)   errorEl.style.display   = 'none';
 
-    const isPromo   = promoCode === PROMO_CODE;
-    const genCount  = FeatureUsage.totalUses();
-    const language  = (function () {
-      const sel = document.getElementById('cgLanguage') || document.getElementById('language');
-      return sel ? sel.value : '';
-    }());
+    /* ── Step 3: KV check — catches signups from any other device ─────────── */
+    checkEmailGlobal(email).then(function (alreadyExists) {
+      if (alreadyExists) {
+        /* Register locally so future checks on this device are instant */
+        EmailRegistry.add(email);
+        localStorage.setItem(LS_JOINED, '1');
+        localStorage.setItem(LS_EMAIL, email);
+        resetBtn(submitBtn, btnText, btnLoad);
+        showAlreadyOnList(email, errorEl);
+        ga('duplicate_email_modal_kv');
+        return;
+      }
 
-    const fd = new FormData();
-    fd.append('access_key', WEB3_KEY);
-    fd.append('subject',    (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') + 'Waitlist Signup — ' + email);
-    fd.append('from_name',  'Poly-Glot Waitlist');
-    fd.append('replyto',    email);
-    fd.append('name',       name || email);
-    fd.append('email',      email);
-    fd.append('role',       role);
-    fd.append('promo_code', promoCode || 'none');
-    fd.append('promo_perk', isPromo ? '3 months free' : 'standard');
-    fd.append('gen_count',  genCount);
-    fd.append('language',   language);
-    fd.append('source',     'modal');
-    fd.append('timestamp',  new Date().toISOString());
-    /* honeypot */
-    fd.append('_honey', '');
+      /* ── Step 4: new signup — send exactly one email via web3forms ──────── */
+      const isPromo  = promoCode === PROMO_CODE;
+      const genCount = FeatureUsage.totalUses();
+      const language = (function () {
+        const sel = document.getElementById('cgLanguage') || document.getElementById('language');
+        return sel ? sel.value : '';
+      }());
 
-    fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.success) throw new Error(data.message || 'submission failed');
-        onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal' }, submitBtn, btnText, btnLoad, successEl, errorEl);
-      })
-      .catch(() => {
-        /* Offline / network error — still register them locally */
-        onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal_offline' }, submitBtn, btnText, btnLoad, successEl, errorEl);
-        ga('waitlist_error');
-      });
+      const fd = new FormData();
+      fd.append('access_key', WEB3_KEY);
+      fd.append('subject',    (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') + 'Waitlist Signup — ' + email);
+      fd.append('from_name',  'Poly-Glot Waitlist');
+      fd.append('replyto',    email);
+      fd.append('name',       name || email);
+      fd.append('email',      email);
+      fd.append('role',       role);
+      fd.append('promo_code', promoCode || 'none');
+      fd.append('promo_perk', isPromo ? '3 months free' : 'standard');
+      fd.append('gen_count',  genCount);
+      fd.append('language',   language);
+      fd.append('source',     'modal');
+      fd.append('timestamp',  new Date().toISOString());
+      fd.append('_honey',     '');
+
+      fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(function (data) {
+          if (!data.success) throw new Error(data.message || 'submission failed');
+          onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal' }, submitBtn, btnText, btnLoad, successEl, errorEl);
+        })
+        .catch(function () {
+          /* Network error — register locally so they aren't blocked from retrying */
+          onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal_offline' }, submitBtn, btnText, btnLoad, successEl, errorEl);
+          ga('waitlist_error');
+        });
+    });
+  }
+
+  /**
+   * Show a friendly "you're already on the list" message.
+   * Used by both local and cross-device dedup paths.
+   */
+  function showAlreadyOnList(email, errorEl) {
+    if (errorEl) {
+      errorEl.innerHTML =
+        '✅ <strong>' + escapeHtml(email) + '</strong> is already on our early-access list! ' +
+        'We\'ll email you the moment Pro launches — and you\'ll get your first 3 months on us. 🚀';
+      errorEl.style.display = 'block';
+    }
   }
 
   /**
@@ -887,8 +895,8 @@
       PromoTracker.save(data.email, data.source, { name: data.name });
     }
 
-    /* Notify Harold immediately */
-    notifyHarold({ name: data.name, email: data.email, source: data.source, promoCode: data.promoCode });
+    /* Register email in KV so every other device sees this signup immediately */
+    registerEmailGlobal(data.email);
 
     FeatureUsage.record('waitlist_joined', data.source);
     ga('waitlist_joined', { source: data.source, promo: data.promoCode || 'none' });
@@ -1047,51 +1055,61 @@
         return;
       }
 
-      /* ── Global email deduplication ── */
+      /* ── Step 1: fast local dedup ───────────────────────────────────────── */
       if (EmailRegistry.has(email)) {
-        if (errorEl) {
-          errorEl.innerHTML =
-            '🎉 You\'re already on our early-access list! ' +
-            'We\'ll email you the moment Pro launches + <strong>3 months free</strong>. You\'re all set! 🚀';
-          errorEl.style.display = 'block';
-        }
-        ga('duplicate_email_inline');
+        showAlreadyOnList(email, errorEl);
+        ga('duplicate_email_inline_local');
         return;
       }
 
+      /* ── Step 2: show loading while KV check runs ────────────────────────── */
       if (submitBtn) submitBtn.disabled = true;
       if (btnText)   btnText.style.display = 'none';
       if (btnLoad)   btnLoad.style.display = 'inline';
       if (successEl) successEl.style.display = 'none';
       if (errorEl)   errorEl.style.display   = 'none';
 
-      const fd = new FormData();
-      fd.append('access_key', WEB3_KEY);
-      fd.append('subject',    '🦜 New Pro Waitlist Signup — ' + email);
-      fd.append('from_name',  'Poly-Glot Waitlist');
-      fd.append('replyto',    email);
-      fd.append('name',       email);
-      fd.append('email',      email);
-      fd.append('source',     'inline_section');
-      fd.append('timestamp',  new Date().toISOString());
-      fd.append('message',
-        '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
-        'Email:  ' + email + '\n' +
-        'Source: Inline Section\n' +
-        'Time:   ' + new Date().toUTCString()
-      );
+      /* ── Step 3: KV cross-device dedup ───────────────────────────────────── */
+      checkEmailGlobal(email).then(function (alreadyExists) {
+        if (alreadyExists) {
+          EmailRegistry.add(email);
+          localStorage.setItem(LS_JOINED, '1');
+          localStorage.setItem(LS_EMAIL, email);
+          resetBtn(submitBtn, btnText, btnLoad);
+          showAlreadyOnList(email, errorEl);
+          ga('duplicate_email_inline_kv');
+          return;
+        }
 
-      fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(data => {
-          resetBtn(submitBtn, btnText, btnLoad);
-          onInlineSuccess(email, successEl, form);
-        })
-        .catch(() => {
-          resetBtn(submitBtn, btnText, btnLoad);
-          onInlineSuccess(email, successEl, form);
-          ga('waitlist_inline_error');
-        });
+        /* ── Step 4: new signup — one email via web3forms ────────────────── */
+        const fd = new FormData();
+        fd.append('access_key', WEB3_KEY);
+        fd.append('subject',    '🦜 New Pro Waitlist Signup — ' + email);
+        fd.append('from_name',  'Poly-Glot Waitlist');
+        fd.append('replyto',    email);
+        fd.append('name',       email);
+        fd.append('email',      email);
+        fd.append('source',     'inline_section');
+        fd.append('timestamp',  new Date().toISOString());
+        fd.append('message',
+          '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
+          'Email:  ' + email + '\n' +
+          'Source: Inline Section\n' +
+          'Time:   ' + new Date().toUTCString()
+        );
+
+        fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(function () {
+            resetBtn(submitBtn, btnText, btnLoad);
+            onInlineSuccess(email, successEl, form);
+          })
+          .catch(function () {
+            resetBtn(submitBtn, btnText, btnLoad);
+            onInlineSuccess(email, successEl, form);
+            ga('waitlist_inline_error');
+          });
+      });
     });
   }
 
@@ -1099,8 +1117,11 @@
    * Shared success handler for the inline section form.
    */
   function onInlineSuccess(email, successEl, form) {
-    /* Register email globally */
+    /* Register in localStorage (fast local cache) */
     EmailRegistry.add(email);
+
+    /* Register in KV (cross-device dedup) — fire-and-forget */
+    registerEmailGlobal(email);
 
     localStorage.setItem(LS_JOINED, '1');
     localStorage.setItem(LS_EMAIL, email);
@@ -1109,10 +1130,9 @@
     ga('waitlist_joined', { source: 'inline_section' });
 
     SignupTracker.save({ email: email, source: 'inline_section' });
-    notifyHarold({ email: email, source: 'inline_section' });
 
     if (successEl) {
-      successEl.innerHTML = `🎉 You're in! We'll email <strong>${escapeHtml(email)}</strong> when Pro launches.`;
+      successEl.innerHTML = '🎉 You\'re in! We\'ll email <strong>' + escapeHtml(email) + '</strong> when Pro launches.';
       successEl.style.display = 'block';
     }
     if (form) {
