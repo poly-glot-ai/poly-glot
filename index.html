@@ -274,17 +274,21 @@
          picks up the correct styles even before CDN propagates.
          ═══════════════════════════════════════════════════════════════════ */
 
-      /* feature badge — vscode blue */
+      /* feature badge — vscode blue (must override browser a{color} default) */
+      a.feature-badge-vscode,
       .feature-badge-vscode {
-        background: rgba(0,122,204,.15);
-        border-color: rgba(0,122,204,.4);
-        color: #60b4f6;
-        text-decoration: none;
+        display: inline-flex !important;
+        background: rgba(0,122,204,.15) !important;
+        border-color: rgba(0,122,204,.4) !important;
+        color: #60b4f6 !important;
+        text-decoration: none !important;
         cursor: pointer;
       }
+      a.feature-badge-vscode:hover,
       .feature-badge-vscode:hover {
-        background: rgba(0,122,204,.25);
-        border-color: rgba(0,122,204,.65);
+        background: rgba(0,122,204,.25) !important;
+        border-color: rgba(0,122,204,.65) !important;
+        color: #93c5fd !important;
         transform: translateY(-1px);
       }
 
@@ -670,7 +674,7 @@
                         </div>
                     </div>
                     <div class="vscode-launch-banner__actions">
-                        <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-install-btn">
+                        <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="vscode-install-btn">
                             <span class="vscode-install-btn__icon">⚡</span>Install in VS Code
                         </a>
                         <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="vscode-marketplace-link">
@@ -688,7 +692,7 @@
                         VS Code Extension
                         <span class="live-badge">✓ Live on Marketplace</span>
                     </h2>
-                    <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-heading-cta">⚡ Install Free</a>
+                    <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="vscode-heading-cta">⚡ Install Free</a>
                 </div>
                 <p class="overview-text">
                     Comment code without leaving your editor. The <strong>Poly-Glot VS Code Extension</strong> brings
@@ -758,7 +762,7 @@
 
                 <!-- CTA bar -->
                 <div class="vscode-cta-bar">
-                    <a href="vscode:extension/poly-glot-ai.poly-glot" class="vscode-cta-bar__primary">
+                    <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="vscode-cta-bar__primary">
                         ⚡ Install in VS Code — Free
                     </a>
                     <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="vscode-cta-bar__secondary">
@@ -1886,7 +1890,7 @@
     <!-- ── Footer ── -->
     <div class="site-footer">
         <div class="site-footer__vscode-row">
-            <a href="vscode:extension/poly-glot-ai.poly-glot" class="footer-vscode-link">
+            <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="footer-vscode-link">
                 💻 Install VS Code Extension — Free
             </a>
             <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="footer-vscode-link">
@@ -1903,5 +1907,23 @@
         </div>
         <p>© 2026 <strong>Harold Moses</strong> · <span class="footer-domain">poly-glot.ai</span> is a registered domain owned by Harold Moses · Built with 🪿 Goose</p>
     </div>
+    <script>
+    /* ── VS Code deep-link: desktop only ──────────────────────────────────
+       On desktop (non-touch, non-mobile UA), upgrade data-vscode-deep links
+       to the vscode:// URI so VS Code opens directly.
+       Mobile always falls through to the marketplace URL (set as href).
+       ──────────────────────────────────────────────────────────────────── */
+    (function() {
+      var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || ('ontouchstart' in window && window.innerWidth < 1024);
+      if (!isMobile) {
+        document.querySelectorAll('[data-vscode-deep]').forEach(function(el) {
+          el.setAttribute('href', el.getAttribute('data-vscode-deep'));
+          el.removeAttribute('target');
+          el.removeAttribute('rel');
+        });
+      }
+    })();
+    </script>
 </body>
 </html>
