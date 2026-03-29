@@ -65,6 +65,39 @@ npx poly-glot-ai-cli comment src/auth.js
 
 ---
 
+## Free tier vs Pro
+
+| | Free | Pro |
+|---|---|---|
+| **Languages** | Python · JavaScript · Java | All 12 languages |
+| **Files / month** | 50 | Unlimited |
+| **Comment modes** | `comment` only | `comment`, `why`, `both` |
+| **CLI tool** | ✅ (3 languages) | ✅ (all 12 languages) |
+| **Web UI** | ✅ | ✅ |
+| **Confidence scoring** | ✗ | ✅ |
+| **Fine-tune export (JSONL)** | ✗ | ✅ |
+| **Price** | Free forever | Coming soon |
+
+### Free languages
+
+The free tier supports **Python**, **JavaScript**, and **Java**.
+
+Picking any other language — TypeScript, Go, Rust, C++, C#, Ruby, PHP, Swift, Kotlin — will exit with:
+
+```
+⚠️  TypeScript requires a Pro subscription.
+
+  Free tier includes:  Python · JavaScript · Java
+  Pro unlocks:         All 12 languages + unlimited files + why-comments
+
+  Join the waitlist and get 3 months free with code EARLYBIRD3:
+  https://poly-glot.ai/#pricing
+```
+
+> **Join the waitlist** at [poly-glot.ai](https://poly-glot.ai/#pricing) and use code **EARLYBIRD3** to get **3 months free** when Pro launches.
+
+---
+
 ## Quick start
 
 ```bash
@@ -304,19 +337,22 @@ Output includes:
 
 ## Supported languages
 
-| Language | Doc-comment style | Why-comment style |
-|----------|-------------------|-------------------|
-| JavaScript / TypeScript | JSDoc / TSDoc | `// why:` inline |
-| Python | Google-style docstrings | `# why:` inline |
-| Java | Javadoc | `// why:` inline |
-| C / C++ | Doxygen | `// why:` inline |
-| C# | XML doc comments | `// why:` inline |
-| Go | GoDoc | `// why:` inline |
-| Rust | `///` doc comments | `// why:` inline |
-| Ruby | YARD | `# why:` inline |
-| PHP | PHPDoc | `// why:` inline |
-| Swift | Swift markup | `// why:` inline |
-| Kotlin | KDoc | `// why:` inline |
+| Language | Tier | Doc-comment style | Why-comment style |
+|----------|------|-------------------|-------------------|
+| JavaScript | **Free** | JSDoc | `// why:` inline |
+| Python | **Free** | Google-style docstrings | `# why:` inline |
+| Java | **Free** | Javadoc | `// why:` inline |
+| TypeScript | Pro 🔒 | TSDoc | `// why:` inline |
+| C / C++ | Pro 🔒 | Doxygen | `// why:` inline |
+| C# | Pro 🔒 | XML doc comments | `// why:` inline |
+| Go | Pro 🔒 | GoDoc | `// why:` inline |
+| Rust | Pro 🔒 | `///` doc comments | `// why:` inline |
+| Ruby | Pro 🔒 | YARD | `# why:` inline |
+| PHP | Pro 🔒 | PHPDoc | `// why:` inline |
+| Swift | Pro 🔒 | Swift markup | `// why:` inline |
+| Kotlin | Pro 🔒 | KDoc | `// why:` inline |
+
+> 🔒 Pro languages require a subscription. [Join the waitlist](https://poly-glot.ai/#pricing) — use code **EARLYBIRD3** for 3 months free.
 
 ---
 
