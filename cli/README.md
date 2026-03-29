@@ -9,6 +9,25 @@
 AI-powered code comment generation from the command line.  
 Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://poly-glot.ai).
 
+---
+
+## 🎉 Poly-Glot AI is officially live!
+
+> Thanks for being one of our **1,200+ early CLI users**. The full platform is now open for subscriptions.
+>
+> 🎁 **Early bird offer** — use code **`EARLYBIRD3`** at checkout for **3 months completely free** on any paid plan.  
+> ⚡ Limited to the first **50 subscribers** — [grab it now →](https://poly-glot.ai)
+>
+> | Plan | Price | What you get |
+> |------|-------|-------------|
+> | **Free** | $0/mo | Python · JS · Java · doc-comments · BYOK |
+> | **Pro** | $9/mo | All 12 languages · why-comments · both mode · shared API key pool |
+> | **Team** | $29/mo | Everything in Pro · 5 seats · team analytics |
+>
+> → [**Sign up at poly-glot.ai**](https://poly-glot.ai)
+
+---
+
 > ⭐ **If this saves you time, a GitHub star goes a long way.**  
 > It helps other developers discover Poly-Glot and keeps the project growing.  
 > → [**Star on GitHub**](https://github.com/hmoses/poly-glot)

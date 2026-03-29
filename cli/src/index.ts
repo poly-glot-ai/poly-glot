@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.6.0';  // pro license token: --token flag, POLYGLOT_LICENSE_TOKEN env, plan-gated modes
+const VERSION = '1.6.1';  // launch announcement, postinstall welcome, README refresh
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -164,11 +164,12 @@ function showWhatsNew(cfg: Config): void {
         lastMaj < maj || (lastMaj === maj && lastMin < min);
 
     // Show each notice exactly once — only for users upgrading past that version
-    const showV14 = isOlderThan(1, 4);
-    const showV15 = isOlderThan(1, 5);
-    const showV16 = isOlderThan(1, 6);
+    const showV14  = isOlderThan(1, 4);
+    const showV15  = isOlderThan(1, 5);
+    const showV16  = isOlderThan(1, 6);
+    const showV161 = last !== VERSION; // show launch notice on first run of 1.6.1
 
-    if (!showV14 && !showV15 && !showV16) return;
+    if (!showV14 && !showV15 && !showV16 && !showV161) return;
 
     if (showV14) {
         console.log(`
@@ -228,6 +229,36 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 
   CI/CD? Set the ${COLORS.dim}POLYGLOT_LICENSE_TOKEN${COLORS.reset} environment variable instead.
 
+${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
+`);
+    }
+
+    if (showV161) {
+        console.log(`
+${COLORS.bold}${COLORS.green}🎉 Poly-Glot AI is officially live!${COLORS.reset}
+${'─'.repeat(54)}
+
+  Thanks for being one of our ${COLORS.bold}1,200+ early CLI users${COLORS.reset}. 🦜
+  The full platform is now open for subscriptions.
+
+  ${COLORS.bold}${COLORS.cyan}What you get free, forever:${COLORS.reset}
+  ✅  Python, JavaScript & Java
+  ✅  JSDoc, PyDoc, Javadoc doc-comments
+  ✅  Unlimited runs on free tier
+
+  ${COLORS.bold}${COLORS.cyan}Upgrade to Pro — $9/mo:${COLORS.reset}
+  🚀  All 12 languages (Go, Rust, Swift, Kotlin, C++, C#, Ruby, PHP + more)
+  💬  Why-comments — explain intent, decisions & trade-offs
+  📝  Both mode — doc + why in a single two-pass run
+  🔑  Shared API key pool — no OpenAI/Anthropic key needed
+  💻  VS Code extension included
+
+  ${COLORS.bold}${COLORS.yellow}🎁 Early bird offer:${COLORS.reset} Use code ${COLORS.bold}EARLYBIRD3${COLORS.reset} for ${COLORS.bold}3 months free${COLORS.reset}
+  Limited to the first 50 subscribers — grab it while it lasts.
+
+  ${COLORS.cyan}→ Sign up at https://poly-glot.ai${COLORS.reset}
+
+${'─'.repeat(54)}
 ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
     }
