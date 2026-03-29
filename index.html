@@ -1303,7 +1303,7 @@
     <script src="app.js?v=217"></script>
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
-    <script src="waitlist.js?v=14"></script>
+    <script src="waitlist.js?v=15"></script>
     <script src="pricing.js?v=5"></script>
 
     <!-- Enterprise / Teams Form Handler -->
@@ -1341,13 +1341,24 @@
                 var message   = (document.getElementById('formMessage')  || {}).value || '';
                 var promoCode = ((document.getElementById('formPromo')   || {}).value || '').trim().toUpperCase();
 
+                // ── Promo code prompt (before anything else) ──
+                if (!promoCode) {
+                    var enterPromo = window.confirm(
+                        'Do you have a promo code?\n\nIf yes, click Cancel, add it to the Promo Code field, then resubmit.\nIf no, click OK to continue without one.'
+                    );
+                    if (!enterPromo) {
+                        // User wants to go back and enter a promo code
+                        var promoField = document.getElementById('formPromo');
+                        if (promoField) { promoField.focus(); }
+                        return;
+                    }
+                }
+
                 // ── Global email deduplication (reads from EmailRegistry in waitlist.js) ──
                 if (window.PolyGlotEmailRegistry && window.PolyGlotEmailRegistry.has(email)) {
                     if (errorMsg) {
                         errorMsg.innerHTML =
-                            '🎉 Great news! You\'re already on our VIP waitlist — ' +
-                            'we\'ll reach out to <strong>' + email + '</strong> when a spot opens up. ' +
-                            'Your early-access status and 3 months free are locked in! 🚀';
+                            '🎉 You\'re already on our waitlist! We\'ll reach out to <strong>' + email + '</strong> soon. Talk to you within 24 hours! 🚀';
                         errorMsg.style.display = 'block';
                     }
                     console.log('✅ Duplicate email blocked (teams form):', email);
