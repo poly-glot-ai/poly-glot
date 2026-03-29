@@ -182,6 +182,68 @@
         transform: translateX(-50%) translateY(10px);
       }
 
+      /* ── Free CTA panel (post sign-in) ── */
+      .pg-modal-free-cta {
+        text-align: center;
+        padding: 8px 0 4px;
+      }
+      .pg-modal-free-cta__icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+        animation: pg-parrot-bob 3s ease-in-out infinite;
+      }
+      .pg-modal-free-cta__title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0 0 10px;
+      }
+      .pg-modal-free-cta__body {
+        font-size: 13px;
+        color: #94a3b8;
+        line-height: 1.6;
+        margin: 0 0 18px;
+      }
+      .pg-modal-free-cta__body strong {
+        color: #e2e8f0;
+      }
+      .pg-modal-free-cta__btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-bottom: 12px;
+        font-family: Inter, sans-serif;
+        transition: opacity 0.2s;
+      }
+      .pg-modal-free-cta__btn:hover { opacity: 0.88; }
+      .pg-modal-free-cta__divider {
+        font-size: 12px;
+        color: #475569;
+        margin-bottom: 10px;
+      }
+      .pg-modal-free-cta__plans {
+        display: block;
+        width: 100%;
+        padding: 11px;
+        background: rgba(79, 70, 229, 0.15);
+        color: #a5b4fc;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1.5px solid rgba(99, 102, 241, 0.35);
+        border-radius: 10px;
+        cursor: pointer;
+        font-family: Inter, sans-serif;
+        transition: background 0.2s;
+      }
+      .pg-modal-free-cta__plans:hover { background: rgba(79,70,229,0.25); }
+
       /* ── Plan Badge (header) ── */
       .pg-plan-badge {
         display: inline-flex;
@@ -384,8 +446,19 @@
             Send Magic Link
           </button>
         </form>
-        <div class="pg-modal-success" id="pgAuthModalSuccess">
+        <div class="pg-modal-success" id="pgAuthModalSuccess" style="display:none;">
           ✅ Check your email!
+        </div>
+        <div class="pg-modal-free-cta" id="pgAuthModalFreeCta" style="display:none;">
+          <div class="pg-modal-free-cta__icon">🦜</div>
+          <h3 class="pg-modal-free-cta__title">You're all set to explore!</h3>
+          <p class="pg-modal-free-cta__body">
+            While you wait for your magic link, you can use <strong>Poly-Glot free</strong> right now —
+            Python, JavaScript &amp; Java with doc-comments included.
+          </p>
+          <button class="pg-modal-free-cta__btn" id="pgAuthModalStartFree">Start Using Free →</button>
+          <div class="pg-modal-free-cta__divider">or</div>
+          <button class="pg-modal-free-cta__plans" id="pgAuthModalSeePlans">⭐ See Pro Plans</button>
         </div>
       </div>
     `;
@@ -459,11 +532,34 @@
       .then(function (res) { return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
       .then(function (result) {
         if (result.ok) {
-          // Success — show confirmation
-          if (form)    form.style.display    = 'none';
+          // Success — show email confirmation + free CTA
+          if (form) form.style.display = 'none';
           if (success) {
             success.style.display = 'block';
-            success.innerHTML = '✅ Check your email!<br><span style="font-size:13px;color:#64748b;display:block;margin-top:6px;">Click the link we sent to <strong>' + email + '</strong>.<br>It expires in 15 minutes.</span>';
+            success.innerHTML = '✅ Magic link sent to <strong>' + email + '</strong><br><span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">Check inbox &amp; spam — expires in 15 min.</span>';
+          }
+          var freeCta = document.getElementById('pgAuthModalFreeCta');
+          if (freeCta) {
+            freeCta.style.display = 'block';
+            // "Start Using Free" — close modal, apply free gating
+            var startFreeBtn = document.getElementById('pgAuthModalStartFree');
+            if (startFreeBtn) {
+              startFreeBtn.addEventListener('click', function () {
+                closeModal();
+                applyPlanGating('free');
+                showToast('👋 Using Poly-Glot free — Python, JS & Java unlocked. Click your email link anytime to restore your session.');
+              });
+            }
+            // "See Pro Plans" — close modal, scroll to pricing
+            var seePlansBtn = document.getElementById('pgAuthModalSeePlans');
+            if (seePlansBtn) {
+              seePlansBtn.addEventListener('click', function () {
+                closeModal();
+                var el = document.getElementById('pg-pricing-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                if (typeof gtag === 'function') gtag('event', 'modal_see_plans_click');
+              });
+            }
           }
         } else {
           // Error — show message, re-enable button
