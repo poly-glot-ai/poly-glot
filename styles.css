@@ -3197,6 +3197,19 @@ kbd {
     font-size: 12px;
 }
 .site-footer strong { color: #94a3b8; }
+.site-footer__badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.site-footer__badges a {
+    display: inline-flex;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+}
+.site-footer__badges a:hover { opacity: 1; }
 .footer-domain {
     color: #7dd3fc;
     font-family: 'Fira Code', monospace;
