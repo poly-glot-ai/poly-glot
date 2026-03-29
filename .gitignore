@@ -22,3 +22,11 @@ node_modules/
 # Build outputs (if added later)
 dist/
 build/
+
+# Demo video frames + outputs
+demo-video/
+get-variant-ids.js
+
+# Wrangler cache
+.wrangler/
+telemetry-worker/.wrangler/
