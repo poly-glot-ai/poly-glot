@@ -3,7 +3,11 @@
   "displayName": "Poly-Glot AI",
   "description": "AI-powered code comment generation — JSDoc, Javadoc, PyDoc, Doxygen, why-comments and more for 12 languages.",
   "version": "1.3.0",
-  "publisher": "hmoses",
+  "publisher": "poly-glot-ai",
+  "license": "MIT",
+  "homepage": "https://poly-glot.ai",
+  "bugs": { "url": "https://github.com/hmoses/poly-glot/issues" },
+  "galleryBanner": { "color": "#0f1e14", "theme": "dark" },
   "icon": "icon.png",
   "repository": {
     "type": "git",
