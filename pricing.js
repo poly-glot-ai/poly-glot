@@ -260,8 +260,8 @@
           <div class="pg-ea-left">
             <span class="pg-ea-icon">🎁</span>
             <div class="pg-ea-text">
-              <strong>On the waitlist? Get 3 months free.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> at checkout.</span>
+              <strong>Join the waitlist — get 3 months free at launch.</strong>
+              <span>Use code <strong>EARLYBIRD3</strong> when you sign up.</span>
             </div>
           </div>
           <button class="pg-ea-cta" id="pg-ea-join-btn">Join Waitlist Free →</button>

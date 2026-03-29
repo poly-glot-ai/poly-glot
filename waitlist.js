@@ -499,7 +499,7 @@
             <span class="pg-banner-fire">✅</span>
             <span class="pg-banner-msg">
               <strong>You're on the Pro waitlist!</strong>
-              <span class="pg-banner-sub"> You'll get early access + 3 months free at launch.</span>
+              <span class="pg-banner-sub"> You'll get early access + 3 months free at launch. Use code EARLYBIRD3 when you sign up.</span>
             </span>
           </div>
           <div class="pg-banner-right">
@@ -515,7 +515,7 @@
             <span class="pg-banner-fire">🔥</span>
             <span class="pg-banner-msg">
               <strong>Poly-Glot Pro — Early Access</strong>
-              <span class="pg-banner-sub"> Join the early-access waitlist — get 3 months free at launch.</span>
+              <span class="pg-banner-sub"> Join the waitlist — get 3 months free at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</span>
             </span>
           </div>
           <div class="pg-banner-right">
@@ -577,7 +577,7 @@
             <span class="pg-wm-parrot">🦜</span>
             <div>
               <h2 class="pg-wm-title" id="pg-modal-title">Poly-Glot Pro — Early Access</h2>
-              <p class="pg-wm-subtitle">Be first. Get 3 months free when Pro launches.</p>
+              <p class="pg-wm-subtitle">Join the waitlist — get 3 months free at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
             </div>
           </div>
           <button class="pg-wm-close" id="pg-modal-close" aria-label="Close modal">✕</button>
@@ -920,7 +920,7 @@
         <span class="pg-banner-fire">✅</span>
         <span class="pg-banner-msg">
           <strong>You're on the Pro waitlist!</strong>
-          <span class="pg-banner-sub"> You'll get early access + 3 months free at launch.</span>
+          <span class="pg-banner-sub"> You'll get early access + 3 months free at launch. Use code EARLYBIRD3 when you sign up.</span>
         </span>
       </div>
       <div class="pg-banner-right">
@@ -1002,7 +1002,7 @@
         <div class="pg-wis-left">
           <div class="pg-wis-eyebrow">🚀 Coming Soon</div>
           <h2 class="pg-wis-heading">Poly-Glot Pro</h2>
-          <p class="pg-wis-sub">Unlimited files. Confidence scoring. Team dashboards. Fine-tune export for LLMs.<br>Join the waitlist — get <strong>3 months free</strong> at launch.</p>
+          <p class="pg-wis-sub">Unlimited files. Confidence scoring. Team dashboards. Fine-tune export for LLMs.<br>Join the waitlist — get <strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
         </div>
         <div class="pg-wis-right">
           <form class="pg-wis-form" id="pg-wis-form" novalidate>
