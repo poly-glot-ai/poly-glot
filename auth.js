@@ -196,7 +196,126 @@
         font-weight: 600;
         padding: 4px 12px;
         vertical-align: middle;
-        margin-left: 10px;
+      }
+
+      /* ── User chip (replaces Sign In button after auth) ── */
+      .pg-user-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px 5px 6px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        border-radius: 100px;
+        font-family: Inter, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: #94a3b8;
+        cursor: default;
+        white-space: nowrap;
+        position: relative;
+      }
+      .pg-user-chip__avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        text-transform: uppercase;
+      }
+      .pg-user-chip__email {
+        max-width: 130px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #cbd5e1;
+        font-weight: 500;
+      }
+      .pg-user-chip__plan {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+      .pg-user-chip__plan--free {
+        background: rgba(100, 116, 139, 0.2);
+        color: #94a3b8;
+      }
+      .pg-user-chip__plan--pro {
+        background: rgba(79, 70, 229, 0.2);
+        color: #a5b4fc;
+      }
+      .pg-user-chip__plan--team {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+      .pg-user-chip__plan--enterprise {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+      }
+      /* dropdown on hover */
+      .pg-user-chip:hover .pg-user-chip__menu {
+        display: flex;
+      }
+      .pg-user-chip__menu {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        background: #1e293b;
+        border: 1px solid rgba(100,116,139,0.3);
+        border-radius: 10px;
+        overflow: hidden;
+        min-width: 160px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        z-index: 9999;
+      }
+      .pg-user-chip__menu-item {
+        padding: 10px 16px;
+        font-size: 13px;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        text-align: left;
+        border: none;
+        background: none;
+        width: 100%;
+        font-family: Inter, sans-serif;
+        white-space: nowrap;
+      }
+      .pg-user-chip__menu-item:hover {
+        background: rgba(255,255,255,0.05);
+        color: #e2e8f0;
+      }
+      .pg-user-chip__menu-item--upgrade {
+        color: #4ade80;
+        font-weight: 600;
+      }
+      .pg-user-chip__menu-item--upgrade:hover {
+        background: rgba(74,222,128,0.08);
+        color: #86efac;
+      }
+      .pg-user-chip__menu-item--danger {
+        color: #f87171;
+      }
+      .pg-user-chip__menu-item--danger:hover {
+        background: rgba(248,113,113,0.08);
+        color: #fca5a5;
+      }
+
+      /* ── Locked button state ── */
+      .btn-locked {
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
       }
     `;
     document.head.appendChild(style);
@@ -360,16 +479,20 @@
         return res.json();
       })
       .then(function (data) {
-        var plan = data.plan || 'free';
+        var plan  = data.plan  || 'free';
+        var email = data.email || localStorage.getItem('pg_email') || '';
         _token = token;
         _plan  = plan;
         localStorage.setItem(LS_PLAN_KEY, plan);
+        if (email) localStorage.setItem('pg_email', email);
         PolyGlotAuth.onPlanLoaded(plan);
+        updateHeaderForUser(email, plan);
       })
       .catch(function () {
         // Token invalid — purge it
         localStorage.removeItem(LS_TOKEN_KEY);
         localStorage.removeItem(LS_PLAN_KEY);
+        localStorage.removeItem('pg_email');
       });
   }
 
@@ -393,13 +516,22 @@
     if (sessionToken) {
       _token = sessionToken;
       _plan  = planParam || 'free';
+      var emailParam = params.get('email') || '';
       localStorage.setItem(LS_TOKEN_KEY, _token);
       localStorage.setItem(LS_PLAN_KEY, _plan);
+      if (emailParam) localStorage.setItem('pg_email', emailParam);
       cleanUrl();
       PolyGlotAuth.onPlanLoaded(_plan);
 
-      var planDisplay = _plan.charAt(0).toUpperCase() + _plan.slice(1);
-      showToast('🎉 You\'re signed in! Plan: ' + planDisplay);
+      var storedEmail = emailParam || localStorage.getItem('pg_email') || '';
+      updateHeaderForUser(storedEmail, _plan);
+
+      if (PAID_PLANS.indexOf(_plan) !== -1) {
+        var planDisplay = _plan.charAt(0).toUpperCase() + _plan.slice(1);
+        showToast('🎉 Welcome! Your ' + planDisplay + ' plan is active — all languages unlocked.', 5000);
+      } else {
+        showToast('👋 Signed in on Free plan — Python, JS & Java available. Upgrade anytime to unlock all 12 languages.', 6000);
+      }
     }
   }
 
@@ -484,6 +616,73 @@
         badgeEl.className = 'pg-plan-badge';
         badgeEl.textContent = '✅ ' + planLabel;
         pricingBtn.parentNode.insertBefore(badgeEl, pricingBtn.nextSibling);
+      }
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     Header user chip
+  ───────────────────────────────────────────── */
+  function updateHeaderForUser(email, plan) {
+    plan = (plan || 'free').toLowerCase();
+    var isPaid = PAID_PLANS.indexOf(plan) !== -1;
+
+    // Replace Sign In button with user chip
+    var signInBtn = document.getElementById('headerSignInBtn');
+    if (!signInBtn) return;
+    if (document.getElementById('pg-user-chip')) return; // already inserted
+
+    var initial  = (email || '?').charAt(0).toUpperCase();
+    var planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+    var planClass = 'pg-user-chip__plan--' + plan;
+
+    var chip = document.createElement('div');
+    chip.id        = 'pg-user-chip';
+    chip.className = 'pg-user-chip';
+    chip.setAttribute('role', 'button');
+    chip.setAttribute('aria-label', 'Account menu');
+    chip.innerHTML =
+      '<div class="pg-user-chip__avatar">' + initial + '</div>' +
+      '<span class="pg-user-chip__email">' + email + '</span>' +
+      '<span class="pg-user-chip__plan ' + planClass + '">' + planLabel + '</span>' +
+      '<div class="pg-user-chip__menu">' +
+        (isPaid ? '' :
+          '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--upgrade" id="pg-chip-upgrade">⭐ Upgrade to Pro</button>'
+        ) +
+        '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--danger" id="pg-chip-signout">Sign out</button>' +
+      '</div>';
+
+    signInBtn.parentNode.replaceChild(chip, signInBtn);
+
+    // Upgrade → scroll to pricing
+    var upgradeBtn = document.getElementById('pg-chip-upgrade');
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', function () {
+        var el = document.getElementById('pg-pricing-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        if (typeof gtag === 'function') gtag('event', 'chip_upgrade_click', { plan: plan });
+      });
+    }
+
+    // Sign out
+    document.getElementById('pg-chip-signout').addEventListener('click', function () {
+      localStorage.removeItem(LS_TOKEN_KEY);
+      localStorage.removeItem(LS_PLAN_KEY);
+      _token = null;
+      _plan  = null;
+      showToast('👋 Signed out.');
+      setTimeout(function () { window.location.reload(); }, 1200);
+    });
+
+    // For paid users: also hide See Plans and show plan badge
+    if (isPaid) {
+      var pricingBtn = document.getElementById('headerPricingBtn');
+      if (pricingBtn) pricingBtn.style.display = 'none';
+      if (!document.querySelector('.pg-plan-badge')) {
+        var badgeEl = document.createElement('span');
+        badgeEl.className = 'pg-plan-badge';
+        badgeEl.textContent = '✅ ' + planLabel;
+        chip.parentNode.insertBefore(badgeEl, chip);
       }
     }
   }
