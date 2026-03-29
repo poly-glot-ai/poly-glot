@@ -990,23 +990,8 @@
   /* ── Header button ─────────────────────────────────────── */
 
   function addHeaderButton() {
-    const headerBadges = document.querySelector('.header-badges');
-    if (!headerBadges) return;
-
-    const btn     = document.createElement('button');
-    btn.className = hasJoined() ? 'pg-header-waitlist-btn pg-header-waitlist-joined' : 'pg-header-waitlist-btn';
-    btn.id        = 'pg-header-waitlist-btn';
-    btn.innerHTML = hasJoined()
-      ? '✅ On the Waitlist'
-      : `<span class="pg-header-btn-pulse"></span> 🚀 Join Pro Waitlist`;
-    btn.setAttribute('aria-label', 'Join Poly-Glot Pro waitlist');
-
-    btn.addEventListener('click', function () {
-      ga('header_btn_click');
-      openWaitlistModal('header');
-    });
-
-    headerBadges.appendChild(btn);
+    // Waitlist button replaced by Live badge + See Plans + Sign In in index.html
+    // Order is enforced via CSS order property — nothing to inject here.
   }
 
   /* ── Inline waitlist section (above Enterprise) ─────────── */
