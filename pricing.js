@@ -16,10 +16,10 @@
      in the Stripe dashboard.
   ──────────────────────────────────────────────────────── */
   const CHECKOUT = {
-    pro_monthly:       'STRIPE_LINK_PRO_MONTHLY',
-    pro_yearly:        'STRIPE_LINK_PRO_YEARLY',
-    team_monthly:      'STRIPE_LINK_TEAM_MONTHLY',
-    team_yearly:       'STRIPE_LINK_TEAM_YEARLY',
+    pro_monthly:       'https://buy.stripe.com/bJe3cx7cU1Na4nY8bO14400',
+    pro_yearly:        'https://buy.stripe.com/00w5kF40I0J62fQ63G14401',
+    team_monthly:      'https://buy.stripe.com/9B65kFfJq9fCbQq3Vy14402',
+    team_yearly:       'https://buy.stripe.com/4gM4gBcxeajGdYyajW14403',
     enterprise_monthly:'#',
     enterprise_yearly: '#',
   };
