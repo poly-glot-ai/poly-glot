@@ -492,40 +492,36 @@
     banner.setAttribute('role', 'banner');
     banner.setAttribute('aria-label', 'Poly-Glot Pro waitlist');
 
-    if (hasJoined()) {
-      banner.innerHTML = `
-        <div class="pg-banner-inner">
-          <div class="pg-banner-left">
-            <span class="pg-banner-fire">✅</span>
-            <span class="pg-banner-msg">
-              <strong>You're on the Pro waitlist!</strong>
-              <span class="pg-banner-sub"> You'll get early access + 3 months free at launch. Use code EARLYBIRD3 when you sign up.</span>
-            </span>
-          </div>
-          <div class="pg-banner-right">
-            <button class="pg-banner-share" id="pg-banner-share-btn">Share 🦜</button>
-            <button class="pg-banner-dismiss" id="pg-banner-dismiss-btn" aria-label="Dismiss banner" title="Dismiss">✕</button>
-          </div>
-        </div>`;
-      banner.classList.add('pg-banner-joined');
-    } else {
-      banner.innerHTML = `
-        <div class="pg-banner-inner">
-          <div class="pg-banner-left">
-            <span class="pg-banner-fire">🔥</span>
-            <span class="pg-banner-msg">
-              <strong>Poly-Glot Pro — Early Access</strong>
-              <span class="pg-banner-sub"> Join the waitlist — get 3 months free at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</span>
-            </span>
-          </div>
-          <div class="pg-banner-right">
-            <button class="pg-banner-cta" id="pg-banner-cta-btn" aria-label="Join the Pro waitlist">
-              🚀 Join Free →
-            </button>
-            <button class="pg-banner-dismiss" id="pg-banner-dismiss-btn" aria-label="Dismiss banner" title="Dismiss">✕</button>
-          </div>
-        </div>`;
-    }
+    // Both joined + non-joined users see the same "Now Live" launch banner
+    banner.innerHTML = `
+      <div class="pg-banner-inner">
+        <div class="pg-banner-left">
+          <svg class="pg-banner-parrot" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <ellipse cx="14" cy="17" rx="7" ry="8" fill="#22c55e"/>
+            <ellipse cx="10" cy="18" rx="3" ry="5" fill="#16a34a" transform="rotate(-10 10 18)"/>
+            <ellipse cx="18" cy="18" rx="3" ry="5" fill="#4ade80" transform="rotate(10 18 18)"/>
+            <circle cx="14" cy="9" r="5.5" fill="#22c55e"/>
+            <circle cx="16" cy="8" r="2" fill="#fff"/>
+            <circle cx="16.4" cy="8" r="1.1" fill="#1e293b"/>
+            <path d="M12.5 10.5 Q11 12.5 12.8 13 Q14 13.4 14.5 11.5 Z" fill="#facc15"/>
+            <ellipse cx="12" cy="6.5" rx="2.5" ry="1.5" fill="#4ade80" opacity="0.6"/>
+            <path d="M11 23 Q9 26 7.5 25.5 Q9 23 11 22 Z" fill="#16a34a"/>
+            <path d="M14 24 Q13.5 27 12 26.5 Q13 24 14 23 Z" fill="#22c55e"/>
+            <path d="M17 23 Q19 26 20.5 25.5 Q19 23 17 22 Z" fill="#4ade80"/>
+          </svg>
+          <span class="pg-banner-dot"></span>
+          <span class="pg-banner-msg">
+            <strong>Poly-Glot AI is Live!</strong>
+            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — limited to first 5,000 subscribers.</span>
+          </span>
+        </div>
+        <div class="pg-banner-right">
+          <button class="pg-banner-cta" id="pg-banner-cta-btn" aria-label="See plans">
+            See Plans →
+          </button>
+          <button class="pg-banner-dismiss" id="pg-banner-dismiss-btn" aria-label="Dismiss banner" title="Dismiss">✕</button>
+        </div>
+      </div>`;
 
     document.body.insertBefore(banner, document.body.firstChild);
 
@@ -533,14 +529,8 @@
     if (ctaBtn) {
       ctaBtn.addEventListener('click', function () {
         ga('banner_cta_click');
-        openWaitlistModal('banner');
-      });
-    }
-
-    const shareBtn = document.getElementById('pg-banner-share-btn');
-    if (shareBtn) {
-      shareBtn.addEventListener('click', function () {
-        openWaitlistModal('banner_share');
+        var el = document.getElementById('pg-pricing-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
       });
     }
 
