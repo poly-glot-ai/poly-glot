@@ -804,7 +804,7 @@
 
     /* ── Step 1: fast local dedup (same device/browser) ─────────────────── */
     if (EmailRegistry.has(email)) {
-      showAlreadyOnList(email, successEl, errorEl);
+      showAlreadyOnList(email, successEl, errorEl, promoCode === PROMO_CODE);
       ga('duplicate_email_modal_local');
       return;
     }
@@ -826,7 +826,7 @@
         localStorage.setItem(LS_JOINED, '1');
         localStorage.setItem(LS_EMAIL, email);
         resetBtn(submitBtn, btnText, btnLoad);
-        showAlreadyOnList(email, successEl, errorEl);
+        showAlreadyOnList(email, successEl, errorEl, promoCode === PROMO_CODE);
         ga('duplicate_email_modal_kv');
         return;
       }
@@ -874,20 +874,22 @@
    */
   /**
    * Show the "already on the list" confirmation.
-   * Always renders into the SUCCESS element (green) regardless of what's passed —
-   * this is a positive confirmation, never an error.
+   * Always renders into the SUCCESS element (green) — never the error element.
    *
    * @param {string}          email      - The email address to display.
    * @param {HTMLElement|null} successEl - The green success <p> to write into.
    * @param {HTMLElement|null} errorEl   - The red error <p> to hide (optional).
+   * @param {boolean}         isPromo    - true only when EARLYBIRD3 was entered.
    */
-  function showAlreadyOnList(email, successEl, errorEl) {
-    /* Hide the red error element if present */
+  function showAlreadyOnList(email, successEl, errorEl, isPromo) {
     if (errorEl) { errorEl.style.display = 'none'; errorEl.innerHTML = ''; }
     if (successEl) {
+      var promoLine = isPromo
+        ? ' You\'ll get your first <strong>3 months free</strong> when Pro launches.'
+        : '';
       successEl.innerHTML =
         '✅ <strong>' + escapeHtml(email) + '</strong> is already on our early-access list! ' +
-        'We\'ll email you the moment Pro launches — and you\'ll get your first 3 months on us. 🚀';
+        'We\'ll email you the moment Pro launches.' + promoLine + ' 🚀';
       successEl.style.display = 'block';
     }
   }
@@ -1082,7 +1084,7 @@
 
       /* ── Step 1: fast local dedup ───────────────────────────────────────── */
       if (EmailRegistry.has(email)) {
-        showAlreadyOnList(email, successEl, errorEl);
+        showAlreadyOnList(email, successEl, errorEl, false); // inline form has no promo field
         ga('duplicate_email_inline_local');
         return;
       }
@@ -1101,7 +1103,7 @@
           localStorage.setItem(LS_JOINED, '1');
           localStorage.setItem(LS_EMAIL, email);
           resetBtn(submitBtn, btnText, btnLoad);
-          showAlreadyOnList(email, successEl, errorEl);
+          showAlreadyOnList(email, successEl, errorEl, false); // inline form has no promo field
           ga('duplicate_email_inline_kv');
           return;
         }
