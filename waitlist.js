@@ -1,5 +1,5 @@
 /**
- * Poly-Glot Pro Waitlist — v11
+ * Poly-Glot Pro Waitlist — v13
  * ─────────────────────────────────────────────
  * • Dismissible top banner with live social-proof counter
  * • Full-screen modal with email capture + EARLYBIRD3 promo code field
