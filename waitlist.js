@@ -1123,104 +1123,10 @@
     incrementGlobalCount().then(c => updateBannerToJoined(c));
   }
 
-  /* ── Enterprise form deduplication hook ─────────────────── */
-  /**
-   * Patch the existing enterprise form (from index.html) to enforce global
-   * email deduplication and EARLYBIRD3 promo tracking. We do this by
-   * intercepting the form's submit event before the inline handler runs.
-   * We use `capture: true` so we see the event first.
-   */
-  function patchEnterpriseForm() {
-    const form = document.getElementById('enterpriseForm');
-    if (!form) return;
-
-    form.addEventListener('submit', function (e) {
-      const emailInput = document.getElementById('formEmail');
-      const email      = emailInput ? emailInput.value.trim() : '';
-      const promoInput = document.getElementById('formPromo'); // may not exist yet
-      const promoCode  = promoInput ? promoInput.value.trim().toUpperCase() : '';
-
-      if (!email) return; // let the existing handler validate
-
-      /* ── Global email deduplication ── */
-      if (EmailRegistry.has(email)) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-
-        /* Re-enable button if it was disabled */
-        const submitBtn = document.getElementById('submitBtn');
-        const btnText   = document.getElementById('btnText');
-        const btnLoading = document.getElementById('btnLoading');
-        if (submitBtn)  submitBtn.disabled = false;
-        if (btnText)    btnText.style.display  = 'inline';
-        if (btnLoading) btnLoading.style.display = 'none';
-
-        const errorMsg = document.getElementById('formError');
-        if (errorMsg) {
-          errorMsg.innerHTML =
-            '🎉 Great news! You\'re already on our VIP waitlist — ' +
-            'we\'ll reach out to <strong>' + escapeHtml(email) + '</strong> as soon as a spot opens up. ' +
-            'Your early-access status and 3 months free are locked in! 🚀';
-          errorMsg.style.display = 'block';
-        }
-
-        const successMsg = document.getElementById('formSuccess');
-        if (successMsg) successMsg.style.display = 'none';
-
-        ga('duplicate_email_enterprise');
-        return;
-      }
-
-      /* Not a duplicate — register the email immediately so if Web3Forms
-         fires twice (e.g. retry) we don't double-count. The rest of the
-         existing submission logic will run normally. */
-      EmailRegistry.add(email);
-
-      /* Hook into the existing WaitlistManager.addEmail callback by
-         monkey-patching the success path. We listen for formSuccess
-         visibility to fire our side-effects. */
-      const origAdd = (typeof WaitlistManager !== 'undefined') && WaitlistManager.addEmail
-        ? WaitlistManager.addEmail.bind(WaitlistManager)
-        : null;
-
-      if (origAdd) {
-        WaitlistManager.addEmail = function (em, userData, callback) {
-          WaitlistManager.addEmail = origAdd; // restore immediately
-          origAdd(em, userData, function (added, count) {
-            /* Our side-effects */
-            const name      = document.getElementById('formName')     ? document.getElementById('formName').value     : '';
-            const company   = document.getElementById('formCompany')  ? document.getElementById('formCompany').value  : '';
-            const teamSize  = document.getElementById('formTeamSize') ? document.getElementById('formTeamSize').value : '';
-
-            SignupTracker.save({
-              name:      name,
-              email:     em,
-              company:   company,
-              team_size: teamSize,
-              source:    'enterprise_form',
-              promo_code: promoCode
-            });
-
-            if (promoCode === PROMO_CODE) {
-              PromoTracker.save(em, 'enterprise_form', { name: name, company: company, teamSize: teamSize });
-            }
-
-            notifyHarold({
-              name:      name,
-              email:     em,
-              company:   company,
-              teamSize:  teamSize,
-              source:    'enterprise_form',
-              promoCode: promoCode
-            });
-
-            if (typeof callback === 'function') callback(added, count);
-          });
-        };
-      }
-
-    }, true /* capture = true so we run BEFORE the existing handler */);
-  }
+  /* ── Enterprise form deduplication ─────────────────────────
+     Handled directly in index.html submit handler via
+     window.PolyGlotEmailRegistry.has(email). No patch needed here.
+  ── */
 
   /* ── App usage hooks ───────────────────────────────────── */
 
@@ -1281,7 +1187,6 @@
     createModal();
     addHeaderButton();
     addInlineSection();
-    patchEnterpriseForm();
     attachAppHooks();
     printConsoleTips();
 

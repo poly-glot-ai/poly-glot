@@ -1303,13 +1303,10 @@
     <script src="app.js?v=217"></script>
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
-    <script src="waitlist.js?v=13"></script>
+    <script src="waitlist.js?v=14"></script>
     <script src="pricing.js?v=5"></script>
 
-    <!-- Enterprise / Teams Form Handler
-         NOTE: Global email deduplication + EARLYBIRD3 promo tracking are handled
-         by patchEnterpriseForm() inside waitlist.js (runs before this handler via
-         capture-phase listener). This handler only handles Web3Forms submission. -->
+    <!-- Enterprise / Teams Form Handler -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var form = document.getElementById('enterpriseForm');
@@ -1325,7 +1322,6 @@
                 });
             }
 
-            // Main submit handler — email dedup fires first (capture phase in waitlist.js)
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
 
@@ -1339,11 +1335,24 @@
                 if (errorMsg)   errorMsg.style.display   = 'none';
 
                 var name      = (document.getElementById('formName')     || {}).value || '';
-                var email     = (document.getElementById('formEmail')    || {}).value || '';
+                var email     = ((document.getElementById('formEmail')   || {}).value || '').trim().toLowerCase();
                 var company   = (document.getElementById('formCompany')  || {}).value || '';
                 var teamSize  = (document.getElementById('formTeamSize') || {}).value || '';
                 var message   = (document.getElementById('formMessage')  || {}).value || '';
                 var promoCode = ((document.getElementById('formPromo')   || {}).value || '').trim().toUpperCase();
+
+                // ── Global email deduplication (reads from EmailRegistry in waitlist.js) ──
+                if (window.PolyGlotEmailRegistry && window.PolyGlotEmailRegistry.has(email)) {
+                    if (errorMsg) {
+                        errorMsg.innerHTML =
+                            '🎉 Great news! You\'re already on our VIP waitlist — ' +
+                            'we\'ll reach out to <strong>' + email + '</strong> when a spot opens up. ' +
+                            'Your early-access status and 3 months free are locked in! 🚀';
+                        errorMsg.style.display = 'block';
+                    }
+                    console.log('✅ Duplicate email blocked (teams form):', email);
+                    return; // stop — no fetch, no mailto
+                }
 
                 if (submitBtn)  submitBtn.disabled       = true;
                 if (btnText)    btnText.style.display    = 'none';
@@ -1353,7 +1362,6 @@
                 var subjectLine = (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') +
                                   'Teams Waitlist — ' + (company || email);
 
-                // mailto fallback (always pre-built)
                 var mailSubj = encodeURIComponent(subjectLine);
                 var mailBody = encodeURIComponent(
                     'Name: '       + name    + '\n' +
@@ -1384,6 +1392,25 @@
                         if (btnLoading) btnLoading.style.display = 'none';
 
                         if (data.success) {
+                            // Register email so future attempts on any form are blocked
+                            if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
+
+                            // Save to SignupTracker
+                            if (window.PolyGlotWaitlistTracker) {
+                                window.PolyGlotWaitlistTracker.save({
+                                    name: name, email: email, company: company,
+                                    team_size: teamSize, source: 'enterprise_form',
+                                    promo_code: promoCode
+                                });
+                            }
+
+                            // Save promo user if applicable
+                            if (isPromo && window.PolyGlotPromoTracker) {
+                                window.PolyGlotPromoTracker.save(email, 'enterprise_form', {
+                                    name: name, company: company, teamSize: teamSize
+                                });
+                            }
+
                             form.reset();
                             if (successMsg) {
                                 successMsg.innerHTML = isPromo
@@ -1401,7 +1428,7 @@
                             setTimeout(function() {
                                 if (successMsg) successMsg.style.display = 'none';
                             }, 12000);
-                            console.log('✅ Teams form submitted to hwmoses2@icloud.com. Promo:', promoCode || 'none');
+                            console.log('✅ Teams form submitted. Promo:', promoCode || 'none');
                         } else {
                             throw new Error(data.message || 'Submission failed');
                         }
