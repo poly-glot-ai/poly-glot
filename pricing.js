@@ -249,10 +249,7 @@
               <span>Use code <strong>EARLYBIRD3</strong> at checkout. <span id="pg-promo-countdown" class="pg-promo-countdown">Loading spots…</span></span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn" onclick="
-            var el = document.getElementById('pg-pricing-grid');
-            if(el) el.scrollIntoView({behavior:'smooth'});
-          ">Get Started Free →</button>
+          <button class="pg-ea-cta" id="pg-ea-join-btn">Get Started Free →</button>
         </div>
 
         <!-- Cards -->
@@ -367,16 +364,18 @@
       }
     });
 
-    /* Early access CTA */
+    /* Early access CTA — scroll to AI Settings / comment generator */
     const eaBtn = section.querySelector('#pg-ea-join-btn');
     if (eaBtn) {
       eaBtn.addEventListener('click', function () {
-        if (window.PolyGlotWaitlist) {
-          window.PolyGlotWaitlist.open('pricing');
-        } else {
-          const wlSection = document.getElementById('pg-waitlist-section');
-          if (wlSection) wlSection.scrollIntoView({ behavior: 'smooth' });
+        var target = document.getElementById('commentGenerator') ||
+                     document.getElementById('aiSettingsBtn');
+        if (target) {
+          var rect      = target.getBoundingClientRect();
+          var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          window.scrollTo({ top: rect.top + scrollTop - 24, behavior: 'smooth' });
         }
+        if (typeof gtag === 'function') gtag('event', 'pricing_get_started_free_click');
       });
     }
   }
