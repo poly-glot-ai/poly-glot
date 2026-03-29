@@ -268,6 +268,153 @@
         .header-pricing-cta   { height: 28px; padding: 0 9px; font-size: 11px; width: auto; }
         .header-signin-btn    { height: 28px; padding: 0 9px; font-size: 11px; width: auto; }
       }
+
+      /* ══ VS Code Extension — inline bypass (v20260329) ══════════════════
+         Duplicated from styles.v220.css so Cloudflare HTML cache still
+         picks up the correct styles even before CDN propagates.
+         ═══════════════════════════════════════════════════════════════════ */
+
+      /* feature badge — vscode blue */
+      .feature-badge-vscode {
+        background: rgba(0,122,204,.15);
+        border-color: rgba(0,122,204,.4);
+        color: #60b4f6;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .feature-badge-vscode:hover {
+        background: rgba(0,122,204,.25);
+        border-color: rgba(0,122,204,.65);
+        transform: translateY(-1px);
+      }
+
+      /* VS Code launch banner */
+      .vscode-launch-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        background: linear-gradient(135deg,rgba(0,122,204,.12) 0%,rgba(0,153,255,.06) 100%);
+        border: 1px solid rgba(0,122,204,.35);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: 16px;
+      }
+      .vscode-launch-banner__left {
+        display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+      }
+      .vscode-launch-banner__icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
+      .vscode-launch-banner__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .vscode-launch-banner__title {
+        font-size: 13px; font-weight: 700; color: #e0e0f0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .vscode-live-dot {
+        display: inline-block; width: 7px; height: 7px;
+        background: #34d399; border-radius: 50%; margin-right: 6px;
+        animation: vscode-pulse 2s ease-in-out infinite;
+        vertical-align: middle; position: relative; top: -1px;
+      }
+      @keyframes vscode-pulse {
+        0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,.55); }
+        50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
+      }
+      .vscode-launch-banner__sub {
+        font-size: 11.5px; color: #8a8ab0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .vscode-launch-banner__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+      .vscode-install-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 14px;
+        background: rgba(0,122,204,.85); color: #fff;
+        font-size: 12px; font-weight: 600; border-radius: 7px;
+        text-decoration: none; border: none; cursor: pointer;
+        transition: background .2s, transform .15s; white-space: nowrap;
+      }
+      .vscode-install-btn:hover { background: rgba(0,140,235,1); transform: translateY(-1px); }
+      .vscode-marketplace-link {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 7px 12px;
+        background: transparent;
+        border: 1px solid rgba(0,122,204,.4);
+        color: #60b4f6; font-size: 12px; font-weight: 500; border-radius: 7px;
+        text-decoration: none; transition: all .2s; white-space: nowrap;
+      }
+      .vscode-marketplace-link:hover {
+        background: rgba(0,122,204,.12); border-color: rgba(0,122,204,.65);
+        color: #93c5fd; transform: translateY(-1px);
+      }
+
+      /* VS Code heading row */
+      .vscode-heading-row {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+      }
+      .vscode-heading-row h2.overview-heading { margin-bottom: 0; flex: 1; min-width: 0; }
+      .vscode-heading-cta {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 14px;
+        background: rgba(0,122,204,.8); color: #fff;
+        font-size: 12px; font-weight: 600; border-radius: 7px;
+        text-decoration: none; transition: background .2s, transform .15s;
+        flex-shrink: 0; white-space: nowrap;
+      }
+      .vscode-heading-cta:hover { background: rgba(0,140,235,1); transform: translateY(-1px); }
+
+      /* VS Code CTA bar */
+      .vscode-cta-bar {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        margin-top: 16px; padding-top: 14px;
+        border-top: 1px solid rgba(0,122,204,.15);
+      }
+      .vscode-cta-bar__primary {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 18px;
+        background: rgba(0,122,204,.85); color: #fff;
+        font-size: 13px; font-weight: 600; border-radius: 8px;
+        text-decoration: none; transition: background .2s, transform .15s; white-space: nowrap;
+      }
+      .vscode-cta-bar__primary:hover { background: rgba(0,140,235,1); transform: translateY(-1px); }
+      .vscode-cta-bar__secondary {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 16px;
+        background: transparent; border: 1px solid rgba(0,122,204,.35);
+        color: #60b4f6; font-size: 13px; font-weight: 500; border-radius: 8px;
+        text-decoration: none; transition: all .2s; white-space: nowrap;
+      }
+      .vscode-cta-bar__secondary:hover {
+        background: rgba(0,122,204,.1); border-color: rgba(0,122,204,.6); transform: translateY(-1px);
+      }
+      .vscode-cta-bar__stat { margin-left: auto; font-size: 11.5px; color: #6a6a8a; white-space: nowrap; }
+
+      /* Footer VS Code row */
+      .site-footer__vscode-row {
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; margin-bottom: 10px; flex-wrap: wrap;
+      }
+      .footer-vscode-link {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 6px 14px;
+        background: rgba(0,122,204,.12); border: 1px solid rgba(0,122,204,.3);
+        border-radius: 8px; color: #60b4f6; font-size: 12px; font-weight: 500;
+        text-decoration: none; transition: all .2s;
+      }
+      .footer-vscode-link:hover { background: rgba(0,122,204,.22); border-color: rgba(0,122,204,.55); color: #93c5fd; }
+
+      /* Mobile responsive */
+      @media (max-width: 700px) {
+        .vscode-launch-banner { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .vscode-launch-banner__actions { width: 100%; }
+        .vscode-install-btn, .vscode-marketplace-link { flex: 1; justify-content: center; }
+        .vscode-launch-banner__title, .vscode-launch-banner__sub { white-space: normal; }
+        .vscode-cta-bar { flex-direction: column; align-items: stretch; }
+        .vscode-cta-bar__primary, .vscode-cta-bar__secondary { justify-content: center; }
+        .vscode-cta-bar__stat { margin-left: 0; text-align: center; }
+      }
+      @media (max-width: 360px) {
+        .vscode-launch-banner__actions { flex-direction: column; }
+        .vscode-install-btn, .vscode-marketplace-link { width: 100%; }
+      }
     </style>
 </head>
 <body>
