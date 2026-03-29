@@ -88,6 +88,27 @@
   line-height: 1.6;
 }
 
+/* ── Trust bar ───────────────────────────────────────────── */
+.pg-pricing-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -16px 0 28px;
+  font-family: 'Inter', sans-serif;
+}
+.pg-trust-item {
+  font-size: 12px;
+  color: #4b5563;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pg-trust-divider {
+  font-size: 12px;
+  color: #2d3748;
+}
+
 /* ── Toggle monthly / yearly ─────────────────────────────── */
 .pg-pricing-toggle {
   display: flex;

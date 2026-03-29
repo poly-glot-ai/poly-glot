@@ -225,6 +225,13 @@
           Start free, no credit card required.<br>
           Upgrade, downgrade, or cancel anytime.
         </p>
+        <div class="pg-pricing-trust">
+          <span class="pg-trust-item">🔒 Payments secured by Stripe</span>
+          <span class="pg-trust-divider">·</span>
+          <span class="pg-trust-item">🚫 We never store your card details</span>
+          <span class="pg-trust-divider">·</span>
+          <span class="pg-trust-item">↩️ 30-day money-back guarantee</span>
+        </div>
 
         <!-- Toggle -->
         <div class="pg-pricing-toggle">
