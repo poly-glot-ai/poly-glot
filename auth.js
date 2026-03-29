@@ -440,28 +440,59 @@
   function handleMagicLinkSubmit(e) {
     e.preventDefault();
 
-    var input = document.getElementById('pgAuthModalEmail');
-    var btn   = document.getElementById('pgAuthModalSubmit');
-    var form  = document.getElementById('pgAuthModalForm');
+    var input   = document.getElementById('pgAuthModalEmail');
+    var btn     = document.getElementById('pgAuthModalSubmit');
+    var form    = document.getElementById('pgAuthModalForm');
     var success = document.getElementById('pgAuthModalSuccess');
 
     if (!input || !input.value.trim()) return;
 
     var email = input.value.trim();
-    btn.disabled = true;
+    btn.disabled    = true;
     btn.textContent = 'Sending…';
 
-    fetch(AUTH_API + '/magic-link', {
-      method: 'POST',
+    fetch(AUTH_API + '/login', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
+      body:    JSON.stringify({ email: email })
     })
-      .catch(function () {
-        // Fail silently — still show success UX (link may still be sent)
+      .then(function (res) { return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+      .then(function (result) {
+        if (result.ok) {
+          // Success — show confirmation
+          if (form)    form.style.display    = 'none';
+          if (success) {
+            success.style.display = 'block';
+            success.innerHTML = '✅ Check your email!<br><span style="font-size:13px;color:#64748b;display:block;margin-top:6px;">Click the link we sent to <strong>' + email + '</strong>.<br>It expires in 15 minutes.</span>';
+          }
+        } else {
+          // Error — show message, re-enable button
+          var msg = (result.data && result.data.error) ? result.data.error : 'Something went wrong. Please try again.';
+          btn.disabled    = false;
+          btn.textContent = 'Send Magic Link';
+          input.style.borderColor = '#f87171';
+          // Show error below input
+          var errEl = document.getElementById('pgAuthModalError');
+          if (!errEl) {
+            errEl = document.createElement('p');
+            errEl.id = 'pgAuthModalError';
+            errEl.style.cssText = 'color:#f87171;font-size:13px;margin:8px 0 0;text-align:center;';
+            btn.parentNode.insertBefore(errEl, btn.nextSibling);
+          }
+          errEl.textContent = msg;
+        }
       })
-      .finally(function () {
-        if (form)    form.style.display    = 'none';
-        if (success) success.style.display = 'block';
+      .catch(function () {
+        btn.disabled    = false;
+        btn.textContent = 'Send Magic Link';
+        var errEl = document.getElementById('pgAuthModalError');
+        if (!errEl) {
+          errEl = document.createElement('p');
+          errEl.id = 'pgAuthModalError';
+          errEl.style.cssText = 'color:#f87171;font-size:13px;margin:8px 0 0;text-align:center;';
+          btn.parentNode.insertBefore(errEl, btn.nextSibling);
+        }
+        errEl.textContent = 'Network error — please try again.';
       });
   }
 
