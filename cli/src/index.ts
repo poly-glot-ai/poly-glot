@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.6.1';  // launch announcement, postinstall welcome, README refresh
+const VERSION = '1.6.2';  // free tier: 50 files/month messaging, postinstall + README update
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -219,7 +219,7 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 
   ${COLORS.cyan}Pro plan support${COLORS.reset} — unlock all 12 languages, why-comments, and both mode.
 
-  ${COLORS.bold}Free tier:${COLORS.reset}  Python · JavaScript · Java · doc-comments only
+  ${COLORS.bold}Free tier:${COLORS.reset}  Python · JavaScript · Java · doc-comments · 50 files/mo
   ${COLORS.bold}Pro tier:${COLORS.reset}   All 12 languages · why-comments · both mode · unlimited files
 
   To activate your Pro license:
@@ -244,7 +244,7 @@ ${'─'.repeat(54)}
   ${COLORS.bold}${COLORS.cyan}What you get free, forever:${COLORS.reset}
   ✅  Python, JavaScript & Java
   ✅  JSDoc, PyDoc, Javadoc doc-comments
-  ✅  Unlimited runs on free tier
+  ✅  50 files / month — no credit card required
 
   ${COLORS.bold}${COLORS.cyan}Upgrade to Pro — $9/mo:${COLORS.reset}
   🚀  All 12 languages (Go, Rust, Swift, Kotlin, C++, C#, Ruby, PHP + more)

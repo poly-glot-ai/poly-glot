@@ -20,7 +20,7 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 >
 > | Plan | Price | What you get |
 > |------|-------|-------------|
-> | **Free** | $0/mo | Python · JS · Java · doc-comments · BYOK |
+> | **Free** | $0/mo | Python · JS · Java · doc-comments · 50 files/mo · BYOK |
 > | **Pro** | $9/mo | All 12 languages · why-comments · both mode · shared API key pool |
 > | **Team** | $29/mo | Everything in Pro · 5 seats · team analytics |
 >

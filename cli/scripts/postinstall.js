@@ -30,8 +30,8 @@ ${LINE}
   ${DIM}# Do both in one pass (Pro)${RESET}
   ${CYAN}poly-glot comment src/app.py --both${RESET}
 
-  ${BOLD}${CYAN}Free forever:${RESET}  Python · JavaScript · Java · doc-comments
-  ${BOLD}${CYAN}Pro ($9/mo): ${RESET}  All 12 languages · why + both modes · no API key needed
+  ${BOLD}${CYAN}Free forever:${RESET}  Python · JavaScript · Java · 50 files/mo · doc-comments
+  ${BOLD}${CYAN}Pro ($9/mo): ${RESET}  All 12 languages · why + both modes · unlimited · no API key needed
 
   ${YELLOW}${BOLD}🎁 Early bird offer:${RESET} Use code ${BOLD}EARLYBIRD3${RESET} at checkout
   ${YELLOW}   → 3 months completely free · limited to first 50 subscribers${RESET}
