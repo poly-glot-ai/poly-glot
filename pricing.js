@@ -18,10 +18,8 @@
   const CHECKOUT = {
     pro_monthly:       'STRIPE_LINK_PRO_MONTHLY',
     pro_yearly:        'STRIPE_LINK_PRO_YEARLY',
-    team5_monthly:     'STRIPE_LINK_TEAM_MONTHLY',
-    team5_yearly:      'STRIPE_LINK_TEAM_YEARLY',
-    team15_monthly:    'STRIPE_LINK_TEAM_MONTHLY',
-    team15_yearly:     'STRIPE_LINK_TEAM_YEARLY',
+    team_monthly:      'STRIPE_LINK_TEAM_MONTHLY',
+    team_yearly:       'STRIPE_LINK_TEAM_YEARLY',
     enterprise_monthly:'#',
     enterprise_yearly: '#',
   };
@@ -87,17 +85,11 @@
       name:      'Team',
       monthly:   29,
       yearly:    249,
-      monthlyLarge: 59,
-      yearlyLarge:  499,
-      desc:      'For engineering teams. 5 or 15 seats.',
+      desc:      'For engineering teams. Up to 5 seats.',
       cta:       'Get Started →',
       ctaClass:  'pg-cta-team',
       ctaAction: 'checkout_team',
       popular:   false,
-      teamSizes: [
-        { label: '5 seats',  monthly: 29,  yearly: 249 },
-        { label: '15 seats', monthly: 59,  yearly: 499 },
-      ],
       features: [
         { text: 'Everything in Pro',           check: true },
         { text: 'Shared API key pool',         check: true, soon: true },
@@ -135,34 +127,24 @@
 
   /* ── State ─────────────────────────────────────────────── */
   let isYearly = false;
-  let teamSize  = 5; // default 5 seats
-
   /* ── Helpers ───────────────────────────────────────────── */
   function savings(plan) {
     if (plan.monthly === 0) return '';
-    const monthly = plan.id === 'team' ? (teamSize === 15 ? plan.monthlyLarge : plan.monthly) : plan.monthly;
-    const yearly  = plan.id === 'team' ? (teamSize === 15 ? plan.yearlyLarge  : plan.yearly)  : plan.yearly;
+    const monthly = plan.monthly;
+    const yearly  = plan.yearly;
     const saved   = (monthly * 12) - yearly;
     return `Save $${saved}/yr`;
   }
 
   function displayPrice(plan) {
     if (plan.monthly === 0) return 0;
-    if (plan.id === 'team') {
-      const m = teamSize === 15 ? plan.monthlyLarge : plan.monthly;
-      const y = teamSize === 15 ? plan.yearlyLarge  : plan.yearly;
-      return isYearly ? Math.round(y / 12) : m;
-    }
     return isYearly ? Math.round(plan.yearly / 12) : plan.monthly;
   }
 
   function yearlyTotal(plan) {
     if (plan.monthly === 0) return '';
     if (!isYearly) return '';
-    const y = (plan.id === 'team')
-      ? (teamSize === 15 ? plan.yearlyLarge : plan.yearly)
-      : plan.yearly;
-    return `$${y} billed annually`;
+    return `$${plan.yearly} billed annually`;
   }
 
   /* ── Render ────────────────────────────────────────────── */
@@ -178,23 +160,7 @@
       </li>
     `).join('');
 
-    const teamSelectorHTML = plan.id === 'team' ? `
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        ${plan.teamSizes.map(s => `
-          <button
-            class="pg-team-size-btn ${teamSize === parseInt(s.label) ? 'active' : ''}"
-            data-size="${parseInt(s.label)}"
-            style="
-              flex:1;padding:6px 0;border-radius:6px;font-size:12px;font-weight:600;
-              font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.2s;
-              background:${teamSize === parseInt(s.label) ? 'rgba(125,211,252,0.15)' : 'transparent'};
-              border:1.5px solid ${teamSize === parseInt(s.label) ? 'rgba(125,211,252,0.4)' : 'rgba(125,211,252,0.15)'};
-              color:${teamSize === parseInt(s.label) ? '#7dd3fc' : '#64748b'};
-            "
-          >${s.label}</button>
-        `).join('')}
-      </div>
-    ` : '';
+    const teamSelectorHTML = '';
 
     return `
       <div class="pg-pricing-card ${plan.popular ? 'pg-card-popular' : ''}" data-plan="${plan.id}">
@@ -361,7 +327,7 @@
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
         /* ── Stripe checkout ── */
         const billing  = isYearly ? 'yearly' : 'monthly';
-        const sizeKey  = (action === 'checkout_team' && teamSize === 15) ? 'team15' : (action === 'checkout_team' ? 'team5' : 'pro');
+        const sizeKey  = action === 'checkout_team' ? 'team' : 'pro';
         const urlKey   = `${sizeKey}_${billing}`;
         const url      = checkoutUrl(urlKey);
 
@@ -380,14 +346,6 @@
           window.location.href = url;
         }
       }
-    });
-
-    /* Team size selector */
-    section.addEventListener('click', function (e) {
-      const btn = e.target.closest('.pg-team-size-btn');
-      if (!btn) return;
-      teamSize = parseInt(btn.dataset.size, 10);
-      updateTeamCard();
     });
 
     /* Early access CTA */
@@ -431,35 +389,6 @@
           ? `<span style="color:#34d399">${tot}</span>`
           : (saved ? `<span style="color:#34d399">${saved}</span>` : '&nbsp;');
       }
-    });
-  }
-
-  function updateTeamCard() {
-    const card = document.querySelector('[data-plan="team"]');
-    if (!card) return;
-    const plan = PLANS.find(p => p.id === 'team');
-
-    /* Update price */
-    const amountEl = card.querySelector('.pg-price-amount');
-    if (amountEl) amountEl.textContent = displayPrice(plan);
-
-    /* Update yearly note */
-    const yearlyEl = card.querySelector('.pg-price-yearly-note');
-    if (yearlyEl) {
-      const tot   = yearlyTotal(plan);
-      const saved = isYearly ? savings(plan) : '';
-      yearlyEl.innerHTML = tot
-        ? `<span style="color:#34d399">${tot}</span>`
-        : (saved ? `<span style="color:#34d399">${saved}</span>` : '&nbsp;');
-    }
-
-    /* Update button styles */
-    card.querySelectorAll('.pg-team-size-btn').forEach(btn => {
-      const size    = parseInt(btn.dataset.size, 10);
-      const active  = size === teamSize;
-      btn.style.background    = active ? 'rgba(125,211,252,0.15)' : 'transparent';
-      btn.style.borderColor   = active ? 'rgba(125,211,252,0.4)'  : 'rgba(125,211,252,0.15)';
-      btn.style.color         = active ? '#7dd3fc' : '#64748b';
     });
   }
 
