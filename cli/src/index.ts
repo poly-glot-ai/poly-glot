@@ -30,7 +30,7 @@ import { ping } from './telemetry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.5.5';  // pro language gate: clearer error + web lock icons restored
+const VERSION = '1.6.0';  // pro license token support
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -41,22 +41,60 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
 
 // ─── Free tier language gate ──────────────────────────────────────────────────
 // Only Python, JavaScript, and Java are available on the free tier.
-// All other languages require a Pro subscription (coming soon).
+// All other languages require a Pro subscription.
 const FREE_LANGUAGES = ['python', 'javascript', 'java'];
 
-function assertFreeLanguage(lang: string): void {
-    const normalised = lang.toLowerCase().trim();
-    if (!FREE_LANGUAGES.includes(normalised)) {
-        const label = normalised.charAt(0).toUpperCase() + normalised.slice(1);
-        console.error(
-            `\n  \x1b[33m⚠️  ${label} requires a Pro subscription.\x1b[0m\n` +
-            `\n  \x1b[2mFree tier includes:\x1b[0m  \x1b[36mPython · JavaScript · Java\x1b[0m` +
-            `\n  \x1b[2mPro unlocks:\x1b[0m         \x1b[36mAll 12 languages + unlimited files + why-comments\x1b[0m\n` +
-            `\n  Join the waitlist and get \x1b[32m3 months free\x1b[0m with code \x1b[33mEARLYBIRD3\x1b[0m:` +
-            `\n  \x1b[36mhttps://poly-glot.ai/#pricing\x1b[0m\n`
-        );
-        process.exit(1);
+const AUTH_API = 'https://poly-glot.ai/api/auth';
+
+// Plans that unlock pro features
+const PRO_PLANS = ['pro', 'team', 'enterprise'];
+
+/**
+ * Verify a license token against the auth API.
+ * Returns the plan string or null if invalid/network error.
+ * Uses a local cache (process-lifetime) to avoid repeated API calls.
+ */
+let _cachedPlan: string | null | undefined = undefined;
+
+async function verifyLicense(token: string): Promise<string | null> {
+    if (_cachedPlan !== undefined) return _cachedPlan;
+    try {
+        const res = await fetch(`${AUTH_API}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+            signal: AbortSignal.timeout(3000), // 3s timeout — don't block CLI
+        });
+        if (!res.ok) { _cachedPlan = null; return null; }
+        const data = await res.json() as { valid: boolean; plan?: string };
+        _cachedPlan = data.valid && data.plan ? data.plan : null;
+        return _cachedPlan;
+    } catch {
+        // Network error — fail open (don't block paying users due to connectivity)
+        _cachedPlan = null;
+        return null;
     }
+}
+
+async function assertLanguageAllowed(lang: string, cfg: Config): Promise<void> {
+    const normalised = lang.toLowerCase().trim();
+    if (FREE_LANGUAGES.includes(normalised)) return; // always allowed
+
+    // Check license token
+    if (cfg.licenseToken) {
+        const plan = await verifyLicense(cfg.licenseToken);
+        if (plan && PRO_PLANS.includes(plan)) return; // unlocked
+    }
+
+    // Not unlocked
+    const label = normalised.charAt(0).toUpperCase() + normalised.slice(1);
+    console.error(
+        `\n  \x1b[33m⚠️  ${label} requires a Pro subscription.\x1b[0m\n` +
+        `\n  \x1b[2mFree tier includes:\x1b[0m  \x1b[36mPython · JavaScript · Java\x1b[0m` +
+        `\n  \x1b[2mPro unlocks:\x1b[0m         \x1b[36mAll 12 languages + unlimited files + why-comments\x1b[0m\n` +
+        `\n  Sign in at \x1b[36mhttps://poly-glot.ai\x1b[0m and run \x1b[36mpoly-glot config --token <your-token>\x1b[0m\n`
+    );
+    process.exit(1);
 }
 
 const COLORS = {
@@ -82,7 +120,9 @@ function showWhatsNew(cfg: Config): void {
     const needsV15Notice = needsV14Notice ||
         last.startsWith('1.3') || last.startsWith('1.4');
 
-    if (!needsV15Notice) return;
+    const needsV16Notice = needsV15Notice || last.startsWith('1.5');
+
+    if (!needsV16Notice) return;
 
     if (needsV14Notice) {
         console.log(`
@@ -105,7 +145,8 @@ ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 `);
     }
 
-    console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.5${COLORS.reset}
+    if (needsV15Notice) {
+        console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.5${COLORS.reset}
 
   ${COLORS.bold}--dry-run${COLORS.reset}   Preview exactly what would change — no files written
            ${COLORS.dim}poly-glot comment src/auth.js --dry-run${COLORS.reset}
@@ -127,6 +168,22 @@ ${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.4${COLORS.reset}
 
 ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
+    }
+
+    if (needsV16Notice && !needsV15Notice) {
+        console.log(`
+${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.6${COLORS.reset}
+
+  ${COLORS.cyan}Pro license support${COLORS.reset} — unlock all 12 languages and unlimited files.
+
+  1. Sign in or sign up at ${COLORS.cyan}https://poly-glot.ai${COLORS.reset}
+  2. Copy your license token from Settings
+  3. Run: ${COLORS.dim}poly-glot config --token <your-token>${COLORS.reset}
+
+  ${COLORS.dim}Free tier: Python · JavaScript · Java${COLORS.reset}
+  ${COLORS.dim}Pro tier:  All 12 languages + unlimited files + why-comments${COLORS.reset}
+`);
+    }
 }
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
@@ -214,10 +271,11 @@ async function runConfig(args: string[]): Promise<void> {
     }
 
     // Non-interactive mode if flags are provided
-    if (flags['--key'] || '--mode' in flags) {
+    if (flags['--key'] || '--mode' in flags || flags['--token']) {
         if (flags['--key'])      cfg.apiKey   = flags['--key']      as string;
         if (flags['--provider']) cfg.provider = flags['--provider'] as string;
         if (flags['--model'])    cfg.model    = flags['--model']    as string;
+        if (flags['--token'])    cfg.licenseToken = flags['--token'] as string;
         if (flags['--mode']) {
             const m = (flags['--mode'] as string).toLowerCase();
             if (!['comment', 'why', 'both'].includes(m)) {
@@ -256,6 +314,9 @@ async function runConfig(args: string[]): Promise<void> {
         if (['comment', 'why', 'both'].includes(m)) cfg.defaultMode = m as CommentMode;
         else warn(`Unknown mode "${m}" — keeping "${cfg.defaultMode}"`);
     }
+
+    const tokenAnswer = await ask(`  License token (press Enter to skip): `);
+    if (tokenAnswer.trim()) cfg.licenseToken = tokenAnswer.trim();
 
     rl.close();
     saveConfig(cfg);
@@ -311,7 +372,7 @@ async function runComment(args: string[]): Promise<void> {
     // ── stdin mode ────────────────────────────────────────────────────────────
     if (flags['--stdin']) {
         const lang = (flags['--lang'] as string) || 'javascript';
-        assertFreeLanguage(lang);
+        await assertLanguageAllowed(lang, cfg);
         const code = await readStdin();
         if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
 
@@ -371,7 +432,7 @@ async function runComment(args: string[]): Promise<void> {
             const rel  = path.relative(dir, file);
             const ext  = file.split('.').pop()!.toLowerCase();
             const lang = SUPPORTED_EXTENSIONS[ext] || 'javascript';
-            assertFreeLanguage(lang);
+            await assertLanguageAllowed(lang, cfg);
             const code = fs.readFileSync(file, 'utf8');
 
             process.stdout.write(`  ${COLORS.dim}${rel}${COLORS.reset} … `);
@@ -437,7 +498,7 @@ async function runComment(args: string[]): Promise<void> {
 
     const ext     = absPath.split('.').pop()!.toLowerCase();
     const lang    = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
-    assertFreeLanguage(lang);
+    await assertLanguageAllowed(lang, cfg);
     const code    = fs.readFileSync(absPath, 'utf8');
     const outPath = flags['--output'] ? path.resolve(flags['--output'] as string) : absPath;
 
@@ -515,7 +576,7 @@ async function runExplain(args: string[]): Promise<void> {
 
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
-    assertFreeLanguage(lang);
+    await assertLanguageAllowed(lang, cfg);
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
@@ -819,6 +880,7 @@ ${COLORS.bold}Config flags:${COLORS.reset}
   --provider <name>     Override provider (openai | anthropic)
   --model <name>        Override model (e.g. gpt-4.1-mini, claude-sonnet-4-5)
   --mode <m>            Set default mode in config: comment | why | both
+  --token <token>       Set your Pro license token from poly-glot.ai
   --telemetry           Enable anonymous usage stats
   --no-telemetry        Disable anonymous usage stats
   --version, -v         Print version

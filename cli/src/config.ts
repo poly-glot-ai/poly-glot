@@ -11,6 +11,7 @@ export interface Config {
     telemetry:       boolean | null;   // null = not yet asked, true = opted in, false = opted out
     defaultMode:     CommentMode;      // default commenting mode (comment / why / both)
     lastSeenVersion: string;           // last version the user ran — used for one-time "what's new" notices
+    licenseToken:    string;           // Pro/Team license token from poly-glot.ai
 }
 
 const CONFIG_DIR  = path.join(os.homedir(), '.config', 'polyglot');
@@ -27,6 +28,7 @@ export function loadConfig(): Config {
             model:           process.env.POLYGLOT_MODEL    || 'gpt-4.1-mini',
             defaultMode:     validModes.includes(envMode!) ? envMode! : 'comment',
             lastSeenVersion: '',
+            licenseToken:    '',
             // CI/CD: respect POLYGLOT_TELEMETRY=0 to disable, default off in CI
             telemetry: process.env.POLYGLOT_TELEMETRY === '1' ? true
                      : process.env.POLYGLOT_TELEMETRY === '0' ? false
@@ -36,7 +38,7 @@ export function loadConfig(): Config {
     }
 
     if (!fs.existsSync(CONFIG_FILE)) {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '' };
     }
 
     try {
@@ -52,9 +54,10 @@ export function loadConfig(): Config {
                                  ? (parsed.defaultMode as CommentMode)
                                  : 'comment',
             lastSeenVersion: parsed.lastSeenVersion || '',
+            licenseToken:    parsed.licenseToken || '',
         };
     } catch {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4o-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4o-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '' };
     }
 }
 

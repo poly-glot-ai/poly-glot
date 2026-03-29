@@ -146,7 +146,10 @@
                     <h1>Poly-Glot <span class="header-h1-sub">Code Comment Library</span></h1>
                 </div>
                 <div class="header-badges">
-                    <span class="version-badge">v1.5.2</span>
+                    <span class="version-badge">v1.6.0</span>
+                    <button class="header-signin-btn" id="headerSignInBtn" onclick="
+                        if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header');
+                    ">Sign In</button>
                     <button class="header-pricing-cta" id="headerPricingBtn" onclick="
                         if(typeof gtag==='function') gtag('event','header_pricing_cta_click');
                         var el = document.getElementById('pg-pricing-section');
@@ -1314,7 +1317,8 @@
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
     <script src="waitlist.js?v=20"></script>
-    <script src="pricing.js?v=7"></script>
+    <script src="pricing.js?v=8"></script>
+    <script src="auth.js?v=1"></script>
 
     <!-- Enterprise / Teams Form Handler -->
     <script>

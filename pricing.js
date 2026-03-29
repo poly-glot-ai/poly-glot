@@ -11,16 +11,17 @@
   'use strict';
 
   /* ── Checkout URLs ─────────────────────────────────────
-     Replace these with real LemonSqueezy variant URLs
-     after running: node setup-lemonsqueezy.js
+     Stripe Payment Links — replace STRIPE_LINK_* with
+     your real buy.stripe.com/... URLs after creating them
+     in the Stripe dashboard.
   ──────────────────────────────────────────────────────── */
   const CHECKOUT = {
-    pro_monthly:       'https://poly-glot.lemonsqueezy.com/checkout/buy/1459809',
-    pro_yearly:        'https://poly-glot.lemonsqueezy.com/checkout/buy/1459821',
-    team5_monthly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/1459834',
-    team5_yearly:      'https://poly-glot.lemonsqueezy.com/checkout/buy/1459831',
-    team15_monthly:    'https://poly-glot.lemonsqueezy.com/checkout/buy/1459834',
-    team15_yearly:     'https://poly-glot.lemonsqueezy.com/checkout/buy/1459831',
+    pro_monthly:       'STRIPE_LINK_PRO_MONTHLY',
+    pro_yearly:        'STRIPE_LINK_PRO_YEARLY',
+    team5_monthly:     'STRIPE_LINK_TEAM_MONTHLY',
+    team5_yearly:      'STRIPE_LINK_TEAM_YEARLY',
+    team15_monthly:    'STRIPE_LINK_TEAM_MONTHLY',
+    team15_yearly:     'STRIPE_LINK_TEAM_YEARLY',
     enterprise_monthly:'#',
     enterprise_yearly: '#',
   };
@@ -29,7 +30,9 @@
 
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
-    return base + (base !== '#' ? `?checkout[discount_code]=${PROMO}` : '');
+    if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
+    // Stripe Payment Links accept ?prefilled_promo_code= for auto-applying coupons
+    return base + `?prefilled_promo_code=${PROMO}`;
   }
 
   /* ── Pricing Data ──────────────────────────────────────── */
@@ -63,7 +66,7 @@
       monthly:   9,
       yearly:    79,
       desc:      'For individual developers who ship fast.',
-      cta:       'Coming Soon',
+      cta:       'Get Started →',
       ctaClass:  'pg-cta-pro',
       ctaAction: 'checkout_pro',
       popular:   true,
@@ -87,7 +90,7 @@
       monthlyLarge: 59,
       yearlyLarge:  499,
       desc:      'For engineering teams. 5 or 15 seats.',
-      cta:       'Coming Soon',
+      cta:       'Get Started →',
       ctaClass:  'pg-cta-team',
       ctaAction: 'checkout_team',
       popular:   false,
@@ -356,26 +359,26 @@
       } else if (action === 'scroll_enterprise') {
         document.querySelector('.enterprise-section')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
-        /* ── PAYMENTS COMING SOON — re-enable after LemonSqueezy approval ── */
-        const existing = document.getElementById('pg-coming-soon-toast');
-        if (existing) existing.remove();
-        const toast = document.createElement('div');
-        toast.id = 'pg-coming-soon-toast';
-        toast.style.cssText = [
-          'position:fixed','bottom:32px','left:50%','transform:translateX(-50%)',
-          'background:#1a1d27','border:1px solid #7dd3fc','color:#f0f9ff',
-          'padding:14px 28px','border-radius:10px','font-size:14px','font-weight:500',
-          'box-shadow:0 8px 32px rgba(0,0,0,0.4)','z-index:99999',
-          'display:flex','align-items:center','gap:10px','white-space:nowrap'
-        ].join(';');
-        toast.innerHTML = '🔜 <span>Payments launching very soon — <strong>join the waitlist</strong> for early access!</span>';
-        toast.style.cursor = 'pointer';
-        toast.addEventListener('click', function () {
-          toast.remove();
-          if (window.PolyGlotWaitlist) window.PolyGlotWaitlist.open('pricing_toast');
-        });
-        document.body.appendChild(toast);
-        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+        /* ── Stripe checkout ── */
+        const billing  = isYearly ? 'yearly' : 'monthly';
+        const sizeKey  = (action === 'checkout_team' && teamSize === 15) ? 'team15' : (action === 'checkout_team' ? 'team5' : 'pro');
+        const urlKey   = `${sizeKey}_${billing}`;
+        const url      = checkoutUrl(urlKey);
+
+        if (typeof gtag === 'function') {
+          gtag('event', 'pricing_cta_click', { plan, billing });
+        }
+
+        if (!url || url === '#') {
+          // Stripe links not yet configured — open login/waitlist as fallback
+          if (window.PolyGlotAuth) {
+            window.PolyGlotAuth.openLoginModal('pricing_cta');
+          } else if (window.PolyGlotWaitlist) {
+            window.PolyGlotWaitlist.open('pricing_cta');
+          }
+        } else {
+          window.location.href = url;
+        }
       }
     });
 
