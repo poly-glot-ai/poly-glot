@@ -1151,11 +1151,17 @@ textarea:focus {
         z-index: 100;
     }
 
-    /* Tablet: keep header in one row, slightly compact badge */
+    /* ── Tablet header: single row, slightly compact ── */
     .header-top {
+        flex-direction: row;
         flex-wrap: nowrap;
-        gap: 10px;
         align-items: center;
+        gap: 10px;
+    }
+
+    .header-brand {
+        flex: 1;
+        min-width: 0;
     }
 
     .header-badges {
@@ -1188,19 +1194,18 @@ textarea:focus {
         font-size: 9px;
     }
 
-    /* Override the generic button { width: 100% } for header buttons */
-    .header-pricing-cta,
-    .header-signin-btn {
-        width: auto !important;
-        flex-shrink: 0;
-    }
-
     .header-pricing-cta {
+        width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
         padding: 7px 12px;
         font-size: 12px;
     }
 
     .header-signin-btn {
+        width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
         padding: 7px 12px;
         font-size: 12px;
     }
@@ -1285,11 +1290,20 @@ textarea:focus {
         min-width: auto;
     }
 
-    button, .support-btn {
+    button:not(.header-pricing-cta):not(.header-signin-btn):not(.pg-user-chip),
+    .support-btn {
         width: 100%;
         justify-content: center;
         font-size: 13px;
         padding: 12px 16px;
+    }
+
+    /* Header buttons: never stretch full-width — always inline */
+    .header-pricing-cta,
+    .header-signin-btn {
+        width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
 
     .main-content {
@@ -1358,89 +1372,104 @@ textarea:focus {
     }
 }
 
-/* Small mobile devices */
+/* ── Mobile (≤480px): 2-row header ──────────────────────────
+   Row 1: parrot + title
+   Row 2: live badge + See Plans + Sign In
+   ─────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
     .header {
         padding: 10px 12px;
     }
 
+    /* Stack brand on top, badges on bottom */
     .header-top {
-        flex-wrap: nowrap;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 8px;
+        flex-wrap: nowrap;
     }
 
+    /* Row 1: parrot + title — full width */
     .header-brand {
-        gap: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
         min-width: 0;
-        flex: 1;
+    }
+
+    .header-parrot {
+        height: 38px;
+        width: auto;
+        flex-shrink: 0;
     }
 
     .header-brand h1 {
-        font-size: 15px;
+        font-size: 18px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .header-parrot {
-        height: 32px;
-        width: auto;
-        flex-shrink: 0;
-    }
-
     .header-h1-sub {
-        display: none; /* hide "Code Comment Library" on tiny screens */
+        display: none;
     }
 
-    /* Badge row becomes compact on mobile */
+    /* Row 2: all 3 badges in a single flex row */
     .header-badges {
-        flex-shrink: 0;
-        gap: 6px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
         flex-wrap: nowrap;
+        width: 100%;
     }
 
-    /* Live badge — compact on mobile: show parrot + title only, hide subtitle */
+    /* Live badge — compact: parrot + title, no subtitle */
     .pg-live-badge {
-        padding: 4px 10px 4px 4px;
+        padding: 5px 10px 5px 5px;
         gap: 6px;
+        flex-shrink: 0;
     }
+
     .pg-live-badge__rings {
         width: 28px;
         height: 28px;
     }
+
     .pg-live-badge__parrot {
         width: 28px;
         height: 28px;
     }
+
     .pg-live-badge__title {
-        font-size: 11px;
-    }
-    .pg-live-badge__sub {
-        display: none; /* hide "Subscriptions open" on mobile */
+        font-size: 12px;
     }
 
-    /* Header buttons must NEVER stretch full width on mobile */
-    .header-pricing-cta,
-    .header-signin-btn {
-        width: auto !important;
+    .pg-live-badge__sub {
+        display: none;
+    }
+
+    /* See Plans button */
+    .header-pricing-cta {
+        width: auto;
         flex-shrink: 0;
         white-space: nowrap;
-    }
-
-    /* See Plans — compact on small phones */
-    .header-pricing-cta {
-        padding: 5px 9px;
-        font-size: 11px;
+        padding: 6px 12px;
+        font-size: 12px;
         gap: 4px;
     }
 
-    /* Sign In — compact on small phones */
+    /* Sign In button */
     .header-signin-btn {
-        padding: 5px 9px;
-        font-size: 11px;
+        width: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 6px 12px;
+        font-size: 12px;
     }
 
+    /* ── Rest of mobile styles (unchanged) ── */
     .header h1 {
         font-size: 18px;
     }
@@ -1471,7 +1500,8 @@ textarea:focus {
         font-size: 11px;
     }
 
-    button, .support-btn {
+    button:not(.header-pricing-cta):not(.header-signin-btn):not(.pg-user-chip),
+    .support-btn {
         font-size: 12px;
         padding: 10px 14px;
     }
@@ -1494,7 +1524,7 @@ textarea:focus {
 
 /* ──────────────────────────────────────────
    Tiny phones (≤360px): iPhone SE, small Androids
-   Hide live badge text, keep just the parrot icon
+   2-row layout inherited from ≤480px; just shrink sizes further
    ────────────────────────────────────────── */
 @media (max-width: 360px) {
     .header {
@@ -1505,45 +1535,37 @@ textarea:focus {
         gap: 6px;
     }
 
-    /* Hide the text part of the live badge — only parrot + rings remain */
-    .pg-live-badge__text {
-        display: none;
-    }
-
-    /* Shrink badge padding since it's icon-only now */
-    .pg-live-badge {
-        padding: 4px;
-        gap: 0;
-    }
-
-    .pg-live-badge__rings {
-        width: 26px;
-        height: 26px;
-    }
-    .pg-live-badge__parrot {
-        width: 26px;
-        height: 26px;
-    }
-
-    /* Make buttons icon-only on tiniest screens */
-    .header-pricing-cta {
-        padding: 5px 8px;
-        font-size: 11px;
-        gap: 3px;
-    }
-
-    .header-signin-btn {
-        padding: 5px 8px;
-        font-size: 11px;
-    }
-
-    /* Shrink brand parrot + title */
     .header-parrot {
-        height: 26px;
+        height: 30px;
     }
 
     .header-brand h1 {
-        font-size: 13px;
+        font-size: 15px;
+    }
+
+    .pg-live-badge {
+        padding: 4px 8px 4px 4px;
+        gap: 5px;
+    }
+
+    .pg-live-badge__rings,
+    .pg-live-badge__parrot {
+        width: 24px;
+        height: 24px;
+    }
+
+    .pg-live-badge__title {
+        font-size: 11px;
+    }
+
+    .header-pricing-cta {
+        padding: 5px 9px;
+        font-size: 11px;
+    }
+
+    .header-signin-btn {
+        padding: 5px 9px;
+        font-size: 11px;
     }
 }
 
