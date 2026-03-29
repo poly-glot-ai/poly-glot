@@ -133,6 +133,19 @@ class AIGenerator {
         }
         return this.callOpenAI(apiKey, model, prompt, code);
     }
+    // ── Core: Why-Comments ────────────────────────────────────────────────────
+    async generateWhyComments(code, languageId) {
+        const apiKey = await this.getApiKey();
+        if (!apiKey)
+            throw new Error('API key not configured. Run "Poly-Glot: Configure API Key".');
+        const provider = this.getProvider();
+        const model = this.getModel();
+        const prompt = this.buildWhyPrompt(code, languageId);
+        if (provider === 'anthropic') {
+            return this.callAnthropic(apiKey, model, prompt, code);
+        }
+        return this.callOpenAI(apiKey, model, prompt, code);
+    }
     // ── Core: Explain Code ────────────────────────────────────────────────────
     async explainCode(code, languageId) {
         const apiKey = await this.getApiKey();
@@ -178,6 +191,18 @@ Rules:
 - Preserve all original formatting and indentation exactly
 
 Code to document:
+${code}`;
+    }
+    buildWhyPrompt(code, languageId) {
+        return `Add inline WHY comments to this ${languageId} code.
+
+Rules:
+- Explain WHY — not what. Focus on trade-offs, non-obvious design choices, edge-case reasoning, and intent.
+- Use correct single-line comment syntax for ${languageId}.
+- Skip self-explanatory lines (variable assignments, simple returns, obvious loops).
+- Place comments above the relevant line, or inline at end of line for short notes.
+- Return ONLY the commented code — no markdown fences, no explanations, no preamble.
+
 ${code}`;
     }
     buildExplainPrompt(code, languageId) {

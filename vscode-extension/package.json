@@ -1,8 +1,8 @@
 {
   "name": "poly-glot",
-  "displayName": "Poly-Glot Code Comment Library",
-  "description": "AI-powered code comment generation for 12 languages — JSDoc, Javadoc, PyDoc, Doxygen, and more.",
-  "version": "1.2.0",
+  "displayName": "Poly-Glot AI",
+  "description": "AI-powered code comment generation — JSDoc, Javadoc, PyDoc, Doxygen, why-comments and more for 12 languages.",
+  "version": "1.3.0",
   "publisher": "hmoses",
   "icon": "icon.png",
   "repository": {
@@ -22,9 +22,11 @@
     "jsdoc",
     "javadoc",
     "pydoc",
+    "why-comments",
     "ai",
     "openai",
-    "anthropic"
+    "anthropic",
+    "poly-glot"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -34,8 +36,18 @@
     "commands": [
       {
         "command": "polyglot.generateComments",
-        "title": "Poly-Glot: Generate Comments",
+        "title": "Poly-Glot: Add Doc-Comments",
         "icon": "$(comment)"
+      },
+      {
+        "command": "polyglot.whyComments",
+        "title": "Poly-Glot: Add Why-Comments",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "polyglot.bothComments",
+        "title": "Poly-Glot: Add Doc + Why Comments",
+        "icon": "$(file-code)"
       },
       {
         "command": "polyglot.commentFile",
@@ -48,6 +60,11 @@
         "icon": "$(file-code)"
       },
       {
+        "command": "polyglot.whyFileFromExplorer",
+        "title": "Poly-Glot: Add Why-Comments to File",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "polyglot.explainCode",
         "title": "Poly-Glot: Explain Code",
         "icon": "$(search)"
@@ -56,6 +73,11 @@
         "command": "polyglot.configureApiKey",
         "title": "Poly-Glot: Configure API Key",
         "icon": "$(key)"
+      },
+      {
+        "command": "polyglot.configureLicenseToken",
+        "title": "Poly-Glot: Enter Pro License Token",
+        "icon": "$(star)"
       },
       {
         "command": "polyglot.openTemplates",
@@ -67,13 +89,20 @@
       "editor/context": [
         {
           "command": "polyglot.generateComments",
-          "when": "editorHasSelection",
           "group": "polyglot@1"
+        },
+        {
+          "command": "polyglot.whyComments",
+          "group": "polyglot@2"
+        },
+        {
+          "command": "polyglot.bothComments",
+          "group": "polyglot@3"
         },
         {
           "command": "polyglot.explainCode",
           "when": "editorHasSelection",
-          "group": "polyglot@2"
+          "group": "polyglot@4"
         }
       ],
       "editor/title": [
@@ -88,6 +117,11 @@
           "command": "polyglot.commentFileFromExplorer",
           "when": "resourceExtname =~ /\\.(js|ts|jsx|tsx|py|java|cpp|c|cs|go|rs|rb|php|swift|kt)$/",
           "group": "polyglot@1"
+        },
+        {
+          "command": "polyglot.whyFileFromExplorer",
+          "when": "resourceExtname =~ /\\.(js|ts|jsx|tsx|py|java|cpp|c|cs|go|rs|rb|php|swift|kt)$/",
+          "group": "polyglot@2"
         }
       ]
     },
@@ -96,12 +130,18 @@
         "command": "polyglot.generateComments",
         "key": "ctrl+shift+/",
         "mac": "cmd+shift+/",
-        "when": "editorTextFocus && editorHasSelection"
+        "when": "editorTextFocus"
       },
       {
-        "command": "polyglot.commentFile",
-        "key": "ctrl+shift+alt+/",
-        "mac": "cmd+shift+alt+/",
+        "command": "polyglot.whyComments",
+        "key": "ctrl+shift+w",
+        "mac": "cmd+shift+w",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "polyglot.bothComments",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b",
         "when": "editorTextFocus"
       },
       {
@@ -130,63 +170,38 @@
       ]
     },
     "configuration": {
-      "title": "Poly-Glot",
+      "title": "Poly-Glot AI",
       "properties": {
         "polyglot.provider": {
           "type": "string",
           "default": "openai",
-          "enum": [
-            "openai",
-            "anthropic"
-          ],
+          "enum": ["openai", "anthropic"],
           "enumDescriptions": [
             "Use OpenAI (GPT-4o, GPT-4o-mini)",
-            "Use Anthropic (Claude Sonnet 4, Claude 3.5 Sonnet)"
+            "Use Anthropic (Claude Sonnet, Claude Haiku)"
           ],
-          "description": "AI provider for comment generation"
+          "description": "AI provider for comment generation."
         },
         "polyglot.model": {
           "type": "string",
           "default": "gpt-4o-mini",
-          "description": "Model to use. Set to any valid model ID from your provider."
+          "description": "Model to use. Any valid model ID from your provider."
         },
         "polyglot.commentStyle": {
           "type": "string",
           "default": "auto",
-          "enum": [
-            "auto",
-            "jsdoc",
-            "javadoc",
-            "pydoc",
-            "doxygen",
-            "xmldoc",
-            "godoc",
-            "rustdoc",
-            "rdoc",
-            "phpdoc",
-            "swift",
-            "kotlin"
-          ],
-          "enumDescriptions": [
-            "Auto-detect based on file language (recommended)",
-            "JSDoc (JavaScript / TypeScript)",
-            "Javadoc (Java)",
-            "PyDoc / Google-style (Python)",
-            "Doxygen (C / C++)",
-            "XML doc comments (C#)",
-            "GoDoc (Go)",
-            "Rust doc comments (Rust)",
-            "RDoc / YARD (Ruby)",
-            "PHPDoc (PHP)",
-            "Swift markup (Swift)",
-            "KDoc (Kotlin)"
-          ],
-          "description": "Comment style to use. 'auto' detects from file language."
+          "enum": ["auto","jsdoc","javadoc","pydoc","doxygen","xmldoc","godoc","rustdoc","rdoc","phpdoc","swift","kotlin"],
+          "description": "Comment style. 'auto' detects from file language (recommended)."
         },
         "polyglot.insertInline": {
           "type": "boolean",
           "default": true,
-          "description": "Insert generated comments directly into the editor. If false, shows output in a side panel."
+          "description": "Insert comments directly into the editor. If false, opens result in a side panel."
+        },
+        "polyglot.licenseToken": {
+          "type": "string",
+          "default": "",
+          "description": "Poly-Glot Pro license token. Get yours at poly-glot.ai after subscribing."
         }
       }
     }
