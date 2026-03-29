@@ -1308,7 +1308,7 @@
     <script src="app.js?v=217"></script>
     <script src="cli-terminal-demo.js?v=219"></script>
     <script src="rag-scores.js?v=4"></script>
-    <script src="waitlist.js?v=17"></script>
+    <script src="waitlist.js?v=18"></script>
     <script src="pricing.js?v=7"></script>
 
     <!-- Enterprise / Teams Form Handler -->
@@ -1361,42 +1361,31 @@
 
                 // ── Step 1: fast local dedup (same device) ──
                 if (window.PolyGlotEmailRegistry && window.PolyGlotEmailRegistry.has(email)) {
-                    if (successMsg) {
-                        successMsg.innerHTML =
-                            '✅ <strong>' + email + '</strong> is already on our waitlist! We\'ll reach out soon. 🚀';
-                        successMsg.style.display = 'block';
-                    }
+                    showEnterpriseAlreadyOnList(email, successMsg);
                     return;
                 }
 
-                // ── Step 2: show loading while KV check runs (cross-device) ──
+                // ── Step 2: show loading while KV claim runs ──
                 if (submitBtn)  submitBtn.disabled       = true;
                 if (btnText)    btnText.style.display    = 'none';
                 if (btnLoading) btnLoading.style.display = 'inline';
 
-                // ── Step 3: KV cross-device dedup ──
-                fetch('https://poly-glot.ai/api/counter/check-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email })
-                })
-                .then(function(r) { return r.json(); })
-                .catch(function() { return { exists: false }; }) // network error → let through
-                .then(function(dedup) {
-                    if (dedup.exists) {
+                // ── Step 3: atomically claim in KV BEFORE sending anything ──
+                // Uses the same claimEmailGlobal() from waitlist.js (loaded above).
+                // claimed:true  = first registration on any device — proceed
+                // claimed:false = another device already registered — block
+                window.PolyGlotWaitlist._claimEmail(email).then(function (result) {
+                    if (!result.claimed) {
                         if (submitBtn)  submitBtn.disabled       = false;
                         if (btnText)    btnText.style.display    = 'inline';
                         if (btnLoading) btnLoading.style.display = 'none';
                         if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
                         localStorage.setItem('pg_waitlist_joined', '1');
                         localStorage.setItem('pg_waitlist_email',  email);
-                        if (successMsg) {
-                            successMsg.innerHTML =
-                                '✅ <strong>' + email + '</strong> is already on our waitlist! We\'ll reach out soon. 🚀';
-                            successMsg.style.display = 'block';
-                        }
+                        showEnterpriseAlreadyOnList(email, successMsg);
                         return;
                     }
+                    // ── Step 4: KV lock acquired — submit form ──
                     submitEnterpriseForm(
                         name, email, company, teamSize, message, promoCode,
                         submitBtn, btnText, btnLoading, successMsg, errorMsg
@@ -1410,6 +1399,16 @@
          * Submit the enterprise form — called only after dedup checks pass.
          * Sends exactly one email via web3forms, then registers the email in KV.
          */
+        /* Shared "already on list" message — identical to waitlist.js showAlreadyOnList */
+        function showEnterpriseAlreadyOnList(email, successMsg) {
+            if (successMsg) {
+                successMsg.innerHTML =
+                    '✅ <strong>' + email + '</strong> is already on our early-access list! ' +
+                    'We\'ll email you the moment Pro launches — and you\'ll get your first 3 months on us. 🚀';
+                successMsg.style.display = 'block';
+            }
+        }
+
         function submitEnterpriseForm(name, email, company, teamSize, message, promoCode,
                                       submitBtn, btnText, btnLoading, successMsg, errorMsg) {
             var isPromo     = promoCode === 'EARLYBIRD3';
@@ -1447,14 +1446,8 @@
 
                     if (data.success) {
                         // Register email in localStorage (fast local cache)
+                        // KV was already claimed atomically before this fetch — no repeat needed
                         if (window.PolyGlotEmailRegistry) window.PolyGlotEmailRegistry.add(email);
-
-                        // Register email in KV (cross-device dedup) — fire-and-forget
-                        fetch('https://poly-glot.ai/api/counter/register-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: email })
-                        }).catch(function() { /* non-fatal */ });
 
                         // Persist joined state locally
                         localStorage.setItem('pg_waitlist_joined', '1');

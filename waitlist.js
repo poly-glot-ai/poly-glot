@@ -416,28 +416,42 @@
    * @param {string} email
    * @returns {Promise<boolean>}
    */
+  /**
+   * Check KV for an existing email registration (cross-device).
+   * Returns a Promise<boolean> — true = already registered.
+   * On network error returns false (fail open so users aren't blocked by infra).
+   */
   function checkEmailGlobal(email) {
     return fetch(COUNTER_URL + '/check-email', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email: email.trim().toLowerCase() }),
     })
-      .then(r => r.json())
-      .then(d => d.exists === true)
-      .catch(() => false); // network error → assume new, let them through
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return d.exists === true; })
+      .catch(function ()  { return false; }); // network error → fail open
   }
 
   /**
-   * Register an email in KV so every future device sees the duplicate.
-   * Fire-and-forget — failure is non-fatal.
-   * @param {string} email
+   * Attempt to claim an email in KV atomically.
+   * Returns a Promise<{ claimed: bool }>.
+   *   claimed: true  → this call won the write — proceed with signup
+   *   claimed: false → already registered by another device — block
+   * On network error returns { claimed: true } so the user isn't stranded.
    */
-  function registerEmailGlobal(email) {
-    fetch(COUNTER_URL + '/register-email', {
+  function claimEmailGlobal(email) {
+    return fetch(COUNTER_URL + '/register-email', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email: email.trim().toLowerCase() }),
-    }).catch(() => { /* non-fatal */ });
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        // created: true  → first registration, we own it
+        // created: false → already existed, another device got there first
+        return { claimed: d.created === true };
+      })
+      .catch(function () { return { claimed: true }; }); // network error → fail open
   }
 
   function getLocalCount() {
@@ -795,17 +809,19 @@
       return;
     }
 
-    /* ── Step 2: show loading state while we check KV (cross-device) ─────── */
+    /* ── Step 2: show loading while KV claim runs ────────────────────────── */
     if (submitBtn) submitBtn.disabled = true;
     if (btnText)   btnText.style.display   = 'none';
     if (btnLoad)   btnLoad.style.display   = 'inline';
     if (successEl) successEl.style.display = 'none';
     if (errorEl)   errorEl.style.display   = 'none';
 
-    /* ── Step 3: KV check — catches signups from any other device ─────────── */
-    checkEmailGlobal(email).then(function (alreadyExists) {
-      if (alreadyExists) {
-        /* Register locally so future checks on this device are instant */
+    /* ── Step 3: atomically claim the email in KV BEFORE sending anything ── */
+    /* claimed:true  = first registration on any device — proceed             */
+    /* claimed:false = another device already registered this email — block   */
+    claimEmailGlobal(email).then(function (result) {
+      if (!result.claimed) {
+        /* Another device got there first — mirror state locally and show msg */
         EmailRegistry.add(email);
         localStorage.setItem(LS_JOINED, '1');
         localStorage.setItem(LS_EMAIL, email);
@@ -815,7 +831,7 @@
         return;
       }
 
-      /* ── Step 4: new signup — send exactly one email via web3forms ──────── */
+      /* ── Step 4: KV lock acquired — send exactly one email via web3forms ── */
       const isPromo  = promoCode === PROMO_CODE;
       const genCount = FeatureUsage.totalUses();
       const language = (function () {
@@ -840,14 +856,13 @@
       fd.append('_honey',     '');
 
       fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
-        .then(r => r.json())
+        .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data.success) throw new Error(data.message || 'submission failed');
-          onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal' }, submitBtn, btnText, btnLoad, successEl, errorEl);
+          onWaitlistSuccess({ name: name, email: email, role: role, promoCode: promoCode, genCount: genCount, language: language, source: 'modal' }, submitBtn, btnText, btnLoad, successEl, errorEl);
         })
         .catch(function () {
-          /* Network error — register locally so they aren't blocked from retrying */
-          onWaitlistSuccess({ name, email, role, promoCode, genCount, language, source: 'modal_offline' }, submitBtn, btnText, btnLoad, successEl, errorEl);
+          onWaitlistSuccess({ name: name, email: email, role: role, promoCode: promoCode, genCount: genCount, language: language, source: 'modal_offline' }, submitBtn, btnText, btnLoad, successEl, errorEl);
           ga('waitlist_error');
         });
     });
@@ -895,8 +910,7 @@
       PromoTracker.save(data.email, data.source, { name: data.name });
     }
 
-    /* Register email in KV so every other device sees this signup immediately */
-    registerEmailGlobal(data.email);
+    /* KV was already written atomically before the web3forms call — no repeat needed */
 
     FeatureUsage.record('waitlist_joined', data.source);
     ga('waitlist_joined', { source: data.source, promo: data.promoCode || 'none' });
@@ -1062,16 +1076,16 @@
         return;
       }
 
-      /* ── Step 2: show loading while KV check runs ────────────────────────── */
+      /* ── Step 2: show loading while KV claim runs ────────────────────────── */
       if (submitBtn) submitBtn.disabled = true;
       if (btnText)   btnText.style.display = 'none';
       if (btnLoad)   btnLoad.style.display = 'inline';
       if (successEl) successEl.style.display = 'none';
       if (errorEl)   errorEl.style.display   = 'none';
 
-      /* ── Step 3: KV cross-device dedup ───────────────────────────────────── */
-      checkEmailGlobal(email).then(function (alreadyExists) {
-        if (alreadyExists) {
+      /* ── Step 3: atomically claim in KV BEFORE sending anything ──────────── */
+      claimEmailGlobal(email).then(function (result) {
+        if (!result.claimed) {
           EmailRegistry.add(email);
           localStorage.setItem(LS_JOINED, '1');
           localStorage.setItem(LS_EMAIL, email);
@@ -1081,7 +1095,7 @@
           return;
         }
 
-        /* ── Step 4: new signup — one email via web3forms ────────────────── */
+        /* ── Step 4: KV lock acquired — one email via web3forms ──────────── */
         const fd = new FormData();
         fd.append('access_key', WEB3_KEY);
         fd.append('subject',    '🦜 New Pro Waitlist Signup — ' + email);
@@ -1099,7 +1113,7 @@
         );
 
         fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
-          .then(r => r.json())
+          .then(function (r) { return r.json(); })
           .then(function () {
             resetBtn(submitBtn, btnText, btnLoad);
             onInlineSuccess(email, successEl, form);
@@ -1120,8 +1134,7 @@
     /* Register in localStorage (fast local cache) */
     EmailRegistry.add(email);
 
-    /* Register in KV (cross-device dedup) — fire-and-forget */
-    registerEmailGlobal(email);
+    /* KV was already written atomically before the web3forms call — no repeat needed */
 
     localStorage.setItem(LS_JOINED, '1');
     localStorage.setItem(LS_EMAIL, email);
@@ -1304,7 +1317,10 @@
     listSignups:    ()  => { const s = SignupTracker.getAll(); console.table(s); return s; },
     listPromo:      ()  => { const p = PromoTracker.getAll();  console.table(p); return p; },
     exportPromoCSV: ()  => PromoTracker.exportCSV(),
-    listEmails:     ()  => { const e = EmailRegistry.getAll(); console.table(e.map((m,i) => ({['#']: i+1, email: m}))); return e; }
+    listEmails:     ()  => { const e = EmailRegistry.getAll(); console.table(e.map((m,i) => ({['#']: i+1, email: m}))); return e; },
+    /* Exposed for enterprise form in index.html — same atomic KV claim */
+    _claimEmail:    claimEmailGlobal,
+    _alreadyOnList: showAlreadyOnList,
   };
 
   /* ── Boot ──────────────────────────────────────────────── */
