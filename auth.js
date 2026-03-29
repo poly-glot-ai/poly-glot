@@ -541,12 +541,13 @@
           var freeCta = document.getElementById('pgAuthModalFreeCta');
           if (freeCta) {
             freeCta.style.display = 'block';
-            // "Start Using Free" — close modal, apply free gating
+            // "Start Using Free" — close modal, scroll to tool
             var startFreeBtn = document.getElementById('pgAuthModalStartFree');
             if (startFreeBtn) {
               startFreeBtn.addEventListener('click', function () {
                 closeModal();
                 applyPlanGating('free');
+                scrollToTool();
                 showToast('👋 Using Poly-Glot free — Python, JS & Java unlocked. Click your email link anytime to restore your session.');
               });
             }
@@ -715,7 +716,14 @@
       if (bothBtn && !bothBtn.classList.contains('btn-locked')) { bothBtn.disabled = true; bothBtn.title = 'Both modes — Pro plan required. See Plans ↑'; bothBtn.classList.add('btn-locked'); }
     }
 
-    if (!isPaid) return; // rest of gating only applies to paid users
+    if (!isPaid) {
+      // Show the nudge bar for free users (delayed slightly so page renders first)
+      setTimeout(showNudgeBar, 2000);
+      return;
+    }
+
+    // Paid user — hide nudge bar permanently
+    hideNudgeBarForPaidUser();
 
     // ── Unlock download button ──
     var dlBtn = document.getElementById('cgDownloadBtn');
@@ -812,6 +820,178 @@
         chip.parentNode.insertBefore(badgeEl, chip);
       }
     }
+  }
+
+  /* ─────────────────────────────────────────────
+     Scroll to tool helper
+  ───────────────────────────────────────────── */
+  function scrollToTool() {
+    var el = document.getElementById('commentGenerator');
+    if (!el) return;
+    var rect      = el.getBoundingClientRect();
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    window.scrollTo({ top: rect.top + scrollTop - 24, behavior: 'smooth' });
+  }
+
+  /* ─────────────────────────────────────────────
+     Free-user nudge bar (global, non-intrusive)
+     Shown to all non-subscribed visitors.
+     Dismissed permanently via localStorage.
+     Hidden once user has a paid plan.
+  ───────────────────────────────────────────── */
+  var NUDGE_DISMISSED_KEY = 'pg_nudge_dismissed';
+
+  function injectNudgeBarStyles() {
+    var s = document.createElement('style');
+    s.textContent = `
+      .pg-nudge-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 9990;
+        background: linear-gradient(90deg, #0d1f12 0%, #0f1f2e 50%, #0d1f12 100%);
+        border-top: 1px solid rgba(52, 211, 153, 0.25);
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        animation: pg-nudge-slide-up 0.5s cubic-bezier(0.34,1.56,0.64,1);
+      }
+      @keyframes pg-nudge-slide-up {
+        from { transform: translateY(100%); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      .pg-nudge-bar.pg-nudge-hiding {
+        animation: pg-nudge-slide-down 0.3s ease forwards;
+      }
+      @keyframes pg-nudge-slide-down {
+        to { transform: translateY(100%); opacity: 0; }
+      }
+      .pg-nudge-bar__text {
+        font-family: Inter, sans-serif;
+        font-size: 14px;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .pg-nudge-bar__text strong {
+        color: #e2e8f0;
+      }
+      .pg-nudge-bar__cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        border: none;
+        border-radius: 100px;
+        cursor: pointer;
+        font-family: Inter, sans-serif;
+        box-shadow: 0 2px 10px rgba(34,197,94,0.35);
+        transition: opacity 0.2s, transform 0.2s;
+        white-space: nowrap;
+      }
+      .pg-nudge-bar__cta:hover { opacity: 0.88; transform: translateY(-1px); }
+      .pg-nudge-bar__plans {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        background: transparent;
+        color: #a5b4fc;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1.5px solid rgba(99,102,241,0.35);
+        border-radius: 100px;
+        cursor: pointer;
+        font-family: Inter, sans-serif;
+        transition: background 0.2s;
+        white-space: nowrap;
+      }
+      .pg-nudge-bar__plans:hover { background: rgba(79,70,229,0.15); }
+      .pg-nudge-bar__dismiss {
+        background: none;
+        border: none;
+        color: #475569;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: Inter, sans-serif;
+        transition: color 0.2s;
+        line-height: 1;
+      }
+      .pg-nudge-bar__dismiss:hover { color: #94a3b8; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function showNudgeBar() {
+    // Don't show if: already dismissed, already paid, already shown
+    if (localStorage.getItem(NUDGE_DISMISSED_KEY)) return;
+    if (document.getElementById('pg-nudge-bar')) return;
+
+    injectNudgeBarStyles();
+
+    var bar = document.createElement('div');
+    bar.id        = 'pg-nudge-bar';
+    bar.className = 'pg-nudge-bar';
+    bar.setAttribute('role', 'complementary');
+    bar.innerHTML =
+      '<span class="pg-nudge-bar__text">' +
+        '🦜 <strong>Poly-Glot is free to use</strong> — Python, JavaScript &amp; Java with doc-comments, no account needed.' +
+      '</span>' +
+      '<button class="pg-nudge-bar__cta" id="pg-nudge-try">Try It Free Now ↓</button>' +
+      '<button class="pg-nudge-bar__plans" id="pg-nudge-plans">⭐ See Pro Plans</button>' +
+      '<button class="pg-nudge-bar__dismiss" id="pg-nudge-dismiss" aria-label="Dismiss" title="Dismiss">×</button>';
+
+    document.body.appendChild(bar);
+
+    // Try It Free — scroll to tool
+    document.getElementById('pg-nudge-try').addEventListener('click', function () {
+      dismissNudgeBar(false); // hide but don't permanently dismiss
+      scrollToTool();
+      if (typeof gtag === 'function') gtag('event', 'nudge_bar_try_free');
+    });
+
+    // See Pro Plans — scroll to pricing
+    document.getElementById('pg-nudge-plans').addEventListener('click', function () {
+      dismissNudgeBar(true);
+      var el = document.getElementById('pg-pricing-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      if (typeof gtag === 'function') gtag('event', 'nudge_bar_see_plans');
+    });
+
+    // Dismiss — hide permanently
+    document.getElementById('pg-nudge-dismiss').addEventListener('click', function () {
+      dismissNudgeBar(true);
+      if (typeof gtag === 'function') gtag('event', 'nudge_bar_dismissed');
+    });
+  }
+
+  function dismissNudgeBar(permanent) {
+    var bar = document.getElementById('pg-nudge-bar');
+    if (!bar) return;
+    if (permanent) localStorage.setItem(NUDGE_DISMISSED_KEY, '1');
+    bar.classList.add('pg-nudge-hiding');
+    setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 320);
+  }
+
+  function hideNudgeBarForPaidUser() {
+    // Called when plan resolves to paid — remove bar and mark dismissed
+    var bar = document.getElementById('pg-nudge-bar');
+    if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+    localStorage.setItem(NUDGE_DISMISSED_KEY, '1');
   }
 
   /* ─────────────────────────────────────────────
