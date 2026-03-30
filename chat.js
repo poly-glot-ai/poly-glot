@@ -370,9 +370,10 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
       }
       .pg-chat-header-close:hover { color: #f9fafb; background: rgba(255,255,255,.1); }
 
-      /* Messages */
+      /* Messages — scrollable area only, no suggestions inside */
       .pg-chat-messages {
         flex: 1;
+        min-height: 0;        /* critical: lets flex child shrink below content size */
         overflow-y: auto;
         padding: 14px 14px 8px;
         display: flex;
@@ -467,19 +468,27 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
         40%            { transform: translateY(-5px); opacity: 1; }
       }
 
-      /* Suggestions — live inside the scroll area, always visible */
+      /* Suggestions strip — fixed between messages and input, never scrolls away */
       .pg-chat-suggestions {
+        flex-shrink: 0;                        /* never compressed by flex parent */
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        padding: 6px 2px 2px;
+        padding: 8px 12px 6px;
+        border-top: 1px solid rgba(255,255,255,.06);
+        background: rgba(0,0,0,.15);
+        overflow-x: auto;                      /* horizontal scroll if chips overflow */
+        scrollbar-width: none;                 /* hide scrollbar on suggestions strip */
       }
+      .pg-chat-suggestions::-webkit-scrollbar { display: none; }
       .pg-chat-suggestions-label {
         width: 100%;
-        font-size: 11px;
+        font-size: 10.5px;
         color: #4b5563;
-        margin-bottom: 2px;
+        margin-bottom: 3px;
         letter-spacing: 0.03em;
+        text-transform: uppercase;
+        font-weight: 600;
       }
       .pg-chat-suggestion {
         background: rgba(79,70,229,.12);
@@ -591,9 +600,8 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
         </div>
         <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">✕</button>
       </div>
-      <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite">
-        <div class="pg-chat-suggestions" id="pg-chat-suggestions"></div>
-      </div>
+      <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite"></div>
+      <div class="pg-chat-suggestions" id="pg-chat-suggestions"></div>
       <div class="pg-chat-input-row">
         <textarea
           id="pg-chat-input"
@@ -631,25 +639,25 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
     let history   = []; // { role, content } for AI context
     let hasOpened = false;
 
-    // Render suggestion chips — always visible, never removed
+    // Render suggestion chips — always visible in the fixed strip above input
     function renderSuggestions(items) {
       suggestionsEl.innerHTML = '';
       const label = document.createElement('div');
       label.className = 'pg-chat-suggestions-label';
-      label.textContent = 'Suggested questions:';
+      label.textContent = 'Suggested questions';
       suggestionsEl.appendChild(label);
       items.forEach(text => {
         const btn = document.createElement('button');
         btn.className = 'pg-chat-suggestion';
         btn.textContent = text;
-        btn.addEventListener('click', () => sendMessage(text));
+        btn.addEventListener('click', () => {
+          sendMessage(text);
+        });
         suggestionsEl.appendChild(btn);
       });
-      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    // Append a message bubble — always inserted BEFORE the suggestions div
-    // so suggestions stay anchored at the bottom of the scroll area
+    // Append a message bubble into the scrollable messages area
     function appendMessage(role, htmlContent) {
       const wrapper = document.createElement('div');
       wrapper.className = `pg-chat-msg ${role}`;
@@ -657,13 +665,12 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
       bubble.className = 'pg-chat-bubble';
       bubble.innerHTML = htmlContent;
       wrapper.appendChild(bubble);
-      // Insert before suggestions so they stay at bottom
-      messagesEl.insertBefore(wrapper, suggestionsEl);
+      messagesEl.appendChild(wrapper);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return wrapper;
     }
 
-    // Typing indicator — insert before suggestions so they stay at bottom
+    // Typing indicator
     function showTyping() {
       const el = document.createElement('div');
       el.className = 'pg-chat-msg bot pg-chat-typing';
@@ -673,7 +680,7 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
         <span class="pg-chat-dot"></span>
         <span class="pg-chat-dot"></span>
       </div>`;
-      messagesEl.insertBefore(el, suggestionsEl);
+      messagesEl.appendChild(el);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
