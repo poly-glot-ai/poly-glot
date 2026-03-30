@@ -3735,10 +3735,15 @@ kbd {
 .site-footer strong { color: #94a3b8; }
 .site-footer__badges {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 12px;
+}
+.site-footer__badges > a,
+.site-footer__badges-ph {
+    display: inline-flex;
+    justify-content: center;
 }
 .site-footer__badges a {
     display: inline-flex;
