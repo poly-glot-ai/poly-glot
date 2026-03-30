@@ -1205,8 +1205,12 @@
     var lastFreeVal = FREE_LANGUAGES.indexOf(sel.value) !== -1 ? sel.value : FREE_LANGUAGES[0];
 
     sel.addEventListener('change', function () {
-      /* Skip gating for programmatic auto-detect assignments from app.v220.js */
-      if (this.dataset.autoDetect === '1') return;
+      /* Skip gating for programmatic auto-detect assignments from app.v220.js.
+         Two guards:
+         1. dataset.autoDetect — works for synchronous callers.
+         2. window._pgAutoDetecting — works for async 'change' events fired
+            AFTER the call stack unwinds (when dataset flag is already cleared). */
+      if (this.dataset.autoDetect === '1' || window._pgAutoDetecting) return;
 
       var chosen = this.value;
 

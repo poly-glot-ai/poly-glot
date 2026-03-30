@@ -3533,6 +3533,18 @@ function initCommentGenerator() {
     // always re-detect from content regardless — they bypass the override.
     let _langUserOverride = false;
 
+    // _pgAutoDetecting: true while setSelectValue() is performing a programmatic
+    // language assignment.  Unlike dataset.autoDetect, this flag survives until
+    // AFTER the browser fires the async 'change' event, so waitlist.js can
+    // read it reliably.  Cleared in a setTimeout(0) after the assignment.
+    // Exposed on window so waitlist.js (separate file/closure) can read it.
+    let _pgAutoDetecting = false;
+    Object.defineProperty(window, '_pgAutoDetecting', {
+        get: () => _pgAutoDetecting,
+        set: (v) => { _pgAutoDetecting = v; },
+        configurable: true,
+    });
+
     // detectLanguage() result → <option> value mapping
     const DETECT_TO_OPTION = {
         javascript: 'javascript', typescript: 'typescript', python:  'python',
@@ -3587,12 +3599,25 @@ function initCommentGenerator() {
         const opt = selectEl.querySelector('option[value="' + value + '"]');
         if (!opt) return false;
         const wasDisabled = opt.disabled;
-        // Flag as programmatic auto-detect so waitlist.js change-gate skips it
+
+        // Raise both the dataset flag (synchronous readers) and the module-level
+        // boolean (async 'change' event readers — dataset is already cleared by
+        // the time the browser dispatches the queued change event).
+        _pgAutoDetecting = true;
         selectEl.dataset.autoDetect = '1';
+
         opt.disabled   = false;
         selectEl.value = value;
         opt.disabled   = wasDisabled;
+
+        // Clear the dataset flag synchronously (for any sync readers)
         delete selectEl.dataset.autoDetect;
+
+        // Clear the module-level flag AFTER the change event has been dispatched.
+        // setTimeout(0) runs after the current call-stack unwinds and the browser
+        // has fired any pending events triggered by the .value assignment above.
+        setTimeout(() => { _pgAutoDetecting = false; }, 0);
+
         return selectEl.value === value;
     }
 
