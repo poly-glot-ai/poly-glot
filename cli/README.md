@@ -70,6 +70,23 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 
 ---
 
+## 🤖 Also available in GitHub Copilot Chat
+
+Prefer to stay in your editor? Poly-Glot is a **GitHub Copilot Chat participant** — no terminal needed.
+
+```
+@poly-glot /comment    → generate doc-comments for selected code
+@poly-glot /why        → add why-comments explaining intent & trade-offs (Pro)
+@poly-glot /both       → doc-comments + why-comments in one pass (Pro)
+@poly-glot /explain    → deep analysis: complexity, bugs, doc quality score
+```
+
+Type `@poly-glot` directly in Copilot Chat inside VS Code. Results appear in chat with an **Apply to Editor** button — no copy-paste needed.
+
+→ [**Install the VS Code extension**](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+
+---
+
 ## Install
 
 ```bash
