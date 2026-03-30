@@ -2423,54 +2423,78 @@ function initializeAISettings() {
         }
     });
     
-    // Test API connection
+    // Test API connection — uses a zero-token-cost key validation call
+    // OpenAI:    GET  https://api.openai.com/v1/models          (lists models, free)
+    // Anthropic: POST https://api.anthropic.com/v1/messages     (1-token echo, ~$0.000001)
     testBtn.addEventListener('click', async () => {
         const apiKey = apiKeyInput.value.trim();
-        
+
         if (!apiKey) {
             alert('⚠️ Please enter an API key first');
             return;
         }
-        
+
         testBtn.disabled = true;
-        testBtn.textContent = 'Testing...';
-        
-        // Temporarily save the key to test
-        const originalKey = window.aiGenerator.apiKey;
-        window.aiGenerator.apiKey = apiKey;
-        window.aiGenerator.provider = providerSelect.value;
-        window.aiGenerator.model = resolveModel();
-        
+        testBtn.textContent = 'Testing…';
+
+        const provider = providerSelect.value;
+
         try {
-            const testCode = 'function add(a, b) { return a + b; }';
-            await window.aiGenerator.generateComments(testCode, 'javascript', 'jsdoc');
-            
-            apiStatus.classList.remove('error');
-            apiStatus.classList.add('configured');
-            apiStatus.querySelector('.status-text').textContent = '✓ Connection successful!';
-            
-            alert('✅ API connection successful! Your key is working.');
-            
-            if (window.polyglotAnalytics) {
-                window.polyglotAnalytics.trackEvent('api_test_success', {
-                    provider: providerSelect.value
+            let ok = false;
+            let errMsg = '';
+
+            if (provider === 'openai') {
+                // GET /v1/models — pure key validation, costs nothing
+                const res = await fetch('https://api.openai.com/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
+                if (res.ok) {
+                    ok = true;
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    errMsg = body?.error?.message || `HTTP ${res.status}`;
+                }
+
+            } else if (provider === 'anthropic') {
+                // GET /v1/models — Anthropic's model list endpoint, costs nothing
+                const res = await fetch('https://api.anthropic.com/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    }
+                });
+                if (res.ok) {
+                    ok = true;
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    errMsg = body?.error?.message || `HTTP ${res.status}`;
+                }
             }
+
+            if (ok) {
+                apiStatus.classList.remove('error');
+                apiStatus.classList.add('configured');
+                apiStatus.querySelector('.status-text').textContent = `✓ ${provider} key valid`;
+                alert(`✅ API key verified! Your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} key is working correctly.`);
+                if (window.polyglotAnalytics) {
+                    window.polyglotAnalytics.trackEvent('api_test_success', { provider });
+                }
+            } else {
+                throw new Error(errMsg || 'Key validation failed');
+            }
+
         } catch (error) {
             apiStatus.classList.remove('configured');
             apiStatus.classList.add('error');
             apiStatus.querySelector('.status-text').textContent = `✗ ${error.message}`;
-            
             alert(`❌ Connection failed: ${error.message}\n\nPlease check your API key and try again.`);
-            
-            // Restore original key
-            window.aiGenerator.apiKey = originalKey;
-            
             if (window.polyglotAnalytics) {
-                window.polyglotAnalytics.trackEvent('api_test_failed', {
-                    provider: providerSelect.value,
-                    error: error.message
-                });
+                window.polyglotAnalytics.trackEvent('api_test_failed', { provider, error: error.message });
             }
         } finally {
             testBtn.disabled = false;
