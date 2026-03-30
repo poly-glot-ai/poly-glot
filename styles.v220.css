@@ -343,6 +343,16 @@ body {
     gap: 8px;
 }
 
+/* ── VS Code + CLI section headings — larger to draw attention ─────────── */
+.overview-section-vscode .overview-heading,
+.overview-section-cli .overview-heading {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    gap: 10px;
+}
+
 .overview-text {
     font-size: 13px;
     color: #c0c0d8;
@@ -3351,7 +3361,7 @@ button.why-btn:hover {
     margin-top: 4px;
 }
 
-.vscode-icon { font-size: 16px; }
+.vscode-icon { font-size: 22px; }
 
 /* ── VS Code section bottom CTA bar ──────────────────────────────────── */
 .vscode-cta-bar {
@@ -3576,7 +3586,7 @@ kbd {
     margin-top: 4px;
 }
 
-.cli-icon { font-size: 16px; }
+.cli-icon { font-size: 22px; }
 
 .cli-demo {
     background: #0d1117;

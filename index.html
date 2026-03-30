@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- cache-bust: 20260329-1600 -->
+<!-- cache-bust: 20260330-0900 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -419,6 +419,22 @@
         .vscode-launch-banner__actions { flex-direction: column; }
         .vscode-install-btn, .vscode-marketplace-link { width: 100%; }
       }
+
+      /* ── VS Code + CLI section headings — large + prominent (v20260330) ── */
+      .overview-section-vscode .overview-heading,
+      .overview-section-cli .overview-heading {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.03em !important;
+        text-transform: none !important;
+        gap: 10px !important;
+      }
+      .overview-section-vscode .vscode-icon,
+      .overview-section-cli .cli-icon {
+        font-size: 22px !important;
+      }
+      /* Remove any coming-soon badges — belt and suspenders */
+      .coming-soon-badge { display: none !important; }
     </style>
 </head>
 <body>
@@ -1901,8 +1917,8 @@
             </a>
         </div>
         <div class="site-footer__badges">
-            <a href="https://producthot.com" target="_blank" rel="noopener noreferrer">
-                <img src="https://producthot.com/badages-awards.svg" alt="Featured on Product Hot" style="height:54px;width:auto;">
+            <a href="https://www.producthunt.com/products/attach/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-attach" target="_blank" rel="noopener noreferrer">
+                <img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=110350&theme=light" alt="Poly-Glot AI | Product Hunt" style="width:250px;height:54px;" width="250" height="54">
             </a>
         </div>
         <p>© 2026 <strong>Harold Moses</strong> · <span class="footer-domain">poly-glot.ai</span> is a registered domain owned by Harold Moses · Built with 🪿 Goose</p>

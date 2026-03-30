@@ -1,112 +1,298 @@
-# Poly-Glot — AI Code Comments
+# Poly-Glot — AI Code Comments, JSDoc Generator & Code Documentation
 
-> Intelligent, language-aware documentation comments and deep code analysis — powered by OpenAI or Anthropic, 100% client-side.
+> **The fastest way to generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, and "why" comments** — powered by OpenAI (GPT-4o, o3-mini) or Anthropic (Claude Sonnet 4, Claude Opus 4). 100% client-side. Your API key never leaves your machine.
 
-![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/PLACEHOLDER_PUBLISHER_ID.poly-glot)
-![Installs](https://img.shields.io/visual-studio-marketplace/i/PLACEHOLDER_PUBLISHER_ID.poly-glot)
-
----
-
-## Features
-
-### 📝 Generate Comments (`Cmd+Shift+/`)
-Select any code (or leave nothing selected for the whole file) → Poly-Glot inserts professional, language-aware documentation comments inline.
-
-Supports **12 languages** with their native comment standards:
-- **JavaScript/TypeScript** → JSDoc / TSDoc
-- **Python** → Google-style docstrings
-- **Java** → Javadoc
-- **C#** → XML doc comments (`///`)
-- **C/C++** → Doxygen
-- **Go** → GoDoc
-- **Rust** → rustdoc (`///`)
-- **Ruby** → YARD
-- **PHP** → PHPDoc
-- **Swift** → Swift markup
-- **Kotlin** → KDoc
-- **SQL** → Header block convention
-
-### 🔍 Explain Code (`Cmd+Shift+E`)
-Deep AI analysis of selected code, displayed in a side panel:
-- Plain-English summary
-- Complexity score (1–10) with visual indicator
-- Function/method breakdown (params, returns, side effects)
-- Potential bugs detected
-- Improvement suggestions
-- Documentation quality score (0–100)
-
-### 📚 Templates Sidebar
-Browse ready-to-use comment templates for all 12 supported languages. One-click copy to clipboard.
-
-### 💰 Cost Tracking
-Every generation shows the exact API cost in the status bar for 8 seconds. Ultra-low cost — typical generation is **< $0.001**.
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/poly-glot-ai.poly-glot?label=version&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?label=installs&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/poly-glot-ai.poly-glot?label=rating&color=f5a623&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 ---
 
-## Getting Started
+## ✨ What is Poly-Glot?
 
-1. **Install** the extension from the VS Code Marketplace
-2. **Configure your API key** — open Command Palette → `Poly-Glot: Configure API Key`
-3. **Select code** in any editor
-4. **Press `Cmd+Shift+/`** to generate comments, or **`Cmd+Shift+E`** to explain
+**Poly-Glot** is a VS Code extension that uses AI to write your code documentation for you — in seconds. Select a function, press a shortcut, and get perfect, language-native comments inserted directly into your file.
+
+- 🗂 **JSDoc / TSDoc** for JavaScript & TypeScript
+- 📖 **Javadoc** for Java
+- 🐍 **PyDoc / Google-style docstrings** for Python
+- ⚙️ **Doxygen** for C / C++
+- 📝 **XML doc comments** for C#
+- 🦀 **rustdoc** for Rust
+- 🐹 **GoDoc** for Go
+- 🐘 **PHPDoc** for PHP
+- 💎 **YARD** for Ruby
+- 🍎 **Swift markup** for Swift
+- 🎯 **KDoc** for Kotlin
+- 🗃 **SQL header blocks** for SQL
+
+Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Sonnet 4, Claude Opus 4, Claude Haiku). You bring your own API key — **no middleman, no markup, no data collection**.
 
 ---
 
-## Commands
+## 🆓 Free vs 💎 Pro
 
-| Command | Shortcut | Description |
-|---------|----------|-------------|
-| `Poly-Glot: Generate AI Comments` | `Cmd+Shift+/` | Generate and insert comments |
-| `Poly-Glot: Explain Code` | `Cmd+Shift+E` | Open deep analysis panel |
-| `Poly-Glot: Configure API Key` | — | Set provider, model, and API key |
-| `Poly-Glot: Open Templates Sidebar` | — | Focus the templates sidebar |
+| Feature | Free | Pro |
+|---|:---:|:---:|
+| Generate doc-comments (JSDoc, Javadoc, PyDoc…) | ✅ | ✅ |
+| Explain Code — deep AI analysis panel | ✅ | ✅ |
+| JavaScript, TypeScript, Python, Java | ✅ | ✅ |
+| C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, SQL | 🔒 | ✅ |
+| **Why-Comments** — intent & trade-off inline notes | 🔒 | ✅ |
+| **Both Mode** — doc + why comments in one pass | 🔒 | ✅ |
+| Templates Sidebar | ✅ | ✅ |
+| Real-time cost tracking in status bar | ✅ | ✅ |
+| Files generated per month | 50 | **Unlimited** |
+| Priority support | ❌ | ✅ |
+
+### 🎉 Get 3 Months Free — Code `EARLYBIRD3`
+
+**Pro starts at $9/month.** Use code **`EARLYBIRD3`** at checkout and get your first 3 months free.
+
+👉 **[Claim your free months → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
+
+After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) → **`Poly-Glot: Configure License Token`** to activate Pro instantly.
 
 ---
 
-## Settings
+## 🚀 Getting Started in 60 Seconds
+
+1. **Install** Poly-Glot from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+2. **Add your API key** → Command Palette → `Poly-Glot: Configure API Key`
+   - Choose **OpenAI** or **Anthropic** as your provider
+   - Pick your preferred model (we recommend `gpt-4o` or `claude-sonnet-4`)
+   - Paste your API key (stored securely in the OS keychain — never in `settings.json`)
+3. **Select any function or block of code** in the editor
+4. **Press `Cmd+Shift+/`** (`Ctrl+Shift+/` on Windows/Linux) → comments appear inline instantly
+
+That's it. No backend, no account required for the Free tier, no telemetry.
+
+---
+
+## 🛠 Features
+
+### 📝 Generate AI Comments — `Cmd+Shift+/` / `Ctrl+Shift+/` (Free)
+
+Select code (or leave nothing selected for the whole file) and Poly-Glot writes perfectly formatted, language-native documentation comments and inserts them directly into your file.
+
+**What gets generated:**
+- Function/method summaries in plain English
+- `@param` / `@returns` / `@throws` tags (JSDoc, Javadoc, KDoc…)
+- Type annotations where applicable
+- Edge-case and exception notes
+- Language-appropriate formatting — always
+
+No more manually writing boilerplate Javadoc or hunting for the correct JSDoc syntax.
+
+---
+
+### 💡 Why-Comments — `Cmd+Shift+W` / `Ctrl+Shift+W` (Pro)
+
+AI inserts **inline comments that explain *why* the code exists** — not just what it does.
+
+Captures:
+- Trade-offs and design decisions
+- Non-obvious algorithmic choices
+- Performance or security considerations
+- Historical context that would otherwise live only in a developer's head
+
+Why-Comments give AI assistants (GitHub Copilot, Cursor, etc.) the context they need to give *you* better suggestions. They make PRs self-reviewing and onboarding dramatically faster.
+
+---
+
+### 🔀 Both Mode — `Cmd+Shift+B` / `Ctrl+Shift+B` (Pro)
+
+Generates **doc-comments AND why-comments in a single API call**. One shortcut, full documentation coverage. Use this on any function you want fully documented before a code review.
+
+---
+
+### 🔍 Explain Code — `Cmd+Shift+E` / `Ctrl+Shift+E` (Free)
+
+Select any code and open a rich side panel that shows:
+
+| Analysis | Detail |
+|---|---|
+| 📖 Plain-English summary | What this code does, for any audience |
+| 📊 Complexity score (1–10) | Cyclomatic complexity with visual indicator |
+| 🔬 Function/method breakdown | Params, return types, side effects |
+| 🐛 Potential bugs | Issues the AI detected |
+| 💡 Improvement suggestions | Refactoring and optimization ideas |
+| 📈 Documentation quality score | 0–100 rating of existing comments |
+
+---
+
+### 📚 Templates Sidebar (Free)
+
+Browse a curated library of comment templates for all 12 supported languages. One-click copy to clipboard for:
+- Class/module headers
+- Function doc-comment skeletons
+- License headers
+- TODO / FIXME / HACK / DEPRECATED blocks
+- API endpoint documentation stubs
+
+---
+
+### 💰 Real-Time Cost Tracking (Free)
+
+Every generation displays the **exact token cost in the status bar**. A typical function documentation costs **< $0.001**. Document an entire file for pennies.
+
+---
+
+## ⌨️ All Commands & Shortcuts
+
+| Command | Mac | Windows / Linux | Plan | Description |
+|---|---|---|:---:|---|
+| `Poly-Glot: Generate AI Comments` | `Cmd+Shift+/` | `Ctrl+Shift+/` | Free | Generate & insert doc-comments inline |
+| `Poly-Glot: Why Comments` | `Cmd+Shift+W` | `Ctrl+Shift+W` | **Pro** | Insert intent & trade-off inline notes |
+| `Poly-Glot: Both Comments` | `Cmd+Shift+B` | `Ctrl+Shift+B` | **Pro** | Doc-comments + why-comments in one pass |
+| `Poly-Glot: Explain Code` | `Cmd+Shift+E` | `Ctrl+Shift+E` | Free | Open deep AI analysis side panel |
+| `Poly-Glot: Configure API Key` | — | — | Free | Set provider, model & API key |
+| `Poly-Glot: Configure License Token` | — | — | Pro | Activate Pro license |
+| `Poly-Glot: Open Templates Sidebar` | — | — | Free | Browse comment templates |
+
+---
+
+## ⚙️ Settings
 
 | Setting | Default | Description |
-|---------|---------|-------------|
+|---|---|---|
 | `polyglot.provider` | `openai` | AI provider: `openai` or `anthropic` |
-| `polyglot.model` | `gpt-4o-mini` | Model ID (any valid ID from your provider) |
-| `polyglot.insertInline` | `true` | Insert comments directly into editor; if false, opens a side panel |
+| `polyglot.model` | `gpt-4o` | Model ID (see full model tables below) |
+| `polyglot.licenseToken` | — | Pro license token from poly-glot.ai |
+| `polyglot.insertInline` | `true` | `true` = insert into file · `false` = open side panel |
+| `polyglot.commentStyle` | `auto` | Force a style: `jsdoc`, `javadoc`, `pydoc`, `doxygen`, etc. |
 
 ---
 
-## Supported Models
+## 🤖 Supported AI Models
 
-### OpenAI
-| Model | Cost |
-|-------|------|
-| `gpt-4o-mini` ⭐ | ~$0.001/request |
-| `gpt-4o` | ~$0.003/request |
-| `gpt-4-turbo` | ~$0.01/request |
-| `gpt-3.5-turbo` | ~$0.0005/request |
+### OpenAI Models
 
-### Anthropic
-| Model | Cost |
-|-------|------|
-| `claude-3-5-sonnet-20241022` | ~$0.005/request |
-| `claude-3-5-haiku-20241022` | ~$0.001/request |
-| `claude-3-opus-20240229` | ~$0.02/request |
+| Model | Notes | Est. cost / request |
+|---|---|---|
+| `gpt-4o` ⭐ **Recommended** | Best balance of quality and speed | ~$0.003 |
+| `gpt-4o-mini` 💵 **Budget** | Fast and affordable, great for most files | ~$0.001 |
+| `gpt-4-turbo` | High capability, larger context window | ~$0.010 |
+| `gpt-4` | Original GPT-4, reliable baseline | ~$0.010 |
+| `gpt-3.5-turbo` | Fastest, lowest cost | ~$0.0005 |
+| `o1` | Advanced reasoning, best for complex logic | ~$0.015 |
+| `o1-mini` | Reasoning model, budget option | ~$0.003 |
+| `o3-mini` | Latest generation reasoning, fast | ~$0.001 |
+
+Get an OpenAI API key at [platform.openai.com](https://platform.openai.com).
+
+### Anthropic Models
+
+| Model | Notes | Est. cost / request |
+|---|---|---|
+| `claude-opus-4` 🏆 **Most Powerful** | Best reasoning, deepest analysis | ~$0.020 |
+| `claude-sonnet-4` ⭐ **Recommended** | Excellent quality, fast, great value | ~$0.005 |
+| `claude-3-7-sonnet-20250219` | Extended thinking, nuanced comments | ~$0.005 |
+| `claude-3-5-sonnet-20241022` | Proven quality for code documentation | ~$0.005 |
+| `claude-3-5-haiku-20241022` | Fastest Claude, lowest cost | ~$0.001 |
+| `claude-3-opus-20240229` | Deep analysis, great for complex codebases | ~$0.015 |
+| `claude-3-sonnet-20240229` | Balanced performance and speed | ~$0.005 |
+| `claude-3-haiku-20240307` | Lightweight and fast | ~$0.001 |
+
+Get an Anthropic API key at [console.anthropic.com](https://console.anthropic.com).
+
+> **Costs are estimates** based on a typical 200-token request. Your actual cost depends on code length and model pricing at time of use.
 
 ---
 
-## Privacy
+## 🌍 Supported Languages
 
-🔒 **100% client-side.** Your API key is stored in VS Code's **SecretStorage** (OS keychain — never in settings.json). All requests go directly from your machine to OpenAI/Anthropic. No telemetry, no backend, no data collection.
+| Language | Comment Standard | Format |
+|---|---|---|
+| JavaScript | JSDoc | `/** @param … */` |
+| TypeScript | TSDoc / JSDoc | `/** @param … */` |
+| Python | Google-style docstrings | `"""Args: …"""` |
+| Java | Javadoc | `/** @param … */` |
+| C# | XML doc comments | `/// <summary>…` |
+| C / C++ | Doxygen | `/** \param … */` |
+| Go | GoDoc | `// FunctionName …` |
+| Rust | rustdoc | `/// …` |
+| Ruby | YARD | `# @param …` |
+| PHP | PHPDoc | `/** @param … */` |
+| Swift | Swift markup | `/// - Parameter …` |
+| Kotlin | KDoc | `/** @param … */` |
+| SQL | Header block | `-- ============…` |
 
 ---
 
-## Contributing
+## 🔒 Privacy & Security
 
-Built with [Goose](https://github.com/block/goose) by Block.
-Source: [github.com/hmoses/poly-glot](https://github.com/hmoses/poly-glot)
+Your code and API keys are **100% private**:
 
-Issues and PRs welcome!
+- 🔑 **API keys stored in OS keychain** — VS Code `SecretStorage` (macOS Keychain, Windows Credential Manager, Linux `libsecret`). Never written to `settings.json` or any log file.
+- 📡 **Direct API calls only** — requests go from your machine straight to OpenAI or Anthropic. Poly-Glot has no backend server, no relay, no proxy.
+- 🚫 **Zero telemetry** — no usage data, no error reporting, no analytics are ever collected.
+- 🏠 **Your code never touches our servers** — because we don't have any.
+
+**OpenAI** and **Anthropic** may use API request data per their own privacy policies. If you're working with sensitive code, check your provider's data-handling settings (both offer zero-data-retention options for API users).
 
 ---
 
-## License
+## 💎 Unlock Pro — 3 Months Free with `EARLYBIRD3`
 
-MIT © Harold Moses II
+If you've tried the Pro features and want to unlock them permanently:
+
+1. Visit **[poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
+2. Choose a plan and enter code **`EARLYBIRD3`** at checkout
+3. Get **3 months completely free**
+4. Copy your license token from your account dashboard
+5. In VS Code: Command Palette → `Poly-Glot: Configure License Token` → paste token → Pro activates instantly
+
+Pro unlocks:
+- ✅ **Why-Comments** (`Cmd+Shift+W`)
+- ✅ **Both Mode** (`Cmd+Shift+B`)
+- ✅ All 12 language support (C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, SQL)
+- ✅ Unlimited file generations per month
+
+---
+
+## ❓ FAQ
+
+**Do I need a Poly-Glot account?**
+No account is required for the Free tier. Just bring your own OpenAI or Anthropic API key.
+
+**Does Poly-Glot work offline?**
+No — it needs to reach the OpenAI or Anthropic API. But no other internet connection is required.
+
+**Can I use both OpenAI and Anthropic?**
+You can switch providers any time via `Poly-Glot: Configure API Key`. Only one provider is active at a time.
+
+**Will comments be inserted into my file or shown in a panel?**
+By default, comments are inserted **inline** at the correct position in your file. Set `polyglot.insertInline: false` to open a diff panel instead.
+
+**What if I select nothing?**
+Poly-Glot documents the **entire active file** — great for batch documentation.
+
+**Is there a team or enterprise plan?**
+Email [support@poly-glot.ai](mailto:support@poly-glot.ai) for team licensing.
+
+---
+
+## 🗺 Roadmap
+
+- [ ] Auto-comment on save
+- [ ] Bulk comment entire workspace / folder
+- [ ] GitHub Actions integration
+- [ ] Custom comment templates editor
+- [ ] Team shared templates
+
+Have a feature request? [Open an issue on GitHub](https://github.com/poly-glot-ai/poly-glot/issues) or email [support@poly-glot.ai](mailto:support@poly-glot.ai).
+
+---
+
+## 📦 About
+
+**Version:** 1.3.1  
+**Publisher:** poly-glot-ai  
+**Marketplace:** [poly-glot-ai.poly-glot](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)  
+**Website:** [poly-glot.ai](https://poly-glot.ai)  
+**License:** MIT © Harold Moses
+
+---
+
+*Keywords: AI code comments, JSDoc generator, Javadoc generator, PyDoc generator, Doxygen, KDoc, rustdoc, GoDoc, PHPDoc, YARD, Swift markup, code documentation, why comments, code explainer, OpenAI, Anthropic, Claude, GPT-4, GPT-4o, o3-mini, Claude Sonnet, Claude Opus, AI documentation, automatic comments, VS Code AI, code commenting tool*
