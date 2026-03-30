@@ -2222,5 +2222,62 @@
       }
     })();
     </script>
+<!-- ── Test Connection patch: proxy through worker to fix Anthropic CORS ── -->
+<script>
+(function patchTestConnection() {
+  function attach() {
+    var btn = document.getElementById('testApiKey');
+    if (!btn) return;
+    // Clone to strip all old listeners
+    var fresh = btn.cloneNode(true);
+    btn.parentNode.replaceChild(fresh, btn);
+    fresh.addEventListener('click', async function () {
+      var apiKey = (document.getElementById('apiKey') || {}).value || '';
+      apiKey = apiKey.trim();
+      if (!apiKey) { alert('⚠️ Please enter an API key first'); return; }
+      var providerEl = document.getElementById('aiProvider');
+      var provider   = providerEl ? providerEl.value : 'openai';
+      var label      = provider === 'openai' ? 'OpenAI' : 'Anthropic';
+      var apiStatus  = document.getElementById('apiStatus');
+      fresh.disabled     = true;
+      fresh.textContent  = 'Testing…';
+      try {
+        var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ provider: provider, apiKey: apiKey })
+        });
+        var data = await res.json().catch(function(){ return {}; });
+        if (res.ok && data.ok === true) {
+          if (apiStatus) {
+            apiStatus.className = apiStatus.className.replace('error','') + ' configured';
+            var st = apiStatus.querySelector('.status-text');
+            if (st) st.textContent = '✓ ' + label + ' key valid';
+          }
+          alert('✅ ' + label + ' API key verified and working!');
+        } else {
+          throw new Error(data.error || label + ' key validation failed');
+        }
+      } catch(e) {
+        if (apiStatus) {
+          apiStatus.className = apiStatus.className.replace('configured','') + ' error';
+          var st = apiStatus.querySelector('.status-text');
+          if (st) st.textContent = '✗ ' + e.message;
+        }
+        alert('❌ Connection failed: ' + e.message + '\n\nPlease check your API key and try again.');
+      } finally {
+        fresh.disabled    = false;
+        fresh.textContent = 'Test Connection';
+      }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    // DOMContentLoaded already fired — wait for app.js to init then patch
+    setTimeout(attach, 800);
+  }
+}());
+</script>
 </body>
 </html>
