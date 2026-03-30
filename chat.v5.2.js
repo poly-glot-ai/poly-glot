@@ -57,8 +57,8 @@ Poly-Glot is an AI-powered code documentation tool. It generates professional co
 JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
 
 == SUPPORTED AI MODELS ==
-- OpenAI: GPT-4.1-mini (recommended, cheapest), GPT-4.1, GPT-4.1-nano, GPT-4o, o3, o1, and any custom model ID
-- Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4, Claude Haiku 4, and any custom model ID
+OpenAI: GPT-4.1 (recommended), GPT-4.1 Mini (fast & cheap), GPT-4.1 Nano (cheapest), GPT-4o, GPT-4o Mini, o3, o3-mini, o1, o1-mini, GPT-4 Turbo, GPT-4, GPT-3.5 Turbo (legacy), plus any custom model ID
+Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude Haiku 4 (fast), Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus, Claude 3 Haiku (legacy), plus any custom model ID
 - You bring your own API key — costs go directly to OpenAI/Anthropic, no markup
 - Custom model IDs: type any valid model ID in the AI Settings modal
 
@@ -234,8 +234,8 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
     },
     {
       // AI models — only when asking about models specifically, NOT languages
-      patterns: [/what.{0,20}model|which.{0,20}model|supported.{0,20}model|model.{0,20}(list|available|support|work|use)|gpt.?4|claude|openai.*model|anthropic.*model|custom.*model/i],
-      answer: `**Supported AI models:**\n\n**OpenAI:**\n- GPT-4.1 Mini ⭐ (recommended — fast & cheap)\n- GPT-4.1, GPT-4.1 Nano, GPT-4o, o3, o1\n- Any custom model ID\n\n**Anthropic:**\n- Claude Sonnet 4 ⭐ (recommended)\n- Claude Opus 4, Claude Haiku 4\n- Any custom model ID\n\nSet your model in **⚙️ AI Settings** → model dropdown. Type any valid ID for custom models.`,
+      patterns: [/what.{0,20}model|which.{0,20}model|supported.{0,20}model|model.{0,20}(list|available|support|work|use)|openai.*model|anthropic.*model|custom.*model/i],
+      answer: `**All supported AI models:**\n\n**OpenAI:**\n- GPT-4.1 ⭐ (recommended)\n- GPT-4.1 Mini (fast & cheap)\n- GPT-4.1 Nano (cheapest)\n- GPT-4o · GPT-4o Mini\n- o3 · o3-mini (reasoning)\n- o1 · o1-mini (reasoning)\n- GPT-4 Turbo · GPT-4 · GPT-3.5 Turbo (legacy)\n\n**Anthropic:**\n- Claude Sonnet 4 ⭐ (recommended)\n- Claude Opus 4 (most powerful)\n- Claude Haiku 4 (fast)\n- Claude 3.5 Sonnet · Claude 3.5 Haiku\n- Claude 3 Opus · Claude 3 Haiku (legacy)\n\n✏️ **Custom model IDs** also supported — type any valid ID in ⚙️ AI Settings.`,
     },
     {
       // API key setup — scoped to key setup, not location (location handled above)
