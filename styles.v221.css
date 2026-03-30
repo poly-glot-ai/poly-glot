@@ -4316,6 +4316,22 @@ kbd {
 }
 .pg-editor::placeholder { color: var(--pg-muted); font-family: var(--pg-font); }
 
+/* ── Input validation error ── */
+.cg-input-error {
+    display: none;
+    margin: 6px 16px 0;
+    padding: 8px 12px;
+    background: rgba(248, 113, 113, 0.1);
+    border-left: 3px solid #f87171;
+    border-radius: 4px;
+    color: #fca5a5;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.cg-input-invalid {
+    border-bottom: 2px solid #f87171 !important;
+}
+
 /* Output area — exact match to markdown #outputArea */
 .pg-output-area {
     flex: 1;

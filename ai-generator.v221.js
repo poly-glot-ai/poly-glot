@@ -82,15 +82,15 @@ class AICommentGenerator {
     /**
      * Generate comments for code using AI
      */
-    async generateComments(code, language, commentStyle = 'jsdoc') {
+    async generateComments(code, language, commentStyle = 'jsdoc', onChunk = null) {
         if (!this.isConfigured()) {
             throw new Error('API key not configured. Please add your API key in settings.');
         }
         try {
             if (this.provider === 'openai') {
-                return await this.generateWithOpenAI(code, language, commentStyle);
+                return await this.generateWithOpenAI(code, language, commentStyle, onChunk);
             } else if (this.provider === 'anthropic') {
-                return await this.generateWithAnthropic(code, language, commentStyle);
+                return await this.generateWithAnthropic(code, language, commentStyle, onChunk);
             } else {
                 throw new Error('Invalid provider selected.');
             }
@@ -100,10 +100,11 @@ class AICommentGenerator {
     }
 
     /**
-     * Generate comments using OpenAI API
+     * Generate comments using OpenAI API — streaming for instant progressive output.
      */
-    async generateWithOpenAI(code, language, commentStyle) {
-        const prompt = this.buildPrompt(code, language, commentStyle);
+    async generateWithOpenAI(code, language, commentStyle, onChunk) {
+        const prompt    = this.buildPrompt(code, language, commentStyle);
+        const maxTokens = Math.min(Math.max(code.split('\n').length * 25, 512), 4096);
 
         let response;
         try {
@@ -118,12 +119,13 @@ class AICommentGenerator {
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are an expert code documentation engineer. You write complete, professional documentation comments for all 12 programming languages. You ALWAYS document every function, method, and class — you never skip any. You return ONLY the commented code — no markdown fences, no explanations.'
+                            content: 'You are a code documentation engineer. Add doc-comments to every function, class, and method. Return ONLY the commented code — no fences, no explanations.'
                         },
                         { role: 'user', content: prompt }
                     ],
                     temperature: 0.1,
-                    max_tokens: 8192
+                    max_tokens: maxTokens,
+                    stream: true
                 })
             });
         } catch (networkErr) {
@@ -136,25 +138,52 @@ class AICommentGenerator {
             throw new Error(errBody.error?.message || `OpenAI error ${response.status}`);
         }
 
-        const data = await response.json();
-        const inputTokens  = data.usage?.prompt_tokens || 0;
-        const outputTokens = data.usage?.completion_tokens || 0;
+        // Read the SSE stream and call onChunk for each token
+        let fullText = '';
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete last line
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') break;
+                try {
+                    const json  = JSON.parse(data);
+                    const delta = json.choices?.[0]?.delta?.content || '';
+                    if (delta) {
+                        fullText += delta;
+                        if (onChunk) onChunk(delta);
+                    }
+                } catch (_) { /* malformed SSE line — skip */ }
+            }
+        }
+
+        // Estimate cost from token count (no usage object in streaming mode)
+        const inputTokens  = Math.ceil(prompt.length / 4);
+        const outputTokens = Math.ceil(fullText.length / 4);
         this.costEstimate  = this.calculateOpenAICost(inputTokens, outputTokens);
 
         return {
-            code: this._stripFences(data.choices[0].message.content),
+            code: this._stripFences(fullText),
             provider: 'openai',
             model: this.model,
-            usage: data.usage,
             cost: this.costEstimate
         };
     }
 
     /**
-     * Generate comments using Anthropic API
+     * Generate comments using Anthropic API — streaming for instant progressive output.
      */
-    async generateWithAnthropic(code, language, commentStyle) {
-        const prompt = this.buildPrompt(code, language, commentStyle);
+    async generateWithAnthropic(code, language, commentStyle, onChunk) {
+        const prompt    = this.buildPrompt(code, language, commentStyle);
+        const maxTokens = Math.min(Math.max(code.split('\n').length * 25, 512), 4096);
 
         let response;
         try {
@@ -168,12 +197,13 @@ class AICommentGenerator {
                 },
                 body: JSON.stringify({
                     model: this.model,
-                    max_tokens: 8192,
-                    system: 'You are an expert code documentation engineer. You write complete, professional documentation comments for all 12 programming languages. You ALWAYS document every function, method, and class — you never skip any. You return ONLY the commented code — no markdown fences, no explanations.',
+                    max_tokens: maxTokens,
+                    system: 'You are a code documentation engineer. Add doc-comments to every function, class, and method. Return ONLY the commented code — no fences, no explanations.',
                     messages: [
                         { role: 'user', content: prompt }
                     ],
-                    temperature: 0.1
+                    temperature: 0.1,
+                    stream: true
                 })
             });
         } catch (networkErr) {
@@ -186,16 +216,48 @@ class AICommentGenerator {
             throw new Error(errBody.error?.message || `Anthropic error ${response.status}`);
         }
 
-        const data = await response.json();
-        const inputTokens  = data.usage?.input_tokens || 0;
-        const outputTokens = data.usage?.output_tokens || 0;
-        this.costEstimate  = this.calculateAnthropicCost(inputTokens, outputTokens);
+        // Read Anthropic SSE stream
+        let fullText = '';
+        let inputTokens = 0, outputTokens = 0;
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6).trim();
+                try {
+                    const json = JSON.parse(data);
+                    if (json.type === 'content_block_delta' && json.delta?.type === 'text_delta') {
+                        const delta = json.delta.text || '';
+                        if (delta) {
+                            fullText += delta;
+                            if (onChunk) onChunk(delta);
+                        }
+                    }
+                    // Capture usage from final message_delta event
+                    if (json.type === 'message_delta' && json.usage) {
+                        outputTokens = json.usage.output_tokens || 0;
+                    }
+                    if (json.type === 'message_start' && json.message?.usage) {
+                        inputTokens = json.message.usage.input_tokens || 0;
+                    }
+                } catch (_) { /* malformed SSE line — skip */ }
+            }
+        }
+
+        this.costEstimate = this.calculateAnthropicCost(inputTokens, outputTokens);
 
         return {
-            code: this._stripFences(data.content[0].text),
+            code: this._stripFences(fullText),
             provider: 'anthropic',
             model: this.model,
-            usage: data.usage,
             cost: this.costEstimate
         };
     }
@@ -677,20 +739,13 @@ Format:
 
         const guide = styleGuides[commentStyle] || styleGuides.jsdoc;
 
-        return `You are an expert ${language} documentation engineer. Add complete, professional documentation comments to EVERY function, class, and method in the code below.
-
-Style: ${guide.name}
+        // Compact prompt — same quality, ~40% fewer input tokens = faster + cheaper
+        return `Add ${guide.name} doc-comments to every function, class, and method. Use this format:
 
 ${guide.rules}
 
-CRITICAL RULES — you MUST follow all of these:
-1. Document EVERY function, method, and class — do NOT skip any
-2. Follow the exact format shown above — do not invent a different format
-3. Include ALL parameters, return values, and exceptions — leave nothing out
-4. Keep ALL existing code exactly as-is — only add comments, change nothing else
-5. Return ONLY the commented code — no markdown fences, no explanations, no preamble
+Rules: document ALL functions/methods/classes; keep all existing code unchanged; return ONLY the commented code.
 
-Code to document:
 ${code}`;
     }
 

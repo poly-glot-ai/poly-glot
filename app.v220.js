@@ -3684,10 +3684,69 @@ function initCommentGenerator() {
         if (cgImpBadges) cgImpBadges.innerHTML = '';
     }
 
+    // ── Input validation — runs before every generate call ──────────────
+    function validateCodeInput(text) {
+        if (!text || !text.trim()) return 'No code entered.';
+        const t     = text.trim();
+        const lines = t.split('\n').filter(l => l.trim().length > 0);
+
+        if (t.length < 30)   return 'Code is too short — paste a complete function or class.';
+        if (lines.length < 2) return 'Paste a complete function or block — single lines are not supported.';
+
+        // Signal scoring — needs at least 3 of 7 code-like signals
+        const sig = [
+            /[{}]/.test(t),
+            /\(.*\)/.test(t),
+            /[;:]/.test(t),
+            /[=><+\-*\/!&|]/.test(t),
+            /\b(function|def|class|const|let|var|if|else|for|while|return|import|export|public|private|void|int|string|fn|func|package|select|from|where|div|span)\b/i.test(t),
+            lines.some(l => /^[\t ]{2,}\S/.test(l)),
+            lines.length >= 3,
+        ].filter(Boolean).length;
+        if (sig < 3) return "This doesn't look like code — paste a complete function, class, or block.";
+
+        // Must contain at least one complete block / structure
+        const complete =
+            /\{[^}]{5,}\}/.test(t) ||
+            /^(def|class|if|for|while|async def)\s+.+:\s*\n[\t ]+\S/m.test(t) ||
+            /\bfunc\s+\w+[^{]*\{[\s\S]{5,}\}/.test(t) ||
+            /\bSELECT\b[\s\S]+\bFROM\b/i.test(t) ||
+            /<(\w+)[^>]*>[\s\S]+<\/\1>/i.test(t) ||
+            (lines.length >= 3 && lines.some(l => /^[\t ]{2,}\S/.test(l)));
+        if (!complete) return 'Code looks incomplete — paste a full function or block including its body.';
+
+        return null; // valid
+    }
+
+    // ── Show / clear inline validation error on the input panel ──────────
+    function showInputError(msg) {
+        let err = document.getElementById('cgInputError');
+        if (!err) {
+            err = document.createElement('div');
+            err.id = 'cgInputError';
+            err.className = 'cg-input-error';
+            cgInput.parentNode.insertBefore(err, cgInput.nextSibling);
+        }
+        err.textContent = '⚠️ ' + msg;
+        err.style.display = 'block';
+        cgInput.classList.add('cg-input-invalid');
+    }
+    function clearInputError() {
+        const err = document.getElementById('cgInputError');
+        if (err) err.style.display = 'none';
+        cgInput.classList.remove('cg-input-invalid');
+    }
+    cgInput.addEventListener('input', clearInputError);
+
     // ── Generate Comments ──
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
-        if (!code) { alert('Please paste or upload some code first.'); return; }
+
+        // Validate before hitting the API
+        const validationError = validateCodeInput(code);
+        if (validationError) { showInputError(validationError); return; }
+        clearInputError();
+
         const key = localStorage.getItem(LS.key) || '';
         if (!key || key.length < 10) { alert('Please enter and save your API key in the settings above.'); return; }
 
@@ -3697,17 +3756,28 @@ function initCommentGenerator() {
         window.aiGenerator.provider = cgProvider.value;
         window.aiGenerator.model    = resolveCgModel();
 
-        cgLoading.style.display    = 'flex';
-        cgGenerateBtn.disabled     = true;
+        // Show output area immediately for streaming
+        cgLoading.style.display      = 'none';
+        cgPlaceholder.style.display  = 'none';
+        cgOutput.style.display       = 'block';
+        cgOutput.textContent         = '';
+        cgOutputFooter.style.display = 'none';
+        cgGenerateBtn.disabled       = true;
+        cgGenerateBtn.textContent    = '⏳ Generating…';
 
         try {
             lastInputText  = code;
-            const result   = await window.aiGenerator.generateComments(code, cgLanguage.value, cgStyle.value);
+
+            // Stream tokens directly into the output <pre> as they arrive
+            const result = await window.aiGenerator.generateComments(
+                code, cgLanguage.value, cgStyle.value,
+                (chunk) => {
+                    cgOutput.textContent += chunk;
+                }
+            );
             lastOutputText = result.code;
 
-            // Show output — identical to markdown site flow
-            cgPlaceholder.style.display  = 'none';
-            cgOutput.style.display       = 'block';
+            // Final render (replaces streamed content with clean stripped version)
             cgOutput.textContent         = result.code;
             cgOutputFooter.style.display = 'flex';
 
@@ -3725,9 +3795,8 @@ function initCommentGenerator() {
                 ].join('');
             }
 
-            cgCopyBtn.disabled     = false;
-            // cgDownloadBtn.disabled = false; // 🔒 Download locked until paid version is live
-            cgScoreBtn.disabled    = false;
+            cgCopyBtn.disabled  = false;
+            cgScoreBtn.disabled = false;
 
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
                 provider: result.provider, model: result.model,
@@ -3735,17 +3804,16 @@ function initCommentGenerator() {
             });
 
         } catch (err) {
-            cgPlaceholder.style.display = 'none';
-            cgOutput.style.display      = 'block';
-            cgOutput.textContent        = '❌ Error: ' + err.message;
+            cgOutput.textContent = '❌ Error: ' + err.message;
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_error', { error: err.message });
         } finally {
             // Restore original aiGenerator state
-            window.aiGenerator.apiKey   = orig.key;
-            window.aiGenerator.provider = orig.prov;
-            window.aiGenerator.model    = orig.model;
-            cgLoading.style.display  = 'none';
-            cgGenerateBtn.disabled   = false;
+            window.aiGenerator.apiKey      = orig.key;
+            window.aiGenerator.provider    = orig.prov;
+            window.aiGenerator.model       = orig.model;
+            cgLoading.style.display        = 'none';
+            cgGenerateBtn.disabled         = false;
+            cgGenerateBtn.textContent      = '🤖 Generate Comments';
         }
     });
 
