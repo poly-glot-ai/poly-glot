@@ -1,0 +1,58 @@
+{
+  "name": "poly-glot-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Poly-Glot AI — generate professional code comments & documentation in 12 languages directly from Claude, Goose, Cursor, or any MCP-compatible AI client",
+  "author": "Harold Moses",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://poly-glot.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/poly-glot-ai/poly-glot",
+    "directory": "poly-glot-mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-comments",
+    "documentation",
+    "jsdoc",
+    "javadoc",
+    "pydoc",
+    "doxygen",
+    "ai",
+    "openai",
+    "anthropic",
+    "code-documentation",
+    "developer-tools",
+    "goose",
+    "claude",
+    "cursor"
+  ],
+  "type": "module",
+  "bin": {
+    "poly-glot-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
