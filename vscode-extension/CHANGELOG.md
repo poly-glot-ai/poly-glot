@@ -5,6 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.4.2] — 2026-03-31
+
+### ✨ New
+- **MCP Server** — `poly-glot-mcp` is now published on npm. Use Poly-Glot from Claude Desktop, Goose, Cursor, Windsurf, or any MCP-compatible client. Six tools: `polyglot_add_doc_comments`, `polyglot_add_why_comments`, `polyglot_add_all_comments`, `polyglot_explain_code`, `polyglot_list_languages`, `polyglot_list_models`.
+- **Chat Assistant** — floating chat bubble on poly-glot.ai lets users ask questions about features, pricing, and how to use the tool.
+
+### Improved
+- **Test Connection** — uses zero-cost `GET /v1/models` endpoint for both OpenAI and Anthropic. No tokens burned, works with $0 account balance.
+- **Modal note** — "Test Connection checks your key is valid — no tokens are used and nothing is generated" shown below the button.
+
+---
+
+## [1.4.1] — 2026-03-30
+
+### Improved
+- **Custom model support** — enter any model ID (e.g. `gpt-4o-2024-11-20`, `claude-3-7-sonnet-20250219`) directly in settings; not limited to the preset list
+- **Default model updated** to `gpt-4.1-mini` — better quality, lower cost than `gpt-4o-mini`
+- **Updated model tables** in README with accurate per-request cost estimates for all GPT-4.1, GPT-4o, o3, o1, Claude 4, and Claude 3.5 models
+- **Marketplace** — expanded to 30 keywords, added Machine Learning category, added badges
+
+---
+
 ## [1.4.0] — 2026-03-30
 
 ### 🤖 GitHub Copilot Chat Integration

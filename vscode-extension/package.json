@@ -1,48 +1,63 @@
 {
   "name": "poly-glot",
   "displayName": "Poly-Glot AI",
-  "description": "AI code comments for 12 languages — JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments. Powered by GPT-4o & Claude. Free tier + Pro plan.",
-  "version": "1.4.0",
+  "description": "AI-powered code comments & documentation for 12 languages. Auto-generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments & docstrings. GPT-4.1, GPT-4o, Claude 4 & custom models. Free tier included.",
+  "version": "1.4.2",
   "pricing": "Trial",
   "publisher": "poly-glot-ai",
   "license": "MIT",
   "homepage": "https://poly-glot.ai",
-  "bugs": { "url": "https://github.com/hmoses/poly-glot/issues" },
-  "galleryBanner": { "color": "#0f1e14", "theme": "dark" },
+  "bugs": {
+    "url": "https://github.com/poly-glot-ai/poly-glot/issues"
+  },
+  "galleryBanner": {
+    "color": "#0f1e14",
+    "theme": "dark"
+  },
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hmoses/poly-glot"
+    "url": "https://github.com/poly-glot-ai/poly-glot"
   },
   "engines": {
     "vscode": "^1.95.0"
   },
   "categories": [
     "Programming Languages",
-    "Other",
-    "Snippets",
-    "Formatters"
+    "Machine Learning",
+    "Formatters",
+    "Other"
   ],
   "keywords": [
     "ai comments",
+    "code documentation",
     "jsdoc generator",
     "javadoc generator",
+    "docstring generator",
     "pydoc",
     "doxygen",
-    "kdoc",
+    "code comments",
+    "auto comment",
+    "comment generator",
     "why comments",
-    "code documentation",
-    "ai documentation",
+    "code explanation",
+    "code analysis",
+    "typescript comments",
+    "python docstring",
+    "rust doc comments",
+    "golang doc",
+    "kdoc",
+    "xmldoc",
+    "phpdoc",
     "openai",
     "anthropic",
     "claude",
     "gpt-4",
-    "code comments",
-    "auto comment",
-    "typescript comments",
-    "python docstring",
-    "rust doc",
-    "golang doc",
+    "gpt-4.1",
+    "copilot chat",
+    "ai documentation",
+    "ai code review",
+    "code generator",
     "poly-glot"
   ],
   "activationEvents": [
@@ -55,12 +70,12 @@
         "id": "poly-glot.chat",
         "fullName": "Poly-Glot AI",
         "name": "poly-glot",
-        "description": "AI code comments — JSDoc, Javadoc, PyDoc, why-comments & more. Type /comment, /why, /both, /explain or just ask.",
+        "description": "AI code comments \u2014 JSDoc, Javadoc, PyDoc, why-comments & more. Type /comment, /why, /both, /explain or just ask.",
         "isSticky": true,
         "commands": [
           {
             "name": "comment",
-            "description": "Add doc-comments to selected code or a file (JSDoc, Javadoc, PyDoc, Doxygen…)"
+            "description": "Add doc-comments to selected code or a file (JSDoc, Javadoc, PyDoc, Doxygen\u2026)"
           },
           {
             "name": "why",
@@ -223,7 +238,10 @@
         "polyglot.provider": {
           "type": "string",
           "default": "openai",
-          "enum": ["openai", "anthropic"],
+          "enum": [
+            "openai",
+            "anthropic"
+          ],
           "enumDescriptions": [
             "Use OpenAI (GPT-4.1, GPT-4o, o3, o1, and more)",
             "Use Anthropic (Claude 4, Claude 3.5, and more)"
@@ -233,12 +251,25 @@
         "polyglot.model": {
           "type": "string",
           "default": "gpt-4.1-mini",
-          "description": "Any valid model ID from your provider — e.g. gpt-4.1-mini, gpt-4.1-nano, claude-sonnet-4-5, claude-haiku-4-5. Custom/unlisted model IDs are supported."
+          "description": "Any valid model ID from your provider \u2014 e.g. gpt-4.1-mini, gpt-4.1-nano, claude-sonnet-4-5, claude-haiku-4-5. Custom/unlisted model IDs are supported."
         },
         "polyglot.commentStyle": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto","jsdoc","javadoc","pydoc","doxygen","xmldoc","godoc","rustdoc","rdoc","phpdoc","swift","kotlin"],
+          "enum": [
+            "auto",
+            "jsdoc",
+            "javadoc",
+            "pydoc",
+            "doxygen",
+            "xmldoc",
+            "godoc",
+            "rustdoc",
+            "rdoc",
+            "phpdoc",
+            "swift",
+            "kotlin"
+          ],
           "description": "Comment style. 'auto' detects from file language (recommended)."
         },
         "polyglot.insertInline": {
@@ -266,5 +297,23 @@
     "@types/vscode": "^1.85.0",
     "typescript": "^5.3.0",
     "@vscode/vsce": "^2.24.0"
-  }
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/visual-studio-marketplace/v/poly-glot-ai.poly-glot?color=4ade80&label=VS%20Code%20Marketplace",
+      "href": "https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot",
+      "description": "VS Code Marketplace"
+    },
+    {
+      "url": "https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?color=60b4f6&label=installs",
+      "href": "https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot",
+      "description": "Installs"
+    },
+    {
+      "url": "https://img.shields.io/badge/free%20tier-included-34d399",
+      "href": "https://poly-glot.ai/#pricing",
+      "description": "Free tier included"
+    }
+  ],
+  "qna": "https://github.com/poly-glot-ai/poly-glot/issues"
 }

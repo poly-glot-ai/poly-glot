@@ -1,6 +1,6 @@
 # Poly-Glot — AI Code Comments, JSDoc Generator & Code Documentation
 
-> **The fastest way to generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, and "why" comments** — powered by OpenAI (GPT-4o, o3-mini) or Anthropic (Claude Sonnet 4, Claude Opus 4). 100% client-side. Your API key never leaves your machine.
+> **The fastest way to generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, and "why" comments** — powered by OpenAI (GPT-4.1, GPT-4o, o3) or Anthropic (Claude Sonnet 4, Claude Opus 4, Claude Haiku 4). Works in VS Code, CLI, MCP, and Copilot Chat. 100% client-side. Your API key never leaves your machine.
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/poly-glot-ai.poly-glot?label=version&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?label=installs&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
@@ -244,6 +244,43 @@ Set `polyglot.model` in VS Code settings to any model ID your provider supports:
 
 ---
 
+## 🔌 MCP Server — Use Poly-Glot from Goose, Claude Desktop & Cursor
+
+**`poly-glot-mcp`** is now live on npm — use Poly-Glot's full feature set from any MCP-compatible AI client without leaving your chat interface.
+
+```json
+{
+  "mcpServers": {
+    "poly-glot": {
+      "command": "npx",
+      "args": ["-y", "poly-glot-mcp"],
+      "env": {
+        "POLYGLOT_PROVIDER": "openai",
+        "POLYGLOT_API_KEY": "sk-your-key-here",
+        "POLYGLOT_MODEL": "gpt-4.1-mini"
+      }
+    }
+  }
+}
+```
+
+**6 MCP tools available:**
+
+| Tool | Description |
+|------|-------------|
+| `polyglot_add_doc_comments` | JSDoc, Javadoc, PyDoc, Doxygen — all 12 styles |
+| `polyglot_add_why_comments` | Inline WHY-comments explaining intent & trade-offs |
+| `polyglot_add_all_comments` | Doc + WHY in one two-pass call |
+| `polyglot_explain_code` | Complexity score, bugs, doc quality analysis |
+| `polyglot_list_languages` | All 12 supported languages |
+| `polyglot_list_models` | Models + cost tiers for your provider |
+
+Compatible with: **Goose** · **Claude Desktop** · **Cursor** · **Windsurf** · any MCP client
+
+[Full MCP docs on npm →](https://www.npmjs.com/package/poly-glot-mcp)
+
+---
+
 ## 🔒 Privacy & Security
 
 Your code and API keys are **100% private**:
@@ -311,7 +348,7 @@ Have a feature request? [Open an issue on GitHub](https://github.com/poly-glot-a
 
 ## 📦 About
 
-**Version:** 1.3.1  
+**Version:** 1.4.2  
 **Publisher:** poly-glot-ai  
 **Marketplace:** [poly-glot-ai.poly-glot](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)  
 **Website:** [poly-glot.ai](https://poly-glot.ai)  
