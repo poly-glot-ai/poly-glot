@@ -836,11 +836,27 @@
         filter: drop-shadow(0 4px 24px rgba(139,92,246,0.5));
       }
       .pg-video-big-play:hover { transform: scale(1.1); filter: drop-shadow(0 6px 32px rgba(139,92,246,0.75)); }
+      /* Mobile: shrink play button so it doesn't dominate the frame */
+      @media (max-width: 768px) {
+        .pg-video-big-play {
+          width: 52px; height: 52px;
+          filter: drop-shadow(0 3px 14px rgba(139,92,246,0.55));
+        }
+        .pg-video-big-play:active { transform: scale(0.94); }
+      }
+      @media (max-width: 480px) {
+        .pg-video-big-play {
+          width: 44px; height: 44px;
+        }
+      }
       .pg-video-overlay-label {
         margin: 0;
         font-size: 0.82rem;
         color: rgba(255,255,255,0.6);
         letter-spacing: 0.03em;
+      }
+      @media (max-width: 768px) {
+        .pg-video-overlay-label { font-size: 0.72rem; }
       }
 
       /* Custom controls bar */
@@ -1181,10 +1197,19 @@
                         <!-- Big play overlay (shows before first play) -->
                         <div class="pg-video-overlay" id="pgVideoOverlay">
                             <button class="pg-video-big-play" id="pgVideoBigPlay" aria-label="Play demo video">
-                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="40" cy="40" r="40" fill="rgba(139,92,246,0.18)" />
-                                    <circle cx="40" cy="40" r="36" fill="rgba(139,92,246,0.28)" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
-                                    <polygon points="32,24 60,40 32,56" fill="white"/>
+                                <!--
+                                  Viewbox 64×64. Outer glow ring radius 31 (thin, subtle).
+                                  Filled circle radius 28. Play triangle optically centered:
+                                  left edge x=24, tip x=46, vertical span y=20→44.
+                                  Triangle nudged +1px right for optical centering of the wedge mass.
+                                -->
+                                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Outer glow ring -->
+                                    <circle cx="32" cy="32" r="31" fill="rgba(139,92,246,0.12)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
+                                    <!-- Solid filled disc -->
+                                    <circle cx="32" cy="32" r="27" fill="rgba(139,92,246,0.55)"/>
+                                    <!-- Play triangle — optically centered, clean proportions -->
+                                    <polygon points="26,20 47,32 26,44" fill="white"/>
                                 </svg>
                             </button>
                             <p class="pg-video-overlay-label">2 min demo · no audio needed</p>
