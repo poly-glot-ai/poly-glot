@@ -3292,8 +3292,31 @@ function initCommentGenerator() {
     // Settings elements
     const cgLanguage     = document.getElementById('cgLanguage');
     const cgStyle        = document.getElementById('cgStyle');
-    const cgProvider     = document.getElementById('cgProvider');
-    const cgModel        = document.getElementById('cgModel');
+    const cgProvider          = document.getElementById('cgProvider');
+    const cgModel             = document.getElementById('cgModel');
+    const cgCustomModelRow    = document.getElementById('cgCustomModelRow');
+    const cgCustomModelInput  = document.getElementById('cgCustomModelInput');
+    const CG_CUSTOM_VAL       = '__cg_custom__';
+    const CG_CUSTOM_KEY       = 'cg_custom_model';
+
+    /** Show/hide custom model input row for the generator panel */
+    function toggleCgCustomRow(show) {
+        if (!cgCustomModelRow) return;
+        cgCustomModelRow.style.display = show ? 'block' : 'none';
+        if (show && cgCustomModelInput) {
+            const saved = localStorage.getItem(CG_CUSTOM_KEY) || '';
+            cgCustomModelInput.value = saved;
+            cgCustomModelInput.focus();
+        }
+    }
+
+    /** Returns the actual model ID to use — handles custom entry */
+    function resolveCgModel() {
+        if (cgModel.value === CG_CUSTOM_VAL) {
+            return (cgCustomModelInput && cgCustomModelInput.value.trim()) || 'gpt-4.1-mini';
+        }
+        return cgModel.value;
+    }
     const cgApiKey       = document.getElementById('cgApiKey');
     const cgToggleKey    = document.getElementById('cgToggleKey');
     const cgSaveKey      = document.getElementById('cgSaveKey');
@@ -3387,16 +3410,37 @@ function initCommentGenerator() {
 
     function updateModelDropdown(provider, selectedModel) {
         const list = MODELS[provider] || MODELS.openai;
+        const isCustom = selectedModel && !list.find(m => m.value === selectedModel);
         cgModel.innerHTML = list
             .map(m => `<option value="${m.value}"${m.value === selectedModel ? ' selected' : ''}>${m.label}</option>`)
             .join('');
+        // Always append the custom sentinel
+        cgModel.innerHTML += `<option value="${CG_CUSTOM_VAL}"${isCustom ? ' selected' : ''}>✏️ Custom model…</option>`;
+        if (isCustom) {
+            toggleCgCustomRow(true);
+            if (cgCustomModelInput) cgCustomModelInput.value = selectedModel;
+        } else {
+            toggleCgCustomRow(false);
+        }
     }
 
     // ── Provider change → update model dropdown ──
     cgProvider.addEventListener('change', () => {
         const prov = cgProvider.value;
-        updateModelDropdown(prov, prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o-mini');
+        updateModelDropdown(prov, prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4.1-mini');
     });
+
+    // ── Custom model row: show/hide + persist ──
+    cgModel.addEventListener('change', () => {
+        const isCustom = cgModel.value === CG_CUSTOM_VAL;
+        toggleCgCustomRow(isCustom);
+    });
+    if (cgCustomModelInput) {
+        cgCustomModelInput.addEventListener('input', () => {
+            const val = cgCustomModelInput.value.trim();
+            if (val) localStorage.setItem(CG_CUSTOM_KEY, val);
+        });
+    }
 
     // ── Sync comment style to language ──
     function syncStyleToLanguage() {
@@ -3436,10 +3480,14 @@ function initCommentGenerator() {
         }
         localStorage.setItem(LS.key,      key);
         localStorage.setItem(LS.provider, cgProvider.value);
-        localStorage.setItem(LS.model,    cgModel.value);
+        const resolvedModel = resolveCgModel();
+        localStorage.setItem(LS.model, resolvedModel);
+        if (cgModel.value === CG_CUSTOM_VAL && cgCustomModelInput) {
+            localStorage.setItem(CG_CUSTOM_KEY, cgCustomModelInput.value.trim());
+        }
         cgKeyStatus.textContent = '✅ Settings saved';
         cgKeyStatus.className   = 'pg-key-status ok';
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value });
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value, model: resolvedModel });
     });
 
     // ── File upload ──
@@ -3631,7 +3679,7 @@ function initCommentGenerator() {
         const orig = { key: window.aiGenerator.apiKey, prov: window.aiGenerator.provider, model: window.aiGenerator.model };
         window.aiGenerator.apiKey   = key;
         window.aiGenerator.provider = cgProvider.value;
-        window.aiGenerator.model    = cgModel.value;
+        window.aiGenerator.model    = resolveCgModel();
 
         cgLoading.style.display    = 'flex';
         cgGenerateBtn.disabled     = true;

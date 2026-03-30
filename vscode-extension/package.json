@@ -225,15 +225,15 @@
           "default": "openai",
           "enum": ["openai", "anthropic"],
           "enumDescriptions": [
-            "Use OpenAI (GPT-4o, GPT-4o-mini)",
-            "Use Anthropic (Claude Sonnet, Claude Haiku)"
+            "Use OpenAI (GPT-4.1, GPT-4o, o3, o1, and more)",
+            "Use Anthropic (Claude 4, Claude 3.5, and more)"
           ],
           "description": "AI provider for comment generation."
         },
         "polyglot.model": {
           "type": "string",
-          "default": "gpt-4o-mini",
-          "description": "Model to use. Any valid model ID from your provider."
+          "default": "gpt-4.1-mini",
+          "description": "Any valid model ID from your provider — e.g. gpt-4.1-mini, gpt-4.1-nano, claude-sonnet-4-5, claude-haiku-4-5. Custom/unlisted model IDs are supported."
         },
         "polyglot.commentStyle": {
           "type": "string",

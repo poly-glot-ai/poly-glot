@@ -60,7 +60,7 @@ After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) →
 1. **Install** Poly-Glot from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 2. **Add your API key** → Command Palette → `Poly-Glot: Configure API Key`
    - Choose **OpenAI** or **Anthropic** as your provider
-   - Pick your preferred model (we recommend `gpt-4o` or `claude-sonnet-4`)
+   - Pick your preferred model (we recommend `gpt-4.1-mini` or `claude-sonnet-4-5`) — or enter any custom model ID
    - Paste your API key (stored securely in the OS keychain — never in `settings.json`)
 3. **Select any function or block of code** in the editor
 4. **Press `Cmd+Shift+/`** (`Ctrl+Shift+/` on Windows/Linux) → comments appear inline instantly
@@ -157,7 +157,7 @@ Every generation displays the **exact token cost in the status bar**. A typical 
 | Setting | Default | Description |
 |---|---|---|
 | `polyglot.provider` | `openai` | AI provider: `openai` or `anthropic` |
-| `polyglot.model` | `gpt-4o` | Model ID (see full model tables below) |
+| `polyglot.model` | `gpt-4.1-mini` | Any valid model ID from your provider (see tables below, or enter a custom ID) |
 | `polyglot.licenseToken` | — | Pro license token from poly-glot.ai |
 | `polyglot.insertInline` | `true` | `true` = insert into file · `false` = open side panel |
 | `polyglot.commentStyle` | `auto` | Force a style: `jsdoc`, `javadoc`, `pydoc`, `doxygen`, etc. |
@@ -166,37 +166,61 @@ Every generation displays the **exact token cost in the status bar**. A typical 
 
 ## 🤖 Supported AI Models
 
+Poly-Glot accepts **any valid model ID** from OpenAI or Anthropic — including models not listed here. Just type the model ID into the `polyglot.model` setting. The extension will use it directly.
+
 ### OpenAI Models
 
-| Model | Notes | Est. cost / request |
+| Model | Notes | Est. cost / request* |
 |---|---|---|
-| `gpt-4o` ⭐ **Recommended** | Best balance of quality and speed | ~$0.003 |
-| `gpt-4o-mini` 💵 **Budget** | Fast and affordable, great for most files | ~$0.001 |
-| `gpt-4-turbo` | High capability, larger context window | ~$0.010 |
-| `gpt-4` | Original GPT-4, reliable baseline | ~$0.010 |
-| `gpt-3.5-turbo` | Fastest, lowest cost | ~$0.0005 |
-| `o1` | Advanced reasoning, best for complex logic | ~$0.015 |
-| `o1-mini` | Reasoning model, budget option | ~$0.003 |
-| `o3-mini` | Latest generation reasoning, fast | ~$0.001 |
+| `gpt-4.1-mini` ⭐ **Recommended** | Best quality-to-cost ratio | ~$0.001 |
+| `gpt-4.1` | Best GPT-4.1 quality | ~$0.004 |
+| `gpt-4.1-nano` 💵 **Cheapest** | Fastest & lowest cost | ~$0.0002 |
+| `gpt-4o` | Great quality, widely supported | ~$0.005 |
+| `gpt-4o-mini` | Budget option, very fast | ~$0.0003 |
+| `o3-mini` | Fast reasoning model | ~$0.002 |
+| `o3` | Most powerful reasoning | ~$0.018 |
+| `o1-mini` | Budget reasoning | ~$0.002 |
+| `o1` | Full reasoning, slower | ~$0.027 |
+| `gpt-4-turbo` | Previous-gen turbo | ~$0.014 |
+| `gpt-4` | Classic GPT-4 | ~$0.030 |
+| `gpt-3.5-turbo` | Legacy, lightest output | ~$0.0007 |
 
 Get an OpenAI API key at [platform.openai.com](https://platform.openai.com).
 
 ### Anthropic Models
 
-| Model | Notes | Est. cost / request |
+| Model | Notes | Est. cost / request* |
 |---|---|---|
-| `claude-opus-4` 🏆 **Most Powerful** | Best reasoning, deepest analysis | ~$0.020 |
-| `claude-sonnet-4` ⭐ **Recommended** | Excellent quality, fast, great value | ~$0.005 |
-| `claude-3-7-sonnet-20250219` | Extended thinking, nuanced comments | ~$0.005 |
-| `claude-3-5-sonnet-20241022` | Proven quality for code documentation | ~$0.005 |
-| `claude-3-5-haiku-20241022` | Fastest Claude, lowest cost | ~$0.001 |
-| `claude-3-opus-20240229` | Deep analysis, great for complex codebases | ~$0.015 |
-| `claude-3-sonnet-20240229` | Balanced performance and speed | ~$0.005 |
-| `claude-3-haiku-20240307` | Lightweight and fast | ~$0.001 |
+| `claude-sonnet-4-5` ⭐ **Recommended** | Excellent quality & speed | ~$0.007 |
+| `claude-opus-4-5` 🏆 **Most Powerful** | Deepest analysis | ~$0.033 |
+| `claude-haiku-4-5` 💵 **Cheapest** | Fastest & lowest cost | ~$0.002 |
+| `claude-3-5-sonnet-20241022` | Proven quality, previous gen | ~$0.007 |
+| `claude-3-5-haiku-20241022` | Budget Claude, very fast | ~$0.002 |
+| `claude-3-opus-20240229` | Deep reasoning, older gen | ~$0.033 |
+| `claude-3-haiku-20240307` | Lightest legacy Claude | ~$0.0006 |
 
 Get an Anthropic API key at [console.anthropic.com](https://console.anthropic.com).
 
-> **Costs are estimates** based on a typical 200-token request. Your actual cost depends on code length and model pricing at time of use.
+> \* **Estimates** based on ~200-token input / 400-token output (a typical small function). Costs scale with file size. Check [platform.openai.com/pricing](https://platform.openai.com/pricing) and [anthropic.com/pricing](https://www.anthropic.com/pricing) for current rates.
+
+### Using a custom or unlisted model
+
+Set `polyglot.model` in VS Code settings to any model ID your provider supports:
+
+```json
+// settings.json
+{
+  "polyglot.provider": "openai",
+  "polyglot.model": "gpt-4o-2024-11-20"
+}
+```
+
+```json
+{
+  "polyglot.provider": "anthropic",
+  "polyglot.model": "claude-3-7-sonnet-20250219"
+}
+```
 
 ---
 

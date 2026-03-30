@@ -394,49 +394,57 @@ Output includes:
 
 ## Supported models
 
-Poly-Glot works with any model from OpenAI or Anthropic. Set your preferred model with `poly-glot config --model <name>` or the `POLYGLOT_MODEL` env var.
+Poly-Glot works with **any model ID** from OpenAI or Anthropic — including brand-new releases. Set your preferred model with `poly-glot config --model <name>` or the `POLYGLOT_MODEL` env var. Pass any valid model ID, even ones not listed here.
 
 ### OpenAI
 
 | Model | Type | Approx. cost / request* | Notes |
 |-------|------|------------------------|-------|
-| `o3-mini` | Reasoning | ~$0.04–$0.20 | Most powerful reasoning model |
-| `o1` | Reasoning | ~$0.05–$0.30 | Full reasoning, slower |
-| `o1-mini` | Reasoning | ~$0.01–$0.06 | Budget reasoning model |
-| `gpt-4o` ⭐ | Chat | ~$0.01–$0.05 | **Recommended** — best balance of speed & quality |
-| `gpt-4o-mini` | Chat | ~$0.001–$0.005 | Great budget option, very fast |
-| `gpt-4-turbo` | Chat | ~$0.02–$0.10 | Previous-gen turbo |
-| `gpt-4` | Chat | ~$0.03–$0.15 | Classic GPT-4 |
-| `gpt-3.5-turbo` | Chat | ~$0.001–$0.003 | Fastest & cheapest; lighter output |
+| `gpt-4.1-mini` ⭐ | Chat | ~$0.001 | **Recommended** — best quality-to-cost ratio |
+| `gpt-4.1` | Chat | ~$0.004 | Best GPT-4.1 quality |
+| `gpt-4.1-nano` | Chat | ~$0.0002 | Fastest & cheapest OpenAI option |
+| `gpt-4o` | Chat | ~$0.005 | Great quality, widely supported |
+| `gpt-4o-mini` | Chat | ~$0.0003 | Budget option, very fast |
+| `o3-mini` | Reasoning | ~$0.002 | Fast reasoning model |
+| `o3` | Reasoning | ~$0.018 | Most powerful reasoning |
+| `o1-mini` | Reasoning | ~$0.002 | Budget reasoning |
+| `o1` | Reasoning | ~$0.027 | Full reasoning, slower |
+| `gpt-4-turbo` | Chat | ~$0.014 | Previous-gen turbo |
+| `gpt-4` | Chat | ~$0.030 | Classic GPT-4 |
+| `gpt-3.5-turbo` | Chat | ~$0.0007 | Legacy, lightest output |
 
 ### Anthropic
 
 | Model | Type | Approx. cost / request* | Notes |
 |-------|------|------------------------|-------|
-| `claude-opus-4` | Chat | ~$0.05–$0.25 | Most powerful Claude model |
-| `claude-sonnet-4` ⭐ | Chat | ~$0.01–$0.06 | **Recommended** — excellent quality & speed |
-| `claude-3-7-sonnet-20250219` | Chat | ~$0.01–$0.05 | Extended thinking support |
-| `claude-3-5-sonnet-20241022` | Chat | ~$0.01–$0.04 | Highly capable, previous gen |
-| `claude-3-5-haiku-20241022` | Chat | ~$0.001–$0.006 | Budget pick, very fast |
-| `claude-3-opus-20240229` | Chat | ~$0.04–$0.20 | Older opus, deep reasoning |
-| `claude-3-sonnet-20240229` | Chat | ~$0.01–$0.04 | Balanced older-gen |
-| `claude-3-haiku-20240307` | Chat | ~$0.001–$0.003 | Fastest & cheapest Claude |
+| `claude-sonnet-4-5` ⭐ | Chat | ~$0.007 | **Recommended** — excellent quality & speed |
+| `claude-opus-4-5` | Chat | ~$0.033 | Most powerful Claude |
+| `claude-haiku-4-5` | Chat | ~$0.002 | Fastest & cheapest Anthropic |
+| `claude-3-5-sonnet-20241022` | Chat | ~$0.007 | Proven quality, previous gen |
+| `claude-3-5-haiku-20241022` | Chat | ~$0.002 | Budget Claude, very fast |
+| `claude-3-opus-20240229` | Chat | ~$0.033 | Deep reasoning, older gen |
+| `claude-3-haiku-20240307` | Chat | ~$0.0006 | Lightest & fastest legacy Claude |
 
-> \* Costs are rough estimates for a typical source file (~200 tokens in, ~400 tokens out). Actual costs depend on file size and the model's current pricing. Check [platform.openai.com/pricing](https://platform.openai.com/pricing) and [anthropic.com/pricing](https://www.anthropic.com/pricing) for up-to-date rates.
+> \* Estimates based on a ~200-token input / 400-token output (a typical small function). Costs scale linearly with file size. Check [platform.openai.com/pricing](https://platform.openai.com/pricing) and [anthropic.com/pricing](https://www.anthropic.com/pricing) for current rates.
 
 **Quick recommendation:**
-- 🚀 **Best overall** — `gpt-4o` or `claude-sonnet-4`
-- 💰 **Lowest cost** — `gpt-3.5-turbo` or `claude-3-haiku-20240307`
-- 🧠 **Deepest analysis** — `o3-mini` or `claude-opus-4`
+- 🚀 **Best overall** — `gpt-4.1-mini` or `claude-sonnet-4-5`
+- 💰 **Lowest cost** — `gpt-4.1-nano` or `claude-3-haiku-20240307`
+- 🧠 **Deepest analysis** — `o3` or `claude-opus-4-5`
+- 🔬 **Custom / latest model** — pass any model ID directly
 
 ```bash
 # Set your preferred model
-poly-glot config --provider openai --model gpt-4o
-poly-glot config --provider anthropic --model claude-sonnet-4
+poly-glot config --provider openai --model gpt-4.1-mini
+poly-glot config --provider anthropic --model claude-sonnet-4-5
 
 # Or override per-run
-poly-glot comment src/auth.js --provider openai --model gpt-4o-mini
-poly-glot comment src/auth.js --provider anthropic --model claude-3-5-haiku-20241022
+poly-glot comment src/auth.js --provider openai --model gpt-4.1-nano
+poly-glot comment src/auth.js --provider anthropic --model claude-haiku-4-5
+
+# Use any custom or newly-released model ID
+poly-glot comment src/auth.js --provider openai --model gpt-4o-2024-11-20
+poly-glot comment src/auth.js --provider anthropic --model claude-3-7-sonnet-20250219
 ```
 
 ---
@@ -448,7 +456,7 @@ poly-glot comment src/auth.js --provider anthropic --model claude-3-5-haiku-2024
   env:
     POLYGLOT_API_KEY: ${{ secrets.POLYGLOT_API_KEY }}
     POLYGLOT_PROVIDER: openai
-    POLYGLOT_MODEL: gpt-4o-mini
+    POLYGLOT_MODEL: gpt-4.1-mini
     POLYGLOT_MODE: both
   run: |
     npm install -g poly-glot-ai-cli

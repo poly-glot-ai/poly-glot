@@ -1490,8 +1490,8 @@
                         <div class="form-group">
                             <label for="aiProvider">AI Provider:</label>
                             <select id="aiProvider" class="settings-select">
-                                <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
-                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="openai">OpenAI (GPT-4.1, GPT-4o, o3…)</option>
+                                <option value="anthropic">Anthropic (Claude 4, 3.5…)</option>
                             </select>
                         </div>
 
@@ -1538,18 +1538,28 @@
                         <h3>💰 Cost Information</h3>
                         <div class="cost-info">
                             <div class="cost-card">
-                                <h4>GPT-4o Mini (Recommended)</h4>
+                                <h4>GPT-4.1 Mini ⭐</h4>
                                 <p class="cost-price">~$0.001 per request</p>
-                                <p class="cost-desc">Best balance of quality and cost</p>
+                                <p class="cost-desc">Best balance of quality &amp; cost</p>
                             </div>
                             <div class="cost-card">
-                                <h4>Claude 3.5 Sonnet</h4>
-                                <p class="cost-price">~$0.01 per request</p>
+                                <h4>GPT-4.1 Nano</h4>
+                                <p class="cost-price">~$0.0002 per request</p>
+                                <p class="cost-desc">Fastest &amp; cheapest OpenAI</p>
+                            </div>
+                            <div class="cost-card">
+                                <h4>Claude Haiku 4</h4>
+                                <p class="cost-price">~$0.002 per request</p>
+                                <p class="cost-desc">Fastest &amp; cheapest Anthropic</p>
+                            </div>
+                            <div class="cost-card">
+                                <h4>Claude Sonnet 4 ⭐</h4>
+                                <p class="cost-price">~$0.007 per request</p>
                                 <p class="cost-desc">Excellent for complex code</p>
                             </div>
                         </div>
                         <p class="cost-note">
-                            💡 Actual costs depend on code size. Most requests cost less than $0.01.
+                            💡 Estimates based on a ~200-token input / 400-token output. Actual cost scales with file size. You can also enter any custom model ID supported by your provider.
                         </p>
                     </div>
 
@@ -1770,7 +1780,19 @@
                         <option value="gpt-4-turbo">GPT-4 Turbo</option>
                         <option value="gpt-4">GPT-4</option>
                         <option value="gpt-3.5-turbo">GPT-3.5 Turbo (legacy)</option>
+                        <option value="__cg_custom__">✏️ Custom model…</option>
                     </select>
+                </div>
+                <div class="pg-field" id="cgCustomModelRow" style="display:none;">
+                    <label class="pg-label" for="cgCustomModelInput">Custom model ID</label>
+                    <input type="text" id="cgCustomModelInput" class="pg-key-input" style="width:100%;box-sizing:border-box;"
+                           placeholder="e.g. gpt-4o-2024-11-20, claude-3-7-sonnet-20250219"
+                           autocomplete="off" spellcheck="false">
+                    <small class="help-text" style="margin-top:4px;display:block;color:#64748b;font-size:11px;">
+                        Any model ID supported by your provider —
+                        <a href="https://platform.openai.com/docs/models" target="_blank" rel="noopener" style="color:#60b4f6;">OpenAI docs</a> ·
+                        <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener" style="color:#60b4f6;">Anthropic docs</a>
+                    </small>
                 </div>
                 <div class="pg-field pg-field-key">
                     <label class="pg-label" for="cgApiKey">API Key</label>
