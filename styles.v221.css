@@ -2264,12 +2264,29 @@ textarea:focus {
 
 .modal-footer {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 20px 30px;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 30px 20px;
     border-top: 2px solid rgba(125,211,252,0.15);
     background: #1a1d27;
     border-radius: 0 0 10px 10px;
+}
+
+.test-connection-note {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.test-connection-note strong {
+    color: #9ca3af;
+}
+
+.modal-footer-btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 .settings-section {
