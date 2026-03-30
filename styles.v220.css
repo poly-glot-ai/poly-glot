@@ -346,11 +346,11 @@ body {
 /* ── VS Code + CLI section headings — larger to draw attention ─────────── */
 .overview-section-vscode .overview-heading,
 .overview-section-cli .overview-heading {
-    font-size: 18px;
+    font-size: 27px;
     font-weight: 800;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     text-transform: none;
-    gap: 10px;
+    gap: 12px;
 }
 
 .overview-text {
