@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- cache-bust: 20260330-0930 -->
+<!-- cache-bust: 20260330-1130 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -433,8 +433,192 @@
       .overview-section-cli .cli-icon {
         font-size: 26px !important;
       }
-      /* Remove any coming-soon badges — belt and suspenders */
-      .coming-soon-badge { display: none !important; }
+      /* Remove any coming-soon badges + old waitlist inline section — belt and suspenders */
+      .coming-soon-badge          { display: none !important; }
+      .pg-waitlist-inline-section { display: none !important; }
+      .pg-wis-content             { display: none !important; }
+
+      /* ══ Copilot section — inline bypass (v20260330) ═════════════════════ */
+      .overview-section-copilot {
+        background: linear-gradient(135deg, rgba(128,0,255,.07) 0%, rgba(80,0,200,.04) 100%);
+        border: 1px solid rgba(139,92,246,.35);
+        border-radius: 10px;
+        padding: 22px 24px;
+        margin-top: 4px;
+        position: relative;
+        overflow: hidden;
+      }
+      .overview-section-copilot::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(139,92,246,.12) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .overview-section-copilot .overview-heading {
+        font-size: 27px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.02em !important;
+        text-transform: none !important;
+        gap: 12px !important;
+        color: #c4b5fd !important;
+      }
+      .copilot-live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        background: rgba(139,92,246,.2);
+        border: 1px solid rgba(139,92,246,.5);
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #c4b5fd;
+        letter-spacing: 0.04em;
+        vertical-align: middle;
+      }
+      .copilot-live-dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        background: #a78bfa;
+        border-radius: 50%;
+        animation: vscode-pulse 2s ease-in-out infinite;
+      }
+      .copilot-commands-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 18px 0;
+      }
+      .copilot-cmd-card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: rgba(139,92,246,.06);
+        border: 1px solid rgba(139,92,246,.2);
+        border-radius: 8px;
+        padding: 14px 16px;
+        transition: border-color .2s, background .2s;
+      }
+      .copilot-cmd-card:hover {
+        border-color: rgba(139,92,246,.45);
+        background: rgba(139,92,246,.1);
+      }
+      .copilot-cmd-card__command {
+        font-family: 'Fira Code', monospace;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #c4b5fd;
+        background: rgba(139,92,246,.15);
+        border-radius: 5px;
+        padding: 3px 8px;
+        width: fit-content;
+      }
+      .copilot-cmd-card__pro {
+        display: inline-flex;
+        align-items: center;
+        font-size: 10px;
+        background: rgba(251,191,36,.15);
+        color: #fbbf24;
+        border: 1px solid rgba(251,191,36,.35);
+        border-radius: 8px;
+        padding: 1px 6px;
+        margin-left: 6px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+      .copilot-cmd-card__desc {
+        font-size: 12px;
+        color: #9090b0;
+        line-height: 1.55;
+      }
+      .copilot-how-to {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 14px 0 0;
+        padding: 14px 16px;
+        background: rgba(139,92,246,.06);
+        border: 1px solid rgba(139,92,246,.18);
+        border-radius: 8px;
+      }
+      .copilot-how-to__step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #9090b0;
+        flex: 1;
+        min-width: 160px;
+      }
+      .copilot-how-to__num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px; height: 20px;
+        background: rgba(139,92,246,.2);
+        color: #c4b5fd;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .copilot-how-to__arrow { color: #4a4a6a; font-size: 14px; flex-shrink: 0; }
+      .copilot-cta-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(139,92,246,.18);
+      }
+      .copilot-cta-bar__primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 18px;
+        background: rgba(139,92,246,.85);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background .2s, transform .15s;
+        white-space: nowrap;
+      }
+      .copilot-cta-bar__primary:hover { background: rgba(124,58,237,1); transform: translateY(-1px); }
+      .copilot-cta-bar__secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 16px;
+        background: transparent;
+        border: 1px solid rgba(139,92,246,.4);
+        color: #c4b5fd;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all .2s;
+        white-space: nowrap;
+      }
+      .copilot-cta-bar__secondary:hover {
+        background: rgba(139,92,246,.1);
+        border-color: rgba(139,92,246,.65);
+        transform: translateY(-1px);
+      }
+      .copilot-cta-bar__stat { margin-left: auto; font-size: 11.5px; color: #6a6a8a; white-space: nowrap; }
+      @media (max-width: 700px) {
+        .copilot-commands-grid { grid-template-columns: 1fr; }
+        .copilot-cta-bar { flex-direction: column; align-items: stretch; }
+        .copilot-cta-bar__primary, .copilot-cta-bar__secondary { justify-content: center; }
+        .copilot-cta-bar__stat { margin-left: 0; text-align: center; }
+        .copilot-how-to { flex-direction: column; gap: 8px; }
+        .copilot-how-to__arrow { transform: rotate(90deg); }
+      }
     </style>
 </head>
 <body>
@@ -788,7 +972,74 @@
                 </div>
             </div>
 
-            <!-- ── Section 5: CLI Tool ── -->
+            <!-- ── Section 5: GitHub Copilot Chat ── -->
+            <div class="overview-section overview-section-copilot">
+                <h2 class="overview-heading">
+                    <span style="font-size:26px">🤖</span>
+                    GitHub Copilot Chat
+                    <span class="copilot-live-badge"><span class="copilot-live-dot"></span> Now Available</span>
+                </h2>
+                <p class="overview-text">
+                    Poly-Glot is now a <strong>GitHub Copilot Chat participant</strong>. Type <code class="inline-code">@poly-glot</code> directly
+                    in Copilot Chat to generate comments, add why-comments, and analyse code — without leaving your editor or switching context.
+                </p>
+
+                <div class="copilot-commands-grid">
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot /comment</span>
+                        <span class="copilot-cmd-card__desc">Generates JSDoc, Javadoc, or PyDoc for your selected code — shown in chat with an <strong>Apply to Editor</strong> button</span>
+                    </div>
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot /why <span class="copilot-cmd-card__pro">Pro</span></span>
+                        <span class="copilot-cmd-card__desc">Adds inline why-comments explaining intent, trade-offs &amp; non-obvious decisions — shown with upgrade prompt if on free</span>
+                    </div>
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot /both <span class="copilot-cmd-card__pro">Pro</span></span>
+                        <span class="copilot-cmd-card__desc">Doc-comments + why-comments in a single pass — the most complete commenting mode available</span>
+                    </div>
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot /explain</span>
+                        <span class="copilot-cmd-card__desc">Deep analysis in chat: complexity score, bug list, doc quality (0–100), and full function breakdown</span>
+                    </div>
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot /upgrade</span>
+                        <span class="copilot-cmd-card__desc">Shows Free vs Pro feature table + <strong>3 months free</strong> with code <code class="inline-code">EARLYBIRD3</code> at <a href="https://poly-glot.ai/#pg-pricing-section" style="color:#c4b5fd;">poly-glot.ai</a></span>
+                    </div>
+                    <div class="copilot-cmd-card">
+                        <span class="copilot-cmd-card__command">@poly-glot</span>
+                        <span class="copilot-cmd-card__desc">Just ask naturally — "comment this function", "why is this written this way?", "explain this code" — Poly-Glot understands</span>
+                    </div>
+                </div>
+
+                <div class="copilot-how-to">
+                    <div class="copilot-how-to__step">
+                        <span class="copilot-how-to__num">1</span>
+                        <span>Install the <strong>Poly-Glot VS Code Extension</strong> (v1.4.0+)</span>
+                    </div>
+                    <div class="copilot-how-to__arrow">→</div>
+                    <div class="copilot-how-to__step">
+                        <span class="copilot-how-to__num">2</span>
+                        <span>Open <strong>Copilot Chat</strong> (<kbd>Cmd+Shift+I</kbd>)</span>
+                    </div>
+                    <div class="copilot-how-to__arrow">→</div>
+                    <div class="copilot-how-to__step">
+                        <span class="copilot-how-to__num">3</span>
+                        <span>Select code → type <code class="inline-code">@poly-glot /comment</code> → hit Enter</span>
+                    </div>
+                </div>
+
+                <div class="copilot-cta-bar">
+                    <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="copilot-cta-bar__primary">
+                        🤖 Install Extension &amp; Use in Copilot
+                    </a>
+                    <a href="https://poly-glot.ai/#pg-pricing-section" class="copilot-cta-bar__secondary">
+                        💎 Get Pro — 3 months free with EARLYBIRD3
+                    </a>
+                    <span class="copilot-cta-bar__stat">Requires GitHub Copilot &amp; VS Code v1.95+</span>
+                </div>
+            </div>
+
+            <!-- ── Section 6: CLI Tool ── -->
             <div class="overview-section overview-section-cli">
                 <h2 class="overview-heading">
                     <span class="cli-icon">⌨️</span>
@@ -1907,10 +2158,10 @@
     <div class="site-footer">
         <div class="site-footer__vscode-row">
             <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="footer-vscode-link">
-                💻 Install VS Code Extension — Free
+                💻 VS Code Extension
             </a>
-            <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="footer-vscode-link">
-                📦 VS Code Marketplace ↗
+            <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="footer-vscode-link" style="border-color:rgba(139,92,246,.35);color:#c4b5fd;background:rgba(139,92,246,.1);">
+                🤖 Available in Copilot Chat
             </a>
             <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="footer-vscode-link" style="border-color:rgba(16,185,129,.3);color:#34d399;">
                 ⌨️ CLI on npm ↗

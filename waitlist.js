@@ -1332,7 +1332,7 @@
     createBanner();
     createModal();
     addHeaderButton();
-    addInlineSection();
+    // addInlineSection(); — removed: site is live, waitlist section replaced by pricing
     attachAppHooks();
     printConsoleTips();
 
