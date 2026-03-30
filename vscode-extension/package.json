@@ -2,7 +2,7 @@
   "name": "poly-glot",
   "displayName": "Poly-Glot AI",
   "description": "AI code comments for 12 languages — JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments. Powered by GPT-4o & Claude. Free tier + Pro plan.",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "pricing": "Trial",
   "publisher": "poly-glot-ai",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "url": "https://github.com/hmoses/poly-glot"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.95.0"
   },
   "categories": [
     "Programming Languages",
@@ -50,6 +50,37 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "poly-glot.chat",
+        "fullName": "Poly-Glot AI",
+        "name": "poly-glot",
+        "description": "AI code comments — JSDoc, Javadoc, PyDoc, why-comments & more. Type /comment, /why, /both, /explain or just ask.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "comment",
+            "description": "Add doc-comments to selected code or a file (JSDoc, Javadoc, PyDoc, Doxygen…)"
+          },
+          {
+            "name": "why",
+            "description": "Add why-comments explaining intent, trade-offs and non-obvious decisions [Pro]"
+          },
+          {
+            "name": "both",
+            "description": "Add doc-comments AND why-comments in one pass [Pro]"
+          },
+          {
+            "name": "explain",
+            "description": "Deep analysis: complexity, bugs, doc quality score, function breakdown"
+          },
+          {
+            "name": "upgrade",
+            "description": "Show Pro plan info and get 3 months free with EARLYBIRD3"
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "polyglot.generateComments",

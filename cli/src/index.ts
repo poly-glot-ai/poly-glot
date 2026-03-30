@@ -27,10 +27,11 @@ import { CommentMode } from './config';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
 import { ping } from './telemetry';
+import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } from './usage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.6.2';  // free tier: 50 files/month messaging, postinstall + README update
+const VERSION = '1.7.0';  // enforce 50 files/month quota on free tier
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -455,12 +456,20 @@ async function runComment(args: string[]): Promise<void> {
     if (flags['--stdin']) {
         const lang = (flags['--lang'] as string) || 'javascript';
         await assertLanguageAllowed(lang, cfg);
+
+        // Quota check for free users (Pro users skip)
+        if (!await hasPro(cfg)) assertQuota(1);
+
         const code = await readStdin();
         if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
 
         spin(`Adding ${modeLabel[effectiveMode]} for stdin (${lang})…`);
         const output = await processCode(code, lang);
         stopSpin();
+
+        // Increment only after successful generation
+        if (!isDryRun && !await hasPro(cfg)) incrementUsage(1);
+
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
 
         if (isDryRun) {
@@ -485,6 +494,10 @@ async function runComment(args: string[]): Promise<void> {
 
         const files = collectFiles(dir, exts);
         if (!files.length) { warn(`No supported files found in ${dir}`); return; }
+
+        // ── Quota check for free users (upfront, before any work) ────────────
+        const isPaidUser = await hasPro(cfg);
+        if (!isPaidUser && !isDryRun) assertQuota(files.length);
 
         const outputDir = flags['--output-dir'] as string | undefined;
         const verb      = isDryRun ? 'Would process' : 'About to process';
@@ -531,6 +544,7 @@ async function runComment(args: string[]): Promise<void> {
                     if (isDiff)  printDiff(rel, code, output);
                     fs.writeFileSync(outPath, output, 'utf8');
                     ok++;
+                    if (!isPaidUser) incrementUsage(1);
                     console.log(`${COLORS.green}✓${COLORS.reset}`);
                 }
             } catch (e: unknown) {

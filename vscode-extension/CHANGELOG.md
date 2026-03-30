@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.4.0] — 2026-03-30
+
+### 🤖 GitHub Copilot Chat Integration
+- New `@poly-glot` chat participant in Copilot Chat
+- `/comment` — generate doc-comments from selected code
+- `/why` — add why-comments explaining intent & trade-offs _(Pro)_
+- `/both` — doc-comments + why-comments in one pass _(Pro)_
+- `/explain` — deep analysis: complexity, bugs, doc quality score
+- `/upgrade` — show Pro plan info + EARLYBIRD3 promo
+- Follow-up suggestions after every response
+- Plan gating: Pro features prompt upgrade inline in chat
+- API key check: guides user to configure if not set
+
+### Changed
+- Marketplace SEO: 19 keywords, 4 categories, optimised description
+- Min VS Code engine bumped to `^1.95.0` (required for chat API)
+
+---
+
 ## [1.3.1] — 2026-03-29
 
 ### Changed
