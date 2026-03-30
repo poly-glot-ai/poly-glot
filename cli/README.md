@@ -1,40 +1,44 @@
-# poly-glot-ai-cli
+# Poly-Glot CLI
 
-[![npm version](https://img.shields.io/npm/v/poly-glot-ai-cli)](https://www.npmjs.com/package/poly-glot-ai-cli)
-[![downloads](https://img.shields.io/npm/dm/poly-glot-ai-cli)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![npm version](https://img.shields.io/npm/v/poly-glot-ai-cli?color=CB3837&label=npm)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![installs](https://img.shields.io/npm/dt/poly-glot-ai-cli?label=installs)](https://www.npmjs.com/package/poly-glot-ai-cli)
 [![license](https://img.shields.io/npm/l/poly-glot-ai-cli)](https://github.com/hmoses/poly-glot/blob/main/LICENSE)
 [![node](https://img.shields.io/node/v/poly-glot-ai-cli)](https://www.npmjs.com/package/poly-glot-ai-cli)
 
-**Poly-Glot CLI** — add standardized doc-comments and why-comments to any codebase from your terminal.
+Add standardized doc-comments and why-comments to your code from the terminal — powered by OpenAI or Anthropic.
 
-Powered by OpenAI or Anthropic. Bring your own API key — your code never touches Poly-Glot servers.
-
-→ **[poly-glot.ai](https://poly-glot.ai)** · [Web UI](https://poly-glot.ai) · [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+```bash
+npm install -g poly-glot-ai-cli
+poly-glot config          # add your API key once
+poly-glot comment src/auth.js
+```
 
 ---
 
-## Free tier vs Pro
+## Pricing
 
-| | Free | Pro |
-|---|---|---|
-| **Languages** | Python · JavaScript · Java | All 12 languages |
-| **Files / month** | 50 | Unlimited |
-| **Comment modes** | `comment` only | `comment`, `why`, `both` |
-| **CLI tool** | ✅ (3 languages) | ✅ (all 12 languages) |
-| **Web UI** | ✅ | ✅ |
-| **Confidence scoring** | ✗ | ✅ |
-| **Fine-tune export (JSONL)** | ✗ | ✅ |
-| **Price** | Free forever | Coming soon |
+| Tier | Price | What you get |
+|------|-------|--------------|
+| **Free** | $0 | Python · JavaScript · Java · 50 files/month · `comment` mode |
+| **Pro** | $9/mo | All 12 languages · why-comments · both mode · shared API key pool |
 
-> | **Pro** | $9/mo | All 12 languages · why-comments · both mode · shared API key pool |
+> Join the waitlist at [poly-glot.ai](https://poly-glot.ai/#pricing) and use code **EARLYBIRD3** to get **3 months free** when Pro launches.
 
-> 🎁 **Join the waitlist** and get **3 months free** with code **EARLYBIRD3**: [poly-glot.ai/#pricing](https://poly-glot.ai/#pricing)
+---
+
+## What it does
+
+| Mode | What gets added |
+|------|-----------------|
+| `comment` | Standardized doc-comments — JSDoc, PyDoc, Javadoc, TSDoc, Doxygen, KDoc… |
+| `why` | Inline `// why:` comments explaining reasoning, trade-offs, and intent |
+| `both` | Both types in one two-pass run |
 
 ---
 
 ## Commands
 
-| Command | What it does |
+| Command | Description |
 |---------|-------------|
 | `poly-glot comment <file>` | Add standardized doc-comments (JSDoc, PyDoc, Javadoc…) |
 | `poly-glot comment <file> --why` | Add inline why-comments explaining reasoning & intent |
@@ -49,7 +53,7 @@ Powered by OpenAI or Anthropic. Bring your own API key — your code never touch
 **Safety flags** (use before any file is written):
 
 | Flag | What it does |
-|------|-------------|
+|------|--------------|
 | `--dry-run` | Preview changes — no files written |
 | `--diff` | Show a `+/-` unified diff before writing |
 | `--backup` | Save `.orig` copy of every file before overwriting |
@@ -216,102 +220,14 @@ poly-glot explain src/auth.js
 
 ---
 
-## Comment modes
+## Default mode
 
-Poly-Glot has three comment modes:
-
-| Mode | Flag | What it adds |
-|------|------|--------------|
-| `comment` (default) | _(no flag)_ | Standardized doc-comments — JSDoc, PyDoc, Javadoc, etc. |
-| `why` | `--why` | Inline `// why:` comments — reasoning, trade-offs, intent |
-| `both` | `--both` | Two-pass run: doc-comments first, then why-comments |
+Set a default so you never need to type a flag again:
 
 ```bash
-# Set a persistent default mode
 poly-glot config --mode both   # all future runs use doc + why
 poly-glot config               # interactive — prompts for mode
 ```
-
----
-
-## Demo mode (no API key required)
-
-Try Poly-Glot without spending a cent — `demo` uses a built-in before/after example:
-
-```bash
-poly-glot demo                     # interactive — choose a language
-poly-glot demo --lang python       # jump straight to Python example
-poly-glot demo --lang javascript
-poly-glot demo --lang java
-```
-
-Available demo languages: `python`, `javascript`, `typescript`, `java`, `go`, `rust`, `cpp`, `csharp`, `ruby`, `php`, `swift`, `kotlin`.
-
-```bash
-poly-glot demo --lang rust --live # generate live using your API key
-```
-
-### `poly-glot config`
-
-Configure your API key, provider, model, and default comment mode.
-
-```bash
-# Interactive
-poly-glot config
-
-# Non-interactive
-poly-glot config --key sk-... --provider openai --model gpt-4o-mini
-poly-glot config --key sk-ant-... --provider anthropic --model claude-sonnet-4-5
-poly-glot config --mode both
-```
-
-**Environment variables** (override config file — ideal for CI):
-
-```bash
-export POLYGLOT_API_KEY=sk-...
-export POLYGLOT_PROVIDER=openai
-export POLYGLOT_MODEL=gpt-4o-mini
-export POLYGLOT_MODE=both         # comment | why | both
-poly-glot comment src/auth.js
-```
-
-### `poly-glot comment`
-
-Comment a file, directory, or stdin.
-
-| Flag | Description |
-|------|-------------|
-| `<file>` | Single file to comment (edited in place) |
-| `--output <file>` | Write to a different file instead |
-| `--dir <dir>` | Comment all supported files in a directory (recursive) |
-| `--output-dir <dir>` | Output directory for `--dir` mode (preserves structure) |
-| `--stdin` | Read from stdin (requires `--lang`) |
-| `--lang <lang>` | Force language detection |
-| `--dry-run` | Print result — do not write |
-| `--diff` | Show unified diff |
-| `--backup` | Write `.orig` backup before overwriting |
-| `--yes` / `-y` | Skip `--dir` confirmation |
-| `--why` | why-comment mode |
-| `--both` | doc + why mode |
-| `--mode <m>` | Explicit mode: `comment` \| `why` \| `both` |
-| `--provider <p>` | Override provider for this run |
-| `--model <m>` | Override model for this run |
-| `--quiet` / `-q` | Suppress progress output |
-
-### `poly-glot explain`
-
-Deep static + AI analysis of a file.
-
-```bash
-poly-glot explain src/auth.js
-poly-glot explain src/auth.js --json   # machine-readable output
-```
-
-Outputs:
-- Complexity score (cyclomatic + cognitive)
-- Doc coverage %
-- Potential bug hotspots
-- Improvement suggestions
 
 ---
 
