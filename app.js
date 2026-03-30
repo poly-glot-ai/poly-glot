@@ -2423,9 +2423,10 @@ function initializeAISettings() {
         }
     });
     
-    // Test API connection — uses a zero-token-cost key validation call
-    // OpenAI:    GET  https://api.openai.com/v1/models          (lists models, free)
-    // Anthropic: POST https://api.anthropic.com/v1/messages     (1-token echo, ~$0.000001)
+    // Test API connection — proxied through our worker to avoid CORS issues.
+    // Anthropic blocks browser-to-API CORS; OpenAI allows it but we proxy both
+    // for consistency. The worker calls the provider server-side and returns
+    // { ok: true } or { ok: false, error: "..." }. No generation, no token cost.
     testBtn.addEventListener('click', async () => {
         const apiKey = apiKeyInput.value.trim();
 
@@ -2438,54 +2439,28 @@ function initializeAISettings() {
         testBtn.textContent = 'Testing…';
 
         const provider = providerSelect.value;
+        const providerLabel = provider === 'openai' ? 'OpenAI' : 'Anthropic';
 
         try {
-            let ok = false;
-            let errMsg = '';
+            const res = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ provider, apiKey }),
+            });
 
-            if (provider === 'openai') {
-                // GET /v1/models — pure key validation, costs nothing
-                const res = await fetch('https://api.openai.com/v1/models', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                if (res.ok) {
-                    ok = true;
-                } else {
-                    const body = await res.json().catch(() => ({}));
-                    errMsg = body?.error?.message || `HTTP ${res.status}`;
-                }
+            const data = await res.json().catch(() => ({}));
 
-            } else if (provider === 'anthropic') {
-                // GET /v1/models — Anthropic's model list endpoint, costs nothing
-                const res = await fetch('https://api.anthropic.com/v1/models', {
-                    method: 'GET',
-                    headers: {
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
-                    }
-                });
-                if (res.ok) {
-                    ok = true;
-                } else {
-                    const body = await res.json().catch(() => ({}));
-                    errMsg = body?.error?.message || `HTTP ${res.status}`;
-                }
-            }
-
-            if (ok) {
+            if (res.ok && data.ok === true) {
                 apiStatus.classList.remove('error');
                 apiStatus.classList.add('configured');
-                apiStatus.querySelector('.status-text').textContent = `✓ ${provider} key valid`;
-                alert(`✅ API key verified! Your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} key is working correctly.`);
+                apiStatus.querySelector('.status-text').textContent = `✓ ${providerLabel} key valid`;
+                alert(`✅ ${providerLabel} API key verified and working!`);
                 if (window.polyglotAnalytics) {
                     window.polyglotAnalytics.trackEvent('api_test_success', { provider });
                 }
             } else {
-                throw new Error(errMsg || 'Key validation failed');
+                const msg = data?.error || `${providerLabel} key validation failed`;
+                throw new Error(msg);
             }
 
         } catch (error) {
