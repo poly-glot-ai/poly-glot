@@ -116,8 +116,13 @@ const PolyGlotScorer = (() => {
         if (/\bvar\s+\w+\s*:\s*\w+/.test(text))                    s.swift += 4;
         if (/\bimport\s+(Foundation|UIKit|SwiftUI)\b/.test(text))  s.swift += 9;
         if (/\bguard\s+let\b|\bguard\s+var\b/.test(text))         s.swift += 7;
-        if (/\blet\s+\w+\s*[:=]/.test(text) && !/^package/m.test(text)) s.swift += 3;
+        // Swift `let` only counts when it has a TYPE annotation (let x: Type) —
+        // plain `let x =` is valid JS/TS too and must NOT inflate the Swift score.
+        if (/\blet\s+\w+\s*:\s*\w+/.test(text))                   s.swift += 3;
         if (/->\s*\w+[\s{]/.test(text) && !/^package/m.test(text)) s.swift += 2;
+        // Prevent false Swift wins: if the snippet has `function` keyword (not
+        // valid Swift), zero-out the Swift score entirely.
+        if (/\bfunction\s+\w+\s*\(/.test(text))                    s.swift = 0;
 
         // ── TypeScript ─────────────────────────────────────────────────────
         if (/\binterface\s+\w+\s*\{/.test(text))                   s.typescript += 7;
@@ -131,6 +136,12 @@ const PolyGlotScorer = (() => {
         if (/=>\s*\{|=>\s*\w+/.test(text))                         s.javascript += 3;
         if (/\brequire\s*\(|module\.exports/.test(text))           s.javascript += 5;
         if (/document\.|window\.|addEventListener/.test(text))     s.javascript += 5;
+        // Plain `function Name(` is a strong JS/TS signal — not valid in Swift/Go/Rust/Python
+        if (/\bfunction\s+\w+\s*\(/.test(text))                    s.javascript += 5;
+        // `new ClassName(` is a JS/TS/Java pattern — differentiates from Swift
+        if (/\bnew\s+[A-Z]\w*\s*\(/.test(text))                    s.javascript += 3;
+        // `.getFullYear()` / `.getMonth()` / `.getTime()` — JS Date API
+        if (/\.\s*get(FullYear|Month|Date|Time|Hours|Minutes)\s*\(/.test(text)) s.javascript += 4;
 
         // ── Pick winner ────────────────────────────────────────────────────
         let winner = 'javascript', best = 0;
