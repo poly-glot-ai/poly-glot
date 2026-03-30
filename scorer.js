@@ -152,7 +152,7 @@ const PolyGlotScorer = (() => {
             moduleDoc:   /\/\*\*[\s\S]{60,}?\*\//,
             author:      /@author|@version|@since/gi,
             see:         /@see\s+/g,
-            fnDecl:      /function\s+[a-zA-Z_]\w*\s*\(|const\s+[a-zA-Z_]\w*\s*=\s*(async\s+)?\(?[^)]*\)?\s*=>/gm,
+            fnDecl:      /(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+[a-zA-Z_]\w*\s*\(|(?:^|\n)\s*(?:export\s+)?const\s+[a-zA-Z_]\w*\s*=\s*(?:async\s+)?\(/gm,
             style:       'JSDoc',
         },
         typescript: {
@@ -165,7 +165,7 @@ const PolyGlotScorer = (() => {
             moduleDoc:   /\/\*\*[\s\S]{60,}?\*\//,
             author:      /@author|@version|@since/gi,
             see:         /@see\s+/g,
-            fnDecl:      /function\s+[a-zA-Z_]\w*\s*\(|const\s+[a-zA-Z_]\w*\s*=.*=>/gm,
+            fnDecl:      /(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+[a-zA-Z_]\w*\s*\(|(?:^|\n)\s*(?:export\s+)?const\s+[a-zA-Z_]\w*\s*=\s*(?:async\s+)?\(/gm,
             style:       'TSDoc',
         },
         python: {
