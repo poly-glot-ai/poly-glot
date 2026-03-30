@@ -19,7 +19,7 @@
 > | Last 7 days | **1,229** |
 > | All time | **1,229** |
 >
-> *Last updated: 2026-03-29*
+> *Last updated: 2026-03-30*
 <!-- npm-stats-end -->
 
 ---
