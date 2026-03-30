@@ -3,101 +3,43 @@
 > **A comprehensive, AI-powered library of coding comment patterns and best practices for 12 programming languages.**
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-poly--glot.ai-blue?style=for-the-badge)](https://poly-glot.ai/)
-[![Built with Goose](https://img.shields.io/badge/Built_with-Goose_AI-6366f1?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://github.com/block/goose)
-[![BSL 1.1 License](https://img.shields.io/badge/License-BSL%201.1-orange?style=for-the-badge)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/Hosted_on-GitHub_Pages-222?style=for-the-badge&logo=github)](https://poly-glot.ai/)
-[![GitHub stars](https://img.shields.io/github/stars/hmoses/poly-glot?style=for-the-badge&logo=github&color=yellow)](https://github.com/hmoses/poly-glot)
+[![NPM Version](https://img.shields.io/npm/v/poly-glot-ai-cli?style=for-the-badge&color=green)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![VS Code](https://img.shields.io/badge/VS_Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 > ⭐ **922 installs on Day 1. If Poly-Glot saves you time, a star helps other developers find it.**  
-> → [**Star this repo**](https://github.com/hmoses/poly-glot)
 
-<!-- npm-stats-start -->
+---
+
 > 📦 **npm install stats** *(updated daily)*
-> | Period | Downloads |
-> |--------|-----------|
-> | Yesterday | **448** |
-> | Last 7 days | **1,677** |
-> | All time | **1,677** |
->
-> *Last updated: 2026-03-30*
-<!-- npm-stats-end -->
 
 ---
 
-**Before:** Inconsistent AI comments → **After:** Professional JSDoc standard
-**Result:** 12% comment coverage → 85% coverage (+73% improvement)
+## 🎯 What is Poly-Glot?
 
-[Try the live demo](https://hmoses.github.io/poly-glot/) and click "▶️ Play Demo" to see the transformation!
+Poly-Glot is an AI-powered code documentation tool that adds standardized comments to your code across 12 programming languages. It supports multiple comment styles:
 
----
+- **Doc comments** — JSDoc, PyDoc, Javadoc, TSDoc, and more
+- **Why comments** — explains the reasoning, trade-offs, and intent
+- **Both modes** — two-pass AI run combining doc + why
 
-## ✨ Features
+### Key features
 
-### 🤖 **AI-Powered Comment Generation** ⚡ NEW!
-- **Generate professional comments instantly** using GPT-4o, Claude 3.5, or other AI models
 - **Bring your own API key** — Works with OpenAI and Anthropic APIs
 - **Privacy-first**: Your API key stays in your browser (localStorage), never sent to our servers
-- **Cost-effective**: Most requests cost less than $0.01 (as low as $0.001 with GPT-4o-mini)
-- **Smart formatting**: Automatically applies language-specific documentation standards
-- **Real-time cost tracking**: See estimated cost before and after each generation
-- **One-click integration**: Copy or replace your code with AI-generated comments
-
-### 📚 **Comprehensive Language Support**
-- **12 Programming Languages**: Python, JavaScript, Java, C++, C#, Go, Rust, Ruby, PHP, TypeScript, Swift, and Kotlin
-- Language-specific documentation standards (JSDoc, Javadoc, PyDoc, Doxygen, etc.)
-- Single-line, multi-line, and documentation comment syntax for each language
-
-### 🎨 **Interactive Templates**
-- Pre-built, well-commented function examples
-- Class documentation templates
-- Real-world code snippets
-- Copy-to-clipboard functionality for instant use
-
-### 🔍 **Code Analysis Tool**
-- Analyze your code for comment coverage
-- Identify undocumented functions and classes
-- Calculate comment-to-code ratios
-- Get actionable suggestions for improvement
-
-### 📖 **Best Practices Guide**
-- Language-specific commenting conventions
-- General documentation principles
-- When to comment vs. when to refactor
-- Industry-standard documentation formats
-
-### 💾 **Favorites System**
-- Bookmark frequently used templates
-- Persistent storage using localStorage
-- Quick access to saved snippets
-
-### 🎓 **Learning Resources**
-- Side-by-side template and code editor view
-- Curated examples for common patterns
-- Search functionality across all templates
-- Export templates as text files
+- **Twelve languages**: JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
+- **Multiple interfaces**: Web UI, CLI tool, VS Code Extension, and GitHub Copilot Chat participant
+- **Free tier**: JavaScript, Python, and Java — no account required
 
 ---
 
-## 🔒 Security
+## 🛡️ Privacy & Security
 
-Poly-Glot is designed from the ground up with a **privacy-first, zero-trust architecture**. Your code and credentials never leave your machine.
-
-### 🏗️ Architecture: Fully Client-Side
-
-Poly-Glot is a **100% static, client-side application** — there is no backend server, no database, and no middleman. Everything runs directly in your browser.
-
-| Component | Where it runs | Data stored |
-|-----------|--------------|-------------|
-| Templates & Language Data | Your browser | None (bundled in JS) |
-| AI API calls | Direct browser → OpenAI/Anthropic | Never cached server-side |
-| API Keys | Your browser `localStorage` only | Never transmitted to us |
-| Favorites | Your browser `localStorage` | Never leaves your device |
-| Usage Analytics | Your browser `localStorage` | Session data only, local |
-
-### 🔑 API Key Handling
+### 🔑 Your API Keys are Safe
 
 - Your OpenAI or Anthropic API key is stored **only in your browser's `localStorage`**
-- API calls are made **directly from your browser** to OpenAI/Anthropic — Poly-Glot servers are never in the request path
+- Keys are **never transmitted to Poly-Glot servers** — there are no Poly-Glot servers involved in AI generation
+- All AI API calls go **directly from your browser to OpenAI/Anthropic**
 - You can inspect every network request in your browser's DevTools — there are zero calls to any Poly-Glot backend
 - Keys can be cleared at any time via the AI Settings panel or by clearing browser storage
 
@@ -188,9 +130,49 @@ php -S localhost:8000
 > **Privacy Note:** Your API key never leaves your browser and is stored in `localStorage`. All AI calls go directly from your browser to OpenAI/Anthropic.
 
 ### 2. **Install the CLI, Paste, or Upload Your Code** ⚡
-- **CLI:** Install via `npm install -g poly-glot` and run `poly-glot` on any file
 - **Web:** Select your programming language from the dropdown and paste your undocumented code into the editor
 - **Upload:** Drag and drop or use the upload button to load a code file directly
+- **CLI:** See below for full setup instructions ↓
+
+#### CLI Setup
+
+**Install:**
+```bash
+npm install -g poly-glot-ai-cli
+```
+
+**Add your API key** (one-time setup):
+```bash
+poly-glot config
+```
+You will be prompted to choose your provider (OpenAI or Anthropic), paste your API key, and pick a default model.
+
+Get your key from:
+- OpenAI → [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- Anthropic → [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+
+Or pass it non-interactively:
+```bash
+# OpenAI
+poly-glot config --key sk-proj-... --provider openai --model gpt-4.1-mini
+
+# Anthropic
+poly-glot config --key sk-ant-api03-... --provider anthropic --model claude-sonnet-4-5
+```
+
+Or via environment variables (ideal for CI/CD):
+```bash
+export POLYGLOT_API_KEY=sk-proj-...
+export POLYGLOT_PROVIDER=openai    # openai | anthropic
+export POLYGLOT_MODEL=gpt-4.1-mini
+```
+
+> 🔒 Your key is stored locally only — never sent to Poly-Glot servers. All AI calls go directly from your machine to OpenAI/Anthropic.
+
+**Then run:**
+```bash
+poly-glot comment yourfile.js
+```
 
 ### 3. **Click "Generate Comments"** 🤖
 1. Click **"🤖 Generate Comments"**
@@ -198,284 +180,198 @@ php -S localhost:8000
 3. Click **"Apply"** to replace your code or **"Copy"** to use it elsewhere
 
 ### 4. **Get Standardized Docs Instantly** 📄
-Your code is returned with consistent, professional documentation comments — ready to ship.
 
-### 5. **Browse Templates**
-1. Select a language from the sidebar
-2. Choose a category (Syntax, Functions, Classes, Best Practices)
-3. Click any template to view it in full
-4. Use **"Copy"** to grab the snippet instantly
-
-### 6. **Analyze Your Code**
-1. Navigate to the **"Interactive Editor"** category
-2. Paste your code into the right panel
-3. Click **"Analyze"** to get a comment coverage report
-4. Review suggestions and apply templates as needed
-
-### 7. **Save Favorites** ⭐
-- Click the ⭐ on any template to save it
-- Access all saved templates under the **"⭐ Favorites"** sidebar item
-- Favorites persist across browser sessions via `localStorage`
+Your code is transformed with:
+- **Function-level doc comments** with parameter types and return values
+- **Class-level documentation** with purpose and usage examples  
+- **Inline code explanations** for complex logic
+- **JSDoc/PyDoc/Javadoc formatting** matching your language's conventions
 
 ---
 
-## 📁 Project Structure
+## 🌍 Supported Languages
+
+| Language | Doc Style | Free Tier | Pro |
+|----------|-----------|-----------|-----|
+| JavaScript | JSDoc | ✅ | ✅ |
+| Python | Google/NumPy docstrings | ✅ | ✅ |
+| Java | Javadoc | ✅ | ✅ |
+| TypeScript | TSDoc | — | ✅ |
+| C++ | Doxygen | — | ✅ |
+| C# | XML doc comments | — | ✅ |
+| Go | GoDoc | — | ✅ |
+| Rust | `///` doc comments | — | ✅ |
+| Ruby | YARD | — | ✅ |
+| PHP | PHPDoc | — | ✅ |
+| Swift | Swift Markup | — | ✅ |
+| Kotlin | KDoc | — | ✅ |
+
+---
+
+## 🤖 Comment Styles
+
+### Doc Comments (default mode)
+Standardized language-specific documentation comments:
+
+```javascript
+// Before
+function calculateDiscount(price, userType, quantity) {
+  if (userType === 'premium' && quantity > 10) {
+    return price * 0.85;
+  }
+  return price * (userType === 'premium' ? 0.9 : 0.95);
+}
+```
+
+```javascript  
+// After (Poly-Glot output)
+/**
+ * Calculates the discount applied to a purchase based on user type and quantity.
+ *
+ * @param {number} price - The original price before discount
+ * @param {string} userType - The customer tier ('premium' or 'standard')
+ * @param {number} quantity - Number of items in the order
+ * @returns {number} The discounted price after applying tier and volume rules
+ */
+function calculateDiscount(price, userType, quantity) {
+  if (userType === 'premium' && quantity > 10) {
+    return price * 0.85;
+  }
+  return price * (userType === 'premium' ? 0.9 : 0.95);
+}
+```
+
+### Why Comments (--why mode)
+Inline comments explaining reasoning and intent:
+
+```javascript
+function calculateDiscount(price, userType, quantity) {
+  // why: premium + bulk threshold (>10) triggers the steepest discount (15%)
+  // to reward high-value customers and encourage larger order sizes
+  if (userType === 'premium' && quantity > 10) {
+    return price * 0.85; // why: 15% discount — highest tier
+  }
+  // why: standard premium discount (10%) for lower quantities;
+  // non-premium users get a smaller loyalty discount (5%)
+  return price * (userType === 'premium' ? 0.9 : 0.95);
+}
+```
+
+---
+
+## 🔧 CLI Tool
+
+For batch processing, CI/CD pipelines, and terminal workflows:
+
+```bash
+# Install globally
+npm install -g poly-glot-ai-cli
+
+# Configure your API key (one-time)
+poly-glot config
+
+# Comment a single file
+poly-glot comment utils.py
+
+# Comment with why-mode
+poly-glot comment utils.py --why
+
+# Preview changes without writing
+poly-glot comment utils.py --dry-run
+
+# Comment entire directory
+poly-glot comment --dir ./src --output-dir ./commented
+```
+
+Full CLI documentation: [cli/README.md](cli/README.md)
+
+---
+
+## 📁 Repository Structure
 
 ```
 poly-glot/
-├── index.html                    # Main application entry point
-├── styles.css                    # All styling (CSS variables, responsive design)
-├── app.js                        # Application logic and templates
-├── ai-generator.js               # AI comment generation (OpenAI/Anthropic)
-├── analytics.js                  # Privacy-first analytics system
-├── README.md                     # This file
-├── ANALYTICS.md                  # Analytics documentation
-├── CHANGELOG.md                  # Version history
-├── GOOGLE_ANALYTICS_SETUP.md     # GA4 setup guide
-├── LICENSE                       # MIT License
-└── .gitignore                    # Git ignore rules
+├── index.html          # Main web app
+├── app.js              # Core application logic
+├── ai-generator.js     # AI comment generation engine
+├── auth.js             # Authentication & user management
+├── pricing.js          # Subscription & billing logic
+├── scorer.js           # Code quality scoring
+├── styles.css          # Main stylesheet
+├── phase1.css          # Feature-phase styles
+├── pricing.css         # Pricing page styles
+├── cli/                # CLI tool source (poly-glot-ai-cli)
+│   ├── README.md
+│   ├── src/
+│   └── package.json
+├── vscode-extension/   # VS Code extension source
+├── poly-glot-mcp/      # MCP server source
+└── team-dashboard/     # Team analytics dashboard
 ```
-
-### Browser Compatibility
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
 
 ---
 
-## 🎯 Supported Languages & Documentation Standards
+## 🧰 Tech Stack
 
-| Language   | Doc Standard        | Comment Syntax       |
-|------------|---------------------|----------------------|
-| Python     | Sphinx/Google/NumPy | `#`, `"""`           |
-| JavaScript | JSDoc               | `//`, `/* */`, `/**` |
-| Java       | Javadoc             | `//`, `/* */`, `/**` |
-| C++        | Doxygen             | `//`, `/* */`, `/**` |
-| C#         | XML Documentation   | `//`, `/* */`, `///` |
-| Go         | GoDoc               | `//`, `/* */`        |
-| Rust       | Rustdoc             | `//`, `/* */`, `///` |
-| Ruby       | RDoc/YARD           | `#`, `=begin/end`    |
-| PHP        | PHPDoc              | `//`, `/* */`, `/**` |
-| TypeScript | TSDoc               | `//`, `/* */`, `/**` |
-| Swift      | Swift Markup        | `//`, `/* */`, `///` |
-| Kotlin     | KDoc                | `//`, `/* */`, `/**` |
+- **Frontend**: Vanilla HTML/CSS/JavaScript — no framework dependencies
+- **AI Providers**: OpenAI API (GPT-4o-mini, GPT-4o, o3) and Anthropic API (Claude Sonnet, Haiku, Opus)
+- **Hosting**: GitHub Pages (zero backend)
+- **CLI**: Node.js with zero runtime dependencies
+- **Analytics**: Privacy-first local analytics + Google Analytics 4
+- **Auth**: Firebase Authentication (Google, GitHub, email)
+- **Payments**: LemonSqueezy
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
+Contributions are welcome!
 
-### Adding New Languages
 1. Fork the repository
-2. Add language patterns to `commentPatterns` object in `app.js`
-3. Include: single-line, multi-line, and docstring syntax
-4. Add function and class examples
-5. List best practices (minimum 5)
-6. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/add-new-language`
+3. Make your changes and test them
+4. Submit a pull request
 
-### Adding Examples
-Add real-world code examples to the `examples` object in `app.js`:
-
-```javascript
-languagename: [
-    {
-        title: 'Example Title',
-        category: 'Category Name',
-        code: `your code here`
-    }
-]
-```
-
-### Reporting Issues
-Found a bug or have a suggestion? Please open an issue with:
-- Clear description
-- Steps to reproduce (for bugs)
-- Expected vs. actual behavior
-- Browser and version
+Please maintain the existing code style and add tests where applicable.
 
 ---
 
-## 📝 License
+## 📄 License
 
-Poly-Glot AI is licensed under the **Business Source License 1.1 (BSL 1.1)**.
+This project is licensed under the **Poly-Glot Source Available License**. You may use, study, and modify this code for personal and non-commercial purposes. Commercial use, redistribution, and creating competing services are not permitted without explicit written permission.
 
-- ✅ **Free** for personal and evaluation use
-- 🔒 **Commercial use** requires a paid subscription → [poly-glot.ai/#pricing](https://poly-glot.ai/#pricing)
-- 📅 Converts to MIT License 4 years from first publication
-
-### What This Means:
-
-✅ **Free to use** - For personal, educational, and open-source projects  
-✅ **Free to modify** - Fork, customize, and improve  
-✅ **Network copyleft** - If you run modified versions as a service, you must share source code  
-
-### 💼 Commercial & Enterprise Licensing
-
-Need to integrate Poly-Glot into proprietary software or offer it as a service without open-sourcing your modifications?
-
-**Commercial licenses available for:**
-- 🏢 **Enterprise Integration** - Embed Poly-Glot in your commercial product
-- ☁️ **SaaS/Hosting** - Run Poly-Glot as a service without AGPL obligations
-- 🎯 **Custom Features** - Priority development and support
-- 🔒 **White-label** - Rebrand and resell
-
-**Contact:** hwmoses2@icloud.com
-
-See [LICENSE](LICENSE) for full terms.
+See the [LICENSE](LICENSE) file for full terms.
 
 ---
 
-## 🌟 Acknowledgments
+## 🔗 Links
 
-- Inspired by the need for quick reference to commenting conventions across languages
-- Built with ❤️ for the developer community
-- Font: [Inter](https://fonts.google.com/specimen/Inter) & [Fira Code](https://fonts.google.com/specimen/Fira+Code)
-- **Built entirely with [Goose](https://github.com/block/goose)** — an open-source AI agent by [Block](https://block.xyz) that autonomously planned, scaffolded, and iterated on every feature in this project
-
----
-
-## 🤖 Built with Goose
-
-Poly-Glot was designed and built end-to-end using **[Goose](https://github.com/block/goose)**, an open-source, extensible AI agent developed by [Block](https://block.xyz) (the parent company of Square, Cash App, and Tidal).
-
-Goose autonomously:
-- 🏗️ Scaffolded the entire project architecture
-- 🎨 Designed and implemented the UI/UX
-- 🤖 Built the AI comment generation engine
-- 🔒 Implemented the privacy-first analytics system
-- 📦 Wrote all 12 language template libraries
-- 🚀 Set up GitHub Pages deployment
-- 📊 Integrated Google Analytics
-- 📝 Authored and maintained this documentation
-
-> *This project is a real-world showcase of what's possible when you pair a developer with an AI agent. Every commit, every feature, every line of documentation was guided by a human but executed by Goose.*
-
-**Try Goose yourself:** [github.com/block/goose](https://github.com/block/goose)
+- **Web App**: [poly-glot.ai](https://poly-glot.ai)
+- **VS Code Extension**: [marketplace.visualstudio.com](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+- **npm Package**: [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+- **Issues**: [GitHub Issues](https://github.com/poly-glot-ai/poly-glot/issues)
 
 ---
 
-## 📬 Contact
+## 💬 Prompt Engineering Tips
 
-- **GitHub**: [@hmoses](https://github.com/hmoses)
-- **Issues**: [GitHub Issues](https://github.com/hmoses/poly-glot/issues)
+For best results with Poly-Glot:
 
----
+### Comment density
+- Use `--both` mode for maximum documentation density
+- Smaller, focused functions get more accurate comments
+- Complex algorithms benefit from `--why` mode to explain intent
 
-## 🗺️ Roadmap
+### Model selection
+- **GPT-4.1-mini** or **Claude Sonnet**: Best balance of quality and cost
+- **GPT-4.1-nano** or **Claude Haiku**: Maximum speed, great for large codebases
+- **o3** or **Claude Opus**: Deepest analysis for critical path code
 
-- [x] **AI-powered comment generation** ✅ (GPT-4o, Claude 3.5 — LIVE!)
-- [x] **Google Analytics integration** ✅
-- [x] **Privacy-first local analytics** ✅
-- [ ] Add syntax highlighting to code editor
-- [ ] More language support (SQL, R, Scala, Dart, etc.)
-- [ ] Dark/light theme toggle
-- [ ] Export to various formats (Markdown, JSON)
-- [ ] Backend API for premium features
-- [ ] GitHub Sponsors integration
-- [ ] VS Code extension
-- [ ] Mobile app version
-- [ ] Team collaboration features
-- [ ] CI/CD integration plugins
+### Language tips
+- Python: Works best with Google-style docstrings for type hints
+- TypeScript: TSDoc format integrates with VS Code IntelliSense
+- Java: Javadoc output is compatible with Maven Javadoc plugin
 
 ---
-
----
-
-# 🚀 Prompt Poly-Glot.AI ⚡ NEW!
-
-> **Professional Prompt Engineering with Human-in-the-Loop Testing**
-
-**🌐 Live App:** [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/)
-
-## Overview
-
-**Prompt Poly-Glot.AI** is the second tool in the Poly-Glot Suite - a professional prompt engineering platform for creating, testing, and refining prompts for OpenAI and Anthropic APIs. With advanced Human-in-the-Loop testing, quality metrics, and intelligent suggestions, it's the professional's choice for prompt engineering.
-
-## 🌟 Key Features
-
-### 🔄 Human-in-the-Loop Testing
-- Test prompts with mock AI responses
-- Quality metrics dashboard (Clarity, Completeness, Tone)
-- Smart improvement suggestions powered by analysis
-- Version control with diff view
-- A/B comparison mode for testing variants
-
-### 🎨 Variable System
-- Use `{{variable}}` syntax for reusable templates
-- Auto-detection of variables from template
-- Configurable input types (text, textarea, dropdown, number)
-- Real-time preview updates as you type
-
-### 🌐 Multi-Provider Export
-- **OpenAI Format**: Valid JSON for GPT-4, GPT-3.5, etc.
-- **Anthropic Format**: Valid JSON for Claude 3.5 Sonnet, Opus, etc.
-- **cURL Commands**: Ready-to-use API calls for both providers
-- **Plain Text**: Simple rendered output
-
-### 📚 Template Library
-8 professional pre-built templates:
-- **Code Review Assistant** - Review code for security, performance, best practices
-- **Content Writer** - Create blog posts, articles, marketing copy
-- **Data Analyst** - Analyze datasets and generate insights
-- **Translation Expert** - Accurate, context-aware translations
-- **Summarization Tool** - Concise summaries of any content
-- **Creative Storyteller** - Narrative writing and storytelling
-- **Technical Documentation** - Developer docs and guides
-- **Customer Support** - Empathetic customer service responses
-
-### 💾 Advanced Features
-- Auto-save to localStorage every 2 seconds
-- Character and token counter (real-time)
-- Real-time syntax highlighting for `{{variables}}`
-- Import/export templates as JSON
-- Share prompts via URL (base64 encoded)
-- Export test reports with iteration history
-- Works completely offline after first load
-
-## 🎯 Quick Example
-
-Create a reusable template:
-```
-You are a {{role}} assistant with expertise in {{domain}}.
-
-Task: {{task}}
-
-Requirements:
-- Tone: {{tone}}
-- Output format: {{format}}
-
-Additional context:
-{{context}}
-```
-
-Then:
-1. Fill in the variables (auto-detected on right panel)
-2. Test with mock AI in Human-in-the-Loop tab
-3. Review quality metrics
-4. Apply improvement suggestions
-5. Export in OpenAI or Anthropic format
-6. Use in production!
-
-## 📖 Documentation
-
-See [/prompt/README.md](./prompt/README.md) for detailed documentation.
-
-## 🚀 Get Started
-
-**Visit:** [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/)
 
 Start engineering better prompts today - no installation or account required!
-
----
-
-<div align="center">
-
-**Made with 💻 and ☕ by developers, for developers**
-
-**Powered by [Goose](https://github.com/block/goose) 🪿 — the open-source AI agent by [Block](https://block.xyz)**
-
-⭐ Star this repository if you found it helpful!
-
-</div>
