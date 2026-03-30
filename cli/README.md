@@ -36,9 +36,9 @@ Supports **OpenAI** and **Anthropic** — same engine as [poly-glot.ai](https://
 > 📦 **npm install stats** *(updated daily)*
 > | Period | Downloads |
 > |--------|-----------|
-> | Yesterday | **272** |
-> | Last 7 days | **1,229** |
-> | All time | **1,229** |
+> | Yesterday | **448** |
+> | Last 7 days | **1,677** |
+> | All time | **1,677** |
 >
 > *Last updated: 2026-03-30*
 <!-- npm-stats-end -->
