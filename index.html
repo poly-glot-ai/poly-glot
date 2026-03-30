@@ -697,6 +697,330 @@
         .copilot-prereq { flex-direction: column; gap: 8px; }
       }
     </style>
+
+    <!-- ── Poly-Glot Demo Video styles ───────────────────────────────────── -->
+    <style>
+      /* Section wrapper */
+      .pg-video-section {
+        padding-top: 0 !important;
+      }
+
+      /* Eyebrow label */
+      .pg-video-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: #a78bfa;
+        margin-bottom: 14px;
+      }
+      .pg-video-eyebrow-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: #a78bfa;
+        animation: pgVideoPulse 2s ease-in-out infinite;
+      }
+      @keyframes pgVideoPulse {
+        0%,100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.4; transform: scale(0.75); }
+      }
+
+      .pg-video-heading { margin-bottom: 8px !important; }
+      .pg-video-subtext { margin-bottom: 28px !important; color: #94a3b8; }
+
+      /* Outer shell — browser frame */
+      .pg-video-shell {
+        border-radius: 14px;
+        overflow: hidden;
+        background: #0d1117;
+        border: 1px solid rgba(139,92,246,0.25);
+        box-shadow:
+          0 0 0 1px rgba(0,0,0,0.5),
+          0 32px 80px rgba(0,0,0,0.55),
+          0 0 60px rgba(139,92,246,0.08);
+        max-width: 900px;
+        margin: 0 auto;
+        transition: box-shadow 0.3s ease;
+      }
+      .pg-video-shell:hover {
+        box-shadow:
+          0 0 0 1px rgba(0,0,0,0.5),
+          0 40px 100px rgba(0,0,0,0.65),
+          0 0 80px rgba(139,92,246,0.14);
+      }
+
+      /* Browser chrome bar */
+      .pg-video-chrome {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: #1a1f2e;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        user-select: none;
+      }
+      .pg-video-chrome-dots { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+      .pg-chrome-dot {
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        display: block;
+      }
+      .pg-chrome-dot--red    { background: #ff5f57; }
+      .pg-chrome-dot--yellow { background: #ffbd2e; }
+      .pg-chrome-dot--green  { background: #28c840; }
+      .pg-video-chrome-url {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 0.78rem;
+        color: #94a3b8;
+        font-family: 'Fira Code', monospace;
+        max-width: 260px;
+        margin: 0 auto;
+      }
+      .pg-chrome-lock { font-size: 0.7rem; }
+      .pg-video-chrome-spacer { flex-shrink: 0; width: 54px; }
+
+      /* Video wrapper — relative for overlay + controls */
+      .pg-video-wrap {
+        position: relative;
+        background: #000;
+        cursor: pointer;
+        line-height: 0;
+      }
+      .pg-video-wrap:hover .pg-video-controls {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* The actual video */
+      .pg-video-el {
+        width: 100%;
+        max-height: 560px;
+        object-fit: contain;
+        display: block;
+        background: #000;
+      }
+
+      /* Big play overlay */
+      .pg-video-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: rgba(0,0,0,0.42);
+        backdrop-filter: blur(2px);
+        transition: opacity 0.25s ease;
+        z-index: 10;
+      }
+      .pg-video-overlay.pg-hidden { opacity: 0; pointer-events: none; }
+      .pg-video-big-play {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        width: 80px; height: 80px;
+        transition: transform 0.2s ease, filter 0.2s ease;
+        filter: drop-shadow(0 4px 24px rgba(139,92,246,0.5));
+      }
+      .pg-video-big-play:hover { transform: scale(1.1); filter: drop-shadow(0 6px 32px rgba(139,92,246,0.75)); }
+      .pg-video-overlay-label {
+        margin: 0;
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.6);
+        letter-spacing: 0.03em;
+      }
+
+      /* Custom controls bar */
+      .pg-video-controls {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px 12px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.85));
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 0.22s ease, transform 0.22s ease;
+        z-index: 20;
+        user-select: none;
+      }
+
+      /* Control buttons */
+      .pg-vc-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255,255,255,0.85);
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: color 0.15s, background 0.15s;
+        line-height: 0;
+      }
+      .pg-vc-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+      .pg-vc-icon { width: 18px; height: 18px; }
+
+      /* Progress bar */
+      .pg-vc-progress-wrap {
+        flex: 1;
+        position: relative;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      .pg-vc-progress-track {
+        position: relative;
+        width: 100%;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+        overflow: visible;
+      }
+      .pg-vc-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.1s linear;
+        pointer-events: none;
+      }
+      .pg-vc-progress-thumb {
+        position: absolute;
+        top: 50%;
+        left: 0%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 13px; height: 13px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        transition: transform 0.15s ease;
+        pointer-events: none;
+      }
+      .pg-vc-progress-wrap:hover .pg-vc-progress-thumb { transform: translate(-50%, -50%) scale(1); }
+      .pg-vc-progress-input {
+        position: absolute;
+        inset: -6px 0;
+        width: 100%;
+        height: calc(100% + 12px);
+        opacity: 0;
+        cursor: pointer;
+        margin: 0;
+      }
+
+      /* Time display */
+      .pg-vc-time {
+        font-size: 0.73rem;
+        color: rgba(255,255,255,0.65);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: 'Fira Code', monospace;
+      }
+
+      /* Speed menu */
+      .pg-vc-speed-wrap { position: relative; flex-shrink: 0; }
+      .pg-vc-speed-btn {
+        font-size: 0.76rem;
+        font-weight: 600;
+        font-family: 'Fira Code', monospace;
+        min-width: 34px;
+        color: rgba(255,255,255,0.75);
+        letter-spacing: -0.01em;
+      }
+      .pg-vc-speed-btn:hover { color: #fff; }
+      .pg-vc-speed-menu {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        right: 0;
+        background: #1e2433;
+        border: 1px solid rgba(139,92,246,0.3);
+        border-radius: 8px;
+        padding: 4px;
+        display: none;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 72px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        z-index: 100;
+      }
+      .pg-vc-speed-menu.pg-open { display: flex; }
+      .pg-vc-speed-opt {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255,255,255,0.75);
+        font-size: 0.8rem;
+        font-family: 'Fira Code', monospace;
+        padding: 6px 10px;
+        border-radius: 5px;
+        text-align: center;
+        transition: background 0.12s, color 0.12s;
+        white-space: nowrap;
+      }
+      .pg-vc-speed-opt:hover { background: rgba(139,92,246,0.2); color: #fff; }
+      .pg-vc-speed-opt--active { color: #a78bfa; font-weight: 700; }
+
+      /* Callout strip */
+      .pg-video-callouts {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        margin-top: 20px;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+        background: rgba(139,92,246,0.06);
+        border: 1px solid rgba(139,92,246,0.15);
+        border-radius: 10px;
+        padding: 14px 24px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .pg-video-callout-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 0.84rem;
+        color: #94a3b8;
+        flex: 1;
+        justify-content: center;
+        min-width: 160px;
+      }
+      .pg-video-callout-icon { font-size: 1rem; }
+      .pg-video-callout-divider {
+        width: 1px;
+        height: 24px;
+        background: rgba(139,92,246,0.2);
+        flex-shrink: 0;
+        align-self: center;
+      }
+
+      /* Responsive */
+      @media (max-width: 700px) {
+        .pg-video-chrome-url { max-width: 160px; font-size: 0.72rem; }
+        .pg-video-callout-divider { display: none; }
+        .pg-video-callout-item { min-width: 120px; font-size: 0.78rem; }
+      }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -817,6 +1141,121 @@
                     <li>🛡️ <strong>Safer</strong> — preserves critical context across refactors</li>
                     <li>💬 <strong>Why-first</strong> — trains better LLMs, improves fine-tune datasets</li>
                 </ul>
+            </div>
+
+            <!-- ── Demo Video Section ── -->
+            <div class="overview-section pg-video-section" id="pg-demo-video">
+                <div class="pg-video-eyebrow">
+                    <span class="pg-video-eyebrow-dot"></span>
+                    See it in action
+                </div>
+                <h2 class="overview-heading pg-video-heading">Watch Poly-Glot transform undocumented code in seconds</h2>
+                <p class="overview-text pg-video-subtext">Paste your code, pick your language and style, hit Generate — professional doc-comments appear line by line.</p>
+
+                <div class="pg-video-shell" id="pgVideoShell">
+                    <!-- Browser chrome bar -->
+                    <div class="pg-video-chrome">
+                        <div class="pg-video-chrome-dots">
+                            <span class="pg-chrome-dot pg-chrome-dot--red"></span>
+                            <span class="pg-chrome-dot pg-chrome-dot--yellow"></span>
+                            <span class="pg-chrome-dot pg-chrome-dot--green"></span>
+                        </div>
+                        <div class="pg-video-chrome-url">
+                            <span class="pg-chrome-lock">🔒</span>
+                            <span>poly-glot.ai</span>
+                        </div>
+                        <div class="pg-video-chrome-spacer"></div>
+                    </div>
+
+                    <!-- Video wrapper -->
+                    <div class="pg-video-wrap" id="pgVideoWrap">
+                        <video
+                            id="pgDemoVideo"
+                            class="pg-video-el"
+                            src="poly-glot-demo.mp4"
+                            preload="metadata"
+                            playsinline
+                            muted
+                        ></video>
+
+                        <!-- Big play overlay (shows before first play) -->
+                        <div class="pg-video-overlay" id="pgVideoOverlay">
+                            <button class="pg-video-big-play" id="pgVideoBigPlay" aria-label="Play demo video">
+                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="40" cy="40" r="40" fill="rgba(139,92,246,0.18)" />
+                                    <circle cx="40" cy="40" r="36" fill="rgba(139,92,246,0.28)" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+                                    <polygon points="32,24 60,40 32,56" fill="white"/>
+                                </svg>
+                            </button>
+                            <p class="pg-video-overlay-label">2 min demo · no audio needed</p>
+                        </div>
+
+                        <!-- Custom controls bar -->
+                        <div class="pg-video-controls" id="pgVideoControls">
+                            <!-- Play/Pause -->
+                            <button class="pg-vc-btn" id="pgVcPlayPause" aria-label="Play/Pause">
+                                <svg class="pg-vc-icon pg-vc-icon--play" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="currentColor"/></svg>
+                                <svg class="pg-vc-icon pg-vc-icon--pause" viewBox="0 0 24 24" style="display:none"><rect x="5" y="3" width="4" height="18" fill="currentColor"/><rect x="15" y="3" width="4" height="18" fill="currentColor"/></svg>
+                            </button>
+
+                            <!-- Progress bar -->
+                            <div class="pg-vc-progress-wrap" id="pgVcProgressWrap">
+                                <div class="pg-vc-progress-track">
+                                    <div class="pg-vc-progress-fill" id="pgVcProgressFill"></div>
+                                    <div class="pg-vc-progress-thumb" id="pgVcProgressThumb"></div>
+                                </div>
+                                <input type="range" class="pg-vc-progress-input" id="pgVcScrub" min="0" max="100" step="0.1" value="0" aria-label="Seek">
+                            </div>
+
+                            <!-- Time -->
+                            <span class="pg-vc-time" id="pgVcTime">0:00 / 2:03</span>
+
+                            <!-- Mute toggle -->
+                            <button class="pg-vc-btn" id="pgVcMute" aria-label="Mute/Unmute">
+                                <svg class="pg-vc-icon pg-vc-icon--muted" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" fill="currentColor"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>
+                                <svg class="pg-vc-icon pg-vc-icon--unmuted" viewBox="0 0 24 24" style="display:none"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="currentColor"/></svg>
+                            </button>
+
+                            <!-- Speed picker -->
+                            <div class="pg-vc-speed-wrap" id="pgVcSpeedWrap">
+                                <button class="pg-vc-btn pg-vc-speed-btn" id="pgVcSpeedBtn" aria-label="Playback speed" aria-expanded="false">
+                                    <span id="pgVcSpeedLabel">1×</span>
+                                </button>
+                                <div class="pg-vc-speed-menu" id="pgVcSpeedMenu" role="menu" aria-label="Playback speed options">
+                                    <button class="pg-vc-speed-opt" data-speed="0.5" role="menuitem">0.5×</button>
+                                    <button class="pg-vc-speed-opt" data-speed="0.75" role="menuitem">0.75×</button>
+                                    <button class="pg-vc-speed-opt pg-vc-speed-opt--active" data-speed="1" role="menuitem">1×</button>
+                                    <button class="pg-vc-speed-opt" data-speed="1.25" role="menuitem">1.25×</button>
+                                    <button class="pg-vc-speed-opt" data-speed="1.5" role="menuitem">1.5×</button>
+                                    <button class="pg-vc-speed-opt" data-speed="2" role="menuitem">2×</button>
+                                </div>
+                            </div>
+
+                            <!-- Fullscreen -->
+                            <button class="pg-vc-btn" id="pgVcFullscreen" aria-label="Fullscreen">
+                                <svg class="pg-vc-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Callout strip below video -->
+                <div class="pg-video-callouts">
+                    <div class="pg-video-callout-item">
+                        <span class="pg-video-callout-icon">⚡</span>
+                        <span>Comments stream in real-time</span>
+                    </div>
+                    <div class="pg-video-callout-divider"></div>
+                    <div class="pg-video-callout-item">
+                        <span class="pg-video-callout-icon">🌐</span>
+                        <span>12 languages auto-detected</span>
+                    </div>
+                    <div class="pg-video-callout-divider"></div>
+                    <div class="pg-video-callout-item">
+                        <span class="pg-video-callout-icon">🔒</span>
+                        <span>Your code never leaves your browser</span>
+                    </div>
+                </div>
             </div>
 
             <!-- ── Section 1b: Legacy Codebases & Tech Debt ── -->
@@ -2390,6 +2829,190 @@
     // DOMContentLoaded already fired — wait for app.js to init then patch
     setTimeout(attach, 800);
   }
+}());
+</script>
+
+<!-- ── Poly-Glot Demo Video Player ──────────────────────────────────────── -->
+<script>
+(function () {
+  'use strict';
+
+  function pgFmt(s) {
+    s = Math.max(0, Math.floor(s));
+    var m = Math.floor(s / 60), sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var video    = document.getElementById('pgDemoVideo');
+    var overlay  = document.getElementById('pgVideoOverlay');
+    var bigPlay  = document.getElementById('pgVideoBigPlay');
+    var controls = document.getElementById('pgVideoControls');
+    var ppBtn    = document.getElementById('pgVcPlayPause');
+    var scrub    = document.getElementById('pgVcScrub');
+    var fill     = document.getElementById('pgVcProgressFill');
+    var thumb    = document.getElementById('pgVcProgressThumb');
+    var timeEl   = document.getElementById('pgVcTime');
+    var muteBtn  = document.getElementById('pgVcMute');
+    var speedBtn = document.getElementById('pgVcSpeedBtn');
+    var speedMenu= document.getElementById('pgVcSpeedMenu');
+    var speedLbl = document.getElementById('pgVcSpeedLabel');
+    var fsBtn    = document.getElementById('pgVcFullscreen');
+    var shell    = document.getElementById('pgVideoShell');
+    var wrap     = document.getElementById('pgVideoWrap');
+
+    if (!video) return;
+
+    // ── Icons ────────────────────────────────────────────────────────────
+    function showPlay()  {
+      ppBtn.querySelector('.pg-vc-icon--play').style.display  = '';
+      ppBtn.querySelector('.pg-vc-icon--pause').style.display = 'none';
+    }
+    function showPause() {
+      ppBtn.querySelector('.pg-vc-icon--play').style.display  = 'none';
+      ppBtn.querySelector('.pg-vc-icon--pause').style.display = '';
+    }
+    function showMuted() {
+      muteBtn.querySelector('.pg-vc-icon--muted').style.display   = '';
+      muteBtn.querySelector('.pg-vc-icon--unmuted').style.display = 'none';
+    }
+    function showUnmuted() {
+      muteBtn.querySelector('.pg-vc-icon--muted').style.display   = 'none';
+      muteBtn.querySelector('.pg-vc-icon--unmuted').style.display = '';
+    }
+
+    // ── Initial state ───────────────────────────────────────────────────
+    showPlay();
+    showMuted();  // starts muted
+
+    // ── Big play overlay ─────────────────────────────────────────────────
+    function startVideo() {
+      overlay.classList.add('pg-hidden');
+      video.muted = false;
+      video.play().catch(function () {
+        // autoplay blocked — fallback to muted
+        video.muted = true;
+        showMuted();
+        video.play();
+      });
+      showPause();
+      showUnmuted();
+    }
+    bigPlay.addEventListener('click', function (e) { e.stopPropagation(); startVideo(); });
+    overlay.addEventListener('click', startVideo);
+
+    // ── Click on video = play/pause (once overlay gone) ──────────────────
+    wrap.addEventListener('click', function (e) {
+      if (!overlay.classList.contains('pg-hidden')) return;
+      if (e.target === speedBtn || speedMenu.contains(e.target)) return;
+      togglePlay();
+    });
+
+    // ── Play / Pause ─────────────────────────────────────────────────────
+    function togglePlay() {
+      if (video.paused) { video.play(); showPause(); }
+      else              { video.pause(); showPlay(); }
+    }
+    ppBtn.addEventListener('click', function (e) { e.stopPropagation(); togglePlay(); });
+    video.addEventListener('ended', function () { showPlay(); });
+
+    // ── Progress ─────────────────────────────────────────────────────────
+    video.addEventListener('timeupdate', function () {
+      if (!video.duration) return;
+      var pct = (video.currentTime / video.duration) * 100;
+      fill.style.width  = pct + '%';
+      thumb.style.left  = pct + '%';
+      scrub.value       = pct;
+      timeEl.textContent = pgFmt(video.currentTime) + ' / ' + pgFmt(video.duration);
+    });
+    video.addEventListener('loadedmetadata', function () {
+      timeEl.textContent = '0:00 / ' + pgFmt(video.duration);
+    });
+    scrub.addEventListener('input', function () {
+      if (!video.duration) return;
+      video.currentTime = (scrub.value / 100) * video.duration;
+    });
+
+    // ── Mute ─────────────────────────────────────────────────────────────
+    muteBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      video.muted = !video.muted;
+      video.muted ? showMuted() : showUnmuted();
+    });
+
+    // ── Speed menu ───────────────────────────────────────────────────────
+    speedBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = speedMenu.classList.toggle('pg-open');
+      speedBtn.setAttribute('aria-expanded', open);
+    });
+    speedMenu.querySelectorAll('.pg-vc-speed-opt').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var rate = parseFloat(this.dataset.speed);
+        video.playbackRate = rate;
+        speedLbl.textContent = (rate === 1 ? '1' : rate) + '×';
+        speedMenu.querySelectorAll('.pg-vc-speed-opt').forEach(function (b) {
+          b.classList.toggle('pg-vc-speed-opt--active', b === btn);
+        });
+        speedMenu.classList.remove('pg-open');
+        speedBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+    // Close speed menu on outside click
+    document.addEventListener('click', function (e) {
+      if (!speedMenu.contains(e.target) && e.target !== speedBtn) {
+        speedMenu.classList.remove('pg-open');
+        speedBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // ── Keyboard shortcuts (when video section focused) ───────────────────
+    wrap.setAttribute('tabindex', '0');
+    wrap.addEventListener('keydown', function (e) {
+      switch (e.key) {
+        case ' ': case 'k': e.preventDefault(); togglePlay(); break;
+        case 'ArrowRight':  e.preventDefault(); video.currentTime = Math.min(video.duration, video.currentTime + 5); break;
+        case 'ArrowLeft':   e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); break;
+        case 'm': case 'M': video.muted = !video.muted; video.muted ? showMuted() : showUnmuted(); break;
+        case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
+      }
+    });
+
+    // ── Fullscreen ───────────────────────────────────────────────────────
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        (shell.requestFullscreen || shell.webkitRequestFullscreen || shell.mozRequestFullScreen).call(shell);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
+      }
+    }
+    fsBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFullscreen(); });
+
+    // Keep controls visible in fullscreen
+    document.addEventListener('fullscreenchange', function () {
+      if (document.fullscreenElement === shell) {
+        controls.style.opacity = '1';
+        controls.style.transform = 'translateY(0)';
+      } else {
+        controls.style.opacity = '';
+        controls.style.transform = '';
+      }
+    });
+
+    // ── Auto-show controls briefly on first play ─────────────────────────
+    video.addEventListener('play', function () {
+      controls.style.opacity = '1';
+      controls.style.transform = 'translateY(0)';
+      clearTimeout(wrap._ctrlTimer);
+      wrap._ctrlTimer = setTimeout(function () {
+        if (!video.paused) {
+          controls.style.opacity = '';
+          controls.style.transform = '';
+        }
+      }, 2200);
+    });
+  });
 }());
 </script>
 </body>
