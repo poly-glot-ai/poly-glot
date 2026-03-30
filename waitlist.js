@@ -1205,6 +1205,9 @@
     var lastFreeVal = FREE_LANGUAGES.indexOf(sel.value) !== -1 ? sel.value : FREE_LANGUAGES[0];
 
     sel.addEventListener('change', function () {
+      /* Skip gating for programmatic auto-detect assignments from app.v220.js */
+      if (this.dataset.autoDetect === '1') return;
+
       var chosen = this.value;
 
       if (!isDemoOnly) {

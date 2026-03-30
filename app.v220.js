@@ -3587,9 +3587,12 @@ function initCommentGenerator() {
         const opt = selectEl.querySelector('option[value="' + value + '"]');
         if (!opt) return false;
         const wasDisabled = opt.disabled;
-        opt.disabled = false;
+        // Flag as programmatic auto-detect so waitlist.js change-gate skips it
+        selectEl.dataset.autoDetect = '1';
+        opt.disabled   = false;
         selectEl.value = value;
-        opt.disabled = wasDisabled;
+        opt.disabled   = wasDisabled;
+        delete selectEl.dataset.autoDetect;
         return selectEl.value === value;
     }
 
@@ -3818,9 +3821,9 @@ function initCommentGenerator() {
     });
 
     // ── Copy ──
-    // ── Block keyboard/mouse copy from the output element directly ──
-    // Users must use the Copy button — direct selection is disabled.
-    ['copy', 'cut', 'contextmenu', 'dragstart'].forEach(function(evt) {
+    // ── Block all clipboard interaction on the output element ──
+    // Copy is via the Copy button only. Paste is not applicable to a read-only output.
+    ['copy', 'cut', 'paste', 'contextmenu', 'dragstart', 'drop'].forEach(function(evt) {
         cgOutput.addEventListener(evt, function(e) { e.preventDefault(); });
     });
 
