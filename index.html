@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- cache-bust: 20260330-0330 -->
+<!-- cache-bust: 20260330-0400 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -623,6 +623,70 @@
         transform: translateY(-1px);
       }
       .copilot-cta-bar__stat { margin-left: auto; font-size: 11.5px; color: #6a6a8a; white-space: nowrap; }
+
+      /* Prerequisite callout banner */
+      .copilot-prereq {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 13px 16px;
+        background: rgba(251,191,36,.06);
+        border: 1px solid rgba(251,191,36,.25);
+        border-radius: 8px;
+        margin-bottom: 18px;
+      }
+      .copilot-prereq__icon {
+        font-size: 17px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .copilot-prereq__body {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12.5px;
+        line-height: 1.55;
+        color: #c9a84c;
+      }
+      .copilot-prereq__title {
+        font-weight: 700;
+        color: #fbbf24;
+        font-size: 13px;
+      }
+      .copilot-prereq__steps {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: #a8863a;
+      }
+      .copilot-prereq__steps li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .copilot-prereq__step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px; height: 18px;
+        background: rgba(251,191,36,.18);
+        color: #fbbf24;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .copilot-prereq__steps a {
+        color: #fbbf24;
+        text-decoration: underline;
+        text-decoration-color: rgba(251,191,36,.4);
+        text-underline-offset: 2px;
+      }
+      .copilot-prereq__steps a:hover { text-decoration-color: #fbbf24; }
+
       @media (max-width: 700px) {
         .copilot-commands-grid { grid-template-columns: 1fr; }
         .copilot-cta-bar { flex-direction: column; align-items: stretch; }
@@ -630,6 +694,7 @@
         .copilot-cta-bar__stat { margin-left: 0; text-align: center; }
         .copilot-how-to { flex-direction: column; gap: 8px; }
         .copilot-how-to__arrow { transform: rotate(90deg); }
+        .copilot-prereq { flex-direction: column; gap: 8px; }
       }
     </style>
 </head>
@@ -995,6 +1060,28 @@
                     Poly-Glot is now a <strong>Copilot Chat participant</strong>. Type <code class="inline-code">@poly-glot</code> directly
                     in Copilot Chat to generate comments, add why-comments, and analyse code — without leaving your editor or switching context.
                 </p>
+
+                <!-- ── Prerequisites callout ── -->
+                <div class="copilot-prereq">
+                    <div class="copilot-prereq__icon">⚠️</div>
+                    <div class="copilot-prereq__body">
+                        <span class="copilot-prereq__title">Prerequisites — required before use</span>
+                        <ul class="copilot-prereq__steps">
+                            <li>
+                                <span class="copilot-prereq__step-num">1</span>
+                                <span>Install the <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener">Poly-Glot VS Code Extension</a> (v1.4.0+) — the Copilot participant is built into the extension</span>
+                            </li>
+                            <li>
+                                <span class="copilot-prereq__step-num">2</span>
+                                <span>Configure your API key → Command Palette (<kbd style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:1px 5px;font-size:11px;">Cmd+Shift+P</kbd>) → <strong>Poly-Glot: Configure API Key</strong></span>
+                            </li>
+                            <li>
+                                <span class="copilot-prereq__step-num">3</span>
+                                <span>Requires an active <strong>GitHub Copilot</strong> subscription and <strong>VS Code v1.95+</strong></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
 
                 <div class="copilot-commands-grid">
                     <div class="copilot-cmd-card">
