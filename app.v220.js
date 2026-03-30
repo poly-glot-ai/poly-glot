@@ -3445,7 +3445,7 @@ function initCommentGenerator() {
     function syncStyleToLanguage() {
         const style = STYLE_MAP[cgLanguage.value];
         if (!style) return;
-        cgStyle.value = style;
+        setSelectValue(cgStyle, style);  // use helper so disabled Pro options can still be set
         // Show a brief "auto-set" indicator on the style label
         const lbl = document.querySelector('label[for="cgStyle"]');
         if (!lbl) return;
@@ -3576,14 +3576,31 @@ function initCommentGenerator() {
     // ── Core: detect language, update BOTH dropdowns, optionally show badge ─
     // Returns the detected language key, or null if code is too short / scorer
     // not loaded yet.  silent=true suppresses the badge (used internally).
+    //
+    // NOTE: auth.v7.js may disable Pro-only <option> elements on the Language
+    // and Comment Style selects for free-tier users.  Setting .value on a
+    // disabled option is a no-op in all browsers, so we temporarily re-enable
+    // the target option, assign the value, then restore its state.  The Pro
+    // gate on *generating* comments is enforced elsewhere (ai-generator /
+    // auth gate), so showing the detected language in the UI is safe.
+    function setSelectValue(selectEl, value) {
+        const opt = selectEl.querySelector('option[value="' + value + '"]');
+        if (!opt) return false;
+        const wasDisabled = opt.disabled;
+        opt.disabled = false;
+        selectEl.value = value;
+        opt.disabled = wasDisabled;
+        return selectEl.value === value;
+    }
+
     function applyDetectedLanguage(code, silent) {
         if (!code || code.trim().length < 20) return null;
         if (typeof PolyGlotScorer === 'undefined') return null;
         const detected = PolyGlotScorer.detectLanguage(code.trim());
         const option   = DETECT_TO_OPTION[detected];
         if (!option) return null;
-        cgLanguage.value = option;   // update Language dropdown
-        syncStyleToLanguage();       // update Comment Style dropdown
+        setSelectValue(cgLanguage, option);  // update Language dropdown (works even if option is disabled)
+        syncStyleToLanguage();               // update Comment Style dropdown
         if (!silent) showLangDetectedBadge(option);
         return option;
     }
