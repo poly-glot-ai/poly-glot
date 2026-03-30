@@ -78,6 +78,10 @@ const PolyGlotScorer = (() => {
         if (/\bimport\s+java\./.test(text))                         s.java += 8;
         if (/\bString\[\]\s+args/.test(text))                       s.java += 5;
         if (/(private|protected|public)\s+\w+\s+\w+\s*[;=]/.test(text)) s.java += 3;
+        // Java import (non-java.*) — e.g. import java.time.LocalDate
+        if (/\bimport\s+[a-z]\w+(\.[a-z]\w+)+\.\w+;/.test(text))  s.java += 4;
+        // Java: no namespace keyword (C# only), zero out if namespace present
+        if (/\bnamespace\s+\w+/.test(text))                         s.java = Math.max(0, s.java - 8);
 
         // ── C# ─────────────────────────────────────────────────────────────
         if (/\busing\s+System\b/.test(text))                        s.csharp += 8;
@@ -86,6 +90,12 @@ const PolyGlotScorer = (() => {
         if (/\/\/\/\s*<summary>/.test(text))                        s.csharp += 8;
         if (/\bforeach\s*\(/.test(text))                            s.csharp += 3;
         if (/\bvar\s+\w+\s*=/.test(text))                          s.csharp += 2;
+        // C# expression-body methods: `) => expression;`
+        if (/\)\s*=>\s*\w+.*;/.test(text))                          s.csharp += 4;
+        // C# PascalCase public methods (Java uses camelCase)
+        if (/\bpublic\s+\w+\s+[A-Z][a-z]\w*\s*\(/.test(text))     s.csharp += 4;
+        // using aliases / non-System using
+        if (/\busing\s+[A-Z]\w*(\.\w+)*;/.test(text))              s.csharp += 3;
 
         // ── C++ ────────────────────────────────────────────────────────────
         if (/#include\s*[<"]/.test(text))                           s.cpp += 9;
@@ -93,6 +103,10 @@ const PolyGlotScorer = (() => {
         if (/\bcout\s*<</.test(text))                               s.cpp += 6;
         if (/\bvector\s*<|map\s*<|pair\s*</.test(text))            s.cpp += 4;
         if (/\bnullptr\b|\bauto\b/.test(text))                      s.cpp += 3;
+        // C++ scope resolution anywhere
+        if (/::\w+/.test(text))                                     s.cpp += 3;
+        // C++ pointer/reference types
+        if (/\w+\s*[*&]\s+\w+/.test(text))                         s.cpp += 3;
 
         // ── Rust ───────────────────────────────────────────────────────────
         if (/\bfn\s+\w+\s*\(/.test(text))                          s.rust += 6;
@@ -102,6 +116,12 @@ const PolyGlotScorer = (() => {
         if (/\bprintln!\s*\(/.test(text))                           s.rust += 6;
         if (/\bOption<|Result<|Vec</.test(text))                    s.rust += 5;
         if (/\bpub\s+(fn|struct|enum|mod)\b/.test(text))           s.rust += 5;
+        // Rust lifetime annotations
+        if (/'[a-z]\b/.test(text))                                  s.rust += 4;
+        // Rust match expression
+        if (/\bmatch\s+\w+\s*\{/.test(text))                       s.rust += 5;
+        // Rust type annotations on fn params: `param: Type`
+        if (/\bfn\s+\w+\s*\([^)]*:\s*[a-zA-Z_]\w*/.test(text))   s.rust += 3;
 
         // ── Kotlin ─────────────────────────────────────────────────────────
         if (/\bfun\s+\w+\s*\(/.test(text))                         s.kotlin += 7;
@@ -110,25 +130,43 @@ const PolyGlotScorer = (() => {
         if (/\bwhen\s*\(/.test(text))                               s.kotlin += 6;
         if (/\?\.\w+|\?\:/.test(text))                              s.kotlin += 4;
         if (/:\s*(String|Int|Boolean|List|Map)\b/.test(text))      s.kotlin += 4;
+        // Kotlin string template ${} — only count if fun/val also present,
+        // because JS/TS use identical template literal syntax
+        if (/\$\{[^}]+\}/.test(text) && /\b(fun|val)\s+\w+/.test(text)) s.kotlin += 4;
+        // Kotlin return type annotation: ): Type
+        if (/\):\s*[A-Z]\w*/.test(text))                            s.kotlin += 3;
 
         // ── Swift ──────────────────────────────────────────────────────────
         if (/\bfunc\s+\w+\s*\(/.test(text))                        s.swift += 4;
         if (/\bvar\s+\w+\s*:\s*\w+/.test(text))                    s.swift += 4;
-        if (/\bimport\s+(Foundation|UIKit|SwiftUI)\b/.test(text))  s.swift += 9;
+        if (/\bimport\s+(Foundation|UIKit|SwiftUI|AppKit|Combine)\b/.test(text)) s.swift += 9;
         if (/\bguard\s+let\b|\bguard\s+var\b/.test(text))         s.swift += 7;
-        // Swift `let` only counts when it has a TYPE annotation (let x: Type) —
-        // plain `let x =` is valid JS/TS too and must NOT inflate the Swift score.
-        if (/\blet\s+\w+\s*:\s*\w+/.test(text))                   s.swift += 3;
-        if (/->\s*\w+[\s{]/.test(text) && !/^package/m.test(text)) s.swift += 2;
-        // Prevent false Swift wins: if the snippet has `function` keyword (not
-        // valid Swift), zero-out the Swift score entirely.
+        // Swift `let` only scores with a type annotation — plain `let x =` is also JS/TS
+        if (/\blet\s+\w+\s*:\s*[A-Z]\w*/.test(text))              s.swift += 4;
+        // Swift return type arrow (space before {)
+        if (/\)\s*->\s*\w+/.test(text) && !/^package/m.test(text)) s.swift += 3;
+        // Swift optional chaining / unwrap
+        if (/\w+\?\.\w+|\w+!\./.test(text))                        s.swift += 4;
+        // Swift string interpolation \(...)
+        if (/\\\([^)]+\)/.test(text))                               s.swift += 5;
+        // `function` keyword is NOT valid Swift — hard zero the score
         if (/\bfunction\s+\w+\s*\(/.test(text))                    s.swift = 0;
+        // `package` keyword means Go or Kotlin, not Swift
+        if (/^package\s+\w+/m.test(text))                          s.swift = 0;
 
         // ── TypeScript ─────────────────────────────────────────────────────
         if (/\binterface\s+\w+\s*\{/.test(text))                   s.typescript += 7;
         if (/\btype\s+\w+\s*=/.test(text))                         s.typescript += 5;
         if (/:\s*(string|number|boolean|void|any|never|unknown)\b/.test(text)) s.typescript += 5;
         if (/\benum\s+\w+\s*\{/.test(text))                        s.typescript += 3;
+        // TypeScript generic return types: Promise<T>, Array<T>
+        if (/:\s*(Promise|Array|Observable|Record)</.test(text))   s.typescript += 6;
+        // TypeScript typed parameters: (param: type)
+        if (/\(\w+:\s*(string|number|boolean|void|any|unknown)\b/.test(text)) s.typescript += 5;
+        // TypeScript non-null assertion or as-cast
+        if (/\w+!\s*[.;,)]|as\s+(string|number|boolean|unknown|any)\b/.test(text)) s.typescript += 4;
+        // TS files commonly use `export` with typed things
+        if (/\bexport\s+(interface|type|enum|const|function|class)\b/.test(text)) s.typescript += 4;
 
         // ── JavaScript ─────────────────────────────────────────────────────
         if (/\bconst\s+\w+\s*=/.test(text))                        s.javascript += 3;
@@ -136,15 +174,29 @@ const PolyGlotScorer = (() => {
         if (/=>\s*\{|=>\s*\w+/.test(text))                         s.javascript += 3;
         if (/\brequire\s*\(|module\.exports/.test(text))           s.javascript += 5;
         if (/document\.|window\.|addEventListener/.test(text))     s.javascript += 5;
-        // Plain `function Name(` is a strong JS/TS signal — not valid in Swift/Go/Rust/Python
+        // `function Name(` is the strongest plain-JS signal — not valid in Swift/Go/Rust/Python
         if (/\bfunction\s+\w+\s*\(/.test(text))                    s.javascript += 5;
-        // `new ClassName(` is a JS/TS/Java pattern — differentiates from Swift
+        // `new ClassName(` — JS/TS object construction
         if (/\bnew\s+[A-Z]\w*\s*\(/.test(text))                    s.javascript += 3;
-        // `.getFullYear()` / `.getMonth()` / `.getTime()` — JS Date API
-        if (/\.\s*get(FullYear|Month|Date|Time|Hours|Minutes)\s*\(/.test(text)) s.javascript += 4;
+        // JS Date API methods
+        if (/\.(getFullYear|getMonth|getDate|getTime|getHours|getMinutes)\s*\(/.test(text)) s.javascript += 4;
+        // JS prototype / this usage (not class-based)
+        if (/\bprototype\.\w+\s*=/.test(text))                     s.javascript += 5;
+        // JS-specific globals
+        if (/\b(setTimeout|setInterval|clearTimeout|clearInterval|fetch|Promise)\s*\(/.test(text)) s.javascript += 3;
 
-        // ── Pick winner ────────────────────────────────────────────────────
-        let winner = 'javascript', best = 0;
+        // ── Cross-language disambiguation rules ─────────────────────────────
+        // TypeScript beats JavaScript when there are explicit type annotations
+        // but no TS-specific keywords yet (e.g. async fn with `: string` param)
+        if (s.typescript > 0 && s.javascript > s.typescript) {
+            // If code has typed params OR Promise<T> return, TS wins
+            if (/\(\w+:\s*\w+/.test(text) && /:\s*\w+\s*[\{;]/.test(text)) {
+                s.typescript = Math.max(s.typescript, s.javascript + 1);
+            }
+        }
+
+        // ── Pick winner (default to javascript on exact tie) ────────────────
+        let winner = 'javascript', best = -1;
         for (const [lang, score] of Object.entries(s)) {
             if (score > best) { best = score; winner = lang; }
         }
