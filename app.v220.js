@@ -3733,6 +3733,12 @@ function initCommentGenerator() {
     });
 
     // ── Copy ──
+    // ── Block keyboard/mouse copy from the output element directly ──
+    // Users must use the Copy button — direct selection is disabled.
+    ['copy', 'cut', 'contextmenu', 'dragstart'].forEach(function(evt) {
+        cgOutput.addEventListener(evt, function(e) { e.preventDefault(); });
+    });
+
     cgCopyBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
         navigator.clipboard.writeText(lastOutputText).then(() => {

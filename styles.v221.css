@@ -4336,6 +4336,11 @@ kbd {
     font-size: 13px;
     line-height: 1.7;
     color: var(--pg-text);
+    /* Prevent text selection — use the Copy button to access output */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* Output placeholder — exact match to markdown .output-placeholder */
