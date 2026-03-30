@@ -281,6 +281,92 @@ Compatible with: **Goose** · **Claude Desktop** · **Cursor** · **Windsurf** �
 
 ---
 
+## 🤖 GitHub Copilot Chat Integration
+
+> **Prerequisite:** The **Poly-Glot VS Code Extension** must be installed and configured with an API key before using Poly-Glot in Copilot Chat. Requires **VS Code v1.95+** and an active **GitHub Copilot** subscription.
+
+Poly-Glot registers itself as a **Copilot Chat participant** (`@poly-glot`), so you can generate comments, explain code, and get documentation analysis directly inside the Copilot Chat panel — no switching tabs, no copy-paste.
+
+### 🔧 Setup (3 steps)
+
+1. **Install the Poly-Glot extension** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+2. **Configure your API key** → Command Palette (`Cmd+Shift+P`) → `Poly-Glot: Configure API Key` → choose provider, paste key, pick model
+3. **Open Copilot Chat** → `Cmd+Shift+I` (Mac) / `Ctrl+Shift+I` (Windows/Linux) → type `@poly-glot` to activate
+
+That's it. No extra config. The participant is registered automatically when the extension is active.
+
+---
+
+### 💬 Commands
+
+| Command | What it does | Plan |
+|---|---|:---:|
+| `@poly-glot /comment` | Generate doc-comments for selected code | Free |
+| `@poly-glot /explain` | Deep code analysis — complexity, bugs, doc quality | Free |
+| `@poly-glot /why` | Add WHY-comments explaining intent & trade-offs | **Pro** |
+| `@poly-glot /both` | Doc-comments + WHY-comments in one pass | **Pro** |
+
+---
+
+### 🗣 Prompt Examples
+
+**Generate doc-comments for a function:**
+```
+@poly-glot /comment
+```
+> Select the function in the editor first, then send the command. Poly-Glot generates JSDoc, Javadoc, PyDoc, etc. and shows an **Apply to Editor** button to insert inline.
+
+---
+
+**Explain what a block of code does:**
+```
+@poly-glot /explain
+```
+> Returns a plain-English summary, complexity score (1–10), function-by-function breakdown, potential bugs, refactoring suggestions, and a documentation quality score (0–100).
+
+---
+
+**Add WHY-comments to explain decisions (Pro):**
+```
+@poly-glot /why
+```
+> Inserts inline comments explaining *why* the code is written the way it is — trade-offs, algorithm choices, business constraints. Makes PRs self-reviewing and helps Copilot give you better suggestions.
+
+---
+
+**Document everything in one shot (Pro):**
+```
+@poly-glot /both
+```
+> Runs two passes — first generates doc-comments, then adds WHY-comments — and delivers both in a single response with an **Apply to Editor** button.
+
+---
+
+**Ask a follow-up question after `/explain`:**
+```
+@poly-glot /explain
+Why is the time complexity O(n²) here? Can it be improved?
+```
+> Poly-Glot uses the same AI context window as your configured model, so you can follow up with natural language questions after any command.
+
+---
+
+### ❓ Copilot Chat FAQ
+
+**Does `@poly-glot` use my API key?**
+Yes — Poly-Glot uses the OpenAI or Anthropic key you configured in the extension. GitHub Copilot and Poly-Glot are completely separate; Poly-Glot does not use your Copilot subscription's token budget.
+
+**Why doesn't `@poly-glot` appear in chat?**
+The participant only registers if the extension is active and VS Code v1.95+ is installed. Try: Command Palette → `Developer: Reload Window`.
+
+**Can I use `/why` and `/both` without Pro?**
+No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — use code **`EARLYBIRD3`** for 3 months free.
+
+**Does it work with VS Code Insiders?**
+Yes — any VS Code build ≥ 1.95 with Copilot Chat enabled works.
+
+---
+
 ## 🔒 Privacy & Security
 
 Your code and API keys are **100% private**:
