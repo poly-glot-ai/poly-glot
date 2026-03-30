@@ -640,9 +640,10 @@ select:hover, button:hover {
 
 button {
     font-weight: 600;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
+    width: auto;
 }
 
 button.primary {
