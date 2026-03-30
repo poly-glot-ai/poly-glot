@@ -545,19 +545,21 @@
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email: email })
     })
-      .then(function (res) { return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+      .then(function (res) { return res.json().then(function(d){ return { httpOk: res.ok, status: res.status, data: d }; }); })
       .then(function (result) {
-        if (result.ok) {
-          // Success — show email confirmation + free CTA
+        // Success only if HTTP 2xx AND data.ok === true
+        if (result.httpOk && result.data && result.data.ok === true) {
+          // Show email confirmation
           if (form) form.style.display = 'none';
           if (success) {
             success.style.display = 'block';
-            success.innerHTML = '✅ Magic link sent to <strong>' + email + '</strong><br><span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">Check inbox &amp; spam — expires in 15 min.</span>';
+            success.innerHTML = '✅ Magic link sent to <strong>' + email + '</strong>'
+              + '<br><span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">'
+              + 'Check your inbox &amp; spam folder — link expires in 15 min.</span>';
           }
           var freeCta = document.getElementById('pgAuthModalFreeCta');
           if (freeCta) {
             freeCta.style.display = 'block';
-            // "Start Using Free" — close modal, scroll to tool
             var startFreeBtn = document.getElementById('pgAuthModalStartFree');
             if (startFreeBtn) {
               startFreeBtn.addEventListener('click', function () {
@@ -567,7 +569,6 @@
                 showToast('👋 Using Poly-Glot free — Python, JS & Java unlocked. Click your email link anytime to restore your session.');
               });
             }
-            // "See Pro Plans" — close modal, scroll to pricing
             var seePlansBtn = document.getElementById('pgAuthModalSeePlans');
             if (seePlansBtn) {
               seePlansBtn.addEventListener('click', function () {
@@ -578,35 +579,43 @@
               });
             }
           }
+          if (typeof gtag === 'function') gtag('event', 'magic_link_sent', { method: 'email' });
         } else {
-          // Error — show message, re-enable button
-          var msg = (result.data && result.data.error) ? result.data.error : 'Something went wrong. Please try again.';
+          // Worker returned an error — surface the real message
+          var msg = (result.data && result.data.error)
+            ? result.data.error
+            : result.status === 429
+              ? 'A link was already sent. Please wait 60 seconds and try again.'
+              : result.status === 502
+                ? 'Email delivery failed — please try again in a moment.'
+                : 'Something went wrong. Please try again.';
           btn.disabled    = false;
           btn.textContent = 'Send Magic Link';
           input.style.borderColor = '#f87171';
-          // Show error below input
-          var errEl = document.getElementById('pgAuthModalError');
-          if (!errEl) {
-            errEl = document.createElement('p');
-            errEl.id = 'pgAuthModalError';
-            errEl.style.cssText = 'color:#f87171;font-size:13px;margin:8px 0 0;text-align:center;';
-            btn.parentNode.insertBefore(errEl, btn.nextSibling);
-          }
-          errEl.textContent = msg;
+          showAuthError(btn, msg);
+          if (typeof gtag === 'function') gtag('event', 'magic_link_error', { status: result.status });
         }
       })
-      .catch(function () {
+      .catch(function (err) {
         btn.disabled    = false;
         btn.textContent = 'Send Magic Link';
-        var errEl = document.getElementById('pgAuthModalError');
-        if (!errEl) {
-          errEl = document.createElement('p');
-          errEl.id = 'pgAuthModalError';
-          errEl.style.cssText = 'color:#f87171;font-size:13px;margin:8px 0 0;text-align:center;';
-          btn.parentNode.insertBefore(errEl, btn.nextSibling);
-        }
-        errEl.textContent = 'Network error — please try again.';
+        showAuthError(btn, 'Network error — please check your connection and try again.');
+        console.error('Auth login fetch error:', err);
       });
+  }
+
+  /** Show an error message below the Send button, creating the element if needed */
+  function showAuthError(btn, msg) {
+    var errEl = document.getElementById('pgAuthModalError');
+    if (!errEl) {
+      errEl = document.createElement('p');
+      errEl.id = 'pgAuthModalError';
+      errEl.style.cssText = 'color:#f87171;font-size:13px;margin:8px 0 0;text-align:center;';
+      if (btn && btn.parentNode) btn.parentNode.insertBefore(errEl, btn.nextSibling);
+      else document.body.appendChild(errEl);
+    }
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
   }
 
   /* ─────────────────────────────────────────────
