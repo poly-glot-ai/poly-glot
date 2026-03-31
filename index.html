@@ -812,58 +812,7 @@
         background: #000;
       }
 
-      /* Big play overlay — transparent, no blur, just centers the button */
-      .pg-video-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        background: rgba(0,0,0,0.18);
-        transition: opacity 0.25s ease;
-        z-index: 10;
-      }
-      .pg-video-overlay.pg-hidden { opacity: 0; pointer-events: none; }
 
-      /* Play button — clean circle, no glow/shadow */
-      .pg-video-big-play {
-        background: rgba(109,40,217,0.85);
-        border: 2px solid rgba(192,132,252,0.5);
-        border-radius: 50%;
-        cursor: pointer;
-        padding: 0;
-        width: 48px; height: 48px;
-        display: flex; align-items: center; justify-content: center;
-        transition: transform 0.18s ease, background 0.18s ease;
-        box-shadow: none;
-        flex-shrink: 0;
-      }
-      .pg-video-big-play:hover { transform: scale(1.08); background: rgba(124,58,237,1); }
-      .pg-video-big-play:active { transform: scale(0.95); }
-      .pg-video-big-play svg {
-        width: 18px; height: 18px;
-        display: block;
-        margin-left: 3px;
-      }
-      @media (max-width: 768px) {
-        .pg-video-big-play { width: 40px; height: 40px; }
-        .pg-video-big-play svg { width: 15px; height: 15px; margin-left: 2px; }
-      }
-      @media (max-width: 480px) {
-        .pg-video-big-play { width: 34px; height: 34px; border-width: 1.5px; }
-        .pg-video-big-play svg { width: 13px; height: 13px; margin-left: 2px; }
-      }
-      .pg-video-overlay-label {
-        margin: 0;
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.6);
-        letter-spacing: 0.03em;
-      }
-      @media (max-width: 768px) {
-        .pg-video-overlay-label { font-size: 0.72rem; }
-      }
 
       /* Custom controls bar */
       .pg-video-controls {
