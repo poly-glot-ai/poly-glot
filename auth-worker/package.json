@@ -1,0 +1,14 @@
+{
+  "name": "poly-glot-auth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker — magic link auth for poly-glot.ai",
+  "scripts": {
+    "dev":    "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail":   "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
