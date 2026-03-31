@@ -429,33 +429,55 @@
 
   /* ── Promo countdown ────────────────────────────────────── */
   function loadPromoCount() {
-    fetch('https://poly-glot.ai/api/auth/promo-count', { cache: 'no-store' })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var banner    = document.getElementById('pg-promo-banner');
-        var countdown = document.getElementById('pg-promo-countdown');
-        if (!banner || !countdown) return;
+    var countdown = document.getElementById('pg-promo-countdown');
+    var banner    = document.getElementById('pg-promo-banner');
+    if (!countdown) return;
 
-        var remaining = data.remaining != null ? data.remaining : (data.limit - data.count);
+    fetch('https://poly-glot.ai/api/auth/promo-count', {
+      method: 'GET',
+      cache:  'no-store'
+    })
+      .then(function(r) {
+        if (!r.ok) throw new Error('bad response');
+        return r.json();
+      })
+      .then(function(data) {
+        // Guard against NaN — fall back to 0 if values are missing/bad
+        var count     = parseInt(data.count,     10) || 0;
+        var limit     = parseInt(data.limit,     10) || 50;
+        var remaining = parseInt(data.remaining, 10);
+        if (isNaN(remaining)) remaining = Math.max(0, limit - count);
 
         if (remaining <= 0) {
-          // Hide banner entirely — offer exhausted
-          banner.style.display = 'none';
+          // Offer exhausted — hide banner entirely
+          if (banner) banner.style.display = 'none';
           return;
         }
 
-        // Update text with live count
-        countdown.textContent = remaining + ' of 50 spots remaining.';
+        // Animate count up from 0 to (limit - remaining) to show momentum
+        var filled    = limit - remaining;
+        var displayed = 0;
+        countdown.textContent = remaining + ' of ' + limit + ' spots remaining.';
         countdown.classList.add('pg-promo-countdown--live');
 
-        // Pulse urgency colours
+        // Animate the filled count ticking up so it feels live
+        if (filled > 0) {
+          var step = Math.max(1, Math.floor(filled / 20));
+          var interval = setInterval(function() {
+            displayed = Math.min(displayed + step, filled);
+            var rem = limit - displayed;
+            countdown.textContent = rem + ' of ' + limit + ' spots remaining.';
+            if (displayed >= filled) clearInterval(interval);
+          }, 60);
+        }
+
+        // Urgency colour when <= 10 left
         if (remaining <= 10) {
           countdown.classList.add('pg-promo-countdown--urgent');
         }
       })
       .catch(function() {
-        // Network failure — show static fallback, don't break
-        var countdown = document.getElementById('pg-promo-countdown');
+        // Network failure — static fallback, never show NaN
         if (countdown) countdown.textContent = 'Limited spots remaining.';
       });
   }

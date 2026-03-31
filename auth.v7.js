@@ -922,18 +922,13 @@
       });
     }
 
-    // ── Header plan badge + hide "See Plans" button ──
+    // ── Hide "See Plans" button for paid users — no badge needed (chip shows plan) ──
     var pricingBtn = document.getElementById('headerPricingBtn');
-    if (pricingBtn) {
-      pricingBtn.style.display = 'none';
-      if (!document.querySelector('.pg-plan-badge')) {
-        var planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
-        var badgeEl = document.createElement('span');
-        badgeEl.className = 'pg-plan-badge';
-        badgeEl.textContent = '✅ ' + planLabel;
-        pricingBtn.parentNode.insertBefore(badgeEl, pricingBtn.nextSibling);
-      }
-    }
+    if (pricingBtn) pricingBtn.style.display = 'none';
+
+    // Remove any stale plan badge that may have been injected previously
+    var staleBadge = document.querySelector('.pg-plan-badge');
+    if (staleBadge) staleBadge.parentNode.removeChild(staleBadge);
   }
 
   /* ─────────────────────────────────────────────
@@ -949,7 +944,9 @@
     if (document.getElementById('pg-user-chip')) return; // already inserted
 
     var initial   = (email || '?').charAt(0).toUpperCase();
-    var planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+    // Plan label: uppercase for paid plans, title-case for free
+    var PLAN_LABELS = { free: 'Free', pro: 'PRO', team: 'TEAM', enterprise: 'ENTERPRISE' };
+    var planLabel = PLAN_LABELS[plan] || (plan.charAt(0).toUpperCase() + plan.slice(1));
     var planClass = 'pg-user-chip__plan--' + plan;
 
     // Build menu HTML
