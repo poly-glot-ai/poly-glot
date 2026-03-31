@@ -798,10 +798,7 @@
         line-height: 0;
         min-height: 200px; /* prevents collapse before video metadata loads */
       }
-      .pg-video-wrap:hover .pg-video-controls {
-        opacity: 1;
-        transform: translateY(0);
-      }
+
 
       /* The actual video — normal flow, establishes height of wrap */
       .pg-video-el {
@@ -823,16 +820,25 @@
         gap: 8px;
         padding: 10px 14px 12px;
         background: linear-gradient(transparent, rgba(0,0,0,0.85));
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(4px);
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
         transition: opacity 0.22s ease, transform 0.22s ease;
         z-index: 5;
         user-select: none;
       }
-      /* Controls only visible after video starts (overlay gone) */
-      .pg-video-wrap:not(.pg-overlay-visible) .pg-video-controls {
-        pointer-events: auto;
+      /* Desktop: hide controls until hover */
+      @media (hover: hover) {
+        .pg-video-controls {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(4px);
+        }
+        .pg-video-wrap:hover .pg-video-controls {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translateY(0);
+        }
       }
 
       /* Control buttons */
