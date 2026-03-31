@@ -1353,6 +1353,26 @@
     _alreadyOnList: showAlreadyOnList,
   };
 
+  /* ── Unlock all selects for paid users ─────────────────── */
+  function unlockAllSelectsForPaidUser() {
+    var ids = ['language', 'cgLanguage', 'cliDemoLanguage', 'demoDemoLang', 'cgStyle', 'cliDemoMode'];
+    ids.forEach(function (id) {
+      clearLockedOptions(document.getElementById(id));
+    });
+
+    // Also unlock grid tiles
+    var grid = document.getElementById('cliDemoLanguageGrid');
+    if (grid) {
+      var tiles = grid.querySelectorAll('[data-language],[data-lang]');
+      Array.prototype.forEach.call(tiles, function (tile) {
+        tile.classList.remove('cli-demo-lang--locked');
+        tile.removeAttribute('disabled');
+        var label = tile.querySelector('.cli-demo-lang-label') || tile;
+        label.textContent = label.textContent.replace(' 🔒', '').replace('🔒 ', '');
+      });
+    }
+  }
+
   /* ── Boot ──────────────────────────────────────────────── */
   function init() {
     createBanner();
@@ -1364,6 +1384,31 @@
 
     /* Fetch real global count and update all displays */
     fetchGlobalCount().then(count => updateCountDisplays(count));
+
+    // Hook into PolyGlotAuth.onPlanLoaded so that when auth resolves
+    // AFTER waitlist.js has already stamped locks on, we clear them immediately.
+    // Auth loads after waitlist.js so we poll briefly for it.
+    var pollCount = 0;
+    var pollInterval = setInterval(function () {
+      pollCount++;
+      if (window.PolyGlotAuth) {
+        clearInterval(pollInterval);
+        var originalOnPlanLoaded = window.PolyGlotAuth.onPlanLoaded;
+        window.PolyGlotAuth.onPlanLoaded = function (plan) {
+          originalOnPlanLoaded(plan);
+          var p = (plan || '').toLowerCase();
+          if (p === 'pro' || p === 'team' || p === 'enterprise') {
+            unlockAllSelectsForPaidUser();
+          }
+        };
+        // Also apply immediately if plan already resolved
+        var currentPlan = (localStorage.getItem('pg_plan') || '').toLowerCase();
+        if (currentPlan === 'pro' || currentPlan === 'team' || currentPlan === 'enterprise') {
+          unlockAllSelectsForPaidUser();
+        }
+      }
+      if (pollCount > 50) clearInterval(pollInterval); // give up after 5s
+    }, 100);
   }
 
   if (document.readyState === 'loading') {
