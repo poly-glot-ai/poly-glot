@@ -796,6 +796,7 @@
         background: #000;
         cursor: pointer;
         line-height: 0;
+        min-height: 200px; /* prevents collapse before video metadata loads */
       }
       .pg-video-wrap:hover .pg-video-controls {
         opacity: 1;
@@ -1204,16 +1205,7 @@
                             muted
                         ></video>
 
-                        <!-- Big play overlay (shows before first play) -->
-                        <div class="pg-video-overlay" id="pgVideoOverlay">
-                            <button class="pg-video-big-play" id="pgVideoBigPlay" aria-label="Play demo video">
-                                <!-- Clean play triangle — button itself is the circle -->
-                                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <polygon points="4,2 14,8 4,14" fill="white"/>
-                                </svg>
-                            </button>
-                            <p class="pg-video-overlay-label">2 min demo · no audio needed</p>
-                        </div>
+
 
                         <!-- Custom controls bar -->
                         <div class="pg-video-controls" id="pgVideoControls">
@@ -2761,8 +2753,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     var video    = document.getElementById('pgDemoVideo');
-    var overlay  = document.getElementById('pgVideoOverlay');
-    var bigPlay  = document.getElementById('pgVideoBigPlay');
+
     var controls = document.getElementById('pgVideoControls');
     var ppBtn    = document.getElementById('pgVcPlayPause');
     var scrub    = document.getElementById('pgVcScrub');
@@ -2801,40 +2792,8 @@
     showPlay();
     showMuted();  // starts muted
 
-    // ── Controls bar always visible ──────────────────────────────────────
-    // (small play button at bottom is part of controls — keep it visible)
-
-    // ── Big play overlay ─────────────────────────────────────────────────
-    var _started = false;
-    function startVideo() {
-      if (_started) return; // prevent double-fire on mobile
-      _started = true;
-      overlay.classList.add('pg-hidden');
-      video.muted = false;
-      video.play().catch(function () {
-        video.muted = true;
-        showMuted();
-        video.play();
-      });
-      showPause();
-      showUnmuted();
-    }
-
-    // Single unified handler — button only
-    bigPlay.addEventListener('click', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-      startVideo();
-    });
-    // Tap anywhere on overlay also works
-    overlay.addEventListener('click', function (e) {
-      if (e.target === bigPlay || bigPlay.contains(e.target)) return;
-      startVideo();
-    });
-
-    // ── Click on video = play/pause (once overlay gone) ──────────────────
+    // ── Click on video = play/pause ──────────────────────────────────────
     wrap.addEventListener('click', function (e) {
-      if (!overlay.classList.contains('pg-hidden')) return;
       if (e.target === speedBtn || speedMenu.contains(e.target)) return;
       togglePlay();
     });
