@@ -842,6 +842,17 @@
         }
       }
 
+      /* Touch / mobile: hide the controls bar while the video is playing
+         so it never obscures the content. Controls reappear automatically
+         when the video is paused, ends, or the user taps to pause. */
+      @media (hover: none) {
+        .pg-video-wrap.pg-playing .pg-video-controls {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(4px);
+        }
+      }
+
       /* Control buttons */
       .pg-vc-btn {
         background: none;
@@ -2760,7 +2771,7 @@
       else              { video.pause(); showPlay(); }
     }
     ppBtn.addEventListener('click', function (e) { e.stopPropagation(); togglePlay(); });
-    video.addEventListener('ended', function () { showPlay(); });
+    video.addEventListener('ended', function () { showPlay(); wrap.classList.remove('pg-playing'); });
 
     // ── Progress ─────────────────────────────────────────────────────────
     video.addEventListener('timeupdate', function () {
@@ -2838,25 +2849,41 @@
     // Keep controls visible in fullscreen
     document.addEventListener('fullscreenchange', function () {
       if (document.fullscreenElement === shell) {
+        // Remove pg-playing so controls are always accessible in fullscreen
+        wrap.classList.remove('pg-playing');
         controls.style.opacity = '1';
         controls.style.transform = 'translateY(0)';
       } else {
         controls.style.opacity = '';
         controls.style.transform = '';
+        // Re-apply pg-playing if the video is still playing after exiting fullscreen
+        if (!video.paused) {
+          wrap.classList.add('pg-playing');
+        }
       }
     });
 
     // ── Auto-show controls briefly on first play ─────────────────────────
     video.addEventListener('play', function () {
+      // Remove pg-playing so controls are visible during the grace period
+      wrap.classList.remove('pg-playing');
       controls.style.opacity = '1';
       controls.style.transform = 'translateY(0)';
       clearTimeout(wrap._ctrlTimer);
       wrap._ctrlTimer = setTimeout(function () {
         if (!video.paused) {
+          // Desktop: restore CSS-driven visibility (hover to reveal)
           controls.style.opacity = '';
           controls.style.transform = '';
+          // Mobile: add pg-playing so the controls slide away
+          wrap.classList.add('pg-playing');
         }
       }, 2200);
+    });
+
+    // ── When video is paused, always show controls on touch devices ───────
+    video.addEventListener('pause', function () {
+      wrap.classList.remove('pg-playing');
     });
   });
 }());
