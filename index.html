@@ -1092,13 +1092,42 @@
                   Your code never leaves your browser.
                 </p>
                 <!-- CLI one-command callout -->
-                <div class="pg-hero__cli-hook">
-                  <span class="pg-hero__cli-hook-label">⌨️ Or document your <strong>entire codebase</strong> with one command:</span>
-                  <code class="pg-hero__cli-cmd">poly-glot comment --dir src/ --yes</code>
-                  <a class="pg-hero__cli-link" href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener"
-                     onclick="if(typeof gtag==='function') gtag('event','hero_cli_link_click');">
-                    Install CLI ↗
-                  </a>
+                <div class="pg-hero__cli-block">
+                  <div class="pg-hero__cli-block-header">
+                    <span class="pg-hero__cli-block-title">⌨️ Or document your <strong>entire codebase</strong> with one command</span>
+                    <a class="pg-hero__cli-link" href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener"
+                       onclick="if(typeof gtag==='function') gtag('event','hero_cli_link_click');">
+                      npm install -g poly-glot-ai-cli ↗
+                    </a>
+                  </div>
+                  <div class="pg-hero__cli-main-cmd">
+                    <span class="pg-hero__cli-prompt">$</span>
+                    <code>poly-glot comment --dir src/ --yes</code>
+                  </div>
+                  <ul class="pg-hero__cli-bullets">
+                    <li>✅ Recursively walks every file in your project</li>
+                    <li>✅ Comments in-place — JS, TS, Python, Java, Go, Rust, Swift, Kotlin, C++, C#, Ruby, PHP</li>
+                    <li>✅ Streams results file by file as it runs</li>
+                    <li>✅ <code>--yes</code> skips the prompt — perfect for CI/CD</li>
+                  </ul>
+                  <div class="pg-hero__cli-extras">
+                    <div class="pg-hero__cli-extra-item">
+                      <span class="pg-hero__cli-extra-flag">--dry-run</span>
+                      <span class="pg-hero__cli-extra-desc">Preview every change — nothing written</span>
+                    </div>
+                    <div class="pg-hero__cli-extra-item">
+                      <span class="pg-hero__cli-extra-flag">--diff</span>
+                      <span class="pg-hero__cli-extra-desc">See a +/− diff before committing</span>
+                    </div>
+                    <div class="pg-hero__cli-extra-item">
+                      <span class="pg-hero__cli-extra-flag">--backup</span>
+                      <span class="pg-hero__cli-extra-desc">Save .orig copy of every file first</span>
+                    </div>
+                    <div class="pg-hero__cli-extra-item">
+                      <span class="pg-hero__cli-extra-flag">--both</span>
+                      <span class="pg-hero__cli-extra-desc">Doc-comments + why-comments in one pass</span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- CTAs -->

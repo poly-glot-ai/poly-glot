@@ -250,67 +250,147 @@
 .pg-hero__why-code { color: #e2e8f0; }
 
 /* ══════════════════════════════════════════════════════════════
-   HERO CLI HOOK
+   HERO CLI BLOCK
    ══════════════════════════════════════════════════════════════ */
 
-.pg-hero__cli-hook {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  background: rgba(15,23,42,0.7);
-  border: 1px solid rgba(52,211,153,0.2);
-  border-radius: 10px;
-  padding: 10px 18px;
+.pg-hero__cli-block {
+  background: rgba(10,18,35,0.85);
+  border: 1px solid rgba(52,211,153,0.25);
+  border-radius: 12px;
+  padding: 18px 22px;
   margin: 0 auto 28px;
+  max-width: 680px;
+  text-align: left;
   font-family: 'Inter', sans-serif;
+}
+
+.pg-hero__cli-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.pg-hero__cli-block-title {
   font-size: 13px;
-}
-
-.pg-hero__cli-hook-label {
   color: #94a3b8;
-  white-space: nowrap;
 }
 
-.pg-hero__cli-hook-label strong {
+.pg-hero__cli-block-title strong {
   color: #e2e8f0;
 }
 
-.pg-hero__cli-cmd {
-  font-family: 'Fira Code', monospace;
-  font-size: 13px;
-  color: #34d399;
-  background: rgba(52,211,153,0.08);
-  border: 1px solid rgba(52,211,153,0.15);
-  border-radius: 6px;
-  padding: 3px 10px;
-  white-space: nowrap;
-}
-
 .pg-hero__cli-link {
-  color: #7dd3fc;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
+  color: #34d399;
   text-decoration: none;
   white-space: nowrap;
   transition: color 0.12s;
 }
 
 .pg-hero__cli-link:hover {
-  color: #bae6fd;
+  color: #6ee7b7;
   text-decoration: underline;
 }
 
+/* Main command line */
+.pg-hero__cli-main-cmd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(52,211,153,0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.pg-hero__cli-prompt {
+  color: #34d399;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pg-hero__cli-main-cmd code {
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  color: #e2e8f0;
+  letter-spacing: 0.01em;
+}
+
+/* Bullets */
+.pg-hero__cli-bullets {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pg-hero__cli-bullets li {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-family: 'Inter', sans-serif;
+}
+
+.pg-hero__cli-bullets li code {
+  font-family: 'Fira Code', monospace;
+  font-size: 11.5px;
+  color: #34d399;
+  background: rgba(52,211,153,0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Extras grid */
+.pg-hero__cli-extras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 12px;
+}
+
+.pg-hero__cli-extra-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pg-hero__cli-extra-flag {
+  font-family: 'Fira Code', monospace;
+  font-size: 11.5px;
+  color: #7dd3fc;
+  background: rgba(125,211,252,0.07);
+  border: 1px solid rgba(125,211,252,0.15);
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pg-hero__cli-extra-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  font-family: 'Inter', sans-serif;
+}
+
 @media (max-width: 640px) {
-  .pg-hero__cli-hook {
+  .pg-hero__cli-extras {
+    grid-template-columns: 1fr;
+  }
+  .pg-hero__cli-block-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    text-align: left;
   }
-  .pg-hero__cli-hook-label {
-    white-space: normal;
+  .pg-hero__cli-main-cmd code {
+    font-size: 12px;
   }
 }
 
