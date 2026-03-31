@@ -971,9 +971,7 @@
       billingBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         closeMenu();
-        // Stripe customer portal — replace with your portal link from
-        // Stripe Dashboard → Billing → Customer portal
-        var portalUrl = 'https://billing.stripe.com/p/login/poly-glot';
+        var portalUrl = 'https://billing.stripe.com/p/login/bJe3cx7cU1Na4nY8bO14400';
         window.open(portalUrl, '_blank', 'noopener,noreferrer');
         if (typeof gtag === 'function') gtag('event', 'chip_billing_click', { plan: plan });
       });
