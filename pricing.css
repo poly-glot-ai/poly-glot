@@ -194,9 +194,12 @@
 /* ── Cards grid ─────────────────────────────────────────── */
 .pg-pricing-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: stretch;      /* all cards same height */
+  padding-top: 20px;         /* room for the popular badge overflow */
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .pg-pricing-card {
@@ -206,7 +209,6 @@
   padding: 28px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 0;
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   position: relative;
 }
@@ -217,22 +219,26 @@
   border-color: rgba(125,211,252,0.25);
 }
 
-/* Popular card */
+/* Divider + features sit naturally below CTA */
+.pg-card-divider {
+  margin-top: 0;
+}
+
+/* Popular card — highlight only, no vertical shift */
 .pg-pricing-card.pg-card-popular {
   border-color: rgba(167,139,250,0.4);
   background: linear-gradient(135deg, #1e1a2e 0%, #1a1d27 100%);
   box-shadow: 0 0 0 1px rgba(167,139,250,0.1), 0 8px 32px rgba(124,58,237,0.15);
-  transform: translateY(-4px);
 }
 
 .pg-pricing-card.pg-card-popular:hover {
-  transform: translateY(-7px);
+  transform: translateY(-3px);
   box-shadow: 0 0 0 1px rgba(167,139,250,0.2), 0 16px 48px rgba(124,58,237,0.25);
 }
 
 .pg-popular-badge {
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
@@ -247,6 +253,7 @@
   white-space: nowrap;
   font-family: 'Inter', sans-serif;
   box-shadow: 0 3px 12px rgba(124,58,237,0.4);
+  z-index: 1;
 }
 
 /* ── Card sections ──────────────────────────────────────── */
@@ -272,6 +279,10 @@
 
 .pg-card-price-block {
   margin-bottom: 6px;
+  min-height: 72px; /* normalize Free vs paid price height */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .pg-card-price {
@@ -319,7 +330,7 @@
   font-family: 'Inter', sans-serif;
   line-height: 1.5;
   margin-bottom: 20px;
-  min-height: 40px;
+  min-height: 48px; /* 2 lines at 13px/1.5 = ~39px, give breathing room */
 }
 
 /* ── CTA Button ─────────────────────────────────────────── */
@@ -338,6 +349,7 @@
   text-decoration: none;
   border: none;
   width: 100%;
+  margin-top: auto;     /* pushes CTA to same vertical position across all cards */
   margin-bottom: 24px;
 }
 
@@ -554,22 +566,48 @@
 .pg-faq-a strong { color: #94a3b8; }
 
 /* ── Responsive ─────────────────────────────────────────── */
+
+/* Tablet landscape — 3 cards still fit, just tighten gap */
 @media (max-width: 1024px) {
   .pg-pricing-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    max-width: 100%;
   }
   .pg-pricing-card.pg-card-popular {
     transform: none;
   }
+  .pg-pricing-card.pg-card-popular:hover {
+    transform: translateY(-3px);
+  }
 }
 
-@media (max-width: 640px) {
+/* Tablet portrait — stack to 1 col, cap width, center */
+@media (max-width: 768px) {
   .pg-pricing-grid {
     grid-template-columns: 1fr;
+    max-width: 420px;
+    margin: 0 auto;
+    gap: 16px;
+    padding-top: 20px;
+  }
+  .pg-card-price-block {
+    min-height: unset;
+  }
+  .pg-card-desc {
+    min-height: unset;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .pg-pricing-grid {
+    max-width: 100%;
   }
   .pg-pricing-heading { font-size: 1.9rem; }
   .pg-faq-grid { grid-template-columns: 1fr; }
   .pg-early-access-note { flex-direction: column; align-items: flex-start; }
+  .pg-pricing-section { padding: 48px 16px 64px; }
 }
 
 /* ── Promo countdown ── */
