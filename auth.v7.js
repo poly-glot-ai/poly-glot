@@ -699,14 +699,68 @@
   function handleUrlParams() {
     var params = new URLSearchParams(window.location.search);
 
-    // ── ?auth=expired
+    // ── ?auth=expired ─────────────────────────────────────────────────────
     if (params.get('auth') === 'expired') {
       cleanUrl();
       showToast('⚠️ That sign-in link has expired. Please request a new one.');
       return;
     }
 
-    // ── ?session=TOKEN&plan=PLAN
+    // ── ?token=TOKEN (magic link from Worker) ─────────────────────────────
+    // Worker sends: ?token=hex&plan=free&email=user@example.com
+    var magicToken = params.get('token');
+    if (magicToken) {
+      var emailHint = decodeURIComponent(params.get('email') || '');
+      cleanUrl(); // strip params from URL immediately
+
+      // Show a brief "Signing you in…" toast while we verify
+      showToast('🔐 Signing you in…', 3000);
+
+      // Call /verify to confirm the token is valid (one-time use)
+      fetch(AUTH_API + '/verify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ token: magicToken }),
+      })
+        .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            // Token invalid or expired
+            showToast('⚠️ That sign-in link has expired or already been used. Please request a new one.', 5000);
+            if (typeof gtag === 'function') gtag('event', 'magic_link_verify_failed');
+            return;
+          }
+          var email = result.data.email || emailHint || '';
+          var plan  = (result.data.plan  || 'free').toLowerCase();
+
+          // Persist session
+          _token = magicToken;
+          _plan  = plan;
+          localStorage.setItem(LS_TOKEN_KEY, magicToken);
+          localStorage.setItem(LS_PLAN_KEY,  plan);
+          if (email) localStorage.setItem('pg_email', email);
+
+          // Apply plan gating + update header chip
+          PolyGlotAuth.onPlanLoaded(plan);
+          updateHeaderForUser(email, plan);
+
+          // Welcome toast
+          if (PAID_PLANS.indexOf(plan) !== -1) {
+            var planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
+            showToast('🎉 Welcome back! Your ' + planDisplay + ' plan is active — all features unlocked.', 5000);
+          } else {
+            showToast('👋 Signed in! Python, JS & Java available free. Upgrade anytime for all 12 languages.', 6000);
+          }
+
+          if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan });
+        })
+        .catch(function () {
+          showToast('⚠️ Sign-in failed — please check your connection and try again.', 5000);
+        });
+      return; // don't fall through to ?session= handler
+    }
+
+    // ── ?session=TOKEN (legacy param — keep for backwards compat) ─────────
     var sessionToken = params.get('session');
     var planParam    = params.get('plan');
 
@@ -715,7 +769,7 @@
       _plan  = planParam || 'free';
       var emailParam = params.get('email') || '';
       localStorage.setItem(LS_TOKEN_KEY, _token);
-      localStorage.setItem(LS_PLAN_KEY, _plan);
+      localStorage.setItem(LS_PLAN_KEY,  _plan);
       if (emailParam) localStorage.setItem('pg_email', emailParam);
       cleanUrl();
       PolyGlotAuth.onPlanLoaded(_plan);
@@ -727,7 +781,7 @@
         var planDisplay = _plan.charAt(0).toUpperCase() + _plan.slice(1);
         showToast('🎉 Welcome! Your ' + planDisplay + ' plan is active — all languages unlocked.', 5000);
       } else {
-        showToast('👋 Signed in on Free plan — Python, JS & Java available. Upgrade anytime to unlock all 12 languages.', 6000);
+        showToast('👋 Signed in on Free plan — Python, JS & Java available. Upgrade anytime.', 6000);
       }
     }
   }
