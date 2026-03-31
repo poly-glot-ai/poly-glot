@@ -1182,12 +1182,22 @@
    */
   function markLockedOptions(sel) {
     if (!sel) return;
+    // Never add lock icons for paid users
+    if (hasJoined()) return;
     Array.prototype.forEach.call(sel.options, function (opt) {
       if (isProLanguage(opt.value)) {
         if (opt.text.indexOf('🔒') === -1) {
           opt.text = '🔒 ' + opt.text + ' — Pro';
         }
       }
+    });
+  }
+
+  function clearLockedOptions(sel) {
+    if (!sel) return;
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      opt.disabled = false;
+      opt.text = opt.text.replace(/^🔒\s*/, '').replace(/\s*—\s*Pro$/, '');
     });
   }
 
@@ -1200,6 +1210,12 @@
    */
   function gateLangSelector(sel, isDemoOnly) {
     if (!sel) return;
+
+    // Paid users: clear any existing locks and skip all gating
+    if (hasJoined()) {
+      clearLockedOptions(sel);
+      return;
+    }
 
     /* Label every locked option immediately */
     markLockedOptions(sel);
