@@ -134,6 +134,7 @@
     <link rel="stylesheet" href="styles.v221.css?v=9">
     <link rel="stylesheet" href="phase1.css?v=8">
     <link rel="stylesheet" href="pricing.css?v=7">
+    <link rel="stylesheet" href="design-v2.css?v=1">
     <!-- ═══════════════════════════════════════════════════════
          HEADER BADGE ALIGNMENT — inline so it survives any CDN
          cache on the external stylesheet files.
@@ -1068,6 +1069,106 @@
                     ">Sign In</button>
                 </div>
             </div>
+            <!-- ══ HERO ══════════════════════════════════════════════════ -->
+            <div class="pg-hero">
+              <div class="pg-hero__inner">
+
+                <!-- Eyebrow -->
+                <div class="pg-hero__eyebrow">
+                  <span class="pg-hero__eyebrow-dot"></span>
+                  AI-powered · 12 languages · runs in your browser
+                </div>
+
+                <!-- Headline -->
+                <h2 class="pg-hero__headline">
+                  Turn undocumented code into<br>
+                  <em>professional docs — instantly</em>
+                </h2>
+
+                <!-- Subhead -->
+                <p class="pg-hero__sub">
+                  Paste your code, pick a language, hit Generate.
+                  JSDoc, PyDoc, Javadoc, Doxygen and <em>why-comments</em> stream out line by line.
+                  Your code never leaves your browser.
+                </p>
+
+                <!-- CTAs -->
+                <div class="pg-hero__ctas">
+                  <button class="pg-hero__cta-primary" onclick="
+                    if(typeof gtag==='function') gtag('event','hero_try_free_click');
+                    document.getElementById('commentGenerator')?.scrollIntoView({behavior:'smooth'});
+                  ">🚀 Try it free — no sign-up</button>
+                  <button class="pg-hero__cta-secondary" onclick="
+                    if(typeof gtag==='function') gtag('event','hero_watch_demo_click');
+                    document.getElementById('pg-demo-video')?.scrollIntoView({behavior:'smooth'});
+                  ">▶ Watch 2-min demo</button>
+                </div>
+
+                <!-- Social proof -->
+                <div class="pg-hero__proof">
+                  <span class="pg-hero__proof-item">📦 <strong>957</strong> npm installs</span>
+                  <span class="pg-hero__proof-sep"></span>
+                  <span class="pg-hero__proof-item">🌐 <strong>12</strong> languages</span>
+                  <span class="pg-hero__proof-sep"></span>
+                  <span class="pg-hero__proof-item">🔒 <strong>Zero</strong> data sent to our servers</span>
+                  <span class="pg-hero__proof-sep"></span>
+                  <span class="pg-hero__proof-item">🤖 OpenAI &amp; Anthropic</span>
+                </div>
+
+                <!-- Why-hook -->
+                <div class="pg-hero__why">
+                  <div class="pg-hero__why-label">💬 Unlike Copilot or ChatGPT — Poly-Glot explains <em>why</em>, not just what</div>
+                  <div class="pg-hero__why-cols">
+                    <div class="pg-hero__why-col pg-hero__why-col--bad">
+                      <div class="pg-hero__why-col-label">❌ What comment (useless to AI)</div>
+                      <span class="pg-hero__why-comment">// Loop through users</span><br>
+                      <span class="pg-hero__why-code">for (const u of users) {…}</span>
+                    </div>
+                    <div class="pg-hero__why-col pg-hero__why-col--good">
+                      <div class="pg-hero__why-col-label">✅ Why comment (AI gold)</div>
+                      <span class="pg-hero__why-comment">// Skip inactive users early —<br>// reduces DB calls ~60%</span><br>
+                      <span class="pg-hero__why-code">for (const u of users) {…}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Product chooser -->
+                <div class="pg-chooser__label">How do you want to use Poly-Glot?</div>
+                <div class="pg-chooser">
+                  <button class="pg-chooser__btn" onclick="
+                    if(typeof gtag==='function') gtag('event','chooser_browser');
+                    document.getElementById('commentGenerator')?.scrollIntoView({behavior:'smooth'});
+                  ">
+                    <span class="pg-chooser__icon">🌐</span>
+                    <span class="pg-chooser__name">Browser</span>
+                    <span class="pg-chooser__desc">Paste &amp; generate</span>
+                  </button>
+                  <a class="pg-chooser__btn" href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener"
+                    onclick="if(typeof gtag==='function') gtag('event','chooser_vscode');">
+                    <span class="pg-chooser__icon">💻</span>
+                    <span class="pg-chooser__name">VS Code</span>
+                    <span class="pg-chooser__desc">Inline, no switching</span>
+                  </a>
+                  <a class="pg-chooser__btn" href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener"
+                    onclick="if(typeof gtag==='function') gtag('event','chooser_cli');">
+                    <span class="pg-chooser__icon">⌨️</span>
+                    <span class="pg-chooser__name">Terminal / CLI</span>
+                    <span class="pg-chooser__desc">Batch &amp; CI/CD</span>
+                  </a>
+                  <button class="pg-chooser__btn" onclick="
+                    if(typeof gtag==='function') gtag('event','chooser_copilot');
+                    document.getElementById('pg-copilot-section')?.scrollIntoView({behavior:'smooth'});
+                  ">
+                    <span class="pg-chooser__icon">🤖</span>
+                    <span class="pg-chooser__name">Copilot Chat</span>
+                    <span class="pg-chooser__desc">@poly-glot in chat</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+            <!-- ══ END HERO ══════════════════════════════════════════════ -->
+
             <!-- ── Section 1: What is Poly-Glot Code Comment Library ── -->
             <div class="overview-section">
                 <h2 class="overview-heading">What is Poly-Glot Code Comment Library?</h2>
@@ -2195,6 +2296,13 @@
                         <button id="cgSaveKey" class="pg-save-btn">Save</button>
                     </div>
                     <span id="cgKeyStatus" class="pg-key-status"></span>
+                    <div class="pg-apikey-helper">
+                        <span>🔑 No API key yet?</span>
+                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key in 2 min ↗</a>
+                        <span>·</span>
+                        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a>
+                        <span>· Your key is saved locally, never sent to us.</span>
+                    </div>
                 </div>
             </div>
         </div>

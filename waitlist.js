@@ -514,13 +514,13 @@
           </svg>
           <span class="pg-banner-dot"></span>
           <span class="pg-banner-msg">
-            <strong>Poly-Glot AI is Live!</strong>
-            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> for 3 months free — <span id="pg-banner-countdown">limited to first 50 subscribers</span>.</span>
+            <strong>🎉 Pro is live — get 3 months free.</strong>
+            <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> at checkout — <span id="pg-banner-countdown">only first 50 subscribers</span>.</span>
           </span>
         </div>
         <div class="pg-banner-right">
-          <button class="pg-banner-cta" id="pg-banner-cta-btn" aria-label="See plans">
-            See Plans →
+          <button class="pg-banner-cta" id="pg-banner-cta-btn" aria-label="Claim offer">
+            Claim offer →
           </button>
           <button class="pg-banner-dismiss" id="pg-banner-dismiss-btn" aria-label="Dismiss banner" title="Dismiss">✕</button>
         </div>

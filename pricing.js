@@ -110,7 +110,7 @@
       monthly:   99,
       yearly:    899,
       desc:      'For large teams with compliance and custom needs.',
-      cta:       'Contact Sales →',
+      cta:       'Request a Demo →',
       ctaClass:  'pg-cta-enterprise',
       ctaAction: 'scroll_enterprise',
       popular:   false,
@@ -155,12 +155,21 @@
     const yearlyTot = yearlyTotal(plan);
     const savingsStr = isYearly ? savings(plan) : '';
 
-    const featuresHTML = plan.features.map(f => `
+    // Split features into live and coming-soon
+    const liveFeatures = plan.features.filter(f => !f.soon);
+    const soonFeatures = plan.features.filter(f => f.soon);
+
+    const featuresHTML = liveFeatures.map(f => `
       <li>
         <span class="pg-feat-check">${f.check ? '✓' : '–'}</span>
-        <span style="${!f.check ? 'opacity:0.4' : ''}">${f.text}${f.soon ? '<span class="pg-feat-soon">Soon</span>' : ''}</span>
+        <span style="${!f.check ? 'opacity:0.4' : ''}">${f.text}</span>
       </li>
-    `).join('');
+    `).join('') + (soonFeatures.length ? `
+      <li class="pg-feat-coming-soon-row">
+        <span class="pg-feat-check" style="color:#475569">+</span>
+        <span style="color:#475569;font-size:11px;">${soonFeatures.length} more feature${soonFeatures.length > 1 ? 's' : ''} on the roadmap</span>
+      </li>
+    ` : '');
 
     const teamSelectorHTML = '';
 
