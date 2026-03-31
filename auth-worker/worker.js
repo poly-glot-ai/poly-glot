@@ -11,7 +11,7 @@
 
 const CORS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -180,6 +180,9 @@ async function handleLogin(request, env) {
     return json({ error: 'Email delivery failed — please try again in a moment.' }, 502);
   }
 
+  // Increment global promo counter for this unique email (fire and forget)
+  incrementPromoCount(env, email).catch(() => {});
+
   return json({ ok: true });
 }
 
@@ -221,6 +224,38 @@ async function handleRefresh(request, env) {
   return json({ email: data.email, plan: data.plan || 'free' });
 }
 
+const PROMO_LIMIT = 50;
+
+/**
+ * GET /api/auth/promo-count
+ * Returns global signup count + remaining spots.
+ * { count, limit, remaining }
+ */
+async function handlePromoCount(env) {
+  const raw   = await env.AUTH_KV.get('promo:count');
+  const count = raw ? parseInt(raw, 10) : 0;
+  const remaining = Math.max(0, PROMO_LIMIT - count);
+  return json({ count, limit: PROMO_LIMIT, remaining });
+}
+
+/**
+ * Increment global promo counter for a new unique email.
+ * Uses KV key `promo:seen:{email}` to ensure each email only counts once.
+ */
+async function incrementPromoCount(env, email) {
+  const seenKey = `promo:seen:${email}`;
+  const seen    = await env.AUTH_KV.get(seenKey);
+  if (seen) return; // already counted
+
+  // Mark as seen (no TTL — permanent)
+  await env.AUTH_KV.put(seenKey, '1');
+
+  // Increment global counter atomically (best-effort with KV)
+  const raw   = await env.AUTH_KV.get('promo:count');
+  const count = raw ? parseInt(raw, 10) : 0;
+  await env.AUTH_KV.put('promo:count', String(count + 1));
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -228,6 +263,11 @@ export default {
 
     const url      = new URL(request.url);
     const pathname = url.pathname.replace(/\/$/, '');
+
+    // GET /api/auth/promo-count — public, no auth needed
+    if (request.method === 'GET' && pathname === '/api/auth/promo-count') {
+      return handlePromoCount(env);
+    }
 
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405);
