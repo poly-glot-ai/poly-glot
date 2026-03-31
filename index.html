@@ -2801,8 +2801,8 @@
     showPlay();
     showMuted();  // starts muted
 
-    // ── Hide controls bar while overlay is visible ───────────────────────
-    controls.style.display = 'none';
+    // ── Controls bar always visible ──────────────────────────────────────
+    // (small play button at bottom is part of controls — keep it visible)
 
     // ── Big play overlay ─────────────────────────────────────────────────
     var _started = false;
@@ -2810,7 +2810,6 @@
       if (_started) return; // prevent double-fire on mobile
       _started = true;
       overlay.classList.add('pg-hidden');
-      controls.style.display = ''; // show controls now
       video.muted = false;
       video.play().catch(function () {
         video.muted = true;
