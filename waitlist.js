@@ -464,6 +464,9 @@
   }
 
   function hasJoined() {
+    // Treat paid auth users as having "joined" so Pro languages are never gated
+    var plan = (localStorage.getItem('pg_plan') || '').toLowerCase();
+    if (plan === 'pro' || plan === 'team' || plan === 'enterprise') return true;
     return !!localStorage.getItem(LS_JOINED);
   }
 
