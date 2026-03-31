@@ -831,21 +831,21 @@
         border: none;
         cursor: pointer;
         padding: 0;
-        width: 56px; height: 56px;
+        width: 52px; height: 52px;
         transition: transform 0.2s ease, filter 0.2s ease;
         filter: drop-shadow(0 4px 20px rgba(139,92,246,0.5));
       }
       .pg-video-big-play:hover { transform: scale(1.08); filter: drop-shadow(0 6px 28px rgba(139,92,246,0.7)); }
       @media (max-width: 768px) {
         .pg-video-big-play {
-          width: 44px; height: 44px;
+          width: 40px; height: 40px;
           filter: drop-shadow(0 3px 12px rgba(139,92,246,0.5));
         }
         .pg-video-big-play:active { transform: scale(0.94); }
       }
       @media (max-width: 480px) {
         .pg-video-big-play {
-          width: 36px; height: 36px;
+          width: 32px; height: 32px;
         }
       }
       .pg-video-overlay-label {
@@ -1197,18 +1197,17 @@
                         <div class="pg-video-overlay" id="pgVideoOverlay">
                             <button class="pg-video-big-play" id="pgVideoBigPlay" aria-label="Play demo video">
                                 <!--
-                                  Viewbox 64×64. Outer glow ring radius 31 (thin, subtle).
-                                  Filled circle radius 28. Play triangle optically centered:
-                                  left edge x=24, tip x=46, vertical span y=20→44.
-                                  Triangle nudged +1px right for optical centering of the wedge mass.
+                                  Compact play icon — 48×48 viewBox.
+                                  Subtle ring r=23, filled disc r=19 (leaves 4px breathing room).
+                                  Triangle proportionally smaller — doesn't fill the whole disc.
                                 -->
-                                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <!-- Outer glow ring -->
-                                    <circle cx="32" cy="32" r="31" fill="rgba(139,92,246,0.12)" stroke="rgba(167,139,250,0.35)" stroke-width="1"/>
-                                    <!-- Solid filled disc -->
-                                    <circle cx="32" cy="32" r="27" fill="rgba(139,92,246,0.55)"/>
-                                    <!-- Play triangle — optically centered, clean proportions -->
-                                    <polygon points="26,20 47,32 26,44" fill="white"/>
+                                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Subtle outer ring -->
+                                    <circle cx="24" cy="24" r="23" fill="rgba(139,92,246,0.10)" stroke="rgba(167,139,250,0.30)" stroke-width="1"/>
+                                    <!-- Filled disc — leaves visible ring gap -->
+                                    <circle cx="24" cy="24" r="19" fill="rgba(139,92,246,0.60)"/>
+                                    <!-- Play triangle — compact, optically centered -->
+                                    <polygon points="20,16 34,24 20,32" fill="white"/>
                                 </svg>
                             </button>
                             <p class="pg-video-overlay-label">2 min demo · no audio needed</p>
