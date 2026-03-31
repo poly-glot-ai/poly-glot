@@ -796,20 +796,16 @@
         background: #000;
         cursor: pointer;
         line-height: 0;
-        /* Maintain 16:9 aspect ratio so overlay is always full height before video loads */
-        aspect-ratio: 16/9; /* v2 */
       }
       .pg-video-wrap:hover .pg-video-controls {
         opacity: 1;
         transform: translateY(0);
       }
 
-      /* The actual video */
+      /* The actual video — normal flow, establishes height of wrap */
       .pg-video-el {
         width: 100%;
-        height: 100%;
-        position: absolute;
-        top: 0; left: 0;
+        max-height: 560px;
         object-fit: contain;
         display: block;
         background: #000;
