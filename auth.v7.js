@@ -666,7 +666,9 @@
      Verify existing token
   ───────────────────────────────────────────── */
   function verifyStoredToken(token) {
-    fetch(AUTH_API + '/verify', {
+    // Use /refresh (non-destructive) — /verify is one-time use and would
+    // destroy the token on every page load, wiping the session on first refresh.
+    fetch(AUTH_API + '/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: token })
@@ -676,7 +678,7 @@
         return res.json();
       })
       .then(function (data) {
-        var plan  = data.plan  || 'free';
+        var plan  = (data.plan  || 'free').toLowerCase();
         var email = data.email || localStorage.getItem('pg_email') || '';
         _token = token;
         _plan  = plan;
@@ -686,10 +688,10 @@
         updateHeaderForUser(email, plan);
       })
       .catch(function () {
-        // Token invalid — purge it
+        // Token truly invalid — purge only the token, keep pg_plan so
+        // gating stays correct until we can re-verify
         localStorage.removeItem(LS_TOKEN_KEY);
-        localStorage.removeItem(LS_PLAN_KEY);
-        localStorage.removeItem('pg_email');
+        _token = null;
       });
   }
 
@@ -1343,13 +1345,20 @@
     injectStyles();
     buildModal();
 
-    // 1. Apply free-tier locks immediately so UI is correct before auth resolves
-    applyPlanGating('free');
+    // 1. Apply the stored plan immediately (before any network call) so the
+    //    UI is correct on every page load — not just the first magic-link click.
+    //    Falls back to 'free' for brand-new visitors with no localStorage entry.
+    var cachedPlan  = (localStorage.getItem(LS_PLAN_KEY)  || 'free').toLowerCase();
+    var cachedEmail = localStorage.getItem('pg_email') || '';
+    applyPlanGating(cachedPlan);
+    if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
 
-    // 2. Check URL params first (highest priority)
+    // 2. Check URL params first — magic link click takes highest priority
     handleUrlParams();
 
-    // 3. If no session came from URL, try localStorage token
+    // 3. If no magic link in URL, silently re-validate the stored token via
+    //    /refresh (non-destructive) to confirm it's still live and get
+    //    the latest plan from the Worker (e.g. after a plan upgrade).
     if (!_token) {
       var storedToken = localStorage.getItem(LS_TOKEN_KEY);
       if (storedToken) {

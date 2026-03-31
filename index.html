@@ -831,22 +831,21 @@
         border: none;
         cursor: pointer;
         padding: 0;
-        width: 80px; height: 80px;
+        width: 56px; height: 56px;
         transition: transform 0.2s ease, filter 0.2s ease;
-        filter: drop-shadow(0 4px 24px rgba(139,92,246,0.5));
+        filter: drop-shadow(0 4px 20px rgba(139,92,246,0.5));
       }
-      .pg-video-big-play:hover { transform: scale(1.1); filter: drop-shadow(0 6px 32px rgba(139,92,246,0.75)); }
-      /* Mobile: shrink play button so it doesn't dominate the frame */
+      .pg-video-big-play:hover { transform: scale(1.08); filter: drop-shadow(0 6px 28px rgba(139,92,246,0.7)); }
       @media (max-width: 768px) {
         .pg-video-big-play {
-          width: 52px; height: 52px;
-          filter: drop-shadow(0 3px 14px rgba(139,92,246,0.55));
+          width: 44px; height: 44px;
+          filter: drop-shadow(0 3px 12px rgba(139,92,246,0.5));
         }
         .pg-video-big-play:active { transform: scale(0.94); }
       }
       @media (max-width: 480px) {
         .pg-video-big-play {
-          width: 44px; height: 44px;
+          width: 36px; height: 36px;
         }
       }
       .pg-video-overlay-label {
@@ -2412,7 +2411,7 @@
     <script src="rag-scores.js?v=5"></script>
     <script src="waitlist.js?v=27"></script>
     <script src="pricing.js?v=16"></script>
-    <script src="auth.v7.js?v=6"></script>
+    <script src="auth.v7.js?v=7"></script>
     <script src="chat.v5.3.js"></script>
 
     <!-- Enterprise / Teams Form Handler -->
