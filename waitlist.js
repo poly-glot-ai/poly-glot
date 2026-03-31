@@ -1197,7 +1197,15 @@
     if (!sel) return;
     Array.prototype.forEach.call(sel.options, function (opt) {
       opt.disabled = false;
-      opt.text = opt.text.replace(/^🔒\s*/, '').replace(/\s*—\s*Pro$/, '');
+      // Strip ALL lock text patterns regardless of which system added them:
+      // waitlist.js adds:  "🔒 TypeScript — Pro"
+      // auth.v7.js adds:   "TypeScript 🔒"
+      opt.text = opt.text
+        .replace(/^🔒\s*/,    '')   // leading lock + space
+        .replace(/\s*—\s*Pro$/, '') // trailing " — Pro"
+        .replace(/\s*🔒$/,    '')   // trailing lock (auth.v7 style)
+        .replace(/\s*\(Pro\)$/, '') // trailing "(Pro)"
+        .trim();
     });
   }
 
@@ -1211,9 +1219,9 @@
   function gateLangSelector(sel, isDemoOnly) {
     if (!sel) return;
 
-    // Paid users: clear any existing locks and skip all gating
+    // Paid users: nuclear-unlock everything and skip all gating
     if (hasJoined()) {
-      clearLockedOptions(sel);
+      unlockAllForPaidUser();
       return;
     }
 
@@ -1353,14 +1361,34 @@
     _alreadyOnList: showAlreadyOnList,
   };
 
-  /* ── Unlock all selects for paid users ─────────────────── */
-  function unlockAllSelectsForPaidUser() {
-    var ids = ['language', 'cgLanguage', 'cliDemoLanguage', 'demoDemoLang', 'cgStyle', 'cliDemoMode'];
-    ids.forEach(function (id) {
+  /* ── Nuclear unlock — clears ALL locks from ALL systems ─── */
+  function unlockAllForPaidUser() {
+    // 1. Unlock every language + style + mode select
+    var selectIds = ['language', 'cgLanguage', 'cliDemoLanguage', 'demoDemoLang', 'cgStyle', 'cliDemoMode'];
+    selectIds.forEach(function (id) {
       clearLockedOptions(document.getElementById(id));
     });
 
-    // Also unlock grid tiles
+    // 2. Unlock Why + Both buttons (auth.v7.js may have disabled them)
+    ['whyBtn', 'bothBtn'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = false;
+      btn.classList.remove('btn-locked');
+      var badge = btn.querySelector('.btn-pro-lock');
+      if (badge) badge.parentNode.removeChild(badge);
+    });
+
+    // 3. Unlock download button
+    var dlBtn = document.getElementById('cgDownloadBtn');
+    if (dlBtn) {
+      dlBtn.disabled = false;
+      dlBtn.classList.remove('action-btn--paid');
+      var dlBadge = dlBtn.querySelector('.paid-badge');
+      if (dlBadge) dlBadge.parentNode.removeChild(dlBadge);
+    }
+
+    // 4. Unlock CLI demo grid tiles
     var grid = document.getElementById('cliDemoLanguageGrid');
     if (grid) {
       var tiles = grid.querySelectorAll('[data-language],[data-lang]');
@@ -1368,9 +1396,14 @@
         tile.classList.remove('cli-demo-lang--locked');
         tile.removeAttribute('disabled');
         var label = tile.querySelector('.cli-demo-lang-label') || tile;
-        label.textContent = label.textContent.replace(' 🔒', '').replace('🔒 ', '');
+        label.textContent = label.textContent
+          .replace(' 🔒', '').replace('🔒 ', '').trim();
       });
     }
+
+    // 5. Hide the nudge bar if visible
+    var nudge = document.getElementById('pg-nudge-bar');
+    if (nudge) nudge.style.display = 'none';
   }
 
   /* ── Boot ──────────────────────────────────────────────── */
@@ -1393,18 +1426,19 @@
       pollCount++;
       if (window.PolyGlotAuth) {
         clearInterval(pollInterval);
+        // Wrap onPlanLoaded so we nuclear-unlock immediately when plan resolves
         var originalOnPlanLoaded = window.PolyGlotAuth.onPlanLoaded;
         window.PolyGlotAuth.onPlanLoaded = function (plan) {
           originalOnPlanLoaded(plan);
           var p = (plan || '').toLowerCase();
           if (p === 'pro' || p === 'team' || p === 'enterprise') {
-            unlockAllSelectsForPaidUser();
+            unlockAllForPaidUser();
           }
         };
-        // Also apply immediately if plan already resolved
+        // Also apply immediately if plan already in localStorage
         var currentPlan = (localStorage.getItem('pg_plan') || '').toLowerCase();
         if (currentPlan === 'pro' || currentPlan === 'team' || currentPlan === 'enterprise') {
-          unlockAllSelectsForPaidUser();
+          unlockAllForPaidUser();
         }
       }
       if (pollCount > 50) clearInterval(pollInterval); // give up after 5s
