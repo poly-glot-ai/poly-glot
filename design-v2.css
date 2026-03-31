@@ -249,6 +249,19 @@
 .pg-hero__why-col--good .pg-hero__why-comment { color: #4ade80; }
 .pg-hero__why-code { color: #e2e8f0; }
 
+/* Inline link in hero subhead */
+.pg-hero__sub-link {
+  color: #7dd3fc;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(125,211,252,0.35);
+  transition: color 0.12s, border-color 0.12s;
+}
+.pg-hero__sub-link:hover {
+  color: #bae6fd;
+  border-bottom-color: rgba(186,230,253,0.6);
+}
+
 /* ══════════════════════════════════════════════════════════════
    HERO CLI BLOCK
    ══════════════════════════════════════════════════════════════ */
