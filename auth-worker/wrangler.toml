@@ -1,26 +1,14 @@
-name            = "poly-glot-auth"
-main            = "worker.js"
+name       = "poly-glot-auth"
+main       = "worker.js"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
 
-# ── KV Namespace ──────────────────────────────────────────────────────────────
-# After running `wrangler kv namespace create AUTH_KV`, paste the id below
 [[kv_namespaces]]
-binding  = "AUTH_KV"
-id       = "REPLACE_WITH_KV_NAMESPACE_ID"
-# preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"  # optional, for wrangler dev
+binding = "AUTH_KV"
+id      = "4686b5dd158944e5856f7a402c6c6d2f"
 
-# ── Routes ────────────────────────────────────────────────────────────────────
-# Intercepts /api/auth/* on poly-glot.ai and routes to this worker
-# The rest of the site is served by GitHub Pages as normal
-routes = [
-  { pattern = "poly-glot.ai/api/auth/*", zone_name = "poly-glot.ai" }
-]
-
-# ── Environment variables (non-secret) ────────────────────────────────────────
 [vars]
 BASE_URL = "https://poly-glot.ai"
 
-# ── Secrets (set via `wrangler secret put`) ───────────────────────────────────
-# RESEND_API_KEY — your Resend API key
-# Run: wrangler secret put RESEND_API_KEY
+[[routes]]
+pattern = "poly-glot.ai/api/auth/*"
+zone_name = "poly-glot.ai"
