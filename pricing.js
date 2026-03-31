@@ -29,7 +29,9 @@
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // Stripe Payment Links accept ?prefilled_promo_code= for auto-applying coupons
+    // ?prefilled_promo_code= auto-applies the code at checkout
+    // Only works if "Allow promotion codes" is ON for the Payment Link in Stripe dashboard
+    // If not enabled, Stripe silently ignores the param — checkout still works fine
     return base + `?prefilled_promo_code=${PROMO}`;
   }
 
@@ -366,7 +368,8 @@
             window.PolyGlotWaitlist.open('pricing_cta');
           }
         } else {
-          window.location.href = url;
+          // Open Stripe checkout in new tab so user doesn't lose their place
+          window.open(url, '_blank', 'noopener,noreferrer');
         }
       }
     });
