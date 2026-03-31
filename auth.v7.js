@@ -323,40 +323,66 @@
         background: rgba(245, 158, 11, 0.2);
         color: #fbbf24;
       }
-      /* dropdown on hover */
-      .pg-user-chip:hover .pg-user-chip__menu {
-        display: flex;
+      /* ── User chip — click-to-toggle (works on mobile + desktop) ── */
+      .pg-user-chip {
+        position: relative;
       }
       .pg-user-chip__menu {
         display: none;
         flex-direction: column;
         position: absolute;
-        top: calc(100% + 6px);
+        top: calc(100% + 8px);
         right: 0;
-        background: #1e293b;
-        border: 1px solid rgba(100,116,139,0.3);
-        border-radius: 10px;
+        background: #1a2035;
+        border: 1px solid rgba(139,92,246,0.25);
+        border-radius: 12px;
         overflow: hidden;
-        min-width: 160px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        min-width: 200px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.2);
         z-index: 9999;
+        animation: pgMenuFadeIn 0.15s ease;
+      }
+      @keyframes pgMenuFadeIn {
+        from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0)   scale(1);     }
+      }
+      .pg-user-chip__menu.pg-menu-open { display: flex; }
+      /* Email header inside menu */
+      .pg-user-chip__menu-email {
+        padding: 12px 16px 10px;
+        font-size: 11px;
+        color: #64748b;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+        letter-spacing: 0.01em;
       }
       .pg-user-chip__menu-item {
-        padding: 10px 16px;
+        padding: 11px 16px;
         font-size: 13px;
         color: #94a3b8;
         cursor: pointer;
-        transition: background 0.15s, color 0.15s;
+        transition: background 0.12s, color 0.12s;
         text-align: left;
         border: none;
         background: none;
         width: 100%;
         font-family: Inter, sans-serif;
         white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 9px;
       }
       .pg-user-chip__menu-item:hover {
         background: rgba(255,255,255,0.05);
         color: #e2e8f0;
+      }
+      .pg-user-chip__menu-divider {
+        height: 1px;
+        background: rgba(255,255,255,0.06);
+        margin: 2px 0;
       }
       .pg-user-chip__menu-item--upgrade {
         color: #4ade80;
@@ -366,12 +392,30 @@
         background: rgba(74,222,128,0.08);
         color: #86efac;
       }
+      .pg-user-chip__menu-item--billing {
+        color: #a78bfa;
+        font-weight: 500;
+      }
+      .pg-user-chip__menu-item--billing:hover {
+        background: rgba(139,92,246,0.1);
+        color: #c4b5fd;
+      }
       .pg-user-chip__menu-item--danger {
         color: #f87171;
       }
       .pg-user-chip__menu-item--danger:hover {
         background: rgba(248,113,113,0.08);
         color: #fca5a5;
+      }
+      /* Caret on the chip to signal it's a menu */
+      .pg-user-chip__caret {
+        font-size: 9px;
+        color: #64748b;
+        margin-left: 2px;
+        transition: transform 0.15s ease;
+      }
+      .pg-user-chip.pg-chip-open .pg-user-chip__caret {
+        transform: rotate(180deg);
       }
 
       /* ── Locked button state ── */
@@ -848,58 +892,111 @@
     if (!signInBtn) return;
     if (document.getElementById('pg-user-chip')) return; // already inserted
 
-    var initial  = (email || '?').charAt(0).toUpperCase();
+    var initial   = (email || '?').charAt(0).toUpperCase();
     var planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
     var planClass = 'pg-user-chip__plan--' + plan;
+
+    // Build menu HTML
+    var menuItems = '';
+    menuItems += '<div class="pg-user-chip__menu-email">' + email + '</div>';
+    if (!isPaid) {
+      menuItems += '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--upgrade" id="pg-chip-upgrade">⭐ Upgrade to Pro</button>';
+    } else {
+      menuItems += '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--billing" id="pg-chip-billing">🔑 Manage billing</button>';
+    }
+    menuItems += '<div class="pg-user-chip__menu-divider"></div>';
+    menuItems += '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--danger" id="pg-chip-signout">🚪 Sign out</button>';
 
     var chip = document.createElement('div');
     chip.id        = 'pg-user-chip';
     chip.className = 'pg-user-chip';
     chip.setAttribute('role', 'button');
+    chip.setAttribute('aria-haspopup', 'true');
+    chip.setAttribute('aria-expanded', 'false');
     chip.setAttribute('aria-label', 'Account menu');
     chip.innerHTML =
       '<div class="pg-user-chip__avatar">' + initial + '</div>' +
       '<span class="pg-user-chip__email">' + email + '</span>' +
       '<span class="pg-user-chip__plan ' + planClass + '">' + planLabel + '</span>' +
-      '<div class="pg-user-chip__menu">' +
-        (isPaid ? '' :
-          '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--upgrade" id="pg-chip-upgrade">⭐ Upgrade to Pro</button>'
-        ) +
-        '<button class="pg-user-chip__menu-item pg-user-chip__menu-item--danger" id="pg-chip-signout">Sign out</button>' +
+      '<span class="pg-user-chip__caret">▾</span>' +
+      '<div class="pg-user-chip__menu" id="pgUserChipMenu" role="menu">' +
+        menuItems +
       '</div>';
 
     signInBtn.parentNode.replaceChild(chip, signInBtn);
 
-    // Upgrade → scroll to pricing
+    // ── Click-to-toggle menu (works on touch + desktop) ──────────────────
+    var menu = document.getElementById('pgUserChipMenu');
+
+    function openMenu() {
+      menu.classList.add('pg-menu-open');
+      chip.classList.add('pg-chip-open');
+      chip.setAttribute('aria-expanded', 'true');
+    }
+    function closeMenu() {
+      menu.classList.remove('pg-menu-open');
+      chip.classList.remove('pg-chip-open');
+      chip.setAttribute('aria-expanded', 'false');
+    }
+    function toggleMenu(e) {
+      e.stopPropagation();
+      menu.classList.contains('pg-menu-open') ? closeMenu() : openMenu();
+    }
+
+    chip.addEventListener('click', toggleMenu);
+
+    // Close on outside click / Escape
+    document.addEventListener('click', function (e) {
+      if (!chip.contains(e.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMenu();
+    });
+
+    // ── Upgrade → scroll to pricing ──────────────────────────────────────
     var upgradeBtn = document.getElementById('pg-chip-upgrade');
     if (upgradeBtn) {
-      upgradeBtn.addEventListener('click', function () {
+      upgradeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeMenu();
         var el = document.getElementById('pg-pricing-section');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
         if (typeof gtag === 'function') gtag('event', 'chip_upgrade_click', { plan: plan });
       });
     }
 
-    // Sign out
-    document.getElementById('pg-chip-signout').addEventListener('click', function () {
+    // ── Manage billing → Stripe customer portal ───────────────────────────
+    var billingBtn = document.getElementById('pg-chip-billing');
+    if (billingBtn) {
+      billingBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeMenu();
+        // Stripe customer portal — replace with your portal link from
+        // Stripe Dashboard → Billing → Customer portal
+        var portalUrl = 'https://billing.stripe.com/p/login/poly-glot';
+        window.open(portalUrl, '_blank', 'noopener,noreferrer');
+        if (typeof gtag === 'function') gtag('event', 'chip_billing_click', { plan: plan });
+      });
+    }
+
+    // ── Sign out ──────────────────────────────────────────────────────────
+    document.getElementById('pg-chip-signout').addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeMenu();
       localStorage.removeItem(LS_TOKEN_KEY);
       localStorage.removeItem(LS_PLAN_KEY);
+      localStorage.removeItem('pg_email');
       _token = null;
       _plan  = null;
-      showToast('👋 Signed out.');
-      setTimeout(function () { window.location.reload(); }, 1200);
+      showToast('👋 Signed out successfully.');
+      setTimeout(function () { window.location.reload(); }, 1400);
+      if (typeof gtag === 'function') gtag('event', 'sign_out', { plan: plan });
     });
 
-    // For paid users: also hide See Plans and show plan badge
+    // ── For paid users: hide See Plans in header ──────────────────────────
     if (isPaid) {
       var pricingBtn = document.getElementById('headerPricingBtn');
       if (pricingBtn) pricingBtn.style.display = 'none';
-      if (!document.querySelector('.pg-plan-badge')) {
-        var badgeEl = document.createElement('span');
-        badgeEl.className = 'pg-plan-badge';
-        badgeEl.textContent = '✅ ' + planLabel;
-        chip.parentNode.insertBefore(badgeEl, chip);
-      }
     }
   }
 
