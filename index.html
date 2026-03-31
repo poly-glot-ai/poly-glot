@@ -811,7 +811,7 @@
         background: #000;
       }
 
-      /* Big play overlay */
+      /* Big play overlay — transparent, no blur, just centers the button */
       .pg-video-overlay {
         position: absolute;
         inset: 0;
@@ -819,46 +819,53 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        background: rgba(0,0,0,0.42);
-        backdrop-filter: blur(2px);
+        gap: 10px;
+        background: rgba(0,0,0,0.18);
         transition: opacity 0.25s ease;
         z-index: 10;
       }
       .pg-video-overlay.pg-hidden { opacity: 0; pointer-events: none; }
+
+      /* Play button — clearly sized, never fills the frame */
       .pg-video-big-play {
-        background: rgba(139,92,246,0.55);
-        border: 1.5px solid rgba(167,139,250,0.35);
+        background: rgba(109,40,217,0.82);
+        border: 2px solid rgba(192,132,252,0.5);
         border-radius: 50%;
         cursor: pointer;
         padding: 0;
-        width: 48px; height: 48px;
+        width: 56px; height: 56px;
         display: flex; align-items: center; justify-content: center;
-        transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-        box-shadow: 0 4px 20px rgba(139,92,246,0.45);
+        transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 2px 16px rgba(109,40,217,0.5);
+        flex-shrink: 0;
       }
       .pg-video-big-play:hover {
-        transform: scale(1.08);
-        background: rgba(139,92,246,0.75);
-        box-shadow: 0 6px 28px rgba(139,92,246,0.65);
+        transform: scale(1.1);
+        background: rgba(124,58,237,0.95);
+        box-shadow: 0 4px 24px rgba(109,40,217,0.7);
       }
+      .pg-video-big-play:active { transform: scale(0.95); }
       .pg-video-big-play svg {
-        width: 20px; height: 20px;
+        width: 22px; height: 22px;
         display: block;
+        margin-left: 3px; /* optical centering of triangle */
       }
+      /* Tablet */
       @media (max-width: 768px) {
         .pg-video-big-play {
-          width: 38px; height: 38px;
-          box-shadow: 0 3px 12px rgba(139,92,246,0.45);
+          width: 44px; height: 44px;
+          border-width: 1.5px;
+          box-shadow: 0 2px 12px rgba(109,40,217,0.45);
         }
-        .pg-video-big-play svg { width: 16px; height: 16px; }
-        .pg-video-big-play:active { transform: scale(0.94); }
+        .pg-video-big-play svg { width: 17px; height: 17px; margin-left: 2px; }
       }
+      /* Mobile */
       @media (max-width: 480px) {
         .pg-video-big-play {
-          width: 32px; height: 32px;
+          width: 36px; height: 36px;
+          border-width: 1.5px;
         }
-        .pg-video-big-play svg { width: 13px; height: 13px; }
+        .pg-video-big-play svg { width: 14px; height: 14px; margin-left: 2px; }
       }
       .pg-video-overlay-label {
         margin: 0;
