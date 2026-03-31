@@ -582,3 +582,39 @@
     display: none;
   }
 }
+
+/* ── Enterprise nudge ──────────────────────────────────── */
+.pg-enterprise-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 16px 24px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.pg-enterprise-nudge__text {
+  font-size: 14px;
+  color: #94a3b8;
+  font-family: 'Inter', sans-serif;
+}
+
+.pg-enterprise-nudge__link {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: #a78bfa;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.pg-enterprise-nudge__link:hover {
+  color: #c4b5fd;
+  text-decoration: underline;
+}

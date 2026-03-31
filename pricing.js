@@ -16,12 +16,10 @@
      in the Stripe dashboard.
   ──────────────────────────────────────────────────────── */
   const CHECKOUT = {
-    pro_monthly:       'https://buy.stripe.com/bJe3cx7cU1Na4nY8bO14400',
-    pro_yearly:        'https://buy.stripe.com/00w5kF40I0J62fQ63G14401',
-    team_monthly:      'https://buy.stripe.com/9B65kFfJq9fCbQq3Vy14402',
-    team_yearly:       'https://buy.stripe.com/4gM4gBcxeajGdYyajW14403',
-    enterprise_monthly:'#',
-    enterprise_yearly: '#',
+    pro_monthly:  'https://buy.stripe.com/bJe3cx7cU1Na4nY8bO14400',
+    pro_yearly:   'https://buy.stripe.com/00w5kF40I0J62fQ63G14401',
+    team_monthly: 'https://buy.stripe.com/9B65kFfJq9fCbQq3Vy14402',
+    team_yearly:  'https://buy.stripe.com/4gM4gBcxeajGdYyajW14403',
   };
 
   const PROMO = 'EARLYBIRD3';
@@ -101,28 +99,6 @@
         { text: 'Custom style templates',      check: true, soon: true },
         { text: 'Priority support',            check: true },
         { text: 'Admin panel',                 check: true, soon: true },
-      ],
-    },
-    {
-      id:        'enterprise',
-      tier:      'Enterprise',
-      name:      'Enterprise',
-      monthly:   99,
-      yearly:    899,
-      desc:      'For large teams with compliance and custom needs.',
-      cta:       'Request a Demo →',
-      ctaClass:  'pg-cta-enterprise',
-      ctaAction: 'scroll_enterprise',
-      popular:   false,
-      features: [
-        { text: 'Everything in Team',          check: true },
-        { text: 'Unlimited seats',             check: true },
-        { text: 'SSO / SAML',                  check: true, soon: true },
-        { text: 'Audit logs',                  check: true, soon: true },
-        { text: 'Private deployment',          check: true, soon: true },
-        { text: 'SLA guarantee',               check: true },
-        { text: 'Dedicated onboarding',        check: true },
-        { text: 'White-label option',          check: true, soon: true },
       ],
     },
   ];
@@ -275,6 +251,12 @@
           ${PLANS.map(renderCard).join('')}
         </div>
 
+        <!-- Enterprise nudge -->
+        <div class="pg-enterprise-nudge">
+          <span class="pg-enterprise-nudge__text">Need more than 5 seats, SSO, or a private deployment?</span>
+          <a href="#" class="pg-enterprise-nudge__link" id="pg-enterprise-nudge-link">Let's talk →</a>
+        </div>
+
         <!-- FAQ -->
         <div class="pg-pricing-faq">
           <h3 class="pg-faq-heading">Frequently asked questions</h3>
@@ -356,8 +338,6 @@
 
       if (action === 'scroll') {
         document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
-      } else if (action === 'scroll_enterprise') {
-        document.querySelector('.enterprise-section')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
         /* ── Stripe checkout ── */
         const billing  = isYearly ? 'yearly' : 'monthly';
@@ -382,6 +362,16 @@
         }
       }
     });
+
+    /* Enterprise nudge — scroll to enterprise contact form */
+    const nudgeLink = section.querySelector('#pg-enterprise-nudge-link');
+    if (nudgeLink) {
+      nudgeLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector('.enterprise-section')?.scrollIntoView({ behavior: 'smooth' });
+        if (typeof gtag === 'function') gtag('event', 'enterprise_nudge_click');
+      });
+    }
 
     /* Early access CTA — scroll to AI Settings / comment generator */
     const eaBtn = section.querySelector('#pg-ea-join-btn');
