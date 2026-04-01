@@ -45,9 +45,9 @@ Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Son
 | Files generated per month | 50 | **Unlimited** |
 | Priority support | ❌ | ✅ |
 
-### 🎉 Get 3 Months Free — Code `EARLYBIRD3`
+### 🎉 Start Free — 14-Day Trial, Code `EARLYBIRD3`
 
-**Pro starts at $9/month.** Use code **`EARLYBIRD3`** at checkout and get your first 3 months free.
+**Pro starts at $9/month.** Start with a **14-day free trial** — no charge until day 15. Use code **`EARLYBIRD3`** at checkout for 50% off your first 3 months. Early bird price locked at $9/mo forever (offer expires May 1, 2026).
 
 👉 **[Claim your free months → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
 
@@ -360,7 +360,7 @@ Yes — Poly-Glot uses the OpenAI or Anthropic key you configured in the extensi
 The participant only registers if the extension is active and VS Code v1.95+ is installed. Try: Command Palette → `Developer: Reload Window`.
 
 **Can I use `/why` and `/both` without Pro?**
-No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — use code **`EARLYBIRD3`** for 3 months free.
+No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — start a **14-day free trial**, use code **`EARLYBIRD3`** for 50% off your first 3 months.
 
 **Does it work with VS Code Insiders?**
 Yes — any VS Code build ≥ 1.95 with Copilot Chat enabled works.
@@ -380,13 +380,13 @@ Your code and API keys are **100% private**:
 
 ---
 
-## 💎 Unlock Pro — 3 Months Free with `EARLYBIRD3`
+## 💎 Unlock Pro — 14-Day Free Trial + `EARLYBIRD3`
 
 If you've tried the Pro features and want to unlock them permanently:
 
 1. Visit **[poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
 2. Choose a plan and enter code **`EARLYBIRD3`** at checkout
-3. Get **3 months completely free**
+3. Get **14 days completely free** — no charge until day 15
 4. Copy your license token from your account dashboard
 5. In VS Code: Command Palette → `Poly-Glot: Configure License Token` → paste token → Pro activates instantly
 
