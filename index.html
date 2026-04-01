@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260401-mobile3">
+<html lang="en" data-build="20260401-navchip">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1224,10 +1224,10 @@
       .pg2-gen-heading p { font-size: 13px; padding-right: 60px; }
       /* Container padding */
       .container { padding: 0 14px !important; }
-      /* Nav — stack brand + right items if needed */
-      .pg2-nav__inner { gap: 8px; }
-      .pg2-nav__right { gap: 6px; }
-      .pg2-live-badge { padding: 3px 8px 3px 5px; font-size: 10px; gap: 4px; }
+      /* Nav — tighten for mobile */
+      .pg2-nav__inner { gap: 6px; }
+      .pg2-nav__right { gap: 5px; }
+      .pg2-live-badge { display: none; }
       /* Mockup chat — send button fix */
       .pg2-chat-send {
         flex: 0 0 34px !important;
@@ -1246,8 +1246,8 @@
       .pg2-assistant-section { padding-bottom: 80px; }
     }
     @media (max-width: 380px) {
-      .pg2-nav__brand-text { font-size: 13px; }
-      .pg2-live-badge { display: none; }
+      .pg2-nav__brand-text { font-size: 12px; }
+      .pg2-nav__logo { width: 32px; height: 23px; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
@@ -2376,7 +2376,7 @@ function pg2OpenAssistant(text) {
 <script src="rag-scores.js?v=9"></script>
 <script src="waitlist.js?v=34"></script>
 <script src="pricing.js?v=26"></script>
-<script src="auth.v7.js?v=14"></script>
+<script src="auth.v7.js?v=15"></script>
 <script src="chat.v6.js?v=8"></script>
 
 <!-- VS Code deep-link: desktop only -->

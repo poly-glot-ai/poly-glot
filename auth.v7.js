@@ -443,33 +443,41 @@
       /* ── Mobile responsive ── */
       @media (max-width: 600px) {
         .pg-user-chip {
-          padding: 4px 8px 4px 4px;
-          gap: 5px; font-size: 11px;
+          padding: 3px 6px 3px 3px;
+          gap: 4px; font-size: 11px;
+          max-width: 180px;
         }
         .pg-user-chip__email {
-          max-width: 80px; font-size: 11px;
+          max-width: 70px; font-size: 10px;
         }
         .pg-user-chip__avatar {
-          width: 22px; height: 22px; font-size: 10px;
+          width: 20px; height: 20px; font-size: 9px;
         }
         .pg-user-chip__plan {
           font-size: 8px; padding: 1px 5px;
         }
+        .pg-user-chip__caret { font-size: 8px; margin-left: 0; }
         .pg-user-chip__menu {
           right: 0; left: auto;
-          min-width: 180px; max-width: calc(100vw - 24px);
+          min-width: 200px; max-width: calc(100vw - 20px);
         }
         .pg-user-chip__menu-header {
           font-size: 11px; padding: 10px 12px;
+          word-break: break-all;
         }
         .pg-user-chip__menu-item {
           font-size: 12px; padding: 8px 12px;
         }
       }
+      @media (max-width: 420px) {
+        .pg-user-chip__email { max-width: 55px; font-size: 9px; }
+        .pg-user-chip { max-width: 150px; }
+      }
       @media (max-width: 380px) {
         .pg-user-chip__email { display: none; }
+        .pg-user-chip { max-width: 90px; padding: 3px 5px 3px 3px; }
         .pg-user-chip__menu {
-          right: -8px; min-width: 160px;
+          right: -8px; min-width: 180px;
         }
       }
     `;
