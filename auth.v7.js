@@ -898,6 +898,19 @@
     }
 
     if (!isPaid) {
+      // ── Lock copy button for free users ──
+      var cpBtnFree = document.getElementById('cgCopyBtn');
+      if (cpBtnFree) {
+        cpBtnFree.disabled = true;
+        cpBtnFree.title    = 'Copy — Pro plan required. See Plans ↑';
+        cpBtnFree.classList.add('action-btn--paid');
+        if (!cpBtnFree.querySelector('.paid-badge')) {
+          var cpBadge = document.createElement('span');
+          cpBadge.className   = 'paid-badge';
+          cpBadge.textContent = 'Pro';
+          cpBtnFree.appendChild(cpBadge);
+        }
+      }
       // Show the nudge bar for free users (delayed slightly so page renders first)
       setTimeout(showNudgeBar, 2000);
       return;
@@ -905,6 +918,17 @@
 
     // Paid user — hide nudge bar permanently
     hideNudgeBarForPaidUser();
+
+    // ── Unlock copy button ──
+    var cpBtn = document.getElementById('cgCopyBtn');
+    if (cpBtn) {
+      cpBtn.classList.remove('action-btn--paid');
+      cpBtn.removeAttribute('disabled');
+      cpBtn.title = 'Copy commented code to clipboard';
+      var cpBadgeEl = cpBtn.querySelector('.paid-badge');
+      if (cpBadgeEl) cpBadgeEl.parentNode.removeChild(cpBadgeEl);
+      // Re-attach click so app.v220.js handler works on the live (non-cloned) button
+    }
 
     // ── Unlock download button ──
     var dlBtn = document.getElementById('cgDownloadBtn');

@@ -1326,14 +1326,14 @@ for (const user of users) {
               <option value="java">Java</option>
             </optgroup>
             <optgroup label="── Pro Required 🔒 ──">
-              <option value="cpp" class="pg-locked">C++ 🔒</option>
-              <option value="csharp" class="pg-locked">C# 🔒</option>
-              <option value="go" class="pg-locked">Go 🔒</option>
-              <option value="rust" class="pg-locked">Rust 🔒</option>
-              <option value="ruby" class="pg-locked">Ruby 🔒</option>
-              <option value="php" class="pg-locked">PHP 🔒</option>
-              <option value="swift" class="pg-locked">Swift 🔒</option>
-              <option value="kotlin" class="pg-locked">Kotlin 🔒</option>
+              <option value="cpp" class="pg-locked">C++ 🔒 Pro</option>
+              <option value="csharp" class="pg-locked">C# 🔒 Pro</option>
+              <option value="go" class="pg-locked">Go 🔒 Pro</option>
+              <option value="rust" class="pg-locked">Rust 🔒 Pro</option>
+              <option value="ruby" class="pg-locked">Ruby 🔒 Pro</option>
+              <option value="php" class="pg-locked">PHP 🔒 Pro</option>
+              <option value="swift" class="pg-locked">Swift 🔒 Pro</option>
+              <option value="kotlin" class="pg-locked">Kotlin 🔒 Pro</option>
             </optgroup>
           </select>
         </div>
@@ -1347,14 +1347,14 @@ for (const user of users) {
               <option value="pydoc">PyDoc</option>
             </optgroup>
             <optgroup label="── Pro Required 🔒 ──">
-              <option value="doxygen">Doxygen 🔒</option>
-              <option value="xmldoc">XMLDoc (C#) 🔒</option>
-              <option value="godoc">GoDoc 🔒</option>
-              <option value="rustdoc">RustDoc 🔒</option>
-              <option value="rdoc">RDoc (Ruby) 🔒</option>
-              <option value="phpdoc">PHPDoc 🔒</option>
-              <option value="swift">Swift Doc 🔒</option>
-              <option value="kotlin">KDoc 🔒</option>
+              <option value="doxygen">Doxygen 🔒 Pro</option>
+              <option value="xmldoc">XMLDoc (C#) 🔒 Pro</option>
+              <option value="godoc">GoDoc 🔒 Pro</option>
+              <option value="rustdoc">RustDoc 🔒 Pro</option>
+              <option value="rdoc">RDoc (Ruby) 🔒 Pro</option>
+              <option value="phpdoc">PHPDoc 🔒 Pro</option>
+              <option value="swift">Swift Doc 🔒 Pro</option>
+              <option value="kotlin">KDoc 🔒 Pro</option>
             </optgroup>
           </select>
         </div>
@@ -1712,6 +1712,30 @@ for (const user of users) {
     </div>
   </div>
 </div>
+
+<!-- Live RAG/GEO score watcher — updates when CLI lang OR mode changes -->
+<script>
+(function() {
+  function refreshCliScore() {
+    var lang = (document.getElementById('cliDemoLanguage') || {}).value || 'python';
+    var mode = (document.getElementById('cliDemoMode') || {}).value || 'comment';
+    if (typeof window.pgShowScores === 'function') {
+      window.pgShowScores(lang, mode);
+    }
+  }
+  function attachCliScoreWatchers() {
+    var langSel = document.getElementById('cliDemoLanguage');
+    var modeSel = document.getElementById('cliDemoMode');
+    if (langSel) langSel.addEventListener('change', refreshCliScore);
+    if (modeSel) modeSel.addEventListener('change', refreshCliScore);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachCliScoreWatchers);
+  } else {
+    attachCliScoreWatchers();
+  }
+})();
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      RAG & GEO SECTION
@@ -2181,15 +2205,15 @@ function pg2OpenAssistant(text) {
 <!-- ════════════════════════════════════════════════════════════
      SCRIPTS — all preserved exactly from live site
      ════════════════════════════════════════════════════════════ -->
-<script src="analytics.js?v=218"></script>
-<script src="ai-generator.v221.js?v=4"></script>
-<script src="scorer.js?v=221"></script>
-<script src="app.v220.js?v=6"></script>
-<script src="cli-terminal-demo.js?v=222"></script>
-<script src="rag-scores.js?v=7"></script>
-<script src="waitlist.js?v=31"></script>
-<script src="pricing.js?v=21"></script>
-<script src="auth.v7.js?v=10"></script>
+<script src="analytics.js?v=219"></script>
+<script src="ai-generator.v221.js?v=5"></script>
+<script src="scorer.js?v=222"></script>
+<script src="app.v220.js?v=7"></script>
+<script src="cli-terminal-demo.js?v=223"></script>
+<script src="rag-scores.js?v=8"></script>
+<script src="waitlist.js?v=32"></script>
+<script src="pricing.js?v=22"></script>
+<script src="auth.v7.js?v=11"></script>
 <script src="chat.v6.js?v=4"></script>
 
 <!-- VS Code deep-link: desktop only -->
