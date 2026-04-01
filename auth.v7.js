@@ -439,6 +439,39 @@
         border-radius: inherit;
         background: rgba(0,0,0,0.15);
       }
+
+      /* ── Mobile responsive ── */
+      @media (max-width: 600px) {
+        .pg-user-chip {
+          padding: 4px 8px 4px 4px;
+          gap: 5px; font-size: 11px;
+        }
+        .pg-user-chip__email {
+          max-width: 80px; font-size: 11px;
+        }
+        .pg-user-chip__avatar {
+          width: 22px; height: 22px; font-size: 10px;
+        }
+        .pg-user-chip__plan {
+          font-size: 8px; padding: 1px 5px;
+        }
+        .pg-user-chip__menu {
+          right: 0; left: auto;
+          min-width: 180px; max-width: calc(100vw - 24px);
+        }
+        .pg-user-chip__menu-header {
+          font-size: 11px; padding: 10px 12px;
+        }
+        .pg-user-chip__menu-item {
+          font-size: 12px; padding: 8px 12px;
+        }
+      }
+      @media (max-width: 380px) {
+        .pg-user-chip__email { display: none; }
+        .pg-user-chip__menu {
+          right: -8px; min-width: 160px;
+        }
+      }
     `;
     document.head.appendChild(style);
   }

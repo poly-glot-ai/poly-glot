@@ -728,7 +728,7 @@ When a user pastes code or asks a code question:
 
     /* Suggestion strip */
     .pg-chat-suggestions {
-      flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
       padding: 8px 12px 7px;
       border-top: 1px solid rgba(255,255,255,.06);
       background: rgba(0,0,0,.18);
@@ -746,7 +746,7 @@ When a user pastes code or asks a code question:
       padding: 5px 12px; cursor: pointer; white-space: nowrap;
       flex-shrink: 0; line-height: 1.4; font-family: inherit;
       transition: background .14s, border-color .14s, color .14s, transform .14s;
-      overflow: hidden; text-overflow: ellipsis; max-width: 260px;
+      overflow: hidden; text-overflow: ellipsis;
     }
     .pg-chat-suggestion:hover {
       background: rgba(79,70,229,.3); border-color: rgba(79,70,229,.7);
@@ -810,21 +810,34 @@ When a user pastes code or asks a code question:
         word-break: normal; overflow-wrap: normal;
       }
       .pg-chat-inline-code { font-size: 10.5px; }
+      /* Suggestion chips — stack vertically on mobile */
       .pg-chat-suggestions {
-        padding: 6px 10px; gap: 6px;
-        overflow-x: auto; -webkit-overflow-scrolling: touch;
-        flex-wrap: nowrap; scrollbar-width: none;
+        flex-direction: column; align-items: stretch;
+        padding: 8px 10px; gap: 6px;
+        overflow: hidden;
       }
-      .pg-chat-suggestions::-webkit-scrollbar { display: none; }
-      .pg-chat-suggestion { font-size: 10.5px; padding: 4px 10px; max-width: 240px; flex-shrink: 0; }
-      .pg-chat-suggestions-label { font-size: 9px; }
-      .pg-chat-input-row { padding: 8px 10px 14px; gap: 6px; }
+      .pg-chat-suggestions-label { font-size: 9px; margin-bottom: 2px; }
+      .pg-chat-suggestion {
+        font-size: 12px; padding: 8px 14px;
+        white-space: nowrap; text-align: center;
+        border-radius: 10px; width: 100%; box-sizing: border-box;
+      }
+      /* Input row — fix send button sizing */
+      .pg-chat-input-row {
+        padding: 8px 10px 14px; gap: 8px;
+        align-items: flex-end;
+      }
       #pg-chat-input {
+        flex: 1; min-width: 0;
         font-size: 13px; padding: 8px 10px; min-height: 36px;
         border-radius: 10px;
       }
       #pg-chat-input::placeholder { font-size: 12px; }
-      #pg-chat-send { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
+      #pg-chat-send {
+        width: 36px !important; height: 36px !important;
+        min-width: 36px !important; max-width: 36px !important;
+        border-radius: 10px; flex-shrink: 0;
+      }
       #pg-chat-send svg { width: 15px; height: 15px; }
       .pg-chat-header { padding: 0 12px; }
       .pg-chat-header-title { font-size: 13px; }
@@ -835,7 +848,7 @@ When a user pastes code or asks a code question:
       #pg-chat-trigger { bottom: 14px; right: 12px; width: 42px; height: 42px; font-size: 19px; }
       .pg-chat-code { font-size: 9.5px; padding: 5px 6px; }
       .pg-chat-bubble { font-size: 12px; padding: 7px 9px; }
-      .pg-chat-suggestion { font-size: 10px; padding: 3px 8px; max-width: 180px; }
+      .pg-chat-suggestion { font-size: 11px; padding: 7px 10px; }
       #pg-chat-input { font-size: 12px; }
     }
   `;
@@ -923,26 +936,36 @@ When a user pastes code or asks a code question:
       suggestionsEl.innerHTML = '';
       const label = document.createElement('span');
       label.className = 'pg-chat-suggestions-label';
-      label.textContent = 'Try:';
+      label.textContent = 'TRY:';
       suggestionsEl.appendChild(label);
 
-      const btn = document.createElement('button');
-      btn.className = 'pg-chat-suggestion';
-      btn.textContent = text;
-      btn.title = text;
-      btn.setAttribute('aria-label', `Suggested: ${text}`);
-      btn.addEventListener('click', () => {
-        if (isBusy) return;
-        inputEl.value = text;
-        inputEl.style.height = 'auto';
-        inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
-        sendBtn.disabled = false;
-        btn.classList.add('populated');
-        inputEl.focus();
-        const l = inputEl.value.length;
-        inputEl.setSelectionRange(l, l);
+      // Show 3 chips — current + next 2
+      const chips = [text];
+      let idx = suggestionIndex;
+      for (let i = 0; i < 2; i++) {
+        idx = (idx + 1) % SUGGESTIONS.length;
+        if (!chips.includes(SUGGESTIONS[idx])) chips.push(SUGGESTIONS[idx]);
+      }
+
+      chips.forEach(chipText => {
+        const btn = document.createElement('button');
+        btn.className = 'pg-chat-suggestion';
+        btn.textContent = chipText;
+        btn.title = chipText;
+        btn.setAttribute('aria-label', `Suggested: ${chipText}`);
+        btn.addEventListener('click', () => {
+          if (isBusy) return;
+          inputEl.value = chipText;
+          inputEl.style.height = 'auto';
+          inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+          sendBtn.disabled = false;
+          btn.classList.add('populated');
+          inputEl.focus();
+          const l = inputEl.value.length;
+          inputEl.setSelectionRange(l, l);
+        });
+        suggestionsEl.appendChild(btn);
       });
-      suggestionsEl.appendChild(btn);
     }
 
     function appendMessage(role, content, isHtml = false) {
