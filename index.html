@@ -1252,10 +1252,6 @@
       </a>
       <!-- See Plans -->
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
-      <!-- Theme Toggle -->
-      <button class="pg2-theme-toggle" id="themeToggleBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
-        <span class="pg2-theme-toggle__icon" id="themeToggleIcon">☀️</span>
-      </button>
       <!-- Sign In -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
     </div>
@@ -2336,7 +2332,7 @@ function pg2OpenAssistant(text) {
 <script src="rag-scores.js?v=9"></script>
 <script src="waitlist.js?v=33"></script>
 <script src="pricing.js?v=26"></script>
-<script src="auth.v7.js?v=12"></script>
+<script src="auth.v7.js?v=13"></script>
 <script src="chat.v6.js?v=5"></script>
 
 <!-- VS Code deep-link: desktop only -->
@@ -2407,42 +2403,5 @@ if (enterpriseForm) {
 }
 </script>
 
-<script>
-  /* ── Dark / Light Theme Toggle ── */
-  (function() {
-    const BTN  = document.getElementById('themeToggleBtn');
-    const ICON = document.getElementById('themeToggleIcon');
-    const KEY  = 'pg-theme';
-
-    function applyTheme(theme) {
-      if (theme === 'light') {
-        document.body.classList.add('pg-light');
-        if (ICON) ICON.textContent = '🌙';
-        if (BTN)  BTN.setAttribute('title', 'Switch to dark mode');
-      } else {
-        document.body.classList.remove('pg-light');
-        if (ICON) ICON.textContent = '☀️';
-        if (BTN)  BTN.setAttribute('title', 'Switch to light mode');
-      }
-      try { localStorage.setItem(KEY, theme); } catch(e) {}
-    }
-
-    /* Restore saved preference */
-    let saved = 'dark';
-    try { saved = localStorage.getItem(KEY) || 'dark'; } catch(e) {}
-    applyTheme(saved);
-
-    /* Toggle on click */
-    if (BTN) {
-      BTN.addEventListener('click', function() {
-        const isLight = document.body.classList.contains('pg-light');
-        applyTheme(isLight ? 'dark' : 'light');
-        if (typeof gtag === 'function') {
-          gtag('event', 'theme_toggle', { theme: isLight ? 'dark' : 'light' });
-        }
-      });
-    }
-  })();
-</script>
 </body>
 </html>

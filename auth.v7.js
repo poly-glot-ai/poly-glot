@@ -911,6 +911,19 @@
           cpBtnFree.appendChild(cpBadge);
         }
       }
+      // ── Lock download button for free users ──
+      var dlBtnFree = document.getElementById('cgDownloadBtn');
+      if (dlBtnFree) {
+        dlBtnFree.disabled = true;
+        dlBtnFree.title    = 'Download — Pro plan required. See Plans ↑';
+        dlBtnFree.classList.add('action-btn--paid');
+        if (!dlBtnFree.querySelector('.paid-badge')) {
+          var dlBadge = document.createElement('span');
+          dlBadge.className   = 'paid-badge';
+          dlBadge.textContent = 'Pro';
+          dlBtnFree.appendChild(dlBadge);
+        }
+      }
       // Show the nudge bar for free users (delayed slightly so page renders first)
       setTimeout(showNudgeBar, 2000);
       return;
