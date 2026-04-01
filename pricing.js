@@ -16,10 +16,10 @@
      in the Stripe dashboard.
   ──────────────────────────────────────────────────────── */
   const CHECKOUT = {
-    pro_monthly:  'https://buy.stripe.com/bJe3cx7cU1Na4nY8bO14400',
-    pro_yearly:   'https://buy.stripe.com/00w5kF40I0J62fQ63G14401',
-    team_monthly: 'https://buy.stripe.com/9B65kFfJq9fCbQq3Vy14402',
-    team_yearly:  'https://buy.stripe.com/4gM4gBcxeajGdYyajW14403',
+    pro_monthly:  'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405',
+    pro_yearly:   'https://buy.stripe.com/8x214p54M9fCaMmdw814404',
+    team_monthly: 'https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408',
+    team_yearly:  'https://buy.stripe.com/00w8wR7cU63q7Aa77K14406',
   };
 
   const PROMO = 'EARLYBIRD3';
