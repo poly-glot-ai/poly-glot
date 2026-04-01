@@ -602,50 +602,72 @@
     .pg2-assistant-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 48px;
+      gap: 56px;
       align-items: start;
       max-width: 1100px;
       margin: 0 auto;
       padding: 80px 24px;
     }
-    @media (max-width: 800px) { .pg2-assistant-grid { grid-template-columns: 1fr; gap: 32px; } }
+    @media (max-width: 800px) { .pg2-assistant-grid { grid-template-columns: 1fr; gap: 36px; } }
+
+    /* Feature list */
     .pg2-assistant-features {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 4px;
       margin-top: 28px;
     }
     .pg2-assistant-feat {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      transition: background .15s;
+      cursor: default;
     }
-    .pg2-assistant-feat__arrow {
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 700;
-      margin-top: 2px;
+    .pg2-assistant-feat:hover { background: rgba(125,211,252,.05); }
+    .pg2-assistant-feat__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
       flex-shrink: 0;
+      background: rgba(125,211,252,.1);
+      border: 1px solid rgba(125,211,252,.18);
     }
+    .pg2-assistant-feat__icon--purple { background: rgba(167,139,250,.1); border-color: rgba(167,139,250,.2); }
+    .pg2-assistant-feat__icon--green  { background: rgba(16,185,129,.1);  border-color: rgba(16,185,129,.2);  }
+    .pg2-assistant-feat__icon--amber  { background: rgba(245,158,11,.1);  border-color: rgba(245,158,11,.2);  }
+    .pg2-assistant-feat__icon--pink   { background: rgba(236,72,153,.1);  border-color: rgba(236,72,153,.2);  }
+    .pg2-assistant-feat__icon--indigo { background: rgba(99,102,241,.1);  border-color: rgba(99,102,241,.2);  }
     .pg2-assistant-feat__title {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--text);
       margin-bottom: 2px;
     }
-    .pg2-assistant-feat__text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .pg2-assistant-feat__text { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+    /* VS Code marketplace link */
     .pg2-assistant-vscode-link {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      margin-top: 24px;
-      font-size: 13px;
+      gap: 8px;
+      margin-top: 20px;
+      font-size: 12.5px;
       color: var(--accent);
       text-decoration: none;
-      border-bottom: 1px solid rgba(125,211,252,.3);
-      padding-bottom: 1px;
+      background: rgba(125,211,252,.07);
+      border: 1px solid rgba(125,211,252,.2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      transition: background .14s, border-color .14s;
     }
-    .pg2-assistant-vscode-link:hover { border-color: var(--accent); }
+    .pg2-assistant-vscode-link:hover { background: rgba(125,211,252,.13); border-color: var(--accent); }
 
     /* Chat mockup */
     .pg2-chat-mockup {
@@ -653,6 +675,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.04);
     }
     .pg2-chat-header {
       display: flex;
@@ -689,12 +712,6 @@
       width: 5px; height: 5px;
       background: #34d399;
       border-radius: 50%;
-    }
-    .pg2-chat-header__file {
-      margin-left: auto;
-      font-size: 11px;
-      color: var(--text-dim);
-      font-family: 'Fira Code', monospace;
     }
     .pg2-chat-messages {
       padding: 16px;
@@ -771,25 +788,113 @@
       color: #fff;
       font-size: 14px;
     }
+    /* Chat header file badge */
+    .pg2-chat-header__file {
+      margin-left: auto;
+      font-size: 10.5px;
+      color: var(--accent);
+      font-family: 'Fira Code', monospace;
+      background: rgba(125,211,252,.1);
+      border: 1px solid rgba(125,211,252,.2);
+      border-radius: 5px;
+      padding: 2px 7px;
+      letter-spacing: .02em;
+    }
+    /* Typing indicator */
+    .pg2-chat-typing {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 4px 14px 14px 14px;
+      width: fit-content;
+    }
+    .pg2-chat-typing span {
+      width: 5px; height: 5px;
+      background: var(--text-dim);
+      border-radius: 50%;
+      animation: pg2TypingBounce .9s infinite ease-in-out;
+    }
+    .pg2-chat-typing span:nth-child(2) { animation-delay: .18s; }
+    .pg2-chat-typing span:nth-child(3) { animation-delay: .36s; }
+    @keyframes pg2TypingBounce {
+      0%,60%,100% { transform: translateY(0); opacity: .4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    /* Suggestion strip */
     .pg2-chat-suggestion-strip {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px 10px;
+      padding: 8px 14px 10px;
       flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,.05);
     }
     .pg2-chat-chip {
       background: rgba(79,70,229,.12);
-      border: 1px solid rgba(79,70,229,.3);
+      border: 1px solid rgba(79,70,229,.28);
       color: #a5b4fc;
       font-size: 11px;
       border-radius: 20px;
-      padding: 4px 10px;
+      padding: 4px 11px;
       cursor: pointer;
       font-family: 'Inter', sans-serif;
-      transition: background .14s;
+      transition: background .14s, border-color .14s, transform .1s;
+      white-space: nowrap;
     }
-    .pg2-chat-chip:hover { background: rgba(79,70,229,.25); }
+    .pg2-chat-chip:hover {
+      background: rgba(79,70,229,.28);
+      border-color: rgba(79,70,229,.5);
+      transform: translateY(-1px);
+    }
+    .pg2-chat-chip:active { transform: translateY(0); }
+    /* Input bar */
+    .pg2-chat-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+    }
+    .pg2-chat-input {
+      flex: 1;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 12.5px;
+      font-family: 'Inter', sans-serif;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .pg2-chat-input:focus { border-color: rgba(125,211,252,.35); }
+    .pg2-chat-input::placeholder { color: var(--text-dim); }
+    .pg2-chat-send {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg,#4f46e5,#7c3aed);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #fff;
+      font-size: 15px;
+      transition: opacity .15s, transform .1s;
+    }
+    .pg2-chat-send:hover { opacity: .88; transform: scale(1.05); }
+    /* Shimmer glow on mockup hover */
+    .pg2-chat-mockup {
+      transition: box-shadow .25s;
+    }
+    .pg2-chat-mockup:hover {
+      box-shadow: 0 32px 72px rgba(0,0,0,.5), 0 0 0 1px rgba(125,211,252,.1);
+    }
 
     /* ── VS CODE SECTION ────────────────────────────────────── */
     .pg2-vscode-grid {
@@ -1659,108 +1764,173 @@ for (const user of users) {
 <div class="pg2-divider"></div>
 <div class="pg2-assistant-section">
   <div class="pg2-assistant-grid">
-    <!-- Left: feature list -->
+
+    <!-- ── Left: feature list ─────────────────────────────── -->
     <div>
       <div class="pg2-eyebrow">✦ Poly-Glot Assistant</div>
       <h2 class="pg2-section__h2">Ask anything about your code — in plain English</h2>
-      <p class="pg2-section__sub" style="margin-bottom:0;">Context-aware AI chat built into the tool. Explain functions, find bugs, suggest refactors, write tests — it already knows your code.</p>
+      <p class="pg2-section__sub" style="margin-bottom:0;">Context-aware AI chat built right into the tool. Explain functions, find bugs, suggest refactors, write tests — paste any code and get instant answers.</p>
+
       <div class="pg2-assistant-features">
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon">🔍</div>
           <div>
             <div class="pg2-assistant-feat__title">Explain this function</div>
             <div class="pg2-assistant-feat__text">Paste code, get a plain-English breakdown with context and logic flow.</div>
           </div>
         </div>
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon pg2-assistant-feat__icon--pink">🐛</div>
           <div>
             <div class="pg2-assistant-feat__title">Find bugs</div>
             <div class="pg2-assistant-feat__text">Audit for edge cases, null dereferences, and error handling gaps.</div>
           </div>
         </div>
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon pg2-assistant-feat__icon--purple">⚡</div>
           <div>
             <div class="pg2-assistant-feat__title">Suggest refactors</div>
             <div class="pg2-assistant-feat__text">Concrete, actionable improvement suggestions with before/after diffs.</div>
           </div>
         </div>
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon pg2-assistant-feat__icon--green">🧪</div>
           <div>
             <div class="pg2-assistant-feat__title">Write tests</div>
             <div class="pg2-assistant-feat__text">Generate unit tests directly from function signatures and doc comments.</div>
           </div>
         </div>
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon pg2-assistant-feat__icon--amber">🧠</div>
           <div>
             <div class="pg2-assistant-feat__title">Context-aware</div>
             <div class="pg2-assistant-feat__text">Understands your full file, not just one snippet in isolation.</div>
           </div>
         </div>
+
         <div class="pg2-assistant-feat">
-          <span class="pg2-assistant-feat__arrow">→</span>
+          <div class="pg2-assistant-feat__icon pg2-assistant-feat__icon--indigo">🤖</div>
           <div>
             <div class="pg2-assistant-feat__title">OpenAI &amp; Anthropic</div>
             <div class="pg2-assistant-feat__text">Works with GPT-4o, Claude 3.5 Sonnet, or any model you prefer.</div>
           </div>
         </div>
+
       </div>
+
       <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="pg2-assistant-vscode-link">
         💻 Also available in VS Code Extension — View on Marketplace ↗
       </a>
     </div>
-    <!-- Right: chat mockup -->
-    <div class="pg2-chat-mockup">
+
+    <!-- ── Right: live chat mockup ────────────────────────── -->
+    <div class="pg2-chat-mockup" id="pg2AssistantMockup">
+
+      <!-- Header -->
       <div class="pg2-chat-header">
         <div class="pg2-chat-header__avatar">🦜</div>
-        <div>
+        <div style="flex:1;">
           <div class="pg2-chat-header__name">Poly-Glot Assistant</div>
-          <div class="pg2-chat-header__status"><span class="pg2-chat-header__dot"></span> Online · Ask me anything</div>
+          <div class="pg2-chat-header__status">
+            <span class="pg2-chat-header__dot"></span> Online · Ask me anything
+          </div>
         </div>
         <div class="pg2-chat-header__file">calculatePrice.ts</div>
       </div>
-      <div class="pg2-chat-messages">
+
+      <!-- Messages -->
+      <div class="pg2-chat-messages" id="pg2MockupMessages">
+
+        <!-- Turn 1: user -->
         <div class="pg2-chat-msg pg2-chat-msg--user">
           <div class="pg2-chat-bubble">Can you explain what this function does and flag any potential issues?</div>
         </div>
+
+        <!-- Turn 1: bot -->
         <div class="pg2-chat-msg pg2-chat-msg--bot">
           <div class="pg2-chat-bubble">
-            This function calculates total price including tax. Issue: <code style="font-family:'Fira Code',monospace;font-size:11px;background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;">taxRate</code> is never validated — passing <code style="font-family:'Fira Code',monospace;font-size:11px;background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;">undefined</code> silently returns <code style="font-family:'Fira Code',monospace;font-size:11px;background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px;">NaN</code>. Add a guard:
+            <span style="color:#a5f3fc;font-weight:600;">calculatePrice()</span> totals items and applies a tax rate. 
+            <strong style="color:#fca5a5;">Issue:</strong> <code style="font-family:'Fira Code',monospace;font-size:10.5px;background:rgba(0,0,0,.35);padding:1px 5px;border-radius:3px;">taxRate</code> is never validated — passing <code style="font-family:'Fira Code',monospace;font-size:10.5px;background:rgba(0,0,0,.35);padding:1px 5px;border-radius:3px;">undefined</code> silently returns <code style="font-family:'Fira Code',monospace;font-size:10.5px;background:rgba(0,0,0,.35);padding:1px 5px;border-radius:3px;">NaN</code>. Add a guard:
             <pre class="pg2-chat-code">if (!taxRate || isNaN(taxRate))
   throw new Error('Invalid tax rate')</pre>
           </div>
         </div>
+
+        <!-- Turn 2: user -->
         <div class="pg2-chat-msg pg2-chat-msg--user">
           <div class="pg2-chat-bubble">Can you write a JSDoc comment for it?</div>
         </div>
+
+        <!-- Turn 2: bot -->
         <div class="pg2-chat-msg pg2-chat-msg--bot">
           <div class="pg2-chat-bubble">
-            Sure — here's the JSDoc block:
+            Sure — here's the full JSDoc block:
             <pre class="pg2-chat-code">/**
- * @param {Array} items
- * @param {number} taxRate
- * @returns {Object} { subtotal, tax, total }
- * @throws {Error} on invalid taxRate
+ * Calculates order total with tax.
+ * @param {Array}  items    - Line items with price &amp; qty
+ * @param {number} taxRate  - Decimal rate e.g. 0.08 for 8%
+ * @returns {{ subtotal: number,
+ *             tax: number,
+ *             total: number }}
+ * @throws {Error} If taxRate is missing or NaN
  */</pre>
           </div>
         </div>
+
       </div>
+
+      <!-- Suggestion chips -->
       <div class="pg2-chat-suggestion-strip">
-        <span style="font-size:10px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Try:</span>
-        <button class="pg2-chat-chip" onclick="document.getElementById('pg-chat-input')?.focus();">Find bugs in my code</button>
-        <button class="pg2-chat-chip" onclick="document.getElementById('pg-chat-input')?.focus();">Write unit tests</button>
-        <button class="pg2-chat-chip" onclick="document.getElementById('pg-chat-input')?.focus();">Refactor this function</button>
+        <span style="font-size:10px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Try:</span>
+        <button class="pg2-chat-chip" onclick="pg2OpenAssistant('Find bugs in my code')">Find bugs in my code</button>
+        <button class="pg2-chat-chip" onclick="pg2OpenAssistant('Write unit tests for this code')">Write unit tests</button>
+        <button class="pg2-chat-chip" onclick="pg2OpenAssistant('Help me refactor this function')">Refactor this function</button>
       </div>
+
+      <!-- Input bar -->
       <div class="pg2-chat-input-row">
-        <input type="text" class="pg2-chat-input" placeholder="Ask about your code or Poly-Glot…" id="pg2-chat-mockup-input">
-        <button class="pg2-chat-send" onclick="document.getElementById('pg-chat-trigger')?.click();" title="Open assistant">→</button>
+        <input
+          type="text"
+          class="pg2-chat-input"
+          placeholder="Paste code or ask about Poly-Glot…"
+          id="pg2-chat-mockup-input"
+          onkeydown="if(event.key==='Enter'){ pg2OpenAssistant(this.value); this.value=''; }"
+        >
+        <button class="pg2-chat-send" onclick="pg2OpenAssistant(document.getElementById('pg2-chat-mockup-input').value); document.getElementById('pg2-chat-mockup-input').value='';" title="Open assistant">
+          ➤
+        </button>
       </div>
-    </div>
-  </div>
-</div>
+
+    </div><!-- /pg2-chat-mockup -->
+  </div><!-- /pg2-assistant-grid -->
+</div><!-- /pg2-assistant-section -->
+
+<script>
+/* ── Mockup chip / input → open real floating assistant ─────── */
+function pg2OpenAssistant(text) {
+  // 1. Open the real chat widget
+  var trigger = document.getElementById('pg-chat-trigger');
+  if (trigger) trigger.click();
+  // 2. Wait for widget to render, then inject text and optionally send
+  setTimeout(function() {
+    var inp = document.getElementById('pg-chat-input');
+    if (!inp) return;
+    if (text && text.trim()) {
+      inp.value = text.trim();
+      inp.focus();
+      // Fire input event so any listeners update
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      inp.focus();
+    }
+  }, 300);
+}
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      VS CODE SECTION
