@@ -250,7 +250,7 @@
       const count = this.count();
       const fd    = new FormData();
       fd.append('access_key', WEB3_KEY);
-      fd.append('subject',    '🦜 Poly-Glot Waitlist Export — ' + count + ' signup(s)');
+      fd.append('subject',    '🦜 Poly-Glot Signups Export — ' + count + ' signup(s)');
       fd.append('from_name',  'Poly-Glot Waitlist Tracker');
       fd.append('replyto',    NOTIFY_EMAIL);
       fd.append('name',       'Poly-Glot System');
@@ -850,7 +850,7 @@
 
       const fd = new FormData();
       fd.append('access_key', WEB3_KEY);
-      fd.append('subject',    (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') + 'Waitlist Signup — ' + email);
+      fd.append('subject',    (isPromo ? '🎁 [EARLYBIRD3] ' : '🦜 ') + 'New Signup — ' + email);
       fd.append('from_name',  'Poly-Glot Waitlist');
       fd.append('replyto',    email);
       fd.append('name',       name || email);
@@ -1105,7 +1105,7 @@
         /* ── Step 4: KV lock acquired — one email via web3forms ──────────── */
         const fd = new FormData();
         fd.append('access_key', WEB3_KEY);
-        fd.append('subject',    '🦜 New Pro Waitlist Signup — ' + email);
+        fd.append('subject',    '🦜 New Pro Signup — ' + email);
         fd.append('from_name',  'Poly-Glot Waitlist');
         fd.append('replyto',    email);
         fd.append('name',       email);
@@ -1113,7 +1113,7 @@
         fd.append('source',     'inline_section');
         fd.append('timestamp',  new Date().toISOString());
         fd.append('message',
-          '🦜 New Poly-Glot Pro Waitlist Signup\n\n' +
+          '🦜 New Poly-Glot Pro Signup\n\n' +
           'Email:  ' + email + '\n' +
           'Source: Inline Section\n' +
           'Time:   ' + new Date().toUTCString()
