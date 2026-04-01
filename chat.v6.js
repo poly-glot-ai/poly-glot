@@ -1,13 +1,19 @@
 /**
- * Poly-Glot Chat Assistant v5
+ * Poly-Glot Chat Assistant v6
  * ─────────────────────────────────────────────────────────────────────────────
- * Changes in v5:
- *  1. Parrot emoji rendered directly in button — no SVG wrapper eating it
- *  2. All rule patterns audited & tightened — no more cross-firing
- *  3. New UI-navigation rules: where/how/what/when questions about the site
- *  4. Suggestions pool updated to include navigation questions
- *  5. Correct answers for every suggested question (models ≠ languages etc.)
- *  6. Copilot badge answer added
+ * Changes in v6 (code-assist upgrade):
+ *  1. KNOWLEDGE system prompt expanded — assistant now answers code questions:
+ *     explain, debug/find bugs, refactor, write tests, JSDoc generation, and
+ *     general code Q&A — framed as showcasing Poly-Glot capabilities
+ *  2. CODE_ASSIST_KNOWLEDGE — separate prompt injected when code is detected
+ *  3. detectCodeInMessage() — heuristic to identify when user pastes code
+ *  4. askAI() — dynamically selects knowledge base (site vs code-assist)
+ *     and raises max_tokens to 800 for code responses
+ *  5. Rule-based engine — new code-assist rules added (before fallback)
+ *  6. Suggestions pool — 4 new code-assist prompts added
+ *  7. Fallback UI — code-assist capabilities listed
+ *  8. Input placeholder updated to hint at code capabilities
+ *  9. Greetings updated to mention code-assist mode
  *
  * Zero external dependencies. Pure vanilla JS.
  */
@@ -20,8 +26,9 @@
 You are the Poly-Glot AI assistant embedded on poly-glot.ai.
 Be friendly, concise, and specific. Use bullet points for lists.
 Keep answers under 180 words unless the question genuinely needs more detail.
-Only answer questions about Poly-Glot features, pricing, setup, languages, usage, and how to navigate the site.
-If a question is completely unrelated to Poly-Glot, respond ONLY with the exact token: __UNRELATED__
+Answer questions about Poly-Glot features, pricing, setup, languages, usage, and how to navigate the site.
+Also answer code questions: explain code, find bugs, suggest refactors, write tests, generate JSDoc/PyDoc/Javadoc comments, and general programming help — these showcase exactly what Poly-Glot does.
+If a question is completely unrelated to both Poly-Glot AND code/programming, respond ONLY with the exact token: __UNRELATED__
 
 == SITE NAVIGATION (where things are located) ==
 - API key / AI Settings: Click the ⚙️ gear icon in the top-right of the page → "AI Settings" modal opens
@@ -101,6 +108,22 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
 3. Choose OpenAI or Anthropic, paste your API key, pick a model
 4. Paste code in the editor
 5. Click "Generate Comments"
+
+== CODE ASSISTANT CAPABILITIES ==
+You can help users directly with code questions — this demonstrates what Poly-Glot does under the hood.
+- Explain code: break down what a function or block does in plain English
+- Find bugs: audit for edge cases, null checks, type errors, off-by-one errors, race conditions
+- Suggest refactors: concrete improvements with before/after examples
+- Write tests: generate unit tests (Jest, Pytest, JUnit, etc.) from function signatures
+- Generate doc comments: JSDoc, PyDoc, Javadoc, KDoc, Doxygen, GoDoc, Rustdoc, PHPDoc, etc.
+- Write WHY comments: explain intent, trade-offs, non-obvious decisions inline
+- General code Q&A: answer language-specific questions, explain patterns, compare approaches
+
+When a user pastes code or asks a code question:
+1. Answer it directly and helpfully
+2. If relevant, mention that Poly-Glot can automate this for entire files/codebases
+3. Keep code examples in fenced code blocks with the language name
+4. Be precise — name specific bugs, give specific fixes, not vague suggestions
 `.trim();
 
   // ─── Rule-based engine ────────────────────────────────────────────────────────
@@ -270,6 +293,76 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
       patterns: [/get.?start|how.{0,10}(to use|do i use|use this|begin)|first.?time|set.?up|quick.?start/i],
       answer: `**Getting started in 60 seconds:**\n\n1. Click the **⚙️ gear icon** (top-right) → AI Settings\n2. Choose **OpenAI** or **Anthropic**\n3. Paste your API key → click **Test Connection**\n4. Back on the homepage — paste code in the editor\n5. Choose language + comment type → **Generate Comments**\n\nNeed an API key? [OpenAI →](https://platform.openai.com/api-keys) · [Anthropic →](https://console.anthropic.com/settings/keys)`,
     },
+
+    // ── CODE ASSIST — direct code help (requires AI, shown as no-key hint if missing) ──
+
+    {
+      // Explain code — user asks assistant to explain a function/block
+      patterns: [
+        /explain.{0,30}(this|the|my).{0,20}(code|function|method|class|snippet|block)/i,
+        /what.{0,20}(does|is).{0,30}(this|the).{0,20}(code|function|method|do)/i,
+        /can you.{0,20}explain/i,
+        /break.?down.{0,20}(this|the|my).{0,20}(code|function)/i,
+        /walk me through/i,
+      ],
+      answer: `**Paste your code below and I'll explain it!**\n\nI can break down:\n- 📝 What the function/class does in plain English\n- 🔍 What each parameter and return value means\n- ⚠️ Any edge cases or issues I spot\n- 📊 Complexity notes\n\nJust paste your code (any language) and ask away.\n\n💡 **Tip:** Poly-Glot's **Explain Code** feature does this for entire files — [try it on the homepage →](https://poly-glot.ai)`,
+    },
+    {
+      // Find bugs / debug
+      patterns: [
+        /find.{0,20}(bug|issue|error|problem|mistake)/i,
+        /debug.{0,30}(this|my|the).{0,20}(code|function|script)/i,
+        /what.{0,20}(wrong|broken|issue).{0,20}(with|in).{0,20}(this|my)/i,
+        /audit.{0,20}(this|my|the).{0,20}(code|function)/i,
+        /edge.?case/i,
+        /null.?check|undefined.?check/i,
+      ],
+      answer: `**Paste your code and I'll audit it for bugs!**\n\nI'll check for:\n- 🐛 Null/undefined edge cases\n- 🔢 Off-by-one errors\n- 🔄 Missing error handling\n- 🔒 Type mismatches\n- ⚡ Race conditions / async issues\n- 📦 Scope and closure traps\n\nPaste your code snippet and I'll give you specific fixes.\n\n💡 **Tip:** Poly-Glot's **Explain Code** mode generates a full bug list for any file automatically.`,
+    },
+    {
+      // Refactor
+      patterns: [
+        /refactor.{0,30}(this|my|the).{0,20}(code|function|class|method)/i,
+        /improve.{0,30}(this|my|the).{0,20}(code|function)/i,
+        /how.{0,20}(to|can i|should i|would you).{0,20}refactor/i,
+        /make.{0,20}(this|my).{0,20}(code|function).{0,20}(better|cleaner|cleaner|faster|simpler)/i,
+        /clean.{0,20}(up|this).{0,20}(code|function)/i,
+        /optimi[sz]e.{0,20}(this|my|the).{0,20}(code|function)/i,
+      ],
+      answer: `**Paste your code and I'll suggest concrete refactors!**\n\nI'll look for:\n- ♻️ Repeated logic that can be extracted\n- 📏 Functions that are too long (>20 lines)\n- 🔀 Nested conditionals that can be flattened\n- 💡 More readable alternatives\n- ⚡ Performance improvements\n\nI'll show before/after examples, not just vague advice.\n\n💡 **Tip:** Poly-Glot's WHY-comments mode adds inline reasoning about *why* your refactored code was written the way it was.`,
+    },
+    {
+      // Write tests
+      patterns: [
+        /write.{0,20}(unit.?test|test|spec|jest|pytest|junit)/i,
+        /generate.{0,20}(test|spec|unit.?test)/i,
+        /test.{0,20}(this|my|the).{0,20}(code|function|method|class)/i,
+        /how.{0,20}(to|do i|should i).{0,20}test.{0,20}(this|my|the)/i,
+        /add.{0,20}(test|coverage|spec).{0,20}(for|to)/i,
+      ],
+      answer: `**Paste your function and I'll write tests for it!**\n\nI can generate:\n- ✅ Happy-path tests\n- ❌ Edge case / error tests\n- 🎭 Mock setups\n- Framework-specific syntax: **Jest, Vitest, Mocha, Pytest, JUnit, RSpec, go test**\n\nJust paste the function signature + body and tell me the test framework.\n\n💡 **Tip:** Once Poly-Glot generates your doc-comments, your test runner's autocomplete gets dramatically more accurate.`,
+    },
+    {
+      // Write JSDoc / doc comments
+      patterns: [
+        /write.{0,30}(jsdoc|pydoc|javadoc|kdoc|doxygen|godoc|rustdoc|phpDoc|doc.?comment|docstring)/i,
+        /generate.{0,30}(jsdoc|pydoc|javadoc|doc.?comment|docstring|comment)/i,
+        /add.{0,30}(jsdoc|comment|documentation|doc).{0,20}(to|for).{0,20}(this|my|the)/i,
+        /comment.{0,30}(this|my|the).{0,20}(code|function|class|method)/i,
+        /document.{0,20}(this|my|the).{0,20}(code|function|class)/i,
+      ],
+      answer: `**Paste your code and I'll write the doc comments!**\n\nI generate:\n- 📝 **JSDoc** — \`@param\`, \`@returns\`, \`@throws\`, \`@example\`\n- 🐍 **PyDoc** — Google or NumPy style\n- ☕ **Javadoc** — \`@param\`, \`@return\`, \`@throws\`\n- 🦀 **Rustdoc, GoDoc, KDoc, Doxygen, PHPDoc** and more\n\nPaste your function and tell me the language.\n\n💡 **Or use Poly-Glot directly** — it documents entire files/codebases in one click → [try it →](https://poly-glot.ai)`,
+    },
+    {
+      // WHY comments
+      patterns: [
+        /write.{0,30}why.{0,20}comment/i,
+        /add.{0,30}(intent|reasoning|why).{0,20}comment/i,
+        /explain.{0,30}why.{0,20}(this|the|my).{0,20}(code|decision|choice|approach)/i,
+        /what.{0,20}(is|are).{0,30}why.{0,20}comment/i,
+      ],
+      answer: `**WHY-comments explain intent, not just what the code does.**\n\nExample:\n\`\`\`js\n// Using a Map instead of an array — O(1) lookups at scale (10k+ records)\nconst lookup = new Map(items.map(i => [i.id, i]));\n\`\`\`\n\nPaste code and I'll add WHY-comments to every non-obvious decision.\n\n💡 **Poly-Glot's WHY mode** does this automatically for entire files — it's a **Pro feature**. Use code **EARLYBIRD3** for 3 months free → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
+    },
   ];
 
   function ruleBasedAnswer(q) {
@@ -288,16 +381,17 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
       <div class="pg-chat-fallback-icon">🦜</div>
       <div class="pg-chat-fallback-text">
         <strong>That one's outside my territory!</strong><br>
-        I'm scoped to Poly-Glot topics — here's what I can help with:
+        I can help with Poly-Glot questions <em>and</em> code assistance:
       </div>
       <ul class="pg-chat-fallback-list">
+        <li>🧠 Explain, debug, or refactor code</li>
+        <li>📝 Write JSDoc, PyDoc, Javadoc &amp; more</li>
+        <li>✅ Generate unit tests from functions</li>
+        <li>💬 WHY-comments &amp; inline reasoning</li>
         <li>📍 Finding things on the site (where is…?)</li>
         <li>🚀 Getting started &amp; setup</li>
-        <li>💬 Comment types (Doc, WHY, Both)</li>
-        <li>🌐 Languages &amp; AI models</li>
         <li>🔌 VS Code · CLI · MCP · Copilot Chat</li>
         <li>💳 Pricing &amp; Pro features</li>
-        <li>🔒 Privacy &amp; API key security</li>
       </ul>
       <a href="https://poly-glot.ai" target="_blank" rel="noopener" class="pg-chat-fallback-link">
         Visit poly-glot.ai for full docs ↗
@@ -326,12 +420,50 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ─── Code detection heuristic ────────────────────────────────────────────────
+  // Returns true if the message looks like it contains pasted code or is a
+  // code-related question, so we can bump max_tokens accordingly.
+
+  function detectCodeInMessage(text) {
+    // Fenced code block
+    if (/```[\s\S]{20,}```/.test(text)) return true;
+    // Indented block (4+ spaces or tab at line start, 3+ lines)
+    const indentedLines = text.split('\n').filter(l => /^(\t|    )/.test(l));
+    if (indentedLines.length >= 3) return true;
+    // Common code tokens that appear in real code snippets
+    const codeTokens = [
+      /\bfunction\s+\w+\s*\(/,
+      /\bconst\s+\w+\s*=/,
+      /\blet\s+\w+\s*=/,
+      /\bvar\s+\w+\s*=/,
+      /\bdef\s+\w+\s*\(/,
+      /\bclass\s+\w+[\s:{]/,
+      /\bimport\s+[\w{]/,
+      /\bexport\s+(default\s+)?[\w{(]/,
+      /\breturn\s+.{5,}/,
+      /=>\s*[{(]/,
+      /\bif\s*\(.{3,}\)\s*[{]/,
+      /\bfor\s*\(.{3,}\)\s*[{]/,
+      /\bpublic\s+(static\s+)?\w+\s+\w+\s*\(/,
+      /\bfunc\s+\w+\s*\(/,
+      /\bfn\s+\w+\s*\(/,
+    ];
+    if (codeTokens.some(rx => rx.test(text))) return true;
+    // Code-question keywords
+    if (/\b(explain|debug|refactor|bug|unit test|jsdoc|pydoc|javadoc|docstring|comment this|what does this (code|function|method)|write a test|find the (bug|issue|error))\b/i.test(text)) return true;
+    return false;
+  }
+
   // ─── AI call ──────────────────────────────────────────────────────────────────
 
   async function askAI(question, history) {
     const provider = localStorage.getItem('polyglot_ai_provider') || 'openai';
     const apiKey   = localStorage.getItem('polyglot_api_key') || '';
     if (!apiKey) return null;
+
+    // Use higher token limit for code-related questions
+    const isCodeQuestion = detectCodeInMessage(question);
+    const maxTokens = isCodeQuestion ? 800 : 400;
 
     const messages = [
       { role: 'system', content: KNOWLEDGE },
@@ -345,7 +477,7 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body:    JSON.stringify({ model, messages, max_tokens: 400, temperature: 0.3 }),
+          body:    JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.3 }),
         });
         if (!res.ok) return null;
         const data = await res.json();
@@ -364,7 +496,7 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
             'anthropic-version': '2023-06-01',
             'anthropic-dangerous-direct-browser-access': 'true',
           },
-          body: JSON.stringify({ model, max_tokens: 400, system: sysmsg, messages: anthropicMs }),
+          body: JSON.stringify({ model, max_tokens: maxTokens, system: sysmsg, messages: anthropicMs }),
         });
         if (!res.ok) return null;
         const data = await res.json();
@@ -393,6 +525,13 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
     'Where do I enter a promo code?',
     'How do I test my API key?',
     'How do I use the CLI?',
+    // Code-assist prompts
+    'Explain this function for me',
+    'Find bugs in my code',
+    'Write a JSDoc comment for this',
+    'Help me refactor this function',
+    'Write unit tests for this code',
+    'Add WHY-comments to my code',
   ];
 
   let suggestionIndex = Math.floor(Math.random() * SUGGESTIONS.length);
@@ -695,7 +834,7 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
       <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
       <div class="pg-chat-suggestions" id="pg-chat-suggestions" aria-label="Suggested question"></div>
       <div class="pg-chat-input-row">
-        <textarea id="pg-chat-input" placeholder="Ask where things are, how features work…" rows="1"
+        <textarea id="pg-chat-input" placeholder="Ask about Poly-Glot, or paste code to explain/debug…" rows="1"
           aria-label="Chat message" autocomplete="off" spellcheck="true"></textarea>
         <button id="pg-chat-send" aria-label="Send message" disabled>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
@@ -847,9 +986,9 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
       if (!hasOpened) {
         hasOpened = true;
         const greetings = [
-          "Hey! 👋 I can help you find anything on the site or answer questions about Poly-Glot. What would you like to know?",
-          "Hi there! 🦜 Ask me where things are, how features work, or anything about Poly-Glot!",
-          "Hello! I'm the Poly-Glot assistant. Ask me where to find settings, how to generate comments, pricing — anything!",
+          "Hey! 👋 I can answer questions about Poly-Glot — or paste code and I'll explain, debug, or document it for you.",
+          "Hi there! 🦜 Ask me about features, pricing, or setup. Or paste a function and I'll write JSDoc, find bugs, or suggest refactors!",
+          "Hello! I'm the Poly-Glot assistant. Ask me anything about the site, or paste code to explain, debug, or document it.",
         ];
         const g = greetings[Math.floor(Math.random() * greetings.length)];
         setTimeout(() => {
