@@ -386,22 +386,21 @@ When a user pastes code or asks a code question:
     return `<div class="pg-chat-fallback">
       <div class="pg-chat-fallback-icon">🦜</div>
       <div class="pg-chat-fallback-text">
-        <strong>That one's outside my territory!</strong><br>
-        I can help with Poly-Glot questions <em>and</em> code assistance:
+        <strong>Great question — but that's a bit outside what I cover!</strong><br>
+        I'm best at helping with Poly-Glot and code. Here's what I can do:
       </div>
       <ul class="pg-chat-fallback-list">
-        <li>🧠 Explain, debug, or refactor code</li>
-        <li>📝 Write JSDoc, PyDoc, Javadoc &amp; more</li>
-        <li>✅ Generate unit tests from functions</li>
-        <li>💬 WHY-comments &amp; inline reasoning</li>
-        <li>📍 Finding things on the site (where is…?)</li>
-        <li>🚀 Getting started &amp; setup</li>
-        <li>🔌 VS Code · CLI · MCP · Copilot Chat</li>
-        <li>💳 Pricing &amp; Pro features</li>
+        <li>🧠 Explain, debug, or refactor your code</li>
+        <li>📝 Generate JSDoc, PyDoc, Javadoc &amp; more</li>
+        <li>✅ Write unit tests from functions</li>
+        <li>💬 Add WHY-comments &amp; inline reasoning</li>
+        <li>📍 Help you find anything on the site</li>
+        <li>🚀 Get you set up — API keys, CLI, VS Code</li>
+        <li>💳 Answer pricing &amp; Pro feature questions</li>
       </ul>
-      <a href="https://poly-glot.ai" target="_blank" rel="noopener" class="pg-chat-fallback-link">
-        Visit poly-glot.ai for full docs ↗
-      </a>
+      <div class="pg-chat-fallback-text" style="font-size:12px;color:#9ca3af;margin-top:4px;">
+        Try pasting a code snippet, or ask me something like <em>"How do I install the CLI?"</em>
+      </div>
     </div>`;
   }
 
@@ -777,11 +776,12 @@ When a user pastes code or asks a code question:
 
     /* Send button */
     #pg-chat-send {
-      width: 38px; height: 38px; min-width: 38px;
+      flex: 0 0 38px;
+      width: 38px; height: 38px; min-width: 38px; max-width: 38px;
       background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
       border: none; border-radius: 10px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; padding: 0;
+      padding: 0;
       transition: transform .15s, opacity .15s, box-shadow .15s;
     }
     #pg-chat-send:hover:not(:disabled) {
@@ -834,9 +834,10 @@ When a user pastes code or asks a code question:
       }
       #pg-chat-input::placeholder { font-size: 12px; }
       #pg-chat-send {
+        flex: 0 0 36px !important;
         width: 36px !important; height: 36px !important;
         min-width: 36px !important; max-width: 36px !important;
-        border-radius: 10px; flex-shrink: 0;
+        border-radius: 10px;
       }
       #pg-chat-send svg { width: 15px; height: 15px; }
       .pg-chat-header { padding: 0 12px; }

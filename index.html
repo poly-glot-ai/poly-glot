@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260401-mobile2">
+<html lang="en" data-build="20260401-mobile3">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -891,19 +891,7 @@
       outline: none;
     }
     .pg2-chat-input::placeholder { color: var(--text-dim); }
-    .pg2-chat-send {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg,#4f46e5,#7c3aed);
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: #fff;
-      font-size: 14px;
-    }
+    /* pg2-chat-send — see consolidated rule below */
     /* Chat header file badge */
     .pg2-chat-header__file {
       margin-left: auto;
@@ -990,7 +978,8 @@
     .pg2-chat-input:focus { border-color: rgba(125,211,252,.35); }
     .pg2-chat-input::placeholder { color: var(--text-dim); }
     .pg2-chat-send {
-      width: 34px; height: 34px;
+      flex: 0 0 34px;
+      width: 34px; height: 34px; min-width: 34px; max-width: 34px;
       background: linear-gradient(135deg,#4f46e5,#7c3aed);
       border: none;
       border-radius: 8px;
@@ -998,7 +987,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
       color: #fff;
       font-size: 15px;
       transition: opacity .15s, transform .1s;
@@ -1236,10 +1224,30 @@
       .pg2-gen-heading p { font-size: 13px; padding-right: 60px; }
       /* Container padding */
       .container { padding: 0 14px !important; }
+      /* Nav — stack brand + right items if needed */
+      .pg2-nav__inner { gap: 8px; }
+      .pg2-nav__right { gap: 6px; }
+      .pg2-live-badge { padding: 3px 8px 3px 5px; font-size: 10px; gap: 4px; }
+      /* Mockup chat — send button fix */
+      .pg2-chat-send {
+        flex: 0 0 34px !important;
+        width: 34px !important; height: 34px !important;
+        min-width: 34px !important; max-width: 34px !important;
+      }
+      .pg2-chat-input { font-size: 12px; padding: 7px 10px; }
+      .pg2-chat-input-row { padding: 8px 10px; gap: 6px; }
+      /* Mockup suggestion chips */
+      .pg2-chat-suggestion-strip { flex-direction: column; align-items: stretch; gap: 5px; padding: 6px 10px; }
+      .pg2-chat-chip { text-align: center; padding: 7px 10px; font-size: 11px; }
+      /* Mockup code blocks */
+      .pg2-chat-code { font-size: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .pg2-chat-bubble { font-size: 12px; }
+      /* Assistant section — prevent FAB overlap */
+      .pg2-assistant-section { padding-bottom: 80px; }
     }
     @media (max-width: 380px) {
       .pg2-nav__brand-text { font-size: 13px; }
-      .pg2-live-badge { padding: 3px 7px 3px 5px; font-size: 10px; }
+      .pg2-live-badge { display: none; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
@@ -2369,7 +2377,7 @@ function pg2OpenAssistant(text) {
 <script src="waitlist.js?v=34"></script>
 <script src="pricing.js?v=26"></script>
 <script src="auth.v7.js?v=14"></script>
-<script src="chat.v6.js?v=7"></script>
+<script src="chat.v6.js?v=8"></script>
 
 <!-- VS Code deep-link: desktop only -->
 <script>
