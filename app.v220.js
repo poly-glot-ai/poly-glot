@@ -3470,23 +3470,95 @@ function initCommentGenerator() {
     });
 
     // ── Save API key ──
-    cgSaveKey.addEventListener('click', () => {
-        const key = cgApiKey.value.trim();
+    cgSaveKey.addEventListener('click', async () => {
+        const key      = cgApiKey.value.trim();
+        const provider = cgProvider.value || 'openai';
+
+        // ── Empty key ──
         if (!key) {
             cgKeyStatus.textContent = '❌ Please enter an API key';
             cgKeyStatus.className   = 'pg-key-status err';
             return;
         }
+
+        // ── Format check: OpenAI keys start with sk-, Anthropic with sk-ant- ──
+        const looksOpenAI     = key.startsWith('sk-') && !key.startsWith('sk-ant-');
+        const looksAnthropic  = key.startsWith('sk-ant-');
+
+        if (provider === 'openai' && looksAnthropic) {
+            cgKeyStatus.textContent = '❌ This looks like an Anthropic key — switch provider to Anthropic';
+            cgKeyStatus.className   = 'pg-key-status err';
+            return;
+        }
+        if (provider === 'anthropic' && looksOpenAI) {
+            cgKeyStatus.textContent = '❌ This looks like an OpenAI key — switch provider to OpenAI';
+            cgKeyStatus.className   = 'pg-key-status err';
+            return;
+        }
+        if (!looksOpenAI && !looksAnthropic) {
+            cgKeyStatus.textContent = '❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-';
+            cgKeyStatus.className   = 'pg-key-status err';
+            return;
+        }
+
+        // ── Save & validate in background ──
         localStorage.setItem(LS.key,      key);
-        localStorage.setItem(LS.provider, cgProvider.value);
+        localStorage.setItem(LS.provider, provider);
         const resolvedModel = resolveCgModel();
         localStorage.setItem(LS.model, resolvedModel);
         if (cgModel.value === CG_CUSTOM_VAL && cgCustomModelInput) {
             localStorage.setItem(CG_CUSTOM_KEY, cgCustomModelInput.value.trim());
         }
-        cgKeyStatus.textContent = '✅ Settings saved';
-        cgKeyStatus.className   = 'pg-key-status ok';
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value, model: resolvedModel });
+
+        // Show saving state
+        cgKeyStatus.textContent = '💾 Saving & verifying…';
+        cgKeyStatus.className   = 'pg-key-status';
+
+        try {
+            const res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ provider, apiKey: key }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok && data.ok === true) {
+                const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+                cgKeyStatus.textContent = `✅ ${provLabel} key saved & verified`;
+                cgKeyStatus.className   = 'pg-key-status ok';
+            } else {
+                // ── Parse specific error types ──
+                const raw = (data?.error || '').toLowerCase();
+                let friendlyMsg = '';
+
+                if (raw.includes('incorrect api key') || raw.includes('invalid api key') || raw.includes('no such api key')) {
+                    friendlyMsg = '❌ Invalid API key — check for typos or regenerate at your provider';
+                } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
+                    friendlyMsg = '❌ Key expired or revoked — generate a new key at your provider';
+                } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('insufficient_quota') || raw.includes('credit')) {
+                    friendlyMsg = '❌ Account billing issue — check your balance at your provider dashboard';
+                } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
+                    friendlyMsg = '⚠️ Rate limited — wait a moment and try again';
+                } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
+                    friendlyMsg = '❌ Key lacks permissions — ensure it has API access enabled';
+                } else if (raw.includes('anthropic') && provider === 'openai') {
+                    friendlyMsg = '❌ This looks like an Anthropic key — switch provider to Anthropic';
+                } else if (raw.includes('openai') && provider === 'anthropic') {
+                    friendlyMsg = '❌ This looks like an OpenAI key — switch provider to OpenAI';
+                } else {
+                    friendlyMsg = `❌ Key saved but validation failed — ${data?.error || 'check your key and provider'}`;
+                }
+
+                cgKeyStatus.textContent = friendlyMsg;
+                cgKeyStatus.className   = 'pg-key-status err';
+            }
+        } catch (e) {
+            // Network error — key is saved locally, just couldn't validate
+            cgKeyStatus.textContent = '✅ Key saved (offline — could not verify)';
+            cgKeyStatus.className   = 'pg-key-status ok';
+        }
+
+        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
     });
 
     // ── Toggle API key visibility (inline bar) ──
