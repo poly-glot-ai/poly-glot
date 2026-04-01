@@ -49,7 +49,7 @@ Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Son
 
 **Pro starts at $9/month.** Start with a **14-day free trial** — no charge until day 15. Use code **`EARLYBIRD3`** at checkout for 50% off your first 3 months. Early bird price locked at $9/mo forever (offer expires May 1, 2026).
 
-👉 **[Claim your free months → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
+👉 **[Start your 14-day free trial → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
 
 After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) → **`Poly-Glot: Configure License Token`** to activate Pro instantly.
 
