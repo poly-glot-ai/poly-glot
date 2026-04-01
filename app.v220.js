@@ -3589,7 +3589,6 @@ function initCommentGenerator() {
     });
 
     // ── Toggle API key visibility (inline bar) ──
-    const cgToggleKey = document.getElementById('cgToggleKey');
     if (cgToggleKey) {
         cgToggleKey.addEventListener('click', () => {
             const inp = document.getElementById('cgApiKey');
@@ -3601,7 +3600,7 @@ function initCommentGenerator() {
     }
 
     // ── Test Connection (inline bar) ──
-    const cgTestKey = document.getElementById('cgTestKey');
+    var cgTestKey = document.getElementById('cgTestKey');
     if (cgTestKey) {
         cgTestKey.addEventListener('click', async () => {
             const key      = (document.getElementById('cgApiKey') || {}).value?.trim();
