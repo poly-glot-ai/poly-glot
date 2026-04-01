@@ -235,6 +235,122 @@
       background: rgba(125,211,252,.18);
     }
 
+    /* ── THEME TOGGLE ───────────────────────────────────────── */
+    .pg2-theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: rgba(125,211,252,.08);
+      border: 1px solid rgba(125,211,252,.2);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background .15s, border-color .15s;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .pg2-theme-toggle:hover {
+      background: rgba(125,211,252,.18);
+      border-color: rgba(125,211,252,.4);
+    }
+
+    /* ── LIGHT MODE ─────────────────────────────────────────── */
+    body.pg-light {
+      --bg:          #f8fafc;
+      --bg2:         #ffffff;
+      --bg3:         #f1f5f9;
+      --accent:      #0284c7;
+      --accent2:     #7c3aed;
+      --text:        #0f172a;
+      --muted:       #64748b;
+      --border:      rgba(2,132,199,0.18);
+      background:    #f8fafc;
+      color:         #0f172a;
+    }
+    body.pg-light .pg2-nav {
+      background: rgba(248,250,252,0.96);
+      border-bottom-color: rgba(2,132,199,0.12);
+    }
+    body.pg-light .pg2-nav__logo-text,
+    body.pg-light .pg2-nav__link,
+    body.pg-light .pg2-nav__dropdown-item {
+      color: #0f172a;
+    }
+    body.pg-light .pg2-nav__link:hover { color: #0284c7; }
+    body.pg-light .pg2-nav__dropdown {
+      background: #ffffff;
+      border-color: rgba(2,132,199,0.15);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+    body.pg-light .pg2-section {
+      background: #f8fafc;
+    }
+    body.pg-light .pg2-section:nth-child(even) {
+      background: #ffffff;
+    }
+    body.pg-light .pg2-section__h2,
+    body.pg-light .pg2-section__h3 {
+      color: #0f172a;
+    }
+    body.pg-light .pg2-eyebrow { color: #0284c7; }
+    body.pg-light .pg2-hero__title { color: #0f172a; }
+    body.pg-light .pg2-hero__sub  { color: #475569; }
+    body.pg-light .pg2-step__num  {
+      background: #0284c7;
+      color: #fff;
+    }
+    body.pg-light .pg2-step__text { color: #334155; }
+    body.pg-light .pg2-step__arrow { color: #94a3b8; }
+    body.pg-light .pg2-card {
+      background: #ffffff;
+      border-color: rgba(2,132,199,0.15);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    }
+    body.pg-light .pg2-card:hover {
+      border-color: rgba(2,132,199,0.35);
+    }
+    body.pg-light .pg-tool-wrap,
+    body.pg-light .pg-tool-settings {
+      background: #ffffff;
+      border-color: rgba(2,132,199,0.15);
+    }
+    body.pg-light .pg-textarea,
+    body.pg-light .pg-select,
+    body.pg-light textarea {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: rgba(2,132,199,0.2);
+    }
+    body.pg-light .pg-label,
+    body.pg-light .pg-settings-heading { color: #0284c7; }
+    body.pg-light .pg2-footer {
+      background: #0f172a;
+      color: #94a3b8;
+    }
+    body.pg-light .pg2-theme-toggle {
+      background: rgba(2,132,199,0.08);
+      border-color: rgba(2,132,199,0.2);
+    }
+    body.pg-light .pg2-live-badge {
+      border-color: rgba(16,185,129,0.3);
+      color: #10b981;
+    }
+    body.pg-light code {
+      background: #e2e8f0;
+      color: #0284c7;
+    }
+    body.pg-light .pg2-nav__signin {
+      background: rgba(2,132,199,0.08);
+      border-color: rgba(2,132,199,0.2);
+      color: #0284c7;
+    }
+    body.pg-light .pg2-nav__pricing-cta {
+      background: #0284c7;
+      color: #fff;
+    }
+
     /* ── HERO ───────────────────────────────────────────────── */
     .pg2-hero {
       text-align: center;
@@ -1136,6 +1252,10 @@
       </a>
       <!-- See Plans -->
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
+      <!-- Theme Toggle -->
+      <button class="pg2-theme-toggle" id="themeToggleBtn" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+        <span class="pg2-theme-toggle__icon" id="themeToggleIcon">☀️</span>
+      </button>
       <!-- Sign In -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
     </div>
@@ -2287,5 +2407,42 @@ if (enterpriseForm) {
 }
 </script>
 
+<script>
+  /* ── Dark / Light Theme Toggle ── */
+  (function() {
+    const BTN  = document.getElementById('themeToggleBtn');
+    const ICON = document.getElementById('themeToggleIcon');
+    const KEY  = 'pg-theme';
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.body.classList.add('pg-light');
+        if (ICON) ICON.textContent = '🌙';
+        if (BTN)  BTN.setAttribute('title', 'Switch to dark mode');
+      } else {
+        document.body.classList.remove('pg-light');
+        if (ICON) ICON.textContent = '☀️';
+        if (BTN)  BTN.setAttribute('title', 'Switch to light mode');
+      }
+      try { localStorage.setItem(KEY, theme); } catch(e) {}
+    }
+
+    /* Restore saved preference */
+    let saved = 'dark';
+    try { saved = localStorage.getItem(KEY) || 'dark'; } catch(e) {}
+    applyTheme(saved);
+
+    /* Toggle on click */
+    if (BTN) {
+      BTN.addEventListener('click', function() {
+        const isLight = document.body.classList.contains('pg-light');
+        applyTheme(isLight ? 'dark' : 'light');
+        if (typeof gtag === 'function') {
+          gtag('event', 'theme_toggle', { theme: isLight ? 'dark' : 'light' });
+        }
+      });
+    }
+  })();
+</script>
 </body>
 </html>
