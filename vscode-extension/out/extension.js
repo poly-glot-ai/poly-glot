@@ -43,6 +43,7 @@ const AUTH_API = 'https://poly-glot.ai/api/auth';
 const FREE_LANGUAGES = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS = ['pro', 'team', 'enterprise'];
 const UPGRADE_URL = 'https://poly-glot.ai/#pg-pricing-section';
+const PARTICIPANT_ID = 'poly-glot.chat';
 // ─── Module-level state ───────────────────────────────────────────────────────
 let statusBarItem;
 let aiGenerator;
@@ -63,9 +64,243 @@ function activate(context) {
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(sidebar_1.TemplatesSidebarProvider.viewType, sidebarProvider));
     // Register all commands
     context.subscriptions.push(vscode.commands.registerCommand('polyglot.generateComments', () => cmdGenerateComments()), vscode.commands.registerCommand('polyglot.whyComments', () => cmdWhyComments()), vscode.commands.registerCommand('polyglot.bothComments', () => cmdBothComments()), vscode.commands.registerCommand('polyglot.commentFile', () => cmdCommentFile()), vscode.commands.registerCommand('polyglot.commentFileFromExplorer', (uri) => cmdCommentFileFromExplorer(uri)), vscode.commands.registerCommand('polyglot.whyFileFromExplorer', (uri) => cmdWhyFileFromExplorer(uri)), vscode.commands.registerCommand('polyglot.explainCode', () => cmdExplainCode()), vscode.commands.registerCommand('polyglot.configureApiKey', () => cmdConfigureApiKey()), vscode.commands.registerCommand('polyglot.configureLicenseToken', () => cmdConfigureLicenseToken()), vscode.commands.registerCommand('polyglot.openTemplates', () => vscode.commands.executeCommand('polyglot.templatesView.focus')));
+    // ── Copilot Chat Participant ──────────────────────────────────────────
+    if (typeof vscode.chat?.createChatParticipant === 'function') {
+        const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handleChatRequest);
+        participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+        participant.followupProvider = {
+            provideFollowups(_result, _context, _token) {
+                return [
+                    { prompt: '/comment', label: '$(comment) Add doc-comments', command: 'comment' },
+                    { prompt: '/why', label: '$(comment-discussion) Add why-comments', command: 'why' },
+                    { prompt: '/explain', label: '$(search) Explain this code', command: 'explain' },
+                ];
+            },
+        };
+        context.subscriptions.push(participant);
+    }
 }
 function deactivate() {
     statusBarItem?.dispose();
+}
+// ─── Copilot Chat Handler ─────────────────────────────────────────────────────
+async function handleChatRequest(request, _chatContext, stream, token) {
+    const cmd = request.command;
+    const userText = (request.prompt || '').trim().toLowerCase();
+    // ── /upgrade or asking about pricing ─────────────────────────────────
+    if (cmd === 'upgrade' || userText.includes('price') || userText.includes('pro') || userText.includes('plan')) {
+        stream.markdown([
+            '## 💎 Poly-Glot Pro',
+            '',
+            '| Feature | Free | Pro |',
+            '|---------|------|-----|',
+            '| Doc-comments (`/comment`) | ✅ | ✅ |',
+            '| Explain Code (`/explain`) | ✅ | ✅ |',
+            '| Languages: JS, TS, Python, Java | ✅ | ✅ |',
+            '| Languages: C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin | 🔒 | ✅ |',
+            '| Why-comments (`/why`) | 🔒 | ✅ |',
+            '| Both mode (`/both`) | 🔒 | ✅ |',
+            '| Files per month | 50 | Unlimited |',
+            '',
+            '**Pro starts at $9/month.**',
+            '🎁 Use code **`EARLYBIRD3`** at checkout for **3 months completely free.**',
+            '',
+            '[**→ Get Pro at poly-glot.ai**](https://poly-glot.ai/#pg-pricing-section)',
+            '',
+            'After subscribing, run **Poly-Glot: Configure License Token** in the Command Palette to unlock Pro instantly.',
+        ].join('\n'));
+        return { metadata: { command: 'upgrade' } };
+    }
+    // ── Resolve active editor / selection ────────────────────────────────
+    const editor = vscode.window.activeTextEditor;
+    const selection = editor?.selection;
+    const code = editor
+        ? (selection && !selection.isEmpty
+            ? editor.document.getText(selection)
+            : editor.document.getText())
+        : '';
+    const langId = editor?.document.languageId ?? 'plaintext';
+    if (!code && cmd !== 'upgrade') {
+        stream.markdown('> **No code found.** Open a file (or select some code) then try again.\n\n_Tip: select a function and type `@poly-glot /comment`_');
+        return { metadata: { command: cmd } };
+    }
+    // ── Check API key ─────────────────────────────────────────────────────
+    const cfg = vscode.workspace.getConfiguration('polyglot');
+    const apiKey = await aiGenerator.context?.secrets?.get(`polyglot.apiKey.${cfg.get('provider', 'openai')}`);
+    const hasKey = !!cfg.get('openaiApiKey') || !!cfg.get('anthropicApiKey') || !!apiKey;
+    if (!hasKey) {
+        stream.markdown([
+            '## 🔑 API Key Required',
+            '',
+            'Poly-Glot uses your own OpenAI or Anthropic API key — your code never goes through our servers.',
+            '',
+            '**Set it up in 10 seconds:**',
+            '1. Open Command Palette (`Cmd+Shift+P`)',
+            '2. Run **Poly-Glot: Configure API Key**',
+            '3. Choose OpenAI or Anthropic and paste your key',
+            '',
+            'Then come back and try again!',
+        ].join('\n'));
+        stream.button({ command: 'polyglot.configureApiKey', title: '$(key) Configure API Key' });
+        return { metadata: { command: 'setup' } };
+    }
+    // ── Check Pro gate for /why and /both ────────────────────────────────
+    if (cmd === 'why' || cmd === 'both') {
+        const isPro = await hasPro();
+        if (!isPro) {
+            stream.markdown([
+                `## 🔒 \`/${cmd}\` requires a Pro plan`,
+                '',
+                `Why-comments${cmd === 'both' ? ' and Both mode' : ''} are Pro features.`,
+                '',
+                '**Get 3 months free** with code **`EARLYBIRD3`** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)',
+                '',
+                'Already have Pro? Run **Poly-Glot: Configure License Token** to unlock.',
+            ].join('\n'));
+            stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
+            return { metadata: { command: cmd } };
+        }
+    }
+    // ── Check language gate ───────────────────────────────────────────────
+    if (!FREE_LANGUAGES.includes(langId)) {
+        const isPro = await hasPro();
+        if (!isPro) {
+            stream.markdown([
+                `## 🔒 ${langId} requires a Pro plan`,
+                '',
+                `Free tier supports JavaScript, TypeScript, Python, and Java.`,
+                `**${langId}** is a Pro language.`,
+                '',
+                '**Get 3 months free** with code **`EARLYBIRD3`** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)',
+            ].join('\n'));
+            stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
+            return { metadata: { command: cmd } };
+        }
+    }
+    // ── /explain ─────────────────────────────────────────────────────────
+    if (cmd === 'explain' || (!cmd && (userText.includes('explain') || userText.includes('analys')))) {
+        stream.progress('Analysing your code…');
+        try {
+            const result = await aiGenerator.explainCode(code, langId);
+            if (token.isCancellationRequested) {
+                return;
+            }
+            const cx = (s) => s <= 3 ? '🟢' : s <= 6 ? '🟡' : '🔴';
+            const dq = (s) => s >= 80 ? '🟢' : s >= 50 ? '🟡' : '🔴';
+            stream.markdown([
+                `## 🔍 Code Analysis — ${langId}`,
+                '',
+                `| | |`,
+                `|---|---|`,
+                `| Complexity | ${cx(result.complexityScore)} **${result.complexity}** (${result.complexityScore}/10) |`,
+                `| Doc Quality | ${dq(result.docQuality.score)} **${result.docQuality.label}** (${result.docQuality.score}/100) |`,
+                `| Functions | **${result.functions.length}** |`,
+                `| Potential Bugs | **${result.potentialBugs.length}** |`,
+                `| Cost | $${result.cost.toFixed(5)} |`,
+                '',
+                '### 📖 Summary',
+                result.summary,
+                '',
+                result.potentialBugs.length
+                    ? `### 🐛 Potential Bugs\n${result.potentialBugs.map(b => `- ${b}`).join('\n')}`
+                    : '### 🐛 Potential Bugs\n_No obvious bugs detected._',
+                '',
+                result.suggestions.length
+                    ? `### 💡 Suggestions\n${result.suggestions.map(s => `- ${s}`).join('\n')}`
+                    : '',
+            ].join('\n'));
+            if (result.functions.length) {
+                stream.markdown([
+                    '### ⚙️ Functions',
+                    '| Name | Purpose |',
+                    '|------|---------|',
+                    ...result.functions.map(fn => `| \`${fn.name}\` | ${fn.purpose} |`),
+                ].join('\n'));
+            }
+            return { metadata: { command: 'explain' } };
+        }
+        catch (err) {
+            stream.markdown(`> ❌ **Error:** ${err.message}`);
+            return { metadata: { command: 'explain' } };
+        }
+    }
+    // ── /comment (default) ───────────────────────────────────────────────
+    if (cmd === 'comment' || cmd === 'both' || !cmd) {
+        stream.progress('Generating doc-comments…');
+        try {
+            const result = await aiGenerator.generateComments(code, langId);
+            if (token.isCancellationRequested) {
+                return;
+            }
+            stream.markdown([
+                `## 💬 Doc-Comments — ${langId}`,
+                `_Cost: $${result.cost.toFixed(5)}_`,
+                '',
+                '```' + langId,
+                result.commentedCode,
+                '```',
+                '',
+                '_Use the **Apply to Editor** button below to insert directly, or copy from above._',
+            ].join('\n'));
+            stream.button({
+                command: 'polyglot.generateComments',
+                title: '$(comment) Apply to Editor',
+                arguments: [],
+            });
+            if (cmd !== 'both') {
+                return { metadata: { command: 'comment' } };
+            }
+        }
+        catch (err) {
+            stream.markdown(`> ❌ **Error:** ${err.message}`);
+            return { metadata: { command: 'comment' } };
+        }
+    }
+    // ── /why or second pass of /both ─────────────────────────────────────
+    if (cmd === 'why' || cmd === 'both') {
+        stream.progress('Generating why-comments…');
+        try {
+            const result = await aiGenerator.generateWhyComments(code, langId);
+            if (token.isCancellationRequested) {
+                return;
+            }
+            stream.markdown([
+                `## 💡 Why-Comments — ${langId}`,
+                `_Cost: $${result.cost.toFixed(5)}_`,
+                '',
+                '```' + langId,
+                result.commentedCode,
+                '```',
+            ].join('\n'));
+            stream.button({
+                command: 'polyglot.whyComments',
+                title: '$(comment-discussion) Apply Why-Comments to Editor',
+                arguments: [],
+            });
+            return { metadata: { command: cmd } };
+        }
+        catch (err) {
+            stream.markdown(`> ❌ **Error:** ${err.message}`);
+            return { metadata: { command: cmd } };
+        }
+    }
+    // ── Fallback: help ────────────────────────────────────────────────────
+    stream.markdown([
+        '## 🦜 Poly-Glot AI — Copilot Chat',
+        '',
+        'I can comment and analyse your code. Try:',
+        '',
+        '| Command | What it does |',
+        '|---------|-------------|',
+        '| `@poly-glot /comment` | Add JSDoc / Javadoc / PyDoc to selected code |',
+        '| `@poly-glot /why` | Add why-comments explaining intent & trade-offs _(Pro)_ |',
+        '| `@poly-glot /both` | Doc-comments + why-comments in one pass _(Pro)_ |',
+        '| `@poly-glot /explain` | Deep analysis: complexity, bugs, doc quality |',
+        '| `@poly-glot /upgrade` | See Pro plan + get 3 months free |',
+        '',
+        '_Select some code first for best results._',
+    ].join('\n'));
+    return { metadata: { command: 'help' } };
 }
 // ─── Plan / License helpers ───────────────────────────────────────────────────
 async function getVerifiedPlan() {

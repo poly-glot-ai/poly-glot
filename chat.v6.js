@@ -794,9 +794,49 @@ When a user pastes code or asks a code question:
     @media (max-width: 480px) {
       #pg-chat-window {
         bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%;
-        height: 72vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
+        height: 75vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
       }
-      #pg-chat-trigger { bottom: 20px; right: 20px; }
+      #pg-chat-trigger { bottom: 18px; right: 16px; width: 46px; height: 46px; font-size: 21px; }
+      .pg-chat-msg { max-width: 94%; }
+      .pg-chat-bubble {
+        font-size: 12.5px; padding: 8px 10px;
+        word-break: break-word; overflow-wrap: anywhere;
+      }
+      .pg-chat-code {
+        font-size: 10px; padding: 6px 8px;
+        max-width: 100%; box-sizing: border-box;
+        overflow-x: auto; white-space: pre;
+        -webkit-overflow-scrolling: touch;
+        word-break: normal; overflow-wrap: normal;
+      }
+      .pg-chat-inline-code { font-size: 10.5px; }
+      .pg-chat-suggestions {
+        padding: 6px 10px; gap: 6px;
+        overflow-x: auto; -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap; scrollbar-width: none;
+      }
+      .pg-chat-suggestions::-webkit-scrollbar { display: none; }
+      .pg-chat-suggestion { font-size: 10.5px; padding: 4px 10px; max-width: 240px; flex-shrink: 0; }
+      .pg-chat-suggestions-label { font-size: 9px; }
+      .pg-chat-input-row { padding: 8px 10px 14px; gap: 6px; }
+      #pg-chat-input {
+        font-size: 13px; padding: 8px 10px; min-height: 36px;
+        border-radius: 10px;
+      }
+      #pg-chat-input::placeholder { font-size: 12px; }
+      #pg-chat-send { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
+      #pg-chat-send svg { width: 15px; height: 15px; }
+      .pg-chat-header { padding: 0 12px; }
+      .pg-chat-header-title { font-size: 13px; }
+      .pg-chat-messages { padding: 12px 10px 8px; }
+    }
+    @media (max-width: 360px) {
+      #pg-chat-window { height: 80vh; }
+      #pg-chat-trigger { bottom: 14px; right: 12px; width: 42px; height: 42px; font-size: 19px; }
+      .pg-chat-code { font-size: 9.5px; padding: 5px 6px; }
+      .pg-chat-bubble { font-size: 12px; padding: 7px 9px; }
+      .pg-chat-suggestion { font-size: 10px; padding: 3px 8px; max-width: 180px; }
+      #pg-chat-input { font-size: 12px; }
     }
   `;
 
@@ -840,7 +880,7 @@ When a user pastes code or asks a code question:
       <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
       <div class="pg-chat-suggestions" id="pg-chat-suggestions" aria-label="Suggested question"></div>
       <div class="pg-chat-input-row">
-        <textarea id="pg-chat-input" placeholder="Ask about Poly-Glot, or paste code to explain/debug…" rows="1"
+        <textarea id="pg-chat-input" placeholder="Paste code or ask about Poly-Glot…" rows="1"
           aria-label="Chat message" autocomplete="off" spellcheck="true"></textarea>
         <button id="pg-chat-send" aria-label="Send message" disabled>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">

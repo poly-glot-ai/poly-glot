@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260401-zerotokens">
+<html lang="en" data-build="20260401-mobile">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,7 +46,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.v221.css?v=10">
+  <link rel="stylesheet" href="styles.v221.css?v=11">
   <link rel="stylesheet" href="phase1.css?v=8">
   <link rel="stylesheet" href="pricing.css?v=9">
   <link rel="stylesheet" href="design-v2.css?v=1">
@@ -1206,9 +1206,44 @@
       .pg2-nav__links { display: none; }
     }
     @media (max-width: 600px) {
-      .pg2-hero { padding: 48px 20px 40px; }
+      .pg2-hero { padding: 48px 16px 40px; }
+      .pg2-hero__headline { font-size: 28px; }
+      .pg2-hero__sub { font-size: 15px; }
+      .pg2-hero__cta-primary,
+      .pg2-hero__cta-secondary { height: 44px; padding: 0 20px; font-size: 14px; }
       .pg2-live-badge .pg2-live-badge__sub { display: none; }
       .pg2-nav__pricing-cta { display: none; }
+      .pg2-nav__brand-sub { display: none; }
+      .pg2-nav__logo { width: 40px; height: 29px; }
+      .pg2-nav { padding: 0 14px; }
+      .pg2-nav__brand { gap: 8px; }
+      .pg2-nav__signin { padding: 0 10px; font-size: 11px; }
+      /* Trust bar */
+      .pg2-trust-bar { padding: 12px 16px; }
+      .pg2-trust-bar__inner { gap: 12px 24px; }
+      .pg2-trust-bar__item { font-size: 12px; }
+      /* Steps: stack vertically, hide arrows */
+      .pg2-steps { flex-direction: column; align-items: center; gap: 24px; }
+      .pg2-step__arrow { display: none; }
+      .pg2-step { max-width: 280px; }
+      /* Sections */
+      .pg2-section { padding: 48px 16px; }
+      .pg2-section__h2 { font-size: 24px !important; }
+      .pg2-eyebrow { font-size: 10px; }
+      /* Generator heading — keep clear of chat FAB */
+      .pg2-gen-heading { padding: 36px 16px 24px; }
+      .pg2-gen-heading h2 { font-size: 22px; padding-right: 60px; }
+      .pg2-gen-heading p { font-size: 13px; padding-right: 60px; }
+      /* Container padding */
+      .container { padding: 0 14px !important; }
+    }
+    @media (max-width: 380px) {
+      .pg2-nav__brand-text { font-size: 13px; }
+      .pg2-live-badge { padding: 3px 7px 3px 5px; font-size: 10px; }
+      .pg2-hero__headline { font-size: 24px; }
+      .pg2-hero__sub { font-size: 14px; }
+      .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
+      .pg2-gen-heading h2 { font-size: 20px; }
     }
 
     /* ── SECTION DIVIDER ────────────────────────────────────── */
@@ -2328,13 +2363,13 @@ function pg2OpenAssistant(text) {
 <script src="analytics.js?v=220"></script>
 <script src="ai-generator.v221.js?v=6"></script>
 <script src="scorer.js?v=223"></script>
-<script src="app.v220.js?v=15"></script>
+<script src="app.v220.js?v=16"></script>
 <script src="cli-terminal-demo.js?v=224"></script>
 <script src="rag-scores.js?v=9"></script>
 <script src="waitlist.js?v=34"></script>
 <script src="pricing.js?v=26"></script>
 <script src="auth.v7.js?v=13"></script>
-<script src="chat.v6.js?v=5"></script>
+<script src="chat.v6.js?v=6"></script>
 
 <!-- VS Code deep-link: desktop only -->
 <script>
