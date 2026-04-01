@@ -3471,13 +3471,20 @@ function initCommentGenerator() {
 
     // ── Save API key ──
     cgSaveKey.addEventListener('click', async () => {
-        const key      = cgApiKey.value.trim();
-        const provider = cgProvider.value || 'openai';
+        // Always grab fresh reference in case DOM was re-rendered
+        const cgKeyStatus = document.getElementById('cgKeyStatus');
+        const key      = (document.getElementById('cgApiKey') || cgApiKey).value.trim();
+        const provider = (document.getElementById('cgProvider') || cgProvider).value || '';
+
+        // ── No provider selected ──
+        if (!provider) {
+            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Please select a provider (OpenAI or Anthropic) and enter your API key'; cgKeyStatus.className = 'pg-key-status err'; }
+            return;
+        }
 
         // ── Empty key ──
         if (!key) {
-            cgKeyStatus.textContent = '❌ Please enter an API key';
-            cgKeyStatus.className   = 'pg-key-status err';
+            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Please enter your API key — select a provider first, then paste your key'; cgKeyStatus.className = 'pg-key-status err'; }
             return;
         }
 
@@ -3486,18 +3493,15 @@ function initCommentGenerator() {
         const looksAnthropic  = key.startsWith('sk-ant-');
 
         if (provider === 'openai' && looksAnthropic) {
-            cgKeyStatus.textContent = '❌ This looks like an Anthropic key — switch provider to Anthropic';
-            cgKeyStatus.className   = 'pg-key-status err';
+            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ This looks like an Anthropic key — switch provider to Anthropic'; cgKeyStatus.className = 'pg-key-status err'; }
             return;
         }
         if (provider === 'anthropic' && looksOpenAI) {
-            cgKeyStatus.textContent = '❌ This looks like an OpenAI key — switch provider to OpenAI';
-            cgKeyStatus.className   = 'pg-key-status err';
+            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ This looks like an OpenAI key — switch provider to OpenAI'; cgKeyStatus.className = 'pg-key-status err'; }
             return;
         }
         if (!looksOpenAI && !looksAnthropic) {
-            cgKeyStatus.textContent = '❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-';
-            cgKeyStatus.className   = 'pg-key-status err';
+            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-'; cgKeyStatus.className = 'pg-key-status err'; }
             return;
         }
 
