@@ -3400,7 +3400,7 @@ function initCommentGenerator() {
         const key      = localStorage.getItem(LS.key)      || '';
         const provider = localStorage.getItem(LS.provider) || 'openai';
         const model    = localStorage.getItem(LS.model)    || 'gpt-4o-mini';
-        if (key) { cgApiKey.value = key; cgKeyStatus.textContent = '✅ Key saved'; cgKeyStatus.className = 'pg-key-status ok'; }
+        if (key) { cgApiKey.value = key; cgKeyStatus.textContent = '✅ Key saved'; cgKeyStatus.className = 'pg-key-status ok'; autoClearKeyStatus(cgKeyStatus, 5000); }
         cgProvider.value = provider;
         updateModelDropdown(provider, model);
         // Sync comment style to match default language on page load
@@ -3467,6 +3467,18 @@ function initCommentGenerator() {
     // ── Toggle API key visibility ──
     // (handled below with fresh DOM refs – see "Toggle API key visibility (inline bar)")
 
+    // ── Auto-clear status after delay ──
+    let _keyStatusTimer = null;
+    function autoClearKeyStatus(el, ms) {
+        if (_keyStatusTimer) clearTimeout(_keyStatusTimer);
+        if (!el) return;
+        _keyStatusTimer = setTimeout(() => {
+            el.textContent = '';
+            el.className   = 'pg-key-status';
+            _keyStatusTimer = null;
+        }, ms || 5000);
+    }
+
     // ── Save API key ──
     cgSaveKey.addEventListener('click', async () => {
         // Always grab fresh reference in case DOM was re-rendered
@@ -3528,6 +3540,7 @@ function initCommentGenerator() {
                 const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
                 cgKeyStatus.textContent = `✅ ${provLabel} key saved & verified`;
                 cgKeyStatus.className   = 'pg-key-status ok';
+                autoClearKeyStatus(cgKeyStatus, 5000);
             } else {
                 // ── Parse specific error types ──
                 const raw = (data?.error || '').toLowerCase();
@@ -3558,6 +3571,7 @@ function initCommentGenerator() {
             // Network error — key is saved locally, just couldn't validate
             cgKeyStatus.textContent = '✅ Key saved (offline — could not verify)';
             cgKeyStatus.className   = 'pg-key-status ok';
+            autoClearKeyStatus(cgKeyStatus, 5000);
         }
 
         if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
@@ -3613,7 +3627,7 @@ function initCommentGenerator() {
                 const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
 
                 if (res.ok && data.ok === true) {
-                    if (status) { status.textContent = `✅ ${provLabel} key valid`; status.className = 'pg-key-status ok'; }
+                    if (status) { status.textContent = `✅ ${provLabel} key valid`; status.className = 'pg-key-status ok'; autoClearKeyStatus(status, 5000); }
                     if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_success', { provider });
                 } else {
                     const msg = data?.error || 'Key validation failed';
