@@ -110,20 +110,26 @@ Anthropic: Claude Sonnet 4 (recommended), Claude Opus 4 (most powerful), Claude 
 5. Click "Generate Comments"
 
 == CODE ASSISTANT CAPABILITIES ==
-You can help users directly with code questions — this demonstrates what Poly-Glot does under the hood.
+You can help users directly with these code questions — this demonstrates what Poly-Glot does under the hood.
+ALLOWED:
 - Explain code: break down what a function or block does in plain English
 - Find bugs: audit for edge cases, null checks, type errors, off-by-one errors, race conditions
 - Suggest refactors: concrete improvements with before/after examples
 - Write tests: generate unit tests (Jest, Pytest, JUnit, etc.) from function signatures
-- Generate doc comments: JSDoc, PyDoc, Javadoc, KDoc, Doxygen, GoDoc, Rustdoc, PHPDoc, etc.
 - Write WHY comments: explain intent, trade-offs, non-obvious decisions inline
 - General code Q&A: answer language-specific questions, explain patterns, compare approaches
 
+NOT ALLOWED — redirect to Poly-Glot tool:
+- Do NOT generate full doc-comment blocks (JSDoc, PyDoc, Javadoc, etc.) for entire functions or files
+- Do NOT generate full commented versions of pasted codebases or large code blocks
+- If asked to document/comment code, explain that generating comments for code is what Poly-Glot does — direct them to use the tool at poly-glot.ai (free for JS/TS/Python/Java, Pro for all 12 languages)
+
 When a user pastes code or asks a code question:
-1. Answer it directly and helpfully
-2. If relevant, mention that Poly-Glot can automate this for entire files/codebases
+1. Answer it directly and helpfully (for allowed capabilities above)
+2. If they want code commented/documented, redirect them warmly to poly-glot.ai — that's the product
 3. Keep code examples in fenced code blocks with the language name
 4. Be precise — name specific bugs, give specific fixes, not vague suggestions
+5. After helping with a snippet, note that Poly-Glot can do this for entire files/codebases automatically
 `.trim();
 
   // ─── Rule-based engine ────────────────────────────────────────────────────────
@@ -343,7 +349,7 @@ When a user pastes code or asks a code question:
       answer: `**Paste your function and I'll write tests for it!**\n\nI can generate:\n- ✅ Happy-path tests\n- ❌ Edge case / error tests\n- 🎭 Mock setups\n- Framework-specific syntax: **Jest, Vitest, Mocha, Pytest, JUnit, RSpec, go test**\n\nJust paste the function signature + body and tell me the test framework.\n\n💡 **Tip:** Once Poly-Glot generates your doc-comments, your test runner's autocomplete gets dramatically more accurate.`,
     },
     {
-      // Write JSDoc / doc comments
+      // Write JSDoc / doc comments — redirect to the product (don't do it inline)
       patterns: [
         /write.{0,30}(jsdoc|pydoc|javadoc|kdoc|doxygen|godoc|rustdoc|phpDoc|doc.?comment|docstring)/i,
         /generate.{0,30}(jsdoc|pydoc|javadoc|doc.?comment|docstring|comment)/i,
@@ -351,7 +357,7 @@ When a user pastes code or asks a code question:
         /comment.{0,30}(this|my|the).{0,20}(code|function|class|method)/i,
         /document.{0,20}(this|my|the).{0,20}(code|function|class)/i,
       ],
-      answer: `**Paste your code and I'll write the doc comments!**\n\nI generate:\n- 📝 **JSDoc** — \`@param\`, \`@returns\`, \`@throws\`, \`@example\`\n- 🐍 **PyDoc** — Google or NumPy style\n- ☕ **Javadoc** — \`@param\`, \`@return\`, \`@throws\`\n- 🦀 **Rustdoc, GoDoc, KDoc, Doxygen, PHPDoc** and more\n\nPaste your function and tell me the language.\n\n💡 **Or use Poly-Glot directly** — it documents entire files/codebases in one click → [try it →](https://poly-glot.ai)`,
+      answer: `**That's exactly what Poly-Glot is built for!** 🦜\n\nGenerating professional doc-comments is the core product — paste your code directly into the **generator** on this page and get:\n\n- 📝 **JSDoc** (JS/TS) · **PyDoc** (Python) · **Javadoc** (Java) — free\n- 🦀 **Rustdoc, GoDoc, KDoc, Doxygen, PHPDoc, Swift** — Pro\n- ✍️ **WHY-comments** — explains intent & trade-offs (Pro)\n- 📝 **Both** — doc + WHY in one pass (Pro)\n\n👆 **[Use the generator above ↑](https://poly-glot.ai#commentGenerator)** — paste your code, pick your language, click Generate.\n\nPro tip: use code **EARLYBIRD3** for 3 months free on Pro → [See plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // WHY comments
@@ -511,26 +517,26 @@ When a user pastes code or asks a code question:
   // Mix of feature questions AND navigation questions
 
   const SUGGESTIONS = [
+    // — UI / navigation
     'Where do I add my API key?',
-    'How do I generate comments?',
+    'Where is the pricing?',
+    'How do I install the VS Code extension?',
+    'How does the MCP server work?',
+    'Where do I enter a promo code?',
+    'How do I use the CLI?',
+    // — Features
     'What AI models are supported?',
     'What languages are supported?',
-    'Where is the pricing?',
     'Is my code private?',
     "What's the difference between Doc and WHY comments?",
-    'How do I install the VS Code extension?',
-    'Where is the Explain Code button?',
-    'How does the MCP server work?',
     'How much does Pro cost?',
-    'Where do I enter a promo code?',
     'How do I test my API key?',
-    'How do I use the CLI?',
-    // Code-assist prompts
+    // — Code analysis
     'Explain this function for me',
     'Find bugs in my code',
-    'Write a JSDoc comment for this',
     'Help me refactor this function',
     'Write unit tests for this code',
+    'What edge cases am I missing?',
     'Add WHY-comments to my code',
   ];
 
@@ -986,9 +992,9 @@ When a user pastes code or asks a code question:
       if (!hasOpened) {
         hasOpened = true;
         const greetings = [
-          "Hey! 👋 I can answer questions about Poly-Glot — or paste code and I'll explain, debug, or document it for you.",
-          "Hi there! 🦜 Ask me about features, pricing, or setup. Or paste a function and I'll write JSDoc, find bugs, or suggest refactors!",
-          "Hello! I'm the Poly-Glot assistant. Ask me anything about the site, or paste code to explain, debug, or document it.",
+          "Hey! 👋 I can answer questions about Poly-Glot — or paste code and I'll explain it, find bugs, suggest refactors, or write tests.",
+          "Hi there! 🦜 Ask me about features, pricing, or setup. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
+          "Hello! I'm the Poly-Glot assistant. Ask me anything about the site, or paste code to explain, debug, refactor, or get tests written.",
         ];
         const g = greetings[Math.floor(Math.random() * greetings.length)];
         setTimeout(() => {

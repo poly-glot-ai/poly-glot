@@ -873,10 +873,10 @@
       'Add doc-comments AND why-comments in one two-pass run (⌘⌥↵)');
 
     // ── 5. CLI demo language select (#cliDemoLanguage) ───────────────
-    gateSelect('cliDemoLanguage', FREE_LANGUAGES);
+    // All three demo languages (Python, JS, Java) are free — no gating needed
 
     // ── 6. CLI demo mode select (#cliDemoMode) ───────────────────────
-    gateSelect('cliDemoMode', ['comment']); // why + both are Pro
+    // All modes (Comment, Why, Both) are unlocked in the demo — users see real output
 
     // ── 5. CLI demo language grid tiles ──────────────────────────────
     var grid = document.getElementById('cliDemoLanguageGrid');
