@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260401-keystatus">
+<html lang="en" data-build="20260401-toggle-fix">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1526,17 +1526,7 @@ for (const user of users) {
           <div class="pg-apikey-wrap">
             <input type="password" id="cgApiKey" class="pg-key-input" placeholder="sk-... or sk-ant-... (paste your API key here)" autocomplete="off" spellcheck="false">
             <button class="pg-key-show" id="cgToggleKey" title="Show / hide API key">👁 Show</button>
-            <button class="pg-key-save" id="cgSaveKey" onclick="(function(){
-              var st = document.getElementById('cgKeyStatus');
-              var k  = (document.getElementById('cgApiKey')||{}).value||'';
-              var p  = (document.getElementById('cgProvider')||{}).value||'';
-              if(!st) return;
-              if(!p && !k){ st.textContent='❌ Select a provider and enter your API key'; st.className='pg-key-status err'; return; }
-              if(!p){ st.textContent='❌ Please select a provider (OpenAI or Anthropic)'; st.className='pg-key-status err'; return; }
-              if(!k){ st.textContent='❌ Please enter your API key'; st.className='pg-key-status err'; return; }
-              if(p==='openai' && k.startsWith('sk-ant-')){ st.textContent='❌ This looks like an Anthropic key — switch provider to Anthropic'; st.className='pg-key-status err'; return; }
-              if(p==='anthropic' && k.startsWith('sk-') && !k.startsWith('sk-ant-')){ st.textContent='❌ This looks like an OpenAI key — switch provider to OpenAI'; st.className='pg-key-status err'; return; }
-            })()">Save Key</button>
+            <button class="pg-key-save" id="cgSaveKey">Save Key</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
             <span id="cgKeyStatus" class="pg-key-status"></span>
@@ -2337,7 +2327,7 @@ function pg2OpenAssistant(text) {
 <script src="analytics.js?v=220"></script>
 <script src="ai-generator.v221.js?v=6"></script>
 <script src="scorer.js?v=223"></script>
-<script src="app.v220.js?v=10"></script>
+<script src="app.v220.js?v=11"></script>
 <script src="cli-terminal-demo.js?v=224"></script>
 <script src="rag-scores.js?v=9"></script>
 <script src="waitlist.js?v=34"></script>

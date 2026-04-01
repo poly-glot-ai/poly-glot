@@ -3465,9 +3465,7 @@ function initCommentGenerator() {
     // (manual override handling lives in the auto-detect block below)
 
     // ── Toggle API key visibility ──
-    cgToggleKey.addEventListener('click', () => {
-        cgApiKey.type = cgApiKey.type === 'password' ? 'text' : 'password';
-    });
+    // (handled below with fresh DOM refs – see "Toggle API key visibility (inline bar)")
 
     // ── Save API key ──
     cgSaveKey.addEventListener('click', async () => {
@@ -3563,6 +3561,17 @@ function initCommentGenerator() {
         }
 
         if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
+    });
+
+    // ── Clear status on any input change ──
+    ['cgApiKey', 'cgProvider', 'cgModel'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function() {
+                var st = document.getElementById('cgKeyStatus');
+                if (st && st.textContent) { st.textContent = ''; st.className = 'pg-key-status'; }
+            });
+        }
     });
 
     // ── Toggle API key visibility (inline bar) ──
