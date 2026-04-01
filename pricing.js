@@ -285,6 +285,14 @@
               <div class="pg-faq-q">Do you offer refunds?</div>
               <div class="pg-faq-a"><strong>30-day money-back guarantee</strong> on all paid plans. No questions asked.</div>
             </div>
+            <div class="pg-faq-item pg-faq-item--wide">
+              <div class="pg-faq-q">🗂️ What is the largest directory (codebase) Poly-Glot can update with a single command?</div>
+              <div class="pg-faq-a">
+                <strong>An entire project directory — no upper limit.</strong> Using the <code class="pg-faq-code-inline">--dir</code> flag, the CLI recursively walks every supported source file across your whole codebase and AI-generates comments in one shot across all 12 languages:
+                <pre class="pg-faq-pre"><code class="pg-faq-code">poly-glot comment --dir ./your-project</code></pre>
+                Use <code class="pg-faq-code-inline">--dry-run</code> to preview, <code class="pg-faq-code-inline">--diff</code> to review changes, and <code class="pg-faq-code-inline">--backup</code> to save originals before overwriting. Point it at your entire monorepo, your <code class="pg-faq-code-inline">src/</code> folder, or any directory — it handles the rest.
+              </div>
+            </div>
           </div>
         </div>
 
