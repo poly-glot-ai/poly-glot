@@ -3576,12 +3576,27 @@ kbd {
 .pg-save-btn:hover { opacity: 0.85; }
 .pg-key-status {
     font-size: 12px;
-    min-height: 16px;
-    display: block;
-    margin-top: 4px;
+    font-weight: 600;
+    min-height: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
 }
-.pg-key-status.ok  { color: var(--pg-green); }
-.pg-key-status.err { color: #f87171; }
+.pg-key-status:empty { padding: 0; background: none; }
+.pg-key-status.ok  {
+    color: #10b981;
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.25);
+}
+.pg-key-status.err {
+    color: #f87171;
+    background: rgba(248,113,113,0.12);
+    border: 1px solid rgba(248,113,113,0.25);
+}
 
 /* ── Mobile API key field ── */
 @media (max-width: 768px) {
