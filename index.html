@@ -1408,13 +1408,16 @@ for (const user of users) {
       <div class="pg-settings-row" style="margin-top:12px;">
         <div class="pg-field" style="flex:1;">
           <div class="pg-apikey-wrap">
-            <input type="password" id="apiKeyInput" class="pg-key-input" placeholder="sk-... (paste your API key here)" autocomplete="off" spellcheck="false">
-            <button class="pg-key-show" id="pgKeyShowBtn" title="Show/hide key">👁 Show</button>
-            <button class="pg-key-save" id="pgKeySaveBtn">Save Key</button>
+            <input type="password" id="cgApiKey" class="pg-key-input" placeholder="sk-... or sk-ant-... (paste your API key here)" autocomplete="off" spellcheck="false">
+            <button class="pg-key-show" id="cgToggleKey" title="Show / hide API key">👁 Show</button>
+            <button class="pg-key-save" id="cgSaveKey">Save Key</button>
           </div>
-          <span id="cgKeyStatus" class="pg-key-status"></span>
-          <div class="pg-apikey-helper">
-            <span id="cgApiKeyHelper">🔑 No API key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key in 2 min ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · Your key is saved locally, never sent to us.</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <span id="cgKeyStatus" class="pg-key-status"></span>
+            <button id="cgTestKey" class="action-btn" style="font-size:11px;padding:3px 10px;height:auto;background:rgba(125,211,252,.08);border:1px solid rgba(125,211,252,.2);color:var(--accent);border-radius:6px;cursor:pointer;transition:background .14s;" title="Verify your key is valid — zero tokens used">🔍 Test Connection</button>
+          </div>
+          <div class="pg-apikey-helper" style="margin-top:6px;">
+            <span id="cgApiKeyHelper">🔑 No key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · Stored locally — never sent to Poly-Glot.</span>
           </div>
         </div>
       </div>
@@ -2205,16 +2208,16 @@ function pg2OpenAssistant(text) {
 <!-- ════════════════════════════════════════════════════════════
      SCRIPTS — all preserved exactly from live site
      ════════════════════════════════════════════════════════════ -->
-<script src="analytics.js?v=219"></script>
-<script src="ai-generator.v221.js?v=5"></script>
-<script src="scorer.js?v=222"></script>
-<script src="app.v220.js?v=7"></script>
-<script src="cli-terminal-demo.js?v=223"></script>
-<script src="rag-scores.js?v=8"></script>
-<script src="waitlist.js?v=32"></script>
-<script src="pricing.js?v=22"></script>
-<script src="auth.v7.js?v=11"></script>
-<script src="chat.v6.js?v=4"></script>
+<script src="analytics.js?v=220"></script>
+<script src="ai-generator.v221.js?v=6"></script>
+<script src="scorer.js?v=223"></script>
+<script src="app.v220.js?v=8"></script>
+<script src="cli-terminal-demo.js?v=224"></script>
+<script src="rag-scores.js?v=9"></script>
+<script src="waitlist.js?v=33"></script>
+<script src="pricing.js?v=23"></script>
+<script src="auth.v7.js?v=12"></script>
+<script src="chat.v6.js?v=5"></script>
 
 <!-- VS Code deep-link: desktop only -->
 <script>

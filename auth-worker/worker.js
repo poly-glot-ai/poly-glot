@@ -1,13 +1,35 @@
 /**
  * Poly-Glot Auth Worker
  * ─────────────────────
- * POST /api/auth/login   — generate + email a magic link
- * POST /api/auth/verify  — validate token → return { email, plan }
- * POST /api/auth/refresh — validate token without consuming it
+ * POST /api/auth/login        — generate + email a magic link
+ * POST /api/auth/verify       — validate token → return { email, plan }
+ * POST /api/auth/refresh      — validate token without consuming it
+ * POST /api/auth/validate-key — verify OpenAI or Anthropic API key (zero tokens)
+ * POST /api/auth/track-usage  — server-side file generation counter (50/mo free limit)
+ * GET  /api/auth/get-usage    — return current usage for a session token
  *
  * KV binding : AUTH_KV
  * Env vars   : RESEND_API_KEY, BASE_URL
  */
+
+/* ── Disposable email domain blocklist ─────────────────────────────────────── */
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
+  'guerrillamail.biz','guerrillamail.de','guerrillamailblock.com',
+  'tempmail.com','tempmail.net','tempmail.org','temp-mail.org','temp-mail.io',
+  'throwam.com','throwaway.email','sharklasers.com','guerrillamail.info',
+  'grr.la','guerrillamail.biz','spam4.me','yopmail.com','yopmail.fr',
+  'cool.fr.nf','jetable.fr.nf','nospam.ze.tc','nomail.xl.cx','mega.zik.dj',
+  'speed.1s.fr','courriel.fr.nf','moncourrier.fr.nf','monemail.fr.nf',
+  'monmail.fr.nf','maildrop.cc','mailnull.com','mailnull.net',
+  'dispostable.com','fakeinbox.com','filzmail.com','spamgourmet.com',
+  'trashmail.at','trashmail.com','trashmail.io','trashmail.me','trashmail.net',
+  'trashmail.org','trashmail.xyz','discard.email','spamspot.com','spamtrap.ro',
+  'spamevader.com','anonbox.net','anonymbox.com','dispostable.com',
+  'throwam.com','mailexpire.com','spamfree24.org','spamfree.eu',
+  'mailzilla.org','inoutmail.eu','inoutmail.info','inoutmail.net','inoutmail.de',
+  'filzmail.com','spamfree.eu','spamgourmet.net','spamgourmet.org',
+]);
 
 const CORS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
@@ -145,6 +167,12 @@ async function handleLogin(request, env) {
     return json({ error: 'Valid email required' }, 400);
   }
 
+  // Block disposable/throwaway email domains
+  const domain = email.split('@')[1] || '';
+  if (DISPOSABLE_DOMAINS.has(domain)) {
+    return json({ error: 'Disposable email addresses are not allowed. Please use a real email.' }, 400);
+  }
+
   // Rate limit: 1 magic link per email per 60s
   const rateLimitKey = `ratelimit:${email}`;
   const limited = await env.AUTH_KV.get(rateLimitKey);
@@ -256,6 +284,152 @@ async function incrementPromoCount(env, email) {
   await env.AUTH_KV.put('promo:count', String(count + 1));
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   POST /api/auth/validate-key
+   Validates an OpenAI or Anthropic API key server-side (zero tokens burned).
+   Body: { provider: 'openai'|'anthropic', apiKey: 'sk-...' }
+   Returns: { ok: true } or { ok: false, error: '...' }
+───────────────────────────────────────────────────────────────────────────── */
+async function handleValidateKey(request) {
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const provider = (body.provider || 'openai').toLowerCase();
+  const apiKey   = (body.apiKey   || '').trim();
+
+  if (!apiKey) return json({ ok: false, error: 'API key required' }, 400);
+
+  try {
+    if (provider === 'openai') {
+      // GET /v1/models — read-only, costs $0, works even with $0 balance
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+      if (res.ok) return json({ ok: true });
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `OpenAI returned ${res.status}`;
+      return json({ ok: false, error: msg });
+
+    } else if (provider === 'anthropic') {
+      // GET /v1/models — Anthropic list-models endpoint (requires x-api-key header)
+      const res = await fetch('https://api.anthropic.com/v1/models', {
+        headers: {
+          'x-api-key':         apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      });
+      if (res.ok) return json({ ok: true });
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `Anthropic returned ${res.status}`;
+      return json({ ok: false, error: msg });
+
+    } else {
+      return json({ ok: false, error: 'Unknown provider — use openai or anthropic' }, 400);
+    }
+  } catch (e) {
+    return json({ ok: false, error: e.message || 'Network error' }, 502);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   POST /api/auth/track-usage
+   Server-side file generation counter. Enforces 50 files/month for free users.
+   Body: { token: 'session-token', count: 1 }
+   Returns: { ok: true, used: N, limit: 50, remaining: N }
+         or { ok: false, error: 'Limit reached', used: N, limit: 50 }
+───────────────────────────────────────────────────────────────────────────── */
+const FREE_MONTHLY_LIMIT = 50;
+
+async function handleTrackUsage(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  const token = (body.token || '').trim();
+  const count = parseInt(body.count, 10) || 1;
+
+  if (!token) return json({ ok: false, error: 'Session token required' }, 401);
+
+  // Resolve session → email + plan
+  const raw = await env.AUTH_KV.get(`token:${token}`);
+  let email, plan;
+
+  if (raw) {
+    try { ({ email, plan } = JSON.parse(raw)); } catch { return json({ ok: false, error: 'Malformed session' }, 500); }
+  } else {
+    // Try refresh token (non-consuming sessions stored under session:token)
+    const sessionRaw = await env.AUTH_KV.get(`session:${token}`);
+    if (!sessionRaw) return json({ ok: false, error: 'Invalid session' }, 401);
+    try { ({ email, plan } = JSON.parse(sessionRaw)); } catch { return json({ ok: false, error: 'Malformed session' }, 500); }
+  }
+
+  plan = (plan || 'free').toLowerCase();
+  const isPaid = ['pro', 'team', 'enterprise'].includes(plan);
+
+  // Paid users — no limit, just track for analytics
+  if (isPaid) {
+    const usageKey = `usage:${email}:${monthKey()}`;
+    const cur      = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
+    await env.AUTH_KV.put(usageKey, String(cur + count), { expirationTtl: 35 * 24 * 60 * 60 });
+    return json({ ok: true, used: cur + count, limit: null, remaining: null });
+  }
+
+  // Free users — enforce 50/month hard cap
+  const usageKey = `usage:${email}:${monthKey()}`;
+  const cur      = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
+
+  if (cur >= FREE_MONTHLY_LIMIT) {
+    return json({ ok: false, error: 'Monthly limit reached', used: cur, limit: FREE_MONTHLY_LIMIT, remaining: 0 }, 403);
+  }
+
+  const newCount = Math.min(cur + count, FREE_MONTHLY_LIMIT);
+  // TTL: 35 days (covers full month + buffer) — auto-reset each month
+  await env.AUTH_KV.put(usageKey, String(newCount), { expirationTtl: 35 * 24 * 60 * 60 });
+
+  return json({
+    ok:        true,
+    used:      newCount,
+    limit:     FREE_MONTHLY_LIMIT,
+    remaining: FREE_MONTHLY_LIMIT - newCount,
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   GET /api/auth/get-usage
+   Returns current month's usage for a session token.
+   Query: ?token=session-token
+   Returns: { used: N, limit: 50|null, remaining: N|null, plan: 'free'|'pro'|... }
+───────────────────────────────────────────────────────────────────────────── */
+async function handleGetUsage(request, env) {
+  const url   = new URL(request.url);
+  const token = (url.searchParams.get('token') || '').trim();
+
+  if (!token) return json({ error: 'Token required' }, 401);
+
+  const sessionRaw = await env.AUTH_KV.get(`session:${token}`);
+  if (!sessionRaw) return json({ error: 'Invalid session' }, 401);
+
+  let email, plan;
+  try { ({ email, plan } = JSON.parse(sessionRaw)); } catch { return json({ error: 'Malformed session' }, 500); }
+
+  plan = (plan || 'free').toLowerCase();
+  const isPaid   = ['pro', 'team', 'enterprise'].includes(plan);
+  const usageKey = `usage:${email}:${monthKey()}`;
+  const used     = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
+
+  return json({
+    used,
+    limit:     isPaid ? null : FREE_MONTHLY_LIMIT,
+    remaining: isPaid ? null : Math.max(0, FREE_MONTHLY_LIMIT - used),
+    plan,
+  });
+}
+
+/* Returns YYYY-MM key for the current UTC month */
+function monthKey() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -264,18 +438,23 @@ export default {
     const url      = new URL(request.url);
     const pathname = url.pathname.replace(/\/$/, '');
 
-    // GET /api/auth/promo-count — public, no auth needed
-    if (request.method === 'GET' && pathname === '/api/auth/promo-count') {
-      return handlePromoCount(env);
+    // GET endpoints — public or token-authed
+    if (request.method === 'GET') {
+      if (pathname === '/api/auth/promo-count') return handlePromoCount(env);
+      if (pathname === '/api/auth/get-usage')   return handleGetUsage(request, env);
+      return json({ error: 'Not found' }, 404);
     }
 
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405);
     }
 
-    if (pathname === '/api/auth/login')   return handleLogin(request, env);
-    if (pathname === '/api/auth/verify')  return handleVerify(request, env);
-    if (pathname === '/api/auth/refresh') return handleRefresh(request, env);
+    // POST endpoints
+    if (pathname === '/api/auth/login')        return handleLogin(request, env);
+    if (pathname === '/api/auth/verify')       return handleVerify(request, env);
+    if (pathname === '/api/auth/refresh')      return handleRefresh(request, env);
+    if (pathname === '/api/auth/validate-key') return handleValidateKey(request);
+    if (pathname === '/api/auth/track-usage')  return handleTrackUsage(request, env);
 
     return json({ error: 'Not found' }, 404);
   },

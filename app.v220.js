@@ -3489,6 +3489,61 @@ function initCommentGenerator() {
         if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: cgProvider.value, model: resolvedModel });
     });
 
+    // ── Toggle API key visibility (inline bar) ──
+    const cgToggleKey = document.getElementById('cgToggleKey');
+    if (cgToggleKey) {
+        cgToggleKey.addEventListener('click', () => {
+            const inp = document.getElementById('cgApiKey');
+            if (!inp) return;
+            const isHidden = inp.type === 'password';
+            inp.type = isHidden ? 'text' : 'password';
+            cgToggleKey.textContent = isHidden ? '🙈 Hide' : '👁 Show';
+        });
+    }
+
+    // ── Test Connection (inline bar) ──
+    const cgTestKey = document.getElementById('cgTestKey');
+    if (cgTestKey) {
+        cgTestKey.addEventListener('click', async () => {
+            const key      = (document.getElementById('cgApiKey') || {}).value?.trim();
+            const provider = (document.getElementById('cgProvider') || {}).value || 'openai';
+            const status   = document.getElementById('cgKeyStatus');
+
+            if (!key) {
+                if (status) { status.textContent = '❌ Enter an API key first'; status.className = 'pg-key-status err'; }
+                return;
+            }
+
+            cgTestKey.disabled    = true;
+            cgTestKey.textContent = '🔍 Testing…';
+            if (status) { status.textContent = ''; status.className = 'pg-key-status'; }
+
+            try {
+                const res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ provider, apiKey: key }),
+                });
+                const data = await res.json().catch(() => ({}));
+                const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+
+                if (res.ok && data.ok === true) {
+                    if (status) { status.textContent = `✅ ${provLabel} key valid`; status.className = 'pg-key-status ok'; }
+                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_success', { provider });
+                } else {
+                    const msg = data?.error || 'Key validation failed';
+                    if (status) { status.textContent = `❌ ${msg}`; status.className = 'pg-key-status err'; }
+                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_failed', { provider, error: msg });
+                }
+            } catch (err) {
+                if (status) { status.textContent = `❌ ${err.message}`; status.className = 'pg-key-status err'; }
+            } finally {
+                cgTestKey.disabled    = false;
+                cgTestKey.textContent = '🔍 Test Connection';
+            }
+        });
+    }
+
     // ── File upload ──
     cgFileUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];

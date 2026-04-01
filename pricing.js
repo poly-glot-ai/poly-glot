@@ -41,7 +41,7 @@
       name:      'Free',
       monthly:   0,
       yearly:    0,
-      desc:      'Perfect for exploring. No credit card required.',
+      desc:      'Perfect for exploring. No credit card required. 50 files/month, always free.',
       cta:       'Start for Free',
       ctaClass:  'pg-cta-free',
       ctaAction: 'scroll',
@@ -63,8 +63,8 @@
       name:      'Pro',
       monthly:   9,
       yearly:    79,
-      desc:      'For individual developers who ship fast.',
-      cta:       'Get Started →',
+      desc:      'For individual developers who ship fast. 14-day free trial — cancel anytime.',
+      cta:       'Start Free Trial →',
       ctaClass:  'pg-cta-pro',
       ctaAction: 'checkout_pro',
       popular:   true,
@@ -85,8 +85,8 @@
       name:      'Team',
       monthly:   29,
       yearly:    249,
-      desc:      'For engineering teams. Up to 5 seats.',
-      cta:       'Get Started →',
+      desc:      'For engineering teams. Up to 5 seats. 14-day free trial included.',
+      cta:       'Start Free Trial →',
       ctaClass:  'pg-cta-team',
       ctaAction: 'checkout_team',
       popular:   false,
@@ -237,13 +237,13 @@
         <!-- Launch promo note -->
         <div class="pg-early-access-note" id="pg-promo-banner">
           <div class="pg-ea-left">
-            <span class="pg-ea-icon">🎁</span>
+            <span class="pg-ea-icon">⏳</span>
             <div class="pg-ea-text">
-              <strong>Early bird offer — get 3 months free on any paid plan.</strong>
-              <span>Use code <strong>EARLYBIRD3</strong> at checkout. <span id="pg-promo-countdown" class="pg-promo-countdown">Loading spots…</span></span>
+              <strong>Early bird pricing — Pro locked at $9/mo forever.</strong>
+              <span>Offer expires <strong id="pg-promo-deadline">May 1, 2026</strong> — after that, Pro goes to $12/mo. Use code <strong>EARLYBIRD3</strong> at checkout.</span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn">Get Started Free →</button>
+          <button class="pg-ea-cta" id="pg-ea-join-btn">Start 14-Day Free Trial →</button>
         </div>
 
         <!-- Cards -->
@@ -266,8 +266,8 @@
               <div class="pg-faq-a">Free plan is BYOK (bring your own key). <strong>Pro and above</strong> uses Poly-Glot's API key pool — no setup needed.</div>
             </div>
             <div class="pg-faq-item">
-              <div class="pg-faq-q">What happens after the 3 free months?</div>
-              <div class="pg-faq-a">Your subscription auto-bills at the standard rate. You'll get an email reminder 7 days before. <strong>Cancel anytime.</strong></div>
+              <div class="pg-faq-q">What happens after the 14-day free trial?</div>
+              <div class="pg-faq-a">Your subscription auto-bills at <strong>$9/mo</strong> (early bird rate — locked for life). You'll get an email reminder 3 days before. <strong>Cancel anytime before the trial ends and you won't be charged.</strong></div>
             </div>
             <div class="pg-faq-item">
               <div class="pg-faq-q">Can I switch plans?</div>
@@ -434,65 +434,50 @@
     if (yLabel) yLabel.classList.toggle('active',  isYearly);
   }
 
-  /* ── Promo countdown ────────────────────────────────────── */
-  function loadPromoCount() {
-    var countdown = document.getElementById('pg-promo-countdown');
-    var banner    = document.getElementById('pg-promo-banner');
-    if (!countdown) return;
+  /* ── Deadline countdown ─────────────────────────────────── */
+  /* Replaces the old spot-counter with real deadline urgency.  */
+  /* Deadline: May 1 2026 00:00:00 UTC                         */
+  var DEADLINE = new Date('2026-05-01T00:00:00Z');
 
-    fetch('https://poly-glot.ai/api/auth/promo-count', {
-      method: 'GET',
-      cache:  'no-store'
-    })
-      .then(function(r) {
-        if (!r.ok) throw new Error('bad response');
-        return r.json();
-      })
-      .then(function(data) {
-        // Guard against NaN — fall back to 0 if values are missing/bad
-        var count     = parseInt(data.count,     10) || 0;
-        var limit     = parseInt(data.limit,     10) || 50;
-        var remaining = parseInt(data.remaining, 10);
-        if (isNaN(remaining)) remaining = Math.max(0, limit - count);
+  function updateDeadlineCountdown() {
+    var el     = document.getElementById('pg-promo-deadline');
+    var banner = document.getElementById('pg-promo-banner');
+    if (!el) return;
 
-        if (remaining <= 0) {
-          // Offer exhausted — hide banner entirely
-          if (banner) banner.style.display = 'none';
-          return;
-        }
+    var now  = new Date();
+    var diff = DEADLINE - now;
 
-        // Animate count up from 0 to (limit - remaining) to show momentum
-        var filled    = limit - remaining;
-        var displayed = 0;
-        countdown.textContent = remaining + ' of ' + limit + ' spots remaining.';
-        countdown.classList.add('pg-promo-countdown--live');
+    if (diff <= 0) {
+      // Offer expired — hide banner, update CTA copy
+      if (banner) banner.style.display = 'none';
+      return;
+    }
 
-        // Animate the filled count ticking up so it feels live
-        if (filled > 0) {
-          var step = Math.max(1, Math.floor(filled / 20));
-          var interval = setInterval(function() {
-            displayed = Math.min(displayed + step, filled);
-            var rem = limit - displayed;
-            countdown.textContent = rem + ' of ' + limit + ' spots remaining.';
-            if (displayed >= filled) clearInterval(interval);
-          }, 60);
-        }
+    var days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+    var hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    var mins    = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-        // Urgency colour when <= 10 left
-        if (remaining <= 10) {
-          countdown.classList.add('pg-promo-countdown--urgent');
-        }
-      })
-      .catch(function() {
-        // Network failure — static fallback, never show NaN
-        if (countdown) countdown.textContent = 'Limited spots remaining.';
-      });
+    var label;
+    if (days > 7) {
+      label = 'May 1, 2026';
+    } else if (days >= 1) {
+      label = days + 'd ' + hours + 'h left';
+      el.style.color = '#f59e0b';
+      el.style.fontWeight = '700';
+    } else {
+      label = hours + 'h ' + mins + 'm left';
+      el.style.color = '#ef4444';
+      el.style.fontWeight = '700';
+    }
+    el.textContent = label;
   }
 
   /* ── Init ───────────────────────────────────────────────── */
   function init() {
     renderSection();
-    loadPromoCount();
+    updateDeadlineCountdown();
+    // Refresh countdown every 60 seconds
+    setInterval(updateDeadlineCountdown, 60000);
   }
 
   if (document.readyState === 'loading') {

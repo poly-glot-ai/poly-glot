@@ -992,9 +992,9 @@ When a user pastes code or asks a code question:
       if (!hasOpened) {
         hasOpened = true;
         const greetings = [
-          "Hey! 👋 I can answer questions about Poly-Glot — or paste code and I'll explain it, find bugs, suggest refactors, or write tests.",
-          "Hi there! 🦜 Ask me about features, pricing, or setup. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
-          "Hello! I'm the Poly-Glot assistant. Ask me anything about the site, or paste code to explain, debug, refactor, or get tests written.",
+          "Hey! 👋 I'm the Poly-Glot assistant. Ask me about the product, pricing, or how to get set up — or paste code and I'll explain it, find bugs, suggest refactors, or write tests.",
+          "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, CLI, MCP. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
+          "Hello! I'm your Poly-Glot guide. Ask about the site, pricing, or any feature — or paste code to explain, debug, or refactor it.",
         ];
         const g = greetings[Math.floor(Math.random() * greetings.length)];
         setTimeout(() => {
