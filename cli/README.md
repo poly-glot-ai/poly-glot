@@ -28,11 +28,22 @@ poly-glot comment src/auth.js
 
 ## What it does
 
+### Comment modes
+
 | Mode | What gets added |
 |------|-----------------|
 | `comment` | Standardized doc-comments — JSDoc, PyDoc, Javadoc, TSDoc, Doxygen, KDoc… |
 | `why` | Inline `// why:` comments explaining reasoning, trade-offs, and intent |
-| `both` | Both types in one two-pass run |
+| `both` | Both types in one pass |
+
+### Analysis commands (Pro)
+
+| Command | What it does |
+|---------|--------------|
+| 🐛 `bugs` | Find bugs, edge cases, null dereferences, and error handling gaps |
+| ⚡ `refactor` | Concrete, actionable improvement suggestions with before/after diffs |
+| 🧪 `test` | Generate unit tests directly from function signatures and doc comments |
+| 🔍 `explain` | Deep analysis — complexity score, potential bugs, doc quality |
 
 ---
 
@@ -42,11 +53,14 @@ poly-glot comment src/auth.js
 |---------|-------------|
 | `poly-glot comment <file>` | Add standardized doc-comments (JSDoc, PyDoc, Javadoc…) |
 | `poly-glot comment <file> --why` | Add inline why-comments explaining reasoning & intent |
-| `poly-glot comment <file> --both` | Doc-comments + why-comments in one two-pass run |
+| `poly-glot comment <file> --both` | Doc-comments + why-comments in one pass |
 | `poly-glot why <file>` | Shorthand for `--why` |
 | `poly-glot both <file>` | Shorthand for `--both` |
 | `poly-glot comment --dir <dir>` | Comment every supported file in a directory |
-| `poly-glot explain <file>` | Deep analysis: complexity, bugs, doc quality |
+| `poly-glot bugs <file>` | 🐛 Find bugs, edge cases, null derefs, error handling gaps |
+| `poly-glot refactor <file>` | ⚡ Suggest refactors with concrete before/after diffs |
+| `poly-glot test <file>` | 🧪 Generate unit tests from function signatures & docs |
+| `poly-glot explain <file>` | 🔍 Deep analysis: complexity, bugs, doc quality |
 | `poly-glot config` | Set API key, provider, model, and default mode |
 | `poly-glot demo` | See before/after examples without an API key |
 
@@ -58,6 +72,7 @@ poly-glot comment src/auth.js
 | `--diff` | Show a `+/-` unified diff before writing |
 | `--backup` | Save `.orig` copy of every file before overwriting |
 | `--yes` / `-y` | Skip `--dir` confirmation prompt |
+| `--output <file>` | Write output to a specific file (bugs, refactor, test) |
 
 ---
 
@@ -75,6 +90,59 @@ Prefer to stay in your editor? Poly-Glot is a **GitHub Copilot Chat participant*
 Type `@poly-glot` directly in Copilot Chat inside VS Code. Results appear in chat with an **Apply to Editor** button — no copy-paste needed.
 
 → [**Install the VS Code extension**](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+
+---
+
+## 🐛⚡🧪 Analysis commands (Pro)
+
+Three new commands go beyond documentation — find bugs, improve code quality, and generate tests.
+
+### Find bugs
+
+```bash
+poly-glot bugs src/auth.js
+```
+
+Audits for edge cases, null dereferences, error handling gaps, race conditions, security vulnerabilities, and off-by-one errors. Each issue includes severity, the affected line, and a concrete fix.
+
+```bash
+# Save the report to a file
+poly-glot bugs src/auth.js --output bugs-report.md
+```
+
+### Suggest refactors
+
+```bash
+poly-glot refactor src/utils.ts
+```
+
+Generates 3-7 actionable refactoring suggestions with **before/after code diffs**. Focuses on readability, performance, maintainability, and idiomatic patterns.
+
+```bash
+# Save suggestions to a file
+poly-glot refactor src/utils.ts --output refactor.md
+```
+
+### Write tests
+
+```bash
+poly-glot test src/auth.js
+```
+
+Generates comprehensive unit tests using the standard framework for your language (Jest, pytest, JUnit 5, xUnit, Google Test, RSpec, PHPUnit, XCTest, etc.). Covers happy paths, edge cases, error cases, and boundary values.
+
+```bash
+# Custom output filename
+poly-glot test src/auth.js --output auth.spec.js
+
+# Preview without writing
+poly-glot test src/auth.js --dry-run
+
+# Auto-detects the right test file suffix per language:
+#   JavaScript → .test.js    Python → _test.py     Java → Test.java
+#   TypeScript → .test.ts    Go     → _test.go     Rust → _test.rs
+#   Ruby       → _spec.rb    PHP    → Test.php     Swift → Tests.swift
+```
 
 ---
 
@@ -99,11 +167,12 @@ npx poly-glot-ai-cli comment src/auth.js
 | **Languages** | Python · JavaScript · Java | All 12 languages |
 | **Files / month** | 50 | Unlimited |
 | **Comment modes** | `comment` only | `comment`, `why`, `both` |
+| **Analysis commands** | ✗ | `bugs`, `refactor`, `test`, `explain` |
 | **CLI tool** | ✅ (3 languages) | ✅ (all 12 languages) |
 | **Web UI** | ✅ | ✅ |
 | **Confidence scoring** | ✗ | ✅ |
 | **Fine-tune export (JSONL)** | ✗ | ✅ |
-| **Price** | Free forever | Coming soon |
+| **Price** | Free forever | $9/mo |
 
 ### Free languages
 
@@ -208,13 +277,22 @@ poly-glot both src/auth.js
 # 8. Comment an entire directory (confirms before writing)
 poly-glot comment --dir src/
 
-# 8. Directory run, no prompt (great for CI)
+# 9. Directory run, no prompt (great for CI)
 poly-glot comment --dir src/ --yes
 
-# 9. Pipe from stdin
+# 10. Pipe from stdin
 cat main.py | poly-glot comment --stdin --lang python > main_commented.py
 
-# 10. Analyse code quality
+# 11. Find bugs & edge cases
+poly-glot bugs src/auth.js
+
+# 12. Get refactoring suggestions with before/after diffs
+poly-glot refactor src/utils.ts
+
+# 13. Generate unit tests
+poly-glot test src/auth.js
+
+# 14. Analyse code quality
 poly-glot explain src/auth.js
 ```
 

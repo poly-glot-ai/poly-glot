@@ -2069,27 +2069,27 @@ function initializeDemo() {
         beforeIssues.style.opacity  = '0';
         afterBenefits.style.opacity = '0';
 
-        // Step 1: Before panel + type code
+        // Step 1: Before panel + type code (line-by-line, fast)
         demoPanels[0].classList.add('active');
         await typeCode(demoPanels[0].querySelector('.demo-code code'), data.before, 8);
-        await sleep(120);
+        await sleep(80);
         beforeIssues.style.transition = 'opacity 0.3s ease-in';
         beforeIssues.style.opacity    = '1';
-        await sleep(500);
+        await sleep(300);
 
-        // Step 2: After panel + type improved code
+        // Step 2: After panel + type improved code (line-by-line, fast)
         demoPanels[1].classList.add('active');
         await typeCode(demoPanels[1].querySelector('.demo-code code'), data.after, 6);
-        await sleep(120);
+        await sleep(80);
         afterBenefits.style.transition = 'opacity 0.3s ease-in';
         afterBenefits.style.opacity    = '1';
-        await sleep(500);
+        await sleep(300);
 
         // Step 3: Animated scores for this language
         demoStats.style.display = 'flex';
-        await sleep(100);
+        await sleep(60);
         await animateDemoScores(data);
-        await sleep(500);
+        await sleep(300);
 
         playBtn.textContent      = '✓ Demo Complete';
         playBtn.disabled         = false;
@@ -2123,20 +2123,14 @@ function initializeDemo() {
     // Apply initial labels on load
     applyLanguageLabels();
 
-    // ── typeCode helper (defined inside scope for closure access) ─────────────
+    // ── typeCode helper — line-by-line for speed, still looks like typing ──────
     async function typeCode(codeElement, code, speed = 8) {
         codeElement.textContent = '';
         const lines = code.split('\n');
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            let currentLine = '';
-            for (const char of line) {
-                currentLine += char;
-                codeElement.textContent =
-                    lines.slice(0, i).join('\n') + (i > 0 ? '\n' : '') + currentLine;
-                await sleep(speed);
-            }
-            if (i < lines.length - 1) codeElement.textContent += '\n';
+            codeElement.textContent =
+                lines.slice(0, i + 1).join('\n');
+            await sleep(speed * 3);
         }
     }
 
@@ -4185,20 +4179,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         bothBtn.classList.add('loading');
         bothBtn.disabled = true;
-        bothBtn.innerHTML = '📝💬 Pass 1… <kbd class="btn-kbd">⌘⌥↵</kbd>';
+        bothBtn.innerHTML = '📝💬 Generating… <kbd class="btn-kbd">⌘⌥↵</kbd>';
 
         try {
-            // Show pass 1 progress
-            const docResult = await window.aiGenerator.generateComments(code, language, window.aiGenerator._getCommentStyle(language));
-            bothBtn.innerHTML = '📝💬 Pass 2… <kbd class="btn-kbd">⌘⌥↵</kbd>';
-            const whyResult = await window.aiGenerator.generateWhyComments(docResult.code, language);
-
-            const combinedResult = {
-                code:     whyResult.code,
-                provider: whyResult.provider,
-                model:    whyResult.model,
-                cost:     (docResult.cost || 0) + (whyResult.cost || 0),
-            };
+            // Single-pass: doc-comments + why-comments in one API call (~2x faster)
+            const combinedResult = await window.aiGenerator.generateBoth(code, language);
 
             displayBothResults(combinedResult);
 

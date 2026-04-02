@@ -1835,6 +1835,33 @@ for (const user of users) {
             </div>
           </div>
         </div>
+        <!-- Analysis Commands -->
+        <div class="flags-group">
+          <h4 class="flags-group-title">🔬 Analysis Commands <span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px;">Pro</span></h4>
+          <div class="flags-table">
+            <div class="flags-row flags-row-header"><span>Command</span><span>What it does</span><span>Example</span></div>
+            <div class="flags-row">
+              <code class="flags-code">bugs</code>
+              <span>🐛 Find bugs, edge cases, null derefs, error handling gaps</span>
+              <code class="flags-example">poly-glot bugs src/auth.js</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">refactor</code>
+              <span>⚡ Suggest refactors with concrete before/after diffs</span>
+              <code class="flags-example">poly-glot refactor src/utils.ts</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">test</code>
+              <span>🧪 Generate unit tests from function signatures &amp; docs</span>
+              <code class="flags-example">poly-glot test src/auth.js</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">explain</code>
+              <span>🔍 Deep analysis — complexity, bugs, doc quality score</span>
+              <code class="flags-example">poly-glot explain src/utils.ts</code>
+            </div>
+          </div>
+        </div>
         <!-- Provider & Model -->
         <div class="flags-group">
           <h4 class="flags-group-title">🤖 Provider &amp; Model</h4>
@@ -1872,6 +1899,12 @@ for (const user of users) {
             <div class="cft-line cft-dim">&nbsp;&nbsp;src/auth.js … <span class="cft-green">✓ would update</span></div>
             <div class="cft-line cft-dim">&nbsp;&nbsp;src/utils.ts … <span class="cft-green">✓ would update</span></div>
             <div class="cft-line cft-summary"><span class="cft-green">DRY RUN complete: 21 files would be updated · ~$0.06</span></div>
+            <div class="cft-line" style="margin-top:10px;"><span class="cft-prompt">$</span> <span class="cft-cmd">poly-glot bugs src/auth.js</span></div>
+            <div class="cft-line cft-output">🐛 Bug Audit — auth.js</div>
+            <div class="cft-line cft-dim">&nbsp;&nbsp;🐛 [HIGH] Missing null check on user.token …</div>
+            <div class="cft-line" style="margin-top:10px;"><span class="cft-prompt">$</span> <span class="cft-cmd">poly-glot test src/auth.js</span></div>
+            <div class="cft-line cft-output">🧪 Generated Tests — auth.js</div>
+            <div class="cft-line cft-summary"><span class="cft-green">✓ Tests written to auth.test.js</span></div>
           </div>
         </div>
       </div>

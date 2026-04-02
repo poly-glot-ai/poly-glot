@@ -91,6 +91,27 @@ export interface BothResult {
     tokensUsed: number;
 }
 
+export interface BugsResult {
+    output: string;
+    model: string;
+    cost: number;
+    tokensUsed: number;
+}
+
+export interface RefactorResult {
+    output: string;
+    model: string;
+    cost: number;
+    tokensUsed: number;
+}
+
+export interface TestResult {
+    testCode: string;
+    model: string;
+    cost: number;
+    tokensUsed: number;
+}
+
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 export class PolyGlotGenerator {
@@ -163,6 +184,39 @@ export class PolyGlotGenerator {
 
         return {
             commentedCode,
+            model:      this.cfg.model || '',
+            cost:       0,
+            tokensUsed: 0,
+        };
+    }
+
+    async findBugs(code: string, languageId: string): Promise<BugsResult> {
+        const prompt = this._buildBugsPrompt(code, languageId);
+        const raw = await this._call(prompt);
+        return {
+            output:     raw.replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim(),
+            model:      this.cfg.model || '',
+            cost:       0,
+            tokensUsed: 0,
+        };
+    }
+
+    async suggestRefactors(code: string, languageId: string): Promise<RefactorResult> {
+        const prompt = this._buildRefactorPrompt(code, languageId);
+        const raw = await this._call(prompt);
+        return {
+            output:     raw.replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim(),
+            model:      this.cfg.model || '',
+            cost:       0,
+            tokensUsed: 0,
+        };
+    }
+
+    async generateTests(code: string, languageId: string): Promise<TestResult> {
+        const prompt = this._buildTestPrompt(code, languageId);
+        const raw = await this._call(prompt);
+        return {
+            testCode:   raw.replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim(),
             model:      this.cfg.model || '',
             cost:       0,
             tokensUsed: 0,
@@ -277,6 +331,93 @@ ${code}`;
         return `Analyze this ${lang} code. Return ONLY this JSON, no markdown:
 {"summary":"...","complexity":"Low|Medium|High","complexityScore":1-10,"language":"${lang}","functions":[{"name":"...","purpose":"...","params":["..."],"returns":"..."}],"potentialBugs":["..."],"suggestions":["..."],"docQuality":{"score":0-100,"label":"Excellent|Good|Fair|Poor","issues":["..."],"suggestions":["..."]}}
 
+${code}`;
+    }
+
+    private _buildBugsPrompt(code: string, lang: string): string {
+        return `You are a senior ${lang} engineer performing a thorough bug audit.
+Analyze this code for bugs, edge cases, null/undefined dereferences, error handling gaps,
+off-by-one errors, race conditions, resource leaks, and security vulnerabilities.
+
+For EACH issue found, output:
+
+🐛 [SEVERITY: critical|high|medium|low] <one-line title>
+   Line: <approximate line number or range>
+   Issue: <what's wrong — be specific>
+   Fix: <concrete fix — show the corrected code snippet>
+
+If no issues are found, say "✅ No bugs found — code looks solid."
+
+Rules:
+- Be thorough but avoid false positives — only report real issues.
+- Sort by severity (critical first).
+- Show concrete fix code, not vague advice.
+- Use correct ${lang} syntax in all fix snippets.
+
+Code:
+${code}`;
+    }
+
+    private _buildRefactorPrompt(code: string, lang: string): string {
+        return `You are a senior ${lang} engineer suggesting concrete refactors.
+Analyze this code and suggest actionable improvements for readability, performance,
+maintainability, and idiomatic ${lang} patterns.
+
+For EACH suggestion, output:
+
+⚡ <one-line title>
+   Why: <one sentence explaining the benefit>
+   Before:
+   \`\`\`${lang}
+   <original code snippet>
+   \`\`\`
+   After:
+   \`\`\`${lang}
+   <refactored code snippet>
+   \`\`\`
+
+Rules:
+- Be concrete — show before/after diffs, not vague advice.
+- Focus on the highest-impact changes first.
+- Use idiomatic ${lang} patterns and modern syntax.
+- Preserve the original behavior unless a bug fix is part of the refactor.
+- 3-7 suggestions max — skip trivial cosmetic changes.
+
+Code:
+${code}`;
+    }
+
+    private _buildTestPrompt(code: string, lang: string): string {
+        const testFrameworks: Record<string, string> = {
+            javascript: 'Jest (describe/it/expect)',
+            typescript: 'Jest with TypeScript (describe/it/expect)',
+            python:     'pytest (def test_*, assert)',
+            java:       'JUnit 5 (@Test, assertEquals, assertThrows)',
+            csharp:     'xUnit ([Fact], Assert.Equal, Assert.Throws)',
+            cpp:        'Google Test (TEST, EXPECT_EQ, EXPECT_THROW)',
+            go:         'testing package (func Test*, t.Run, t.Errorf)',
+            rust:       '#[cfg(test)] mod tests / #[test] (assert_eq!, assert!)',
+            ruby:       'RSpec (describe/it/expect)',
+            php:        'PHPUnit (/** @test */, $this->assertEquals)',
+            swift:      'XCTest (func test*, XCTAssertEqual)',
+            kotlin:     'JUnit 5 / kotlin.test (@Test, assertEquals)',
+        };
+        const framework = testFrameworks[lang] || 'the standard test framework';
+
+        return `You are a senior ${lang} engineer writing unit tests.
+Generate comprehensive unit tests for this code using ${framework}.
+
+Rules:
+- Test every public function/method/class.
+- Include: happy path, edge cases, error cases, boundary values.
+- Use descriptive test names that explain the scenario.
+- Mock external dependencies where appropriate.
+- Include setup/teardown if needed.
+- Use correct ${lang} syntax and idiomatic test patterns.
+- Return ONLY the test code — no explanations, no markdown fences.
+- Include necessary imports/requires at the top.
+
+Code to test:
 ${code}`;
     }
 }

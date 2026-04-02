@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Poly-Glot CLI v1.5.0
- * AI-powered code comment generation from the command line.
+ * Poly-Glot CLI v1.8.0
+ * AI-powered code comment generation, bug finding, refactoring, and test generation.
  *
  * Usage:
  *   poly-glot comment <file>                        # Doc-comment a file (default mode)
@@ -13,6 +13,9 @@
  *   poly-glot comment --dir <dir>                   # Comment all supported files
  *   poly-glot comment --dir <dir> --yes             # Skip confirmation prompt
  *   poly-glot why <file>                            # Shorthand for --why
+ *   poly-glot bugs <file>                           # Find bugs, edge cases, null derefs
+ *   poly-glot refactor <file>                       # Suggest refactors with before/after diffs
+ *   poly-glot test <file>                           # Generate unit tests
  *   poly-glot explain <file>                        # Deep code analysis
  *   poly-glot config                                # Interactive setup
  *   poly-glot config --key <key> --provider openai  # Non-interactive setup
@@ -22,7 +25,7 @@ import * as fs       from 'fs';
 import * as path     from 'path';
 import * as os       from 'os';
 import * as readline from 'readline';
-import { PolyGlotGenerator, WhyResult, BothResult } from './generator';
+import { PolyGlotGenerator, WhyResult, BothResult, BugsResult, RefactorResult, TestResult } from './generator';
 import { CommentMode } from './config';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
@@ -31,7 +34,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.7.0';  // enforce 50 files/month quota on free tier
+const VERSION = '1.8.0';  // +bugs, +refactor, +test commands
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -168,9 +171,10 @@ function showWhatsNew(cfg: Config): void {
     const showV14  = isOlderThan(1, 4);
     const showV15  = isOlderThan(1, 5);
     const showV16  = isOlderThan(1, 6);
-    const showV161 = last !== VERSION; // show launch notice on first run of 1.6.1
+    const showV18  = isOlderThan(1, 8);
+    const showV161 = last !== VERSION; // show launch notice on first run of current version
 
-    if (!showV14 && !showV15 && !showV16 && !showV161) return;
+    if (!showV14 && !showV15 && !showV16 && !showV18 && !showV161) return;
 
     if (showV14) {
         console.log(`
@@ -229,6 +233,28 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
     3. Run: ${COLORS.dim}poly-glot config --token <your-token>${COLORS.reset}
 
   CI/CD? Set the ${COLORS.dim}POLYGLOT_LICENSE_TOKEN${COLORS.reset} environment variable instead.
+
+${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
+`);
+    }
+
+    if (showV18) {
+        console.log(`${COLORS.bold}${COLORS.cyan}✨ What's new in Poly-Glot v1.8${COLORS.reset}
+
+  ${COLORS.bold}Three new analysis commands${COLORS.reset} ${COLORS.dim}(Pro required):${COLORS.reset}
+
+  ${COLORS.red}🐛 bugs${COLORS.reset}      Find bugs, edge cases, null derefs, error handling gaps
+           ${COLORS.dim}poly-glot bugs src/auth.js${COLORS.reset}
+
+  ${COLORS.yellow}⚡ refactor${COLORS.reset}  Concrete before/after refactoring suggestions
+           ${COLORS.dim}poly-glot refactor src/utils.ts${COLORS.reset}
+
+  ${COLORS.green}🧪 test${COLORS.reset}      Generate unit tests from function signatures & docs
+           ${COLORS.dim}poly-glot test src/auth.js${COLORS.reset}
+
+  Save output to a file with ${COLORS.cyan}--output <file>${COLORS.reset}:
+  ${COLORS.dim}poly-glot bugs src/auth.js --output bugs.md${COLORS.reset}
+  ${COLORS.dim}poly-glot test src/auth.js --output auth.test.js${COLORS.reset}
 
 ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${COLORS.reset}
 `);
@@ -293,12 +319,15 @@ async function main(): Promise<void> {
         await askTelemetryConsent(cfg);
     }
 
-    if (cmd === 'config')  { await runConfig(args.slice(1)); return; }
-    if (cmd === 'comment') { await runComment(args.slice(1)); return; }
-    if (cmd === 'why')     { await runWhy(args.slice(1)); return; }
-    if (cmd === 'both')    { await runBoth(args.slice(1)); return; }
-    if (cmd === 'explain') { await runExplain(args.slice(1)); return; }
-    if (cmd === 'demo')    { await runDemo(args.slice(1)); return; }
+    if (cmd === 'config')   { await runConfig(args.slice(1)); return; }
+    if (cmd === 'comment')  { await runComment(args.slice(1)); return; }
+    if (cmd === 'why')      { await runWhy(args.slice(1)); return; }
+    if (cmd === 'both')     { await runBoth(args.slice(1)); return; }
+    if (cmd === 'bugs')     { await runBugs(args.slice(1)); return; }
+    if (cmd === 'refactor') { await runRefactor(args.slice(1)); return; }
+    if (cmd === 'test')     { await runTest(args.slice(1)); return; }
+    if (cmd === 'explain')  { await runExplain(args.slice(1)); return; }
+    if (cmd === 'demo')     { await runDemo(args.slice(1)); return; }
 
     error(`Unknown command: ${cmd}. Run 'poly-glot --help' for usage.`);
     process.exit(1);
@@ -657,6 +686,138 @@ async function runBoth(args: string[]): Promise<void> {
     return runComment(['--both', ...args]);
 }
 
+// ─── Command: bugs ────────────────────────────────────────────────────────
+
+async function runBugs(args: string[]): Promise<void> {
+    const flags    = parseFlags(args);
+    const cfg      = loadConfig();
+    assertConfigured(cfg);
+
+    // bugs requires Pro
+    await assertModeAllowed('why', cfg); // reuse Pro gate — bugs is a Pro feature
+
+    const filePath = args.find(a => !a.startsWith('-'));
+    if (!filePath) { error('Specify a file to audit. Usage: poly-glot bugs <file>'); process.exit(1); }
+
+    const absPath = path.resolve(filePath);
+    if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
+
+    const ext  = absPath.split('.').pop()!.toLowerCase();
+    const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    await assertLanguageAllowed(lang, cfg);
+    const code = fs.readFileSync(absPath, 'utf8');
+    const gen  = new PolyGlotGenerator(cfg);
+
+    spin(`Auditing ${path.basename(absPath)} for bugs (${lang}, ${cfg.model})…`);
+    const result = await gen.findBugs(code, lang);
+    stopSpin();
+    ping({ cmd: 'bugs', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+
+    console.log(`\n${COLORS.bold}${COLORS.red}🐛 Bug Audit — ${path.basename(absPath)}${COLORS.reset}`);
+    console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
+    console.log(result.output);
+    console.log('');
+
+    // Optionally write to file
+    const outFile = flags['--output'] as string;
+    if (outFile) {
+        fs.writeFileSync(path.resolve(outFile), result.output, 'utf8');
+        success(`Bug report written to ${outFile}`);
+    }
+}
+
+// ─── Command: refactor ────────────────────────────────────────────────────
+
+async function runRefactor(args: string[]): Promise<void> {
+    const flags    = parseFlags(args);
+    const cfg      = loadConfig();
+    assertConfigured(cfg);
+
+    // refactor requires Pro
+    await assertModeAllowed('why', cfg);
+
+    const filePath = args.find(a => !a.startsWith('-'));
+    if (!filePath) { error('Specify a file to refactor. Usage: poly-glot refactor <file>'); process.exit(1); }
+
+    const absPath = path.resolve(filePath);
+    if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
+
+    const ext  = absPath.split('.').pop()!.toLowerCase();
+    const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    await assertLanguageAllowed(lang, cfg);
+    const code = fs.readFileSync(absPath, 'utf8');
+    const gen  = new PolyGlotGenerator(cfg);
+
+    spin(`Analyzing ${path.basename(absPath)} for refactoring opportunities (${lang}, ${cfg.model})…`);
+    const result = await gen.suggestRefactors(code, lang);
+    stopSpin();
+    ping({ cmd: 'refactor', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+
+    console.log(`\n${COLORS.bold}${COLORS.yellow}⚡ Refactor Suggestions — ${path.basename(absPath)}${COLORS.reset}`);
+    console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
+    console.log(result.output);
+    console.log('');
+
+    const outFile = flags['--output'] as string;
+    if (outFile) {
+        fs.writeFileSync(path.resolve(outFile), result.output, 'utf8');
+        success(`Refactor suggestions written to ${outFile}`);
+    }
+}
+
+// ─── Command: test ────────────────────────────────────────────────────────
+
+async function runTest(args: string[]): Promise<void> {
+    const flags    = parseFlags(args);
+    const cfg      = loadConfig();
+    assertConfigured(cfg);
+
+    // test requires Pro
+    await assertModeAllowed('why', cfg);
+
+    const filePath = args.find(a => !a.startsWith('-'));
+    if (!filePath) { error('Specify a file to generate tests for. Usage: poly-glot test <file>'); process.exit(1); }
+
+    const absPath = path.resolve(filePath);
+    if (!fs.existsSync(absPath)) { error(`File not found: ${absPath}`); process.exit(1); }
+
+    const ext  = absPath.split('.').pop()!.toLowerCase();
+    const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
+    await assertLanguageAllowed(lang, cfg);
+    const code = fs.readFileSync(absPath, 'utf8');
+    const gen  = new PolyGlotGenerator(cfg);
+
+    // Determine output file path
+    const basename = path.basename(absPath, path.extname(absPath));
+    const testExt: Record<string, string> = {
+        javascript: '.test.js', typescript: '.test.ts', python: '_test.py',
+        java: 'Test.java', csharp: 'Tests.cs', cpp: '_test.cpp',
+        go: '_test.go', rust: '_test.rs', ruby: '_spec.rb',
+        php: 'Test.php', swift: 'Tests.swift', kotlin: 'Test.kt',
+    };
+    const defaultOutName = basename + (testExt[lang] || '.test' + path.extname(absPath));
+    const outFile = (flags['--output'] as string) || defaultOutName;
+
+    spin(`Generating tests for ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
+    const result = await gen.generateTests(code, lang);
+    stopSpin();
+    ping({ cmd: 'test', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+
+    console.log(`\n${COLORS.bold}${COLORS.green}🧪 Generated Tests — ${path.basename(absPath)}${COLORS.reset}`);
+    console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
+
+    if ('--dry-run' in flags) {
+        warn('[dry-run] Test file not written. Preview:');
+        console.log(result.testCode);
+    } else {
+        const outPath = path.resolve(outFile);
+        fs.writeFileSync(outPath, result.testCode, 'utf8');
+        success(`Tests written to ${outFile}`);
+        console.log(`\n${COLORS.dim}Run with your test runner to verify.${COLORS.reset}`);
+    }
+    console.log('');
+}
+
 // ─── Command: explain ─────────────────────────────────────────────────────────
 
 async function runExplain(args: string[]): Promise<void> {
@@ -941,6 +1102,9 @@ ${COLORS.bold}Commands:${COLORS.reset}
   ${COLORS.cyan}why${COLORS.reset} --dir <dir>                   Shorthand: why-comment a whole directory
   ${COLORS.cyan}both${COLORS.reset} <file>                       Shorthand: add doc + why-comments to a file
   ${COLORS.cyan}both${COLORS.reset} --dir <dir>                  Shorthand: doc + why-comment a whole directory
+  ${COLORS.cyan}bugs${COLORS.reset} <file>                       Find bugs, edge cases, null derefs, error gaps
+  ${COLORS.cyan}refactor${COLORS.reset} <file>                   Suggest refactors with before/after diffs
+  ${COLORS.cyan}test${COLORS.reset} <file>                       Generate unit tests from function signatures
   ${COLORS.cyan}explain${COLORS.reset} <file>                    Analyse a file (complexity, bugs, quality)
   ${COLORS.cyan}config${COLORS.reset}                            Configure API key, provider, and default mode
 
@@ -948,6 +1112,12 @@ ${COLORS.bold}Comment modes:${COLORS.reset}
   ${COLORS.cyan}comment${COLORS.reset}   JSDoc/PyDoc/KDoc/etc. — parameter types, return values, exceptions
   ${COLORS.cyan}why${COLORS.reset}       Inline reasoning — trade-offs, intent, non-obvious decisions
   ${COLORS.cyan}both${COLORS.reset}      Two-pass: doc-comments first, then why-comments on the result
+
+${COLORS.bold}Analysis commands:${COLORS.reset}  ${COLORS.dim}(Pro required)${COLORS.reset}
+  ${COLORS.cyan}bugs${COLORS.reset}      🐛 Find bugs — edge cases, null derefs, error handling gaps
+  ${COLORS.cyan}refactor${COLORS.reset}  ⚡ Suggest refactors — concrete before/after diffs
+  ${COLORS.cyan}test${COLORS.reset}      🧪 Write tests — unit tests from function signatures & doc-comments
+  ${COLORS.cyan}explain${COLORS.reset}   🔍 Deep analysis — complexity, bugs, doc quality score
 
 ${COLORS.bold}Safety flags:${COLORS.reset}
   ${COLORS.cyan}--dry-run${COLORS.reset}           Preview exactly what would change — no files written
@@ -1012,7 +1182,16 @@ ${COLORS.bold}Examples:${COLORS.reset}
   poly-glot why --dir src/ --output-dir src-why/
   poly-glot both src/auth.js                          # doc + why in one command
   poly-glot both --dir src/ --output-dir src-both/
-  poly-glot explain src/utils.ts
+
+  ${COLORS.dim}# Analysis commands (Pro)${COLORS.reset}
+  poly-glot bugs src/auth.js                          # find bugs & edge cases
+  poly-glot bugs src/auth.js --output bugs-report.md  # save report to file
+  poly-glot refactor src/utils.ts                     # before/after refactor diffs
+  poly-glot refactor src/utils.ts --output refactor.md
+  poly-glot test src/auth.js                          # generate auth.test.js
+  poly-glot test src/auth.js --output auth.spec.js    # custom output filename
+  poly-glot test src/auth.js --dry-run                # preview without writing
+  poly-glot explain src/utils.ts                      # deep code analysis
 
 ${COLORS.bold}Environment variables:${COLORS.reset}
   POLYGLOT_API_KEY          API key (overrides config file)
