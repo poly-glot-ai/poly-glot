@@ -41,7 +41,7 @@
       name:      'Free',
       monthly:   0,
       yearly:    0,
-      desc:      'Perfect for exploring. No credit card required. 50 files/month, always free.',
+      desc:      'Perfect for exploring. 50 files/month, always free.',
       cta:       'Start for Free',
       ctaClass:  'pg-cta-free',
       ctaAction: 'scroll',
@@ -209,8 +209,7 @@
         </div>
         <h2 class="pg-pricing-heading">Simple pricing. Real results.</h2>
         <p class="pg-pricing-sub">
-          Start free, no credit card required.<br>
-          Upgrade, downgrade, or cancel anytime.
+          Start free. Upgrade, downgrade, or cancel anytime.
         </p>
         <div class="pg-pricing-trust">
           <span class="pg-trust-item">🔒 Payments secured by Stripe</span>
