@@ -922,8 +922,8 @@ coverage_threshold: 0.3
     #pg-chat-window {
       position: fixed;
       bottom: 96px; right: 28px;
-      width: 384px; max-width: calc(100vw - 32px);
-      height: 540px; max-height: calc(100vh - 120px);
+      width: 390px; max-width: calc(100vw - 32px);
+      height: 580px; max-height: calc(100vh - 120px);
       background: #13141f;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 16px;
@@ -942,28 +942,44 @@ coverage_threshold: 0.3
 
     /* Header */
     .pg-chat-header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px;
-      background: linear-gradient(135deg, rgba(79,70,229,.25) 0%, rgba(124,58,237,.15) 100%);
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 16px 14px;
+      background: linear-gradient(135deg, rgba(79,70,229,.3) 0%, rgba(124,58,237,.18) 100%);
+      border-bottom: 1px solid rgba(255,255,255,.09);
       flex-shrink: 0;
+      position: relative;
     }
     .pg-chat-header-avatar {
-      width: 36px; height: 36px;
+      width: 44px; height: 44px;
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 19px; flex-shrink: 0;
+      font-size: 22px; flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(79,70,229,.45);
     }
     .pg-chat-header-info { flex: 1; min-width: 0; }
-    .pg-chat-header-name { font-size: 13px; font-weight: 700; color: #f9fafb; line-height: 1.2; }
+    .pg-chat-header-name {
+      font-size: 14px; font-weight: 700; color: #f9fafb; line-height: 1.25;
+      letter-spacing: -.01em;
+    }
     .pg-chat-header-status {
-      font-size: 11px; color: #6b7280;
-      display: flex; align-items: center; gap: 4px; margin-top: 2px;
+      font-size: 11.5px; color: #6b7280;
+      display: flex; align-items: center; gap: 5px; margin-top: 3px;
     }
     .pg-chat-status-dot {
-      width: 6px; height: 6px; background: #34d399;
+      width: 7px; height: 7px; background: #34d399;
       border-radius: 50%; display: inline-block; flex-shrink: 0;
+      box-shadow: 0 0 5px rgba(52,211,153,.6);
+    }
+    .pg-chat-header-badge {
+      display: inline-flex; align-items: center;
+      background: rgba(79,70,229,.25); border: 1px solid rgba(79,70,229,.4);
+      color: #a5b4fc; font-size: 9.5px; font-weight: 600;
+      border-radius: 20px; padding: 2px 8px; letter-spacing: .03em;
+      margin-top: 5px; width: fit-content;
+    }
+    .pg-chat-header-actions {
+      display: flex; align-items: center; gap: 2px; flex-shrink: 0;
     }
     .pg-chat-header-close {
       background: none; border: none; color: #6b7280; cursor: pointer;
@@ -1134,17 +1150,20 @@ coverage_threshold: 0.3
     /* Tablet */
     @media (max-width: 768px) and (min-width: 481px) {
       #pg-chat-window {
-        width: 340px; max-width: calc(100vw - 32px);
-        height: 520px;
+        width: 360px; max-width: calc(100vw - 32px);
+        height: 560px;
       }
+      .pg-chat-header-avatar { width: 40px; height: 40px; font-size: 20px; }
+      .pg-chat-header-name { font-size: 13.5px; }
       .pg-chat-suggestion { font-size: 11px; padding: 5px 10px; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; }
     }
 
     /* Mobile */
     @media (max-width: 480px) {
       #pg-chat-window {
         bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%;
-        height: 75vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
+        height: 82vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
       }
       #pg-chat-trigger { bottom: 18px; right: 16px; width: 46px; height: 46px; font-size: 21px; }
       .pg-chat-msg { max-width: 94%; }
@@ -1160,21 +1179,22 @@ coverage_threshold: 0.3
         word-break: normal; overflow-wrap: normal;
       }
       .pg-chat-inline-code { font-size: 10.5px; }
-      /* Suggestion chips — stack vertically on mobile */
       .pg-chat-suggestions {
-        flex-direction: column; align-items: stretch;
-        padding: 8px 10px; gap: 6px;
-        overflow: hidden;
+        flex-direction: row; align-items: center;
+        flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+        padding: 7px 10px; gap: 6px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
-      .pg-chat-suggestions-label { font-size: 9px; margin-bottom: 2px; }
+      .pg-chat-suggestions::-webkit-scrollbar { display: none; }
+      .pg-chat-suggestions-label { display: none; }
       .pg-chat-suggestion {
-        font-size: 12px; padding: 8px 14px;
-        white-space: normal; text-align: center;
-        border-radius: 10px; width: 100%; box-sizing: border-box;
+        font-size: 11.5px; padding: 6px 12px;
+        white-space: nowrap; flex-shrink: 0;
+        border-radius: 20px;
       }
-      /* Input row — fix send button sizing */
       .pg-chat-input-row {
-        padding: 8px 10px 14px; gap: 8px;
+        padding: 8px 10px 10px; gap: 8px;
         align-items: flex-end;
       }
       #pg-chat-input {
@@ -1190,63 +1210,72 @@ coverage_threshold: 0.3
         border-radius: 10px;
       }
       #pg-chat-send svg { width: 15px; height: 15px; }
-      .pg-chat-header { padding: 0 12px; }
-      .pg-chat-header-title { font-size: 13px; }
+      .pg-chat-header { padding: 14px 12px 12px; }
+      .pg-chat-header-avatar { width: 38px; height: 38px; font-size: 19px; }
+      .pg-chat-header-name { font-size: 13px; }
+      .pg-chat-header-badge { font-size: 9px; padding: 2px 7px; }
       .pg-chat-messages { padding: 12px 10px 8px; }
-      .pg-export-btn { padding: 4px 6px; }
+      .pg-export-bar { padding: 5px 10px 7px; flex-wrap: nowrap; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; gap: 4px; }
+      .pg-export-bar-btn svg { width: 11px; height: 11px; }
     }
     @media (max-width: 360px) {
-      #pg-chat-window { height: 80vh; }
+      #pg-chat-window { height: 85vh; }
       #pg-chat-trigger { bottom: 14px; right: 12px; width: 42px; height: 42px; font-size: 19px; }
       .pg-chat-code { font-size: 9.5px; padding: 5px 6px; }
       .pg-chat-bubble { font-size: 12px; padding: 7px 9px; }
-      .pg-chat-suggestion { font-size: 11px; padding: 7px 10px; }
+      .pg-chat-suggestion { font-size: 11px; padding: 5px 10px; }
       #pg-chat-input { font-size: 16px; }
+      .pg-export-bar-label { display: none; }
+      .pg-export-bar-btn { font-size: 10px; padding: 3px 7px; }
     }
 
-    /* ── Export menu ─────────────────────────────────────────── */
-    .pg-export-btn {
-      background: none; border: none; cursor: pointer;
-      color: #9ca3af; padding: 5px 7px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      transition: color .15s, background .15s;
-      position: relative; flex-shrink: 0;
+    /* ── Export footer bar ───────────────────────────────────── */
+    .pg-export-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 14px 8px;
+      border-top: 1px solid rgba(255,255,255,.05);
+      background: rgba(0,0,0,.15);
+      flex-shrink: 0;
+      gap: 6px;
     }
-    .pg-export-btn:hover { color: #e5e7eb; background: rgba(255,255,255,.08); }
-    .pg-export-btn svg { width: 15px; height: 15px; display: block; }
-    .pg-export-menu {
-      position: absolute; top: calc(100% + 6px); right: 0;
-      background: #1e1b4b; border: 1px solid rgba(79,70,229,.45);
-      border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.55);
-      z-index: 10001; min-width: 170px; overflow: hidden;
-      display: none; flex-direction: column;
+    .pg-export-bar-label {
+      font-size: 9.5px; color: #374151; text-transform: uppercase;
+      letter-spacing: .06em; font-weight: 700; white-space: nowrap; flex-shrink: 0;
     }
-    .pg-export-menu.open { display: flex; }
-    .pg-export-menu-title {
-      font-size: 9px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: #4b5563; padding: 8px 12px 4px;
+    .pg-export-bar-actions {
+      display: flex; align-items: center; gap: 4px;
     }
-    .pg-export-item {
-      background: none; border: none; cursor: pointer;
-      color: #c7d2fe; font-size: 12px; font-family: inherit;
-      padding: 8px 14px; text-align: left; width: 100%;
-      display: flex; align-items: center; gap: 8px;
-      transition: background .12s, color .12s;
+    .pg-export-bar-btn {
+      background: none; border: 1px solid rgba(79,70,229,.2);
+      border-radius: 7px; color: #6b7280; cursor: pointer;
+      font-size: 11px; font-family: inherit; font-weight: 500;
+      padding: 4px 9px; display: flex; align-items: center; gap: 5px;
+      transition: color .14s, background .14s, border-color .14s;
+      white-space: nowrap; flex-shrink: 0;
     }
-    .pg-export-item:hover { background: rgba(79,70,229,.25); color: #fff; }
-    .pg-export-item:last-child { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; margin-top: 2px; }
-    .pg-export-divider { height: 1px; background: rgba(255,255,255,.06); margin: 2px 0; }
+    .pg-export-bar-btn:hover {
+      color: #a5b4fc; background: rgba(79,70,229,.15);
+      border-color: rgba(79,70,229,.45);
+    }
+    .pg-export-bar-btn:active {
+      background: rgba(79,70,229,.25);
+    }
+    .pg-export-bar-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
     .pg-export-toast {
-      position: absolute; top: -32px; right: 0;
+      position: fixed; bottom: 80px; right: 32px;
       background: #4f46e5; color: #fff;
-      font-size: 11px; font-weight: 600; border-radius: 6px;
-      padding: 4px 10px; white-space: nowrap;
+      font-size: 12px; font-weight: 600; border-radius: 8px;
+      padding: 6px 14px; white-space: nowrap;
       opacity: 0; transition: opacity .2s;
-      pointer-events: none;
+      pointer-events: none; z-index: 10002;
+      box-shadow: 0 4px 14px rgba(79,70,229,.4);
     }
     .pg-export-toast.show { opacity: 1; }
     @media (max-width: 480px) {
-      .pg-export-menu { right: auto; left: 0; min-width: 160px; }
+      .pg-export-bar { padding: 5px 10px 7px; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; }
+      .pg-export-toast { bottom: 72px; right: 16px; }
     }
   `;
 
@@ -1279,29 +1308,16 @@ coverage_threshold: 0.3
             <span class="pg-chat-status-dot"></span>
             Online · Ask me anything
           </div>
+          <div class="pg-chat-header-badge">AI-powered · 12 languages</div>
         </div>
-        <button class="pg-export-btn" id="pg-export-btn" aria-label="Export chat" title="Export chat">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <div class="pg-export-menu" id="pg-export-menu">
-            <div class="pg-export-menu-title">Export Chat</div>
-            <button class="pg-export-item" id="pg-export-md">📄 Markdown (.md)</button>
-            <button class="pg-export-item" id="pg-export-txt">📝 Plain Text (.txt)</button>
-            <button class="pg-export-item" id="pg-export-json">🗂 JSON (.json)</button>
-            <div class="pg-export-divider"></div>
-            <button class="pg-export-item" id="pg-export-copy">📋 Copy to clipboard</button>
-          </div>
-          <div class="pg-export-toast" id="pg-export-toast">Copied!</div>
-        </button>
-        <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+        <div class="pg-chat-header-actions">
+          <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
       <div class="pg-chat-suggestions" id="pg-chat-suggestions" aria-label="Suggested question"></div>
@@ -1315,7 +1331,29 @@ coverage_threshold: 0.3
             <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      </div>`;
+      </div>
+      <div class="pg-export-bar">
+        <span class="pg-export-bar-label">Export</span>
+        <div class="pg-export-bar-actions">
+          <button class="pg-export-bar-btn" id="pg-export-md" title="Download as Markdown">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            .md
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-txt" title="Download as plain text">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            .txt
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-json" title="Download as JSON">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            .json
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-copy" title="Copy to clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+      </div>
+      <div class="pg-export-toast" id="pg-export-toast"></div>`;
 
     document.body.appendChild(trigger);
     document.body.appendChild(win);
@@ -1490,34 +1528,22 @@ coverage_threshold: 0.3
       setTimeout(() => toast.classList.remove('show'), 2000);
     }
 
-    // ─── Export menu wiring ────────────────────────────────────────────────────
-    const exportBtn  = document.getElementById('pg-export-btn');
-    const exportMenu = document.getElementById('pg-export-menu');
-
-    exportBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      exportMenu.classList.toggle('open');
-    });
-    document.addEventListener('click', e => {
-      if (!exportBtn.contains(e.target)) exportMenu.classList.remove('open');
-    });
-
+    // ─── Export footer bar wiring ──────────────────────────────────────────────
     document.getElementById('pg-export-md').addEventListener('click', () => {
       downloadFile(getChatAsMarkdown(), `poly-glot-chat-${Date.now()}.md`, 'text/markdown');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .md');
     });
     document.getElementById('pg-export-txt').addEventListener('click', () => {
       downloadFile(getChatAsText(), `poly-glot-chat-${Date.now()}.txt`, 'text/plain');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .txt');
     });
     document.getElementById('pg-export-json').addEventListener('click', () => {
       downloadFile(getChatAsJSON(), `poly-glot-chat-${Date.now()}.json`, 'application/json');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .json');
     });
     document.getElementById('pg-export-copy').addEventListener('click', () => {
       navigator.clipboard.writeText(getChatAsMarkdown()).then(() => {
-        showToast('Copied!');
-        exportMenu.classList.remove('open');
+        showToast('Copied to clipboard!');
       });
     });
 
@@ -1670,6 +1696,7 @@ coverage_threshold: 0.3
   }
 
 })();
+
 
 
 
