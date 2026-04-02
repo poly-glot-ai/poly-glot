@@ -54,6 +54,23 @@ Poly-Glot is an AI-powered code documentation tool. It generates professional co
 3. CLI — npx poly-glot-ai-cli comment file.js
 4. MCP Server — poly-glot-mcp for Claude Desktop, Goose, Cursor, Windsurf
 5. Copilot Chat — @poly-glot /comment, /why, /both, /explain in Copilot Chat
+6. GitHub App — install once, auto-documents every PR with inline review comments and a coverage check run
+
+== GITHUB APP ==
+- Install: github.com/apps/poly-glot-ai
+- Triggers on every pull_request opened or synchronized
+- Fetches changed files, analyzes documentation coverage, posts inline review comments
+- Posts a summary review with avg coverage score and action links
+- Creates a GitHub Check Run (pass/fail based on coverage_threshold)
+- Each inline comment includes the full suggested documented file + deep-link to poly-glot.ai web editor
+- Deep link opens poly-glot.ai with file code pre-loaded (base64 encoded in URL) and shows "Opened from GitHub PR Review" banner
+- Configure via .polyglot.yml in repo root
+- Key .polyglot.yml options: provider, model, mode (doc/why/both), coverage_threshold (default 0.5), max_files (default 15), max_file_size (default 50000 bytes), include/exclude (glob patterns), review_style (inline/summary), check_run (true/false)
+- API key: add openai_api_key or anthropic_api_key to .polyglot.yml (or set OPENAI_API_KEY/ANTHROPIC_API_KEY env vars on server)
+- If no API key found: posts a "Setup required" comment on the PR with instructions
+- Supports all 12 languages, auto-detected from file extension
+- Skips: deleted files, binary files, files over max_file_size, excluded patterns, files already meeting coverage threshold
+- Privacy: code is fetched temporarily to generate docs, never stored; only reads changed PR files; permissions: pull_requests:write, checks:write, contents:read, metadata:read
 
 == COMMENT TYPES ==
 - Doc-comments: JSDoc (JS/TS), Javadoc (Java), PyDoc (Python), Doxygen (C++), XML docs (C#), GoDoc, Rustdoc, YARD (Ruby), PHPDoc, Swift markup, KDoc (Kotlin)
@@ -289,6 +306,317 @@ When a user pastes code or asks a code question:
       patterns: [/explain.?code|code.?explain|\bexplain\b.{0,20}(feature|button|what|how|work)|what.{0,20}explain.{0,20}(do|does|mean)/i],
       answer: `**Explain Code** gives a deep analysis of any code:\n\n- 📝 Plain-English summary\n- 🔢 Complexity score (1–10)\n- 🔍 Function-by-function breakdown\n- 🐛 Potential bugs list\n- ♻️ Refactoring suggestions\n- 📊 Documentation quality score (0–100)\n\n**Where:** Generator panel → **Explain** button (web) · **Cmd+Shift+E** (VS Code) · \`@poly-glot /explain\` (Copilot Chat)`,
     },
+    // ── GITHUB APP — full block of rules, most specific first ───────────────────
+    {
+      // Install the GitHub App
+      patterns: [
+        /how.{0,20}(install|add|set.?up|get|enable|use).{0,20}github.?app/i,
+        /github.?app.{0,20}(install|setup|get.?started|add|enable)/i,
+        /install.{0,20}poly.?glot.{0,20}(on|to|for).{0,20}(github|repo|repository)/i,
+        /where.{0,20}(install|find|get).{0,20}github.?app/i,
+      ],
+      answer: `**Install the Poly-Glot AI GitHub App in 3 steps:**
+
+**1. Install the App**
+Go to [github.com/apps/poly-glot-ai →](https://github.com/apps/poly-glot-ai) and click **Install**.
+Choose to install on all repositories or specific ones.
+
+**2. Add your API key (one of two ways)**
+- **Option A — Repo config:** Add a \`.polyglot.yml\` file to your repo root:
+\`\`\`yaml
+provider: openai
+openai_api_key: sk-your-key-here
+\`\`\`
+- **Option B — Server key:** If you're self-hosting, set \`OPENAI_API_KEY\` or \`ANTHROPIC_API_KEY\` as environment variables on the server.
+
+**3. Open a Pull Request**
+That's it — Poly-Glot AI will automatically analyze the PR, post inline documentation suggestions as review comments, and run a coverage check.
+
+💡 No API key yet? [Get an OpenAI key →](https://platform.openai.com/api-keys) · [Get an Anthropic key →](https://console.anthropic.com/settings/keys)`,
+    },
+    {
+      // What does the GitHub App do / overview
+      patterns: [
+        /what.{0,20}(does|is).{0,30}github.?app/i,
+        /github.?app.{0,20}(what|how|work|do|does|overview|explain)/i,
+        /how.{0,20}(does|do).{0,20}(poly.?glot|the).{0,20}github.?app.{0,20}work/i,
+        /tell.{0,20}(me|us).{0,20}about.{0,20}github.?app/i,
+        /what.{0,20}github.?app/i,
+      ],
+      answer: `**Poly-Glot AI GitHub App — automatic PR documentation:**
+
+🔁 **How it works:**
+1. You open or push to a Pull Request
+2. The app receives a webhook from GitHub
+3. It fetches every changed file in the PR
+4. It analyzes each file for documentation coverage
+5. Files below the threshold get AI-generated doc suggestions
+6. Results are posted as **inline review comments** on the PR
+7. A **Check Run** appears showing coverage scores for each file
+
+📝 **What you get on every PR:**
+- Inline JSDoc / PyDoc / Javadoc / Doxygen suggestions per file
+- A documentation coverage score (0–100%)
+- A deep-link to open the file in the [Poly-Glot web editor](https://poly-glot.ai) to regenerate with custom settings
+- A summary review comment with avg coverage, files analyzed, and action buttons
+
+⚙️ **Fully configurable** via \`.polyglot.yml\` in your repo root — set provider, model, mode, thresholds, include/exclude patterns, and more.
+
+[Install the App →](https://github.com/apps/poly-glot-ai) · [See docs →](https://poly-glot.ai)`,
+    },
+    {
+      // How does it document PRs / what comments does it post
+      patterns: [
+        /how.{0,30}(document|comment|annotate|analyze|review).{0,20}(pr|pull.?request)/i,
+        /what.{0,30}(comment|post|suggest|review|add).{0,20}(pr|pull.?request)/i,
+        /inline.{0,20}(comment|suggestion|review).{0,20}(pr|pull.?request|github)/i,
+        /pr.{0,20}(review|comment|documentation|doc|suggestion)/i,
+        /pull.?request.{0,20}(review|comment|documentation|doc)/i,
+      ],
+      answer: `**On every PR, Poly-Glot AI posts:**
+
+**1. Inline review comments** (one per underdocumented file)
+Each comment includes:
+- The file name, language, and doc style (e.g. JSDoc, PyDoc, Javadoc)
+- A documentation coverage score (e.g. 42%)
+- A collapsible \`<details>\` block with the full suggested documented version
+- A table with action links:
+  - 🌐 Open the file in the Poly-Glot web editor (code pre-loaded)
+  - 💻 Install the VS Code extension
+  - ⌨️ Run the CLI command for that file
+
+**2. A review summary** at the top of the PR with:
+- Total files analyzed
+- Files needing docs
+- Average coverage score
+- Links to the web editor, VS Code extension, and CLI
+
+**3. A GitHub Check Run** named "Poly-Glot AI"
+- Shows pass/fail based on your coverage threshold
+- Lists per-file scores in the check details
+
+💡 **Tip:** Copy the suggested code from the \`<details>\` block and commit it — or click the web editor link to regenerate with different settings.`,
+    },
+    {
+      // Configure / polyglot.yml
+      patterns: [
+        /\.polyglot\.yml|polyglot\.yml|polyglot yaml|config.{0,20}(file|github|app)/i,
+        /how.{0,20}(configure|config|customize|change.?settings|set.?up).{0,20}(github.?app|poly.?glot.?app)/i,
+        /github.?app.{0,20}(configure|config|settings|options|customize)/i,
+        /coverage.?threshold|max.?files|max.?file.?size|include.?pattern|exclude.?pattern/i,
+      ],
+      answer: `**Configure Poly-Glot AI with \`.polyglot.yml\` in your repo root:**
+
+\`\`\`yaml
+# .polyglot.yml
+provider: openai          # openai | anthropic
+model: gpt-4.1            # any valid model ID
+mode: doc                 # doc | why | both
+openai_api_key: sk-...    # your OpenAI key (optional if set server-side)
+anthopic_api_key: sk-...  # your Anthropic key (optional)
+coverage_threshold: 0.5   # 0.0–1.0 — files below this get suggestions
+max_files: 15             # max files to process per PR
+max_file_size: 50000      # skip files larger than this (bytes)
+review_style: inline      # inline | summary
+check_run: true           # show GitHub Check Run with coverage
+include:                  # only process these paths (optional)
+  - src/
+  - lib/
+exclude:                  # skip these paths
+  - tests/
+  - '*.test.js'
+  - '*.spec.ts'
+\`\`\`
+
+**Defaults (no config needed to get started):**
+- Provider: OpenAI · Model: GPT-4.1 · Mode: doc
+- Threshold: 50% · Max files: 15 · Max file size: 50KB
+- Review style: inline · Check run: enabled
+
+💡 Commit this file to your repo root and the app picks it up on the next PR.`,
+    },
+    {
+      // Coverage score / threshold
+      patterns: [
+        /coverage.{0,20}(score|check|threshold|percentage|percent|rating)/i,
+        /documentation.{0,20}(score|coverage|percentage|percent|threshold)/i,
+        /what.{0,20}coverage.{0,20}(mean|means|is|does)/i,
+        /how.{0,20}(is|does).{0,20}coverage.{0,20}(calculated|measured|work|score)/i,
+      ],
+      answer: `**Documentation coverage score (0–100%):**
+
+Poly-Glot AI analyzes each file and scores how well it's documented:
+
+- **100%** — every function/class/method has a doc comment
+- **50%** — about half are documented (the default threshold)
+- **0%** — no doc comments at all
+
+**How it's calculated:**
+The app scans for doc comment patterns per language:
+- JS/TS → \`/** ... */\` JSDoc blocks
+- Python → \`""" ... """\` docstrings
+- Java → \`/** ... */\` Javadoc blocks
+- C++ → \`/** ... */\` or \`/// ...\` Doxygen
+- etc.
+
+**What triggers a suggestion:**
+If a file scores below your \`coverage_threshold\` (default: 50%), Poly-Glot AI generates doc suggestions for that file and posts them as a review comment.
+
+**Change the threshold** in \`.polyglot.yml\`:
+\`\`\`yaml
+coverage_threshold: 0.8  # require 80% coverage
+\`\`\``,
+    },
+    {
+      // Check run
+      patterns: [
+        /check.?run|github.{0,10}check|check.{0,10}(pass|fail|status)/i,
+        /github.?app.{0,20}(check|status|badge|ci)/i,
+        /why.{0,20}(check|failing|failed|red|green).{0,20}(poly|run)/i,
+        /poly.?glot.{0,20}check/i,
+      ],
+      answer: `**Poly-Glot AI creates a GitHub Check Run on every PR:**
+
+You'll see it in the PR's **Checks** tab or status area:
+
+- ✅ **Pass** — all analyzed files meet the coverage threshold
+- ❌ **Fail** — one or more files are below the threshold
+- ⚪ **Neutral** — no API key configured (setup required)
+
+**What the check shows:**
+- Files analyzed · files needing docs · average coverage score
+- Per-file breakdown in the check details
+
+**Disable the check run** if you just want suggestions without blocking CI:
+\`\`\`yaml
+# .polyglot.yml
+check_run: false
+\`\`\`
+
+💡 The check run is informational by default — it won't block merges unless you configure branch protection rules to require it.`,
+    },
+    {
+      // Deep link / web editor link from PR comment
+      patterns: [
+        /deep.?link|open.{0,20}(web|editor|poly.?glot).{0,20}(from|in|link)/i,
+        /open.{0,20}(in|with).{0,20}poly.?glot/i,
+        /web.?editor.{0,20}link|editor.{0,20}link.{0,20}(pr|pull)/i,
+        /pre.?load|preloaded.{0,20}code/i,
+        /regenerate.{0,20}(in|with|using).{0,20}(web|editor|poly.?glot)/i,
+      ],
+      answer: `**Every PR comment includes a "Open in Poly-Glot AI" link:**
+
+When the GitHub App posts a suggestion on your PR, there's a table with:
+
+| Action | What it does |
+|--------|--------------|
+| 🌐 Open in web editor | Opens poly-glot.ai with that file's code **pre-loaded** |
+| 💻 VS Code extension | Links to the marketplace install page |
+| ⌨️ CLI command | Shows the exact \`npx poly-glot-ai-cli\` command for that file |
+
+**The web editor deep link:**
+- Encodes the file's source code as a base64 URL param
+- Opens poly-glot.ai with the code in the editor, language auto-set
+- Shows a banner: *"Opened from GitHub PR Review"*
+- You can change the model, mode (doc/WHY/both), or settings and regenerate
+- No copy-paste needed — everything is pre-loaded
+
+💡 Use this when you want to tweak the generated documentation before committing it.`,
+    },
+    {
+      // Supported languages for the GitHub App
+      patterns: [
+        /github.?app.{0,30}language|language.{0,30}github.?app/i,
+        /what.{0,20}language.{0,20}(github.?app|app.{0,10}support)/i,
+        /github.?app.{0,20}(support|work|handle).{0,20}(language|file|code)/i,
+      ],
+      answer: `**The GitHub App supports all 12 Poly-Glot languages:**
+
+| Language | Doc Style | Tier |
+|----------|-----------|------|
+| JavaScript | JSDoc | Free |
+| TypeScript | JSDoc | Free |
+| Python | PyDoc (Google/NumPy) | Free |
+| Java | Javadoc | Free |
+| C++ | Doxygen | Pro |
+| C# | XML Docs | Pro |
+| Go | GoDoc | Pro |
+| Rust | Rustdoc | Pro |
+| Ruby | YARD | Pro |
+| PHP | PHPDoc | Pro |
+| Swift | Swift Markup | Pro |
+| Kotlin | KDoc | Pro |
+
+Language is **auto-detected** from file extension — no configuration needed.
+
+Files with unsupported extensions (images, lock files, build artifacts, etc.) are automatically skipped.
+
+[Install the App →](https://github.com/apps/poly-glot-ai)`,
+    },
+    {
+      // Privacy / security for GitHub App
+      patterns: [
+        /github.?app.{0,30}(private|privacy|secure|security|safe|data|code|send|store)/i,
+        /(private|secure|safe).{0,30}github.?app/i,
+        /does.{0,20}(app|poly.?glot).{0,20}(see|store|collect|send|share).{0,20}(code|repo|data)/i,
+        /github.?app.{0,20}(access|permission|scope)/i,
+      ],
+      answer: `**The GitHub App is private and secure:**
+
+🔑 **API keys:** Stored in your repo's \`.polyglot.yml\` (add to \`.gitignore\` if needed) or as server environment variables — never logged or stored by Poly-Glot
+
+📡 **Your code:** Fetched temporarily via the GitHub API to generate docs, then discarded — never stored
+
+🔒 **GitHub permissions the app requests:**
+- \`pull_requests: write\` — to post review comments
+- \`checks: write\` — to create the coverage check run
+- \`contents: read\` — to read your source files
+- \`metadata: read\` — to identify the repo
+
+🚫 **What the app does NOT do:**
+- Does not store your source code
+- Does not share your code with anyone except OpenAI/Anthropic (your chosen provider)
+- Does not read files outside of changed PR files
+- Does not access your Git history or other branches
+
+[Privacy Policy →](https://poly-glot.ai/privacy) · [Terms →](https://poly-glot.ai/terms)`,
+    },
+    {
+      // Troubleshooting GitHub App
+      patterns: [
+        /github.?app.{0,30}(not.?work|broken|error|fail|issue|problem|bug|wrong|setup.?comment)/i,
+        /(not.?work|broken|fail|error).{0,30}github.?app/i,
+        /why.{0,20}(isn't|is.?not|didn't|does.?not).{0,20}(app|poly.?glot).{0,20}(work|run|post|comment|fire)/i,
+        /app.{0,20}(not|never).{0,20}(post|comment|run|trigger|respond)/i,
+        /no.{0,20}(comment|review|check|suggestion).{0,20}(from|by).{0,20}(poly.?glot|app)/i,
+      ],
+      answer: `**Troubleshooting the Poly-Glot AI GitHub App:**
+
+**App posted "Setup required" comment:**
+→ No API key found. Add \`openai_api_key\` or \`anthropic_api_key\` to \`.polyglot.yml\` in your repo root.
+
+**No comment posted at all:**
+→ Check the app is installed on the repo (Settings → Integrations → Applications)
+→ Verify the PR has changed files with supported extensions (.js, .ts, .py, .java, etc.)
+→ All files may already meet the coverage threshold — try lowering it in \`.polyglot.yml\`
+
+**Check run failing:**
+→ Files are below your \`coverage_threshold\` (default 50%). Either add docs or lower the threshold:
+\`\`\`yaml
+coverage_threshold: 0.3
+\`\`\`
+
+**All files being skipped:**
+→ Check your \`exclude:\` patterns in \`.polyglot.yml\` — you may be excluding too broadly
+→ Max files limit hit (default 15) — increase with \`max_files: 30\`
+
+**App hitting API errors:**
+→ Verify your API key is valid (test it at [poly-glot.ai](https://poly-glot.ai) → ⚙️ AI Settings → Test Connection)
+→ Check your OpenAI/Anthropic account has credits
+
+[GitHub App Source →](https://github.com/hmoses/poly-glot-github-app)`,
+    },
+
     {
       // Copilot Chat integration
       patterns: [/copilot|@poly.?glot|copilot.?chat|chat.?participant|github.?copilot/i],
@@ -594,8 +922,8 @@ When a user pastes code or asks a code question:
     #pg-chat-window {
       position: fixed;
       bottom: 96px; right: 28px;
-      width: 384px; max-width: calc(100vw - 32px);
-      height: 540px; max-height: calc(100vh - 120px);
+      width: 390px; max-width: calc(100vw - 32px);
+      height: 580px; max-height: calc(100vh - 120px);
       background: #13141f;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 16px;
@@ -614,28 +942,44 @@ When a user pastes code or asks a code question:
 
     /* Header */
     .pg-chat-header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 14px 16px;
-      background: linear-gradient(135deg, rgba(79,70,229,.25) 0%, rgba(124,58,237,.15) 100%);
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 16px 14px;
+      background: linear-gradient(135deg, rgba(79,70,229,.3) 0%, rgba(124,58,237,.18) 100%);
+      border-bottom: 1px solid rgba(255,255,255,.09);
       flex-shrink: 0;
+      position: relative;
     }
     .pg-chat-header-avatar {
-      width: 36px; height: 36px;
+      width: 44px; height: 44px;
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 19px; flex-shrink: 0;
+      font-size: 22px; flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(79,70,229,.45);
     }
     .pg-chat-header-info { flex: 1; min-width: 0; }
-    .pg-chat-header-name { font-size: 13px; font-weight: 700; color: #f9fafb; line-height: 1.2; }
+    .pg-chat-header-name {
+      font-size: 14px; font-weight: 700; color: #f9fafb; line-height: 1.25;
+      letter-spacing: -.01em;
+    }
     .pg-chat-header-status {
-      font-size: 11px; color: #6b7280;
-      display: flex; align-items: center; gap: 4px; margin-top: 2px;
+      font-size: 11.5px; color: #6b7280;
+      display: flex; align-items: center; gap: 5px; margin-top: 3px;
     }
     .pg-chat-status-dot {
-      width: 6px; height: 6px; background: #34d399;
+      width: 7px; height: 7px; background: #34d399;
       border-radius: 50%; display: inline-block; flex-shrink: 0;
+      box-shadow: 0 0 5px rgba(52,211,153,.6);
+    }
+    .pg-chat-header-badge {
+      display: inline-flex; align-items: center;
+      background: rgba(79,70,229,.25); border: 1px solid rgba(79,70,229,.4);
+      color: #a5b4fc; font-size: 9.5px; font-weight: 600;
+      border-radius: 20px; padding: 2px 8px; letter-spacing: .03em;
+      margin-top: 5px; width: fit-content;
+    }
+    .pg-chat-header-actions {
+      display: flex; align-items: center; gap: 2px; flex-shrink: 0;
     }
     .pg-chat-header-close {
       background: none; border: none; color: #6b7280; cursor: pointer;
@@ -794,20 +1138,32 @@ When a user pastes code or asks a code question:
     #pg-chat-send:disabled { opacity: .35; cursor: default; transform: none; }
     #pg-chat-send svg { width: 17px; height: 17px; display: block; flex-shrink: 0; }
 
+    /* Char counter */
+    .pg-chat-char-counter {
+      font-size: 10px; color: #4b5563; text-align: right;
+      padding: 0 14px 4px; flex-shrink: 0;
+      transition: color .15s;
+    }
+    .pg-chat-char-counter.warn  { color: #f59e0b; }
+    .pg-chat-char-counter.error { color: #ef4444; font-weight: 700; }
+
     /* Tablet */
     @media (max-width: 768px) and (min-width: 481px) {
       #pg-chat-window {
-        width: 340px; max-width: calc(100vw - 32px);
-        height: 520px;
+        width: 360px; max-width: calc(100vw - 32px);
+        height: 560px;
       }
+      .pg-chat-header-avatar { width: 40px; height: 40px; font-size: 20px; }
+      .pg-chat-header-name { font-size: 13.5px; }
       .pg-chat-suggestion { font-size: 11px; padding: 5px 10px; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; }
     }
 
     /* Mobile */
     @media (max-width: 480px) {
       #pg-chat-window {
         bottom: 0; right: 0; left: 0; width: 100%; max-width: 100%;
-        height: 75vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
+        height: 82vh; max-height: 100dvh; border-radius: 20px 20px 0 0;
       }
       #pg-chat-trigger { bottom: 18px; right: 16px; width: 46px; height: 46px; font-size: 21px; }
       .pg-chat-msg { max-width: 94%; }
@@ -823,21 +1179,22 @@ When a user pastes code or asks a code question:
         word-break: normal; overflow-wrap: normal;
       }
       .pg-chat-inline-code { font-size: 10.5px; }
-      /* Suggestion chips — stack vertically on mobile */
       .pg-chat-suggestions {
-        flex-direction: column; align-items: stretch;
-        padding: 8px 10px; gap: 6px;
-        overflow: hidden;
+        flex-direction: row; align-items: center;
+        flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+        padding: 7px 10px; gap: 6px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
-      .pg-chat-suggestions-label { font-size: 9px; margin-bottom: 2px; }
+      .pg-chat-suggestions::-webkit-scrollbar { display: none; }
+      .pg-chat-suggestions-label { display: none; }
       .pg-chat-suggestion {
-        font-size: 12px; padding: 8px 14px;
-        white-space: normal; text-align: center;
-        border-radius: 10px; width: 100%; box-sizing: border-box;
+        font-size: 11.5px; padding: 6px 12px;
+        white-space: nowrap; flex-shrink: 0;
+        border-radius: 20px;
       }
-      /* Input row — fix send button sizing */
       .pg-chat-input-row {
-        padding: 8px 10px 14px; gap: 8px;
+        padding: 8px 10px 10px; gap: 8px;
         align-items: flex-end;
       }
       #pg-chat-input {
@@ -853,63 +1210,72 @@ When a user pastes code or asks a code question:
         border-radius: 10px;
       }
       #pg-chat-send svg { width: 15px; height: 15px; }
-      .pg-chat-header { padding: 0 12px; }
-      .pg-chat-header-title { font-size: 13px; }
+      .pg-chat-header { padding: 14px 12px 12px; }
+      .pg-chat-header-avatar { width: 38px; height: 38px; font-size: 19px; }
+      .pg-chat-header-name { font-size: 13px; }
+      .pg-chat-header-badge { font-size: 9px; padding: 2px 7px; }
       .pg-chat-messages { padding: 12px 10px 8px; }
-      .pg-export-btn { padding: 4px 6px; }
+      .pg-export-bar { padding: 5px 10px 7px; flex-wrap: nowrap; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; gap: 4px; }
+      .pg-export-bar-btn svg { width: 11px; height: 11px; }
     }
     @media (max-width: 360px) {
-      #pg-chat-window { height: 80vh; }
+      #pg-chat-window { height: 85vh; }
       #pg-chat-trigger { bottom: 14px; right: 12px; width: 42px; height: 42px; font-size: 19px; }
       .pg-chat-code { font-size: 9.5px; padding: 5px 6px; }
       .pg-chat-bubble { font-size: 12px; padding: 7px 9px; }
-      .pg-chat-suggestion { font-size: 11px; padding: 7px 10px; }
+      .pg-chat-suggestion { font-size: 11px; padding: 5px 10px; }
       #pg-chat-input { font-size: 16px; }
+      .pg-export-bar-label { display: none; }
+      .pg-export-bar-btn { font-size: 10px; padding: 3px 7px; }
     }
 
-    /* ── Export menu ─────────────────────────────────────────── */
-    .pg-export-btn {
-      background: none; border: none; cursor: pointer;
-      color: #9ca3af; padding: 5px 7px; border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      transition: color .15s, background .15s;
-      position: relative; flex-shrink: 0;
+    /* ── Export footer bar ───────────────────────────────────── */
+    .pg-export-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 14px 8px;
+      border-top: 1px solid rgba(255,255,255,.05);
+      background: rgba(0,0,0,.15);
+      flex-shrink: 0;
+      gap: 6px;
     }
-    .pg-export-btn:hover { color: #e5e7eb; background: rgba(255,255,255,.08); }
-    .pg-export-btn svg { width: 15px; height: 15px; display: block; }
-    .pg-export-menu {
-      position: absolute; top: calc(100% + 6px); right: 0;
-      background: #1e1b4b; border: 1px solid rgba(79,70,229,.45);
-      border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.55);
-      z-index: 10001; min-width: 170px; overflow: hidden;
-      display: none; flex-direction: column;
+    .pg-export-bar-label {
+      font-size: 9.5px; color: #374151; text-transform: uppercase;
+      letter-spacing: .06em; font-weight: 700; white-space: nowrap; flex-shrink: 0;
     }
-    .pg-export-menu.open { display: flex; }
-    .pg-export-menu-title {
-      font-size: 9px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: #4b5563; padding: 8px 12px 4px;
+    .pg-export-bar-actions {
+      display: flex; align-items: center; gap: 4px;
     }
-    .pg-export-item {
-      background: none; border: none; cursor: pointer;
-      color: #c7d2fe; font-size: 12px; font-family: inherit;
-      padding: 8px 14px; text-align: left; width: 100%;
-      display: flex; align-items: center; gap: 8px;
-      transition: background .12s, color .12s;
+    .pg-export-bar-btn {
+      background: none; border: 1px solid rgba(79,70,229,.2);
+      border-radius: 7px; color: #6b7280; cursor: pointer;
+      font-size: 11px; font-family: inherit; font-weight: 500;
+      padding: 4px 9px; display: flex; align-items: center; gap: 5px;
+      transition: color .14s, background .14s, border-color .14s;
+      white-space: nowrap; flex-shrink: 0;
     }
-    .pg-export-item:hover { background: rgba(79,70,229,.25); color: #fff; }
-    .pg-export-item:last-child { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; margin-top: 2px; }
-    .pg-export-divider { height: 1px; background: rgba(255,255,255,.06); margin: 2px 0; }
+    .pg-export-bar-btn:hover {
+      color: #a5b4fc; background: rgba(79,70,229,.15);
+      border-color: rgba(79,70,229,.45);
+    }
+    .pg-export-bar-btn:active {
+      background: rgba(79,70,229,.25);
+    }
+    .pg-export-bar-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
     .pg-export-toast {
-      position: absolute; top: -32px; right: 0;
+      position: fixed; bottom: 80px; right: 32px;
       background: #4f46e5; color: #fff;
-      font-size: 11px; font-weight: 600; border-radius: 6px;
-      padding: 4px 10px; white-space: nowrap;
+      font-size: 12px; font-weight: 600; border-radius: 8px;
+      padding: 6px 14px; white-space: nowrap;
       opacity: 0; transition: opacity .2s;
-      pointer-events: none;
+      pointer-events: none; z-index: 10002;
+      box-shadow: 0 4px 14px rgba(79,70,229,.4);
     }
     .pg-export-toast.show { opacity: 1; }
     @media (max-width: 480px) {
-      .pg-export-menu { right: auto; left: 0; min-width: 160px; }
+      .pg-export-bar { padding: 5px 10px 7px; }
+      .pg-export-bar-btn { font-size: 10.5px; padding: 4px 8px; }
+      .pg-export-toast { bottom: 72px; right: 16px; }
     }
   `;
 
@@ -942,32 +1308,20 @@ When a user pastes code or asks a code question:
             <span class="pg-chat-status-dot"></span>
             Online · Ask me anything
           </div>
+          <div class="pg-chat-header-badge">AI-powered · 12 languages</div>
         </div>
-        <button class="pg-export-btn" id="pg-export-btn" aria-label="Export chat" title="Export chat">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <div class="pg-export-menu" id="pg-export-menu">
-            <div class="pg-export-menu-title">Export Chat</div>
-            <button class="pg-export-item" id="pg-export-md">📄 Markdown (.md)</button>
-            <button class="pg-export-item" id="pg-export-txt">📝 Plain Text (.txt)</button>
-            <button class="pg-export-item" id="pg-export-json">🗂 JSON (.json)</button>
-            <div class="pg-export-divider"></div>
-            <button class="pg-export-item" id="pg-export-copy">📋 Copy to clipboard</button>
-          </div>
-          <div class="pg-export-toast" id="pg-export-toast">Copied!</div>
-        </button>
-        <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+        <div class="pg-chat-header-actions">
+          <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
       <div class="pg-chat-suggestions" id="pg-chat-suggestions" aria-label="Suggested question"></div>
+      <div class="pg-chat-char-counter" id="pg-chat-char-counter" aria-live="polite"></div>
       <div class="pg-chat-input-row">
         <textarea id="pg-chat-input" placeholder="Paste code or ask about Poly-Glot…" rows="1"
           aria-label="Chat message" autocomplete="off" spellcheck="true"></textarea>
@@ -977,7 +1331,29 @@ When a user pastes code or asks a code question:
             <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      </div>`;
+      </div>
+      <div class="pg-export-bar">
+        <span class="pg-export-bar-label">Export</span>
+        <div class="pg-export-bar-actions">
+          <button class="pg-export-bar-btn" id="pg-export-md" title="Download as Markdown">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            .md
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-txt" title="Download as plain text">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            .txt
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-json" title="Download as JSON">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            .json
+          </button>
+          <button class="pg-export-bar-btn" id="pg-export-copy" title="Copy to clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+      </div>
+      <div class="pg-export-toast" id="pg-export-toast"></div>`;
 
     document.body.appendChild(trigger);
     document.body.appendChild(win);
@@ -997,6 +1373,8 @@ When a user pastes code or asks a code question:
     const suggestionsEl = document.getElementById('pg-chat-suggestions');
     const badge         = document.getElementById('pg-chat-badge');
     const triggerIcon   = document.getElementById('pg-trigger-icon');
+    const charCounter   = document.getElementById('pg-chat-char-counter');
+    const MAX_CHARS     = 20000;
 
     let isOpen    = false;
     let isBusy    = false;
@@ -1150,34 +1528,22 @@ When a user pastes code or asks a code question:
       setTimeout(() => toast.classList.remove('show'), 2000);
     }
 
-    // ─── Export menu wiring ────────────────────────────────────────────────────
-    const exportBtn  = document.getElementById('pg-export-btn');
-    const exportMenu = document.getElementById('pg-export-menu');
-
-    exportBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      exportMenu.classList.toggle('open');
-    });
-    document.addEventListener('click', e => {
-      if (!exportBtn.contains(e.target)) exportMenu.classList.remove('open');
-    });
-
+    // ─── Export footer bar wiring ──────────────────────────────────────────────
     document.getElementById('pg-export-md').addEventListener('click', () => {
       downloadFile(getChatAsMarkdown(), `poly-glot-chat-${Date.now()}.md`, 'text/markdown');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .md');
     });
     document.getElementById('pg-export-txt').addEventListener('click', () => {
       downloadFile(getChatAsText(), `poly-glot-chat-${Date.now()}.txt`, 'text/plain');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .txt');
     });
     document.getElementById('pg-export-json').addEventListener('click', () => {
       downloadFile(getChatAsJSON(), `poly-glot-chat-${Date.now()}.json`, 'application/json');
-      exportMenu.classList.remove('open');
+      showToast('Downloaded as .json');
     });
     document.getElementById('pg-export-copy').addEventListener('click', () => {
       navigator.clipboard.writeText(getChatAsMarkdown()).then(() => {
-        showToast('Copied!');
-        exportMenu.classList.remove('open');
+        showToast('Copied to clipboard!');
       });
     });
 
@@ -1205,6 +1571,10 @@ When a user pastes code or asks a code question:
     async function sendMessage(text) {
       text = text.trim();
       if (!text || isBusy) return;
+      if (text.length > MAX_CHARS) {
+        appendMessage('bot', `⚠️ Message too long (${text.length.toLocaleString()} chars). Please keep it under ${MAX_CHARS.toLocaleString()} characters (~500 lines of code).`, false);
+        return;
+      }
 
       isBusy = true;
       sendBtn.disabled = true;
@@ -1280,23 +1650,42 @@ When a user pastes code or asks a code question:
     closeBtn.addEventListener('click', closeChat);
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) closeChat(); });
 
+    function updateCharCounter() {
+      const len = inputEl.value.length;
+      const remaining = MAX_CHARS - len;
+      if (len === 0) {
+        charCounter.textContent = '';
+        charCounter.className = 'pg-chat-char-counter';
+      } else if (remaining <= 0) {
+        charCounter.textContent = `0 / ${MAX_CHARS.toLocaleString()} — limit reached`;
+        charCounter.className = 'pg-chat-char-counter error';
+      } else if (remaining <= 2000) {
+        charCounter.textContent = `${remaining.toLocaleString()} chars remaining`;
+        charCounter.className = 'pg-chat-char-counter warn';
+      } else {
+        charCounter.textContent = '';
+        charCounter.className = 'pg-chat-char-counter';
+      }
+      sendBtn.disabled = !inputEl.value.trim() || len > MAX_CHARS;
+    }
+
     inputEl.addEventListener('input', () => {
-      sendBtn.disabled = !inputEl.value.trim();
       const chip = suggestionsEl.querySelector('.pg-chat-suggestion');
       if (chip) chip.classList.remove('populated');
       inputEl.style.height = 'auto';
       inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+      updateCharCounter();
     });
 
     inputEl.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (!sendBtn.disabled && !isBusy) sendMessage(inputEl.value);
+        if (!isBusy && inputEl.value.trim() && inputEl.value.length <= MAX_CHARS) sendMessage(inputEl.value);
       }
     });
 
     sendBtn.addEventListener('click', () => {
-      if (!sendBtn.disabled && !isBusy) sendMessage(inputEl.value);
+      if (!isBusy && inputEl.value.trim() && inputEl.value.length <= MAX_CHARS) sendMessage(inputEl.value);
     });
   }
 
@@ -1307,6 +1696,9 @@ When a user pastes code or asks a code question:
   }
 
 })();
+
+
+
 
 
 
