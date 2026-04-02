@@ -794,6 +794,15 @@ When a user pastes code or asks a code question:
     #pg-chat-send:disabled { opacity: .35; cursor: default; transform: none; }
     #pg-chat-send svg { width: 17px; height: 17px; display: block; flex-shrink: 0; }
 
+    /* Tablet */
+    @media (max-width: 768px) and (min-width: 481px) {
+      #pg-chat-window {
+        width: 340px; max-width: calc(100vw - 32px);
+        height: 520px;
+      }
+      .pg-chat-suggestion { font-size: 11px; padding: 5px 10px; }
+    }
+
     /* Mobile */
     @media (max-width: 480px) {
       #pg-chat-window {
@@ -823,7 +832,7 @@ When a user pastes code or asks a code question:
       .pg-chat-suggestions-label { font-size: 9px; margin-bottom: 2px; }
       .pg-chat-suggestion {
         font-size: 12px; padding: 8px 14px;
-        white-space: nowrap; text-align: center;
+        white-space: normal; text-align: center;
         border-radius: 10px; width: 100%; box-sizing: border-box;
       }
       /* Input row — fix send button sizing */
@@ -833,10 +842,10 @@ When a user pastes code or asks a code question:
       }
       #pg-chat-input {
         flex: 1; min-width: 0;
-        font-size: 13px; padding: 8px 10px; min-height: 36px;
+        font-size: 16px; padding: 8px 10px; min-height: 36px;
         border-radius: 10px;
       }
-      #pg-chat-input::placeholder { font-size: 12px; }
+      #pg-chat-input::placeholder { font-size: 13px; }
       #pg-chat-send {
         flex: 0 0 36px !important;
         width: 36px !important; height: 36px !important;
@@ -847,6 +856,7 @@ When a user pastes code or asks a code question:
       .pg-chat-header { padding: 0 12px; }
       .pg-chat-header-title { font-size: 13px; }
       .pg-chat-messages { padding: 12px 10px 8px; }
+      .pg-export-btn { padding: 4px 6px; }
     }
     @media (max-width: 360px) {
       #pg-chat-window { height: 80vh; }
@@ -854,7 +864,52 @@ When a user pastes code or asks a code question:
       .pg-chat-code { font-size: 9.5px; padding: 5px 6px; }
       .pg-chat-bubble { font-size: 12px; padding: 7px 9px; }
       .pg-chat-suggestion { font-size: 11px; padding: 7px 10px; }
-      #pg-chat-input { font-size: 12px; }
+      #pg-chat-input { font-size: 16px; }
+    }
+
+    /* ── Export menu ─────────────────────────────────────────── */
+    .pg-export-btn {
+      background: none; border: none; cursor: pointer;
+      color: #9ca3af; padding: 5px 7px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      transition: color .15s, background .15s;
+      position: relative; flex-shrink: 0;
+    }
+    .pg-export-btn:hover { color: #e5e7eb; background: rgba(255,255,255,.08); }
+    .pg-export-btn svg { width: 15px; height: 15px; display: block; }
+    .pg-export-menu {
+      position: absolute; top: calc(100% + 6px); right: 0;
+      background: #1e1b4b; border: 1px solid rgba(79,70,229,.45);
+      border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.55);
+      z-index: 10001; min-width: 170px; overflow: hidden;
+      display: none; flex-direction: column;
+    }
+    .pg-export-menu.open { display: flex; }
+    .pg-export-menu-title {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: #4b5563; padding: 8px 12px 4px;
+    }
+    .pg-export-item {
+      background: none; border: none; cursor: pointer;
+      color: #c7d2fe; font-size: 12px; font-family: inherit;
+      padding: 8px 14px; text-align: left; width: 100%;
+      display: flex; align-items: center; gap: 8px;
+      transition: background .12s, color .12s;
+    }
+    .pg-export-item:hover { background: rgba(79,70,229,.25); color: #fff; }
+    .pg-export-item:last-child { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; margin-top: 2px; }
+    .pg-export-divider { height: 1px; background: rgba(255,255,255,.06); margin: 2px 0; }
+    .pg-export-toast {
+      position: absolute; top: -32px; right: 0;
+      background: #4f46e5; color: #fff;
+      font-size: 11px; font-weight: 600; border-radius: 6px;
+      padding: 4px 10px; white-space: nowrap;
+      opacity: 0; transition: opacity .2s;
+      pointer-events: none;
+    }
+    .pg-export-toast.show { opacity: 1; }
+    @media (max-width: 480px) {
+      .pg-export-menu { right: auto; left: 0; min-width: 160px; }
     }
   `;
 
@@ -888,6 +943,22 @@ When a user pastes code or asks a code question:
             Online · Ask me anything
           </div>
         </div>
+        <button class="pg-export-btn" id="pg-export-btn" aria-label="Export chat" title="Export chat">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <div class="pg-export-menu" id="pg-export-menu">
+            <div class="pg-export-menu-title">Export Chat</div>
+            <button class="pg-export-item" id="pg-export-md">📄 Markdown (.md)</button>
+            <button class="pg-export-item" id="pg-export-txt">📝 Plain Text (.txt)</button>
+            <button class="pg-export-item" id="pg-export-json">🗂 JSON (.json)</button>
+            <div class="pg-export-divider"></div>
+            <button class="pg-export-item" id="pg-export-copy">📋 Copy to clipboard</button>
+          </div>
+          <div class="pg-export-toast" id="pg-export-toast">Copied!</div>
+        </button>
         <button class="pg-chat-header-close" id="pg-chat-close" aria-label="Close chat">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -980,11 +1051,135 @@ When a user pastes code or asks a code question:
       bubble.className = 'pg-chat-bubble';
       if (isHtml) bubble.innerHTML = content;
       else        bubble.textContent = content;
+      // Add copy buttons to code blocks
+      if (isHtml) {
+        bubble.querySelectorAll('pre.pg-chat-code').forEach(pre => {
+          const copyBtn = document.createElement('button');
+          copyBtn.textContent = 'Copy';
+          copyBtn.style.cssText = 'position:absolute;top:6px;right:6px;font-size:10px;padding:2px 8px;background:rgba(79,70,229,.5);color:#fff;border:none;border-radius:5px;cursor:pointer;opacity:.7;transition:opacity .15s;font-family:inherit;';
+          copyBtn.addEventListener('mouseenter', () => copyBtn.style.opacity = '1');
+          copyBtn.addEventListener('mouseleave', () => copyBtn.style.opacity = '.7');
+          copyBtn.addEventListener('click', () => {
+            const code = pre.querySelector('code')?.innerText || pre.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+              copyBtn.textContent = '✓ Copied';
+              setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+            });
+          });
+          pre.style.position = 'relative';
+          pre.appendChild(copyBtn);
+        });
+      }
       wrap.appendChild(bubble);
       messagesEl.appendChild(wrap);
       scrollToBottom();
       return wrap;
     }
+
+    // ─── Export helpers ────────────────────────────────────────────────────────
+    function getChatAsMarkdown() {
+      const msgs = messagesEl.querySelectorAll('.pg-chat-msg');
+      let md = '# Poly-Glot Chat Export\n';
+      md += `_Exported ${new Date().toLocaleString()}_\n\n---\n\n`;
+      msgs.forEach(msg => {
+        const isBot = msg.classList.contains('bot');
+        const bubble = msg.querySelector('.pg-chat-bubble');
+        if (!bubble) return;
+        const label = isBot ? '**🦜 Poly-Glot**' : '**You**';
+        // Convert HTML back to readable text/markdown
+        let text = bubble.innerHTML
+          .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, c) => '\n```\n' + c.replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&') + '\n```\n')
+          .replace(/<code[^>]*>([^<]*)<\/code>/gi, (_, c) => '`' + c.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&') + '`')
+          .replace(/<strong>([^<]*)<\/strong>/gi, '**$1**')
+          .replace(/<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi, '[$2]($1)')
+          .replace(/<li>([\s\S]*?)<\/li>/gi, '- $1\n')
+          .replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, '$1')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ')
+          .trim();
+        if (text) md += `${label}\n${text}\n\n`;
+      });
+      return md;
+    }
+
+    function getChatAsText() {
+      const msgs = messagesEl.querySelectorAll('.pg-chat-msg');
+      let txt = `Poly-Glot Chat Export — ${new Date().toLocaleString()}\n`;
+      txt += '='.repeat(50) + '\n\n';
+      msgs.forEach(msg => {
+        const isBot = msg.classList.contains('bot');
+        const bubble = msg.querySelector('.pg-chat-bubble');
+        if (!bubble) return;
+        const label = isBot ? 'Poly-Glot' : 'You';
+        const text = (bubble.innerText || bubble.textContent || '').trim();
+        if (text) txt += `[${label}]\n${text}\n\n`;
+      });
+      return txt;
+    }
+
+    function getChatAsJSON() {
+      const msgs = messagesEl.querySelectorAll('.pg-chat-msg');
+      const data = { exported: new Date().toISOString(), messages: [] };
+      msgs.forEach(msg => {
+        const isBot = msg.classList.contains('bot');
+        const bubble = msg.querySelector('.pg-chat-bubble');
+        if (!bubble) return;
+        const text = (bubble.innerText || bubble.textContent || '').trim();
+        if (text) data.messages.push({ role: isBot ? 'assistant' : 'user', content: text });
+      });
+      return JSON.stringify(data, null, 2);
+    }
+
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('pg-export-toast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ─── Export menu wiring ────────────────────────────────────────────────────
+    const exportBtn  = document.getElementById('pg-export-btn');
+    const exportMenu = document.getElementById('pg-export-menu');
+
+    exportBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      exportMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', e => {
+      if (!exportBtn.contains(e.target)) exportMenu.classList.remove('open');
+    });
+
+    document.getElementById('pg-export-md').addEventListener('click', () => {
+      downloadFile(getChatAsMarkdown(), `poly-glot-chat-${Date.now()}.md`, 'text/markdown');
+      exportMenu.classList.remove('open');
+    });
+    document.getElementById('pg-export-txt').addEventListener('click', () => {
+      downloadFile(getChatAsText(), `poly-glot-chat-${Date.now()}.txt`, 'text/plain');
+      exportMenu.classList.remove('open');
+    });
+    document.getElementById('pg-export-json').addEventListener('click', () => {
+      downloadFile(getChatAsJSON(), `poly-glot-chat-${Date.now()}.json`, 'application/json');
+      exportMenu.classList.remove('open');
+    });
+    document.getElementById('pg-export-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(getChatAsMarkdown()).then(() => {
+        showToast('Copied!');
+        exportMenu.classList.remove('open');
+      });
+    });
 
     function scrollToBottom() {
       requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
@@ -1112,5 +1307,6 @@ When a user pastes code or asks a code question:
   }
 
 })();
+
 
 
