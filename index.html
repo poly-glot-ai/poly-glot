@@ -1674,7 +1674,7 @@ for (const user of users) {
       </div>
       <div class="cli-demo-body">
         <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npm install -g poly-glot-ai-cli</span></div>
-        <div class="cli-line cli-output">+ poly-glot-ai-cli@1.5.2</div>
+        <div class="cli-line cli-output">+ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3747585b4e1a505b58431a565e1a545b5e770619021905">[email&#160;protected]</a></div>
         <div class="cli-line" style="margin-top:8px;"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment vectorStore.py --why</span></div>
         <div class="cli-line cli-output">Poly-Glot — 📝 doc-comments + 💬 why-comments</div>
         <div class="cli-line cli-output">✓ Processing vectorStore.py (Python · PyDoc)</div>
@@ -1913,7 +1913,7 @@ for (const user of users) {
 </div>
 
 <!-- Live RAG/GEO score watcher — updates when CLI lang OR mode changes -->
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 (function() {
   function refreshCliScore() {
     var lang = (document.getElementById('cliDemoLanguage') || {}).value || 'python';
@@ -2370,6 +2370,72 @@ function pg2OpenAssistant(text) {
     </form>
   </div>
 </section>
+
+
+<div class="pg2-divider"></div>
+
+<!-- ════════════════════════════════════════════════════════════
+     GITHUB APP SECTION
+     ════════════════════════════════════════════════════════════ -->
+<div id="pg-github-app-section">
+  <div class="pg2-section" aria-labelledby="github-app-heading">
+    <div class="pg2-vscode-grid">
+      <div>
+        <div class="pg2-eyebrow">🐙 GitHub App</div>
+        <h2 class="pg2-section__h2" id="github-app-heading">Auto-document every pull request</h2>
+        <p class="pg2-section__sub">Install once — Poly-Glot AI reviews every PR automatically. It scans changed files, detects missing documentation, and posts inline JSDoc, PyDoc, Javadoc, or Doxygen suggestions as review comments.</p>
+        <div class="pg2-shortcut-list">
+          <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">📂 PR opened</span><span class="pg2-shortcut__desc">Automatically scans all changed files</span></div>
+          <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">📊 Coverage check</span><span class="pg2-shortcut__desc">GitHub Check Run with per-file doc scores</span></div>
+          <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">💬 Inline suggestions</span><span class="pg2-shortcut__desc">Review comments with full documented code</span></div>
+          <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">⚙️ .polyglot.yml</span><span class="pg2-shortcut__desc">Configure mode, language, thresholds per repo</span></div>
+        </div>
+        <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+          <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-hero__cta-primary" style="font-size:13px;height:40px;padding:0 20px;" onclick="if(typeof gtag==='function') gtag('event','github_app_install_click');">🐙 Install on GitHub Free</a>
+          <a href="https://github.com/hmoses/poly-glot-github-app" target="_blank" rel="noopener" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;">View Source ↗</a>
+        </div>
+      </div>
+      <div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;">🐙 GitHub App — Now Live on Marketplace</div>
+          <div class="pg-integration-cards" style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);">🌐 <strong style="color:var(--text);">12 languages</strong> — JSDoc, PyDoc, Javadoc, Doxygen, KDoc, GoDoc, Rustdoc & more</div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);">🔒 <strong style="color:var(--text);">Your code stays private</strong> — no storage, no data retention</div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);">🔑 <strong style="color:var(--text);">Bring your own API key</strong> — OpenAI or Anthropic, configured per repo</div>
+            <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);">⚙️ <strong style="color:var(--text);">.polyglot.yml config</strong> — mode, coverage threshold, file filters</div>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="live-badge" style="font-size:11px;">✓ Live on GitHub Marketplace</span>
+            <span style="font-size:11px;color:var(--text-dim);">Open source · MIT License</span>
+          </div>
+        </div>
+
+        <!-- How it works mini terminal -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:16px;">
+          <div style="background:rgba(255,255,255,.04);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:8px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:#ff5f57;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#febc2e;display:inline-block;"></span>
+            <span style="width:10px;height:10px;border-radius:50%;background:#28c840;display:inline-block;"></span>
+            <span style="font-size:11px;color:var(--text-dim);margin-left:4px;">GitHub PR Review — Poly-Glot AI</span>
+          </div>
+          <div style="padding:14px;font-family:'Fira Code',monospace;font-size:11px;line-height:1.8;">
+            <div style="color:#34d399;">🤖 Poly-Glot AI Documentation Analysis</div>
+            <div style="color:var(--text-muted);">Files analyzed: 3 · Needing docs: 2 · Coverage: 45%</div>
+            <div style="margin-top:8px;color:var(--accent);">📝 auth.js — JSDoc suggestion:</div>
+            <div style="color:var(--text-dim);">/**</div>
+            <div style="color:var(--text-dim);"> * Authenticates a user with email + password.</div>
+            <div style="color:var(--text-dim);"> * @param {string} email</div>
+            <div style="color:var(--text-dim);"> * @param {string} password</div>
+            <div style="color:var(--text-dim);"> * @returns {Promise&lt;AuthResult&gt;}</div>
+            <div style="color:var(--text-dim);"> */</div>
+            <div style="margin-top:6px;color:#34d399;">✓ Posted as inline review comment</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ════════════════════════════════════════════════════════════
      FOOTER
