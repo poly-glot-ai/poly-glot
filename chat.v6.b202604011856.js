@@ -54,6 +54,23 @@ Poly-Glot is an AI-powered code documentation tool. It generates professional co
 3. CLI — npx poly-glot-ai-cli comment file.js
 4. MCP Server — poly-glot-mcp for Claude Desktop, Goose, Cursor, Windsurf
 5. Copilot Chat — @poly-glot /comment, /why, /both, /explain in Copilot Chat
+6. GitHub App — install once, auto-documents every PR with inline review comments and a coverage check run
+
+== GITHUB APP ==
+- Install: github.com/apps/poly-glot-ai
+- Triggers on every pull_request opened or synchronized
+- Fetches changed files, analyzes documentation coverage, posts inline review comments
+- Posts a summary review with avg coverage score and action links
+- Creates a GitHub Check Run (pass/fail based on coverage_threshold)
+- Each inline comment includes the full suggested documented file + deep-link to poly-glot.ai web editor
+- Deep link opens poly-glot.ai with file code pre-loaded (base64 encoded in URL) and shows "Opened from GitHub PR Review" banner
+- Configure via .polyglot.yml in repo root
+- Key .polyglot.yml options: provider, model, mode (doc/why/both), coverage_threshold (default 0.5), max_files (default 15), max_file_size (default 50000 bytes), include/exclude (glob patterns), review_style (inline/summary), check_run (true/false)
+- API key: add openai_api_key or anthropic_api_key to .polyglot.yml (or set OPENAI_API_KEY/ANTHROPIC_API_KEY env vars on server)
+- If no API key found: posts a "Setup required" comment on the PR with instructions
+- Supports all 12 languages, auto-detected from file extension
+- Skips: deleted files, binary files, files over max_file_size, excluded patterns, files already meeting coverage threshold
+- Privacy: code is fetched temporarily to generate docs, never stored; only reads changed PR files; permissions: pull_requests:write, checks:write, contents:read, metadata:read
 
 == COMMENT TYPES ==
 - Doc-comments: JSDoc (JS/TS), Javadoc (Java), PyDoc (Python), Doxygen (C++), XML docs (C#), GoDoc, Rustdoc, YARD (Ruby), PHPDoc, Swift markup, KDoc (Kotlin)
@@ -289,6 +306,317 @@ When a user pastes code or asks a code question:
       patterns: [/explain.?code|code.?explain|\bexplain\b.{0,20}(feature|button|what|how|work)|what.{0,20}explain.{0,20}(do|does|mean)/i],
       answer: `**Explain Code** gives a deep analysis of any code:\n\n- 📝 Plain-English summary\n- 🔢 Complexity score (1–10)\n- 🔍 Function-by-function breakdown\n- 🐛 Potential bugs list\n- ♻️ Refactoring suggestions\n- 📊 Documentation quality score (0–100)\n\n**Where:** Generator panel → **Explain** button (web) · **Cmd+Shift+E** (VS Code) · \`@poly-glot /explain\` (Copilot Chat)`,
     },
+    // ── GITHUB APP — full block of rules, most specific first ───────────────────
+    {
+      // Install the GitHub App
+      patterns: [
+        /how.{0,20}(install|add|set.?up|get|enable|use).{0,20}github.?app/i,
+        /github.?app.{0,20}(install|setup|get.?started|add|enable)/i,
+        /install.{0,20}poly.?glot.{0,20}(on|to|for).{0,20}(github|repo|repository)/i,
+        /where.{0,20}(install|find|get).{0,20}github.?app/i,
+      ],
+      answer: `**Install the Poly-Glot AI GitHub App in 3 steps:**
+
+**1. Install the App**
+Go to [github.com/apps/poly-glot-ai →](https://github.com/apps/poly-glot-ai) and click **Install**.
+Choose to install on all repositories or specific ones.
+
+**2. Add your API key (one of two ways)**
+- **Option A — Repo config:** Add a \`.polyglot.yml\` file to your repo root:
+\`\`\`yaml
+provider: openai
+openai_api_key: sk-your-key-here
+\`\`\`
+- **Option B — Server key:** If you're self-hosting, set \`OPENAI_API_KEY\` or \`ANTHROPIC_API_KEY\` as environment variables on the server.
+
+**3. Open a Pull Request**
+That's it — Poly-Glot AI will automatically analyze the PR, post inline documentation suggestions as review comments, and run a coverage check.
+
+💡 No API key yet? [Get an OpenAI key →](https://platform.openai.com/api-keys) · [Get an Anthropic key →](https://console.anthropic.com/settings/keys)`,
+    },
+    {
+      // What does the GitHub App do / overview
+      patterns: [
+        /what.{0,20}(does|is).{0,30}github.?app/i,
+        /github.?app.{0,20}(what|how|work|do|does|overview|explain)/i,
+        /how.{0,20}(does|do).{0,20}(poly.?glot|the).{0,20}github.?app.{0,20}work/i,
+        /tell.{0,20}(me|us).{0,20}about.{0,20}github.?app/i,
+        /what.{0,20}github.?app/i,
+      ],
+      answer: `**Poly-Glot AI GitHub App — automatic PR documentation:**
+
+🔁 **How it works:**
+1. You open or push to a Pull Request
+2. The app receives a webhook from GitHub
+3. It fetches every changed file in the PR
+4. It analyzes each file for documentation coverage
+5. Files below the threshold get AI-generated doc suggestions
+6. Results are posted as **inline review comments** on the PR
+7. A **Check Run** appears showing coverage scores for each file
+
+📝 **What you get on every PR:**
+- Inline JSDoc / PyDoc / Javadoc / Doxygen suggestions per file
+- A documentation coverage score (0–100%)
+- A deep-link to open the file in the [Poly-Glot web editor](https://poly-glot.ai) to regenerate with custom settings
+- A summary review comment with avg coverage, files analyzed, and action buttons
+
+⚙️ **Fully configurable** via \`.polyglot.yml\` in your repo root — set provider, model, mode, thresholds, include/exclude patterns, and more.
+
+[Install the App →](https://github.com/apps/poly-glot-ai) · [See docs →](https://poly-glot.ai)`,
+    },
+    {
+      // How does it document PRs / what comments does it post
+      patterns: [
+        /how.{0,30}(document|comment|annotate|analyze|review).{0,20}(pr|pull.?request)/i,
+        /what.{0,30}(comment|post|suggest|review|add).{0,20}(pr|pull.?request)/i,
+        /inline.{0,20}(comment|suggestion|review).{0,20}(pr|pull.?request|github)/i,
+        /pr.{0,20}(review|comment|documentation|doc|suggestion)/i,
+        /pull.?request.{0,20}(review|comment|documentation|doc)/i,
+      ],
+      answer: `**On every PR, Poly-Glot AI posts:**
+
+**1. Inline review comments** (one per underdocumented file)
+Each comment includes:
+- The file name, language, and doc style (e.g. JSDoc, PyDoc, Javadoc)
+- A documentation coverage score (e.g. 42%)
+- A collapsible \`<details>\` block with the full suggested documented version
+- A table with action links:
+  - 🌐 Open the file in the Poly-Glot web editor (code pre-loaded)
+  - 💻 Install the VS Code extension
+  - ⌨️ Run the CLI command for that file
+
+**2. A review summary** at the top of the PR with:
+- Total files analyzed
+- Files needing docs
+- Average coverage score
+- Links to the web editor, VS Code extension, and CLI
+
+**3. A GitHub Check Run** named "Poly-Glot AI"
+- Shows pass/fail based on your coverage threshold
+- Lists per-file scores in the check details
+
+💡 **Tip:** Copy the suggested code from the \`<details>\` block and commit it — or click the web editor link to regenerate with different settings.`,
+    },
+    {
+      // Configure / polyglot.yml
+      patterns: [
+        /\.polyglot\.yml|polyglot\.yml|polyglot yaml|config.{0,20}(file|github|app)/i,
+        /how.{0,20}(configure|config|customize|change.?settings|set.?up).{0,20}(github.?app|poly.?glot.?app)/i,
+        /github.?app.{0,20}(configure|config|settings|options|customize)/i,
+        /coverage.?threshold|max.?files|max.?file.?size|include.?pattern|exclude.?pattern/i,
+      ],
+      answer: `**Configure Poly-Glot AI with \`.polyglot.yml\` in your repo root:**
+
+\`\`\`yaml
+# .polyglot.yml
+provider: openai          # openai | anthropic
+model: gpt-4.1            # any valid model ID
+mode: doc                 # doc | why | both
+openai_api_key: sk-...    # your OpenAI key (optional if set server-side)
+anthopic_api_key: sk-...  # your Anthropic key (optional)
+coverage_threshold: 0.5   # 0.0–1.0 — files below this get suggestions
+max_files: 15             # max files to process per PR
+max_file_size: 50000      # skip files larger than this (bytes)
+review_style: inline      # inline | summary
+check_run: true           # show GitHub Check Run with coverage
+include:                  # only process these paths (optional)
+  - src/
+  - lib/
+exclude:                  # skip these paths
+  - tests/
+  - '*.test.js'
+  - '*.spec.ts'
+\`\`\`
+
+**Defaults (no config needed to get started):**
+- Provider: OpenAI · Model: GPT-4.1 · Mode: doc
+- Threshold: 50% · Max files: 15 · Max file size: 50KB
+- Review style: inline · Check run: enabled
+
+💡 Commit this file to your repo root and the app picks it up on the next PR.`,
+    },
+    {
+      // Coverage score / threshold
+      patterns: [
+        /coverage.{0,20}(score|check|threshold|percentage|percent|rating)/i,
+        /documentation.{0,20}(score|coverage|percentage|percent|threshold)/i,
+        /what.{0,20}coverage.{0,20}(mean|means|is|does)/i,
+        /how.{0,20}(is|does).{0,20}coverage.{0,20}(calculated|measured|work|score)/i,
+      ],
+      answer: `**Documentation coverage score (0–100%):**
+
+Poly-Glot AI analyzes each file and scores how well it's documented:
+
+- **100%** — every function/class/method has a doc comment
+- **50%** — about half are documented (the default threshold)
+- **0%** — no doc comments at all
+
+**How it's calculated:**
+The app scans for doc comment patterns per language:
+- JS/TS → \`/** ... */\` JSDoc blocks
+- Python → \`""" ... """\` docstrings
+- Java → \`/** ... */\` Javadoc blocks
+- C++ → \`/** ... */\` or \`/// ...\` Doxygen
+- etc.
+
+**What triggers a suggestion:**
+If a file scores below your \`coverage_threshold\` (default: 50%), Poly-Glot AI generates doc suggestions for that file and posts them as a review comment.
+
+**Change the threshold** in \`.polyglot.yml\`:
+\`\`\`yaml
+coverage_threshold: 0.8  # require 80% coverage
+\`\`\``,
+    },
+    {
+      // Check run
+      patterns: [
+        /check.?run|github.{0,10}check|check.{0,10}(pass|fail|status)/i,
+        /github.?app.{0,20}(check|status|badge|ci)/i,
+        /why.{0,20}(check|failing|failed|red|green).{0,20}(poly|run)/i,
+        /poly.?glot.{0,20}check/i,
+      ],
+      answer: `**Poly-Glot AI creates a GitHub Check Run on every PR:**
+
+You'll see it in the PR's **Checks** tab or status area:
+
+- ✅ **Pass** — all analyzed files meet the coverage threshold
+- ❌ **Fail** — one or more files are below the threshold
+- ⚪ **Neutral** — no API key configured (setup required)
+
+**What the check shows:**
+- Files analyzed · files needing docs · average coverage score
+- Per-file breakdown in the check details
+
+**Disable the check run** if you just want suggestions without blocking CI:
+\`\`\`yaml
+# .polyglot.yml
+check_run: false
+\`\`\`
+
+💡 The check run is informational by default — it won't block merges unless you configure branch protection rules to require it.`,
+    },
+    {
+      // Deep link / web editor link from PR comment
+      patterns: [
+        /deep.?link|open.{0,20}(web|editor|poly.?glot).{0,20}(from|in|link)/i,
+        /open.{0,20}(in|with).{0,20}poly.?glot/i,
+        /web.?editor.{0,20}link|editor.{0,20}link.{0,20}(pr|pull)/i,
+        /pre.?load|preloaded.{0,20}code/i,
+        /regenerate.{0,20}(in|with|using).{0,20}(web|editor|poly.?glot)/i,
+      ],
+      answer: `**Every PR comment includes a "Open in Poly-Glot AI" link:**
+
+When the GitHub App posts a suggestion on your PR, there's a table with:
+
+| Action | What it does |
+|--------|--------------|
+| 🌐 Open in web editor | Opens poly-glot.ai with that file's code **pre-loaded** |
+| 💻 VS Code extension | Links to the marketplace install page |
+| ⌨️ CLI command | Shows the exact \`npx poly-glot-ai-cli\` command for that file |
+
+**The web editor deep link:**
+- Encodes the file's source code as a base64 URL param
+- Opens poly-glot.ai with the code in the editor, language auto-set
+- Shows a banner: *"Opened from GitHub PR Review"*
+- You can change the model, mode (doc/WHY/both), or settings and regenerate
+- No copy-paste needed — everything is pre-loaded
+
+💡 Use this when you want to tweak the generated documentation before committing it.`,
+    },
+    {
+      // Supported languages for the GitHub App
+      patterns: [
+        /github.?app.{0,30}language|language.{0,30}github.?app/i,
+        /what.{0,20}language.{0,20}(github.?app|app.{0,10}support)/i,
+        /github.?app.{0,20}(support|work|handle).{0,20}(language|file|code)/i,
+      ],
+      answer: `**The GitHub App supports all 12 Poly-Glot languages:**
+
+| Language | Doc Style | Tier |
+|----------|-----------|------|
+| JavaScript | JSDoc | Free |
+| TypeScript | JSDoc | Free |
+| Python | PyDoc (Google/NumPy) | Free |
+| Java | Javadoc | Free |
+| C++ | Doxygen | Pro |
+| C# | XML Docs | Pro |
+| Go | GoDoc | Pro |
+| Rust | Rustdoc | Pro |
+| Ruby | YARD | Pro |
+| PHP | PHPDoc | Pro |
+| Swift | Swift Markup | Pro |
+| Kotlin | KDoc | Pro |
+
+Language is **auto-detected** from file extension — no configuration needed.
+
+Files with unsupported extensions (images, lock files, build artifacts, etc.) are automatically skipped.
+
+[Install the App →](https://github.com/apps/poly-glot-ai)`,
+    },
+    {
+      // Privacy / security for GitHub App
+      patterns: [
+        /github.?app.{0,30}(private|privacy|secure|security|safe|data|code|send|store)/i,
+        /(private|secure|safe).{0,30}github.?app/i,
+        /does.{0,20}(app|poly.?glot).{0,20}(see|store|collect|send|share).{0,20}(code|repo|data)/i,
+        /github.?app.{0,20}(access|permission|scope)/i,
+      ],
+      answer: `**The GitHub App is private and secure:**
+
+🔑 **API keys:** Stored in your repo's \`.polyglot.yml\` (add to \`.gitignore\` if needed) or as server environment variables — never logged or stored by Poly-Glot
+
+📡 **Your code:** Fetched temporarily via the GitHub API to generate docs, then discarded — never stored
+
+🔒 **GitHub permissions the app requests:**
+- \`pull_requests: write\` — to post review comments
+- \`checks: write\` — to create the coverage check run
+- \`contents: read\` — to read your source files
+- \`metadata: read\` — to identify the repo
+
+🚫 **What the app does NOT do:**
+- Does not store your source code
+- Does not share your code with anyone except OpenAI/Anthropic (your chosen provider)
+- Does not read files outside of changed PR files
+- Does not access your Git history or other branches
+
+[Privacy Policy →](https://poly-glot.ai/privacy) · [Terms →](https://poly-glot.ai/terms)`,
+    },
+    {
+      // Troubleshooting GitHub App
+      patterns: [
+        /github.?app.{0,30}(not.?work|broken|error|fail|issue|problem|bug|wrong|setup.?comment)/i,
+        /(not.?work|broken|fail|error).{0,30}github.?app/i,
+        /why.{0,20}(isn't|is.?not|didn't|does.?not).{0,20}(app|poly.?glot).{0,20}(work|run|post|comment|fire)/i,
+        /app.{0,20}(not|never).{0,20}(post|comment|run|trigger|respond)/i,
+        /no.{0,20}(comment|review|check|suggestion).{0,20}(from|by).{0,20}(poly.?glot|app)/i,
+      ],
+      answer: `**Troubleshooting the Poly-Glot AI GitHub App:**
+
+**App posted "Setup required" comment:**
+→ No API key found. Add \`openai_api_key\` or \`anthropic_api_key\` to \`.polyglot.yml\` in your repo root.
+
+**No comment posted at all:**
+→ Check the app is installed on the repo (Settings → Integrations → Applications)
+→ Verify the PR has changed files with supported extensions (.js, .ts, .py, .java, etc.)
+→ All files may already meet the coverage threshold — try lowering it in \`.polyglot.yml\`
+
+**Check run failing:**
+→ Files are below your \`coverage_threshold\` (default 50%). Either add docs or lower the threshold:
+\`\`\`yaml
+coverage_threshold: 0.3
+\`\`\`
+
+**All files being skipped:**
+→ Check your \`exclude:\` patterns in \`.polyglot.yml\` — you may be excluding too broadly
+→ Max files limit hit (default 15) — increase with \`max_files: 30\`
+
+**App hitting API errors:**
+→ Verify your API key is valid (test it at [poly-glot.ai](https://poly-glot.ai) → ⚙️ AI Settings → Test Connection)
+→ Check your OpenAI/Anthropic account has credits
+
+[GitHub App Source →](https://github.com/hmoses/poly-glot-github-app)`,
+    },
+
     {
       // Copilot Chat integration
       patterns: [/copilot|@poly.?glot|copilot.?chat|chat.?participant|github.?copilot/i],
@@ -1342,6 +1670,7 @@ When a user pastes code or asks a code question:
   }
 
 })();
+
 
 
 
