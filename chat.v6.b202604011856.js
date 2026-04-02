@@ -516,6 +516,10 @@ When a user pastes code or asks a code question:
   // Mix of feature questions AND navigation questions
 
   const SUGGESTIONS = [
+    // — GitHub App
+    'How do I install the GitHub App?',
+    'What does the GitHub App do?',
+    'How does the GitHub App document pull requests?',
     // — UI / navigation
     'Where do I add my API key?',
     'Where is the pricing?',
@@ -1056,9 +1060,9 @@ When a user pastes code or asks a code question:
       if (!hasOpened) {
         hasOpened = true;
         const greetings = [
-          "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, CLI, MCP. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
-          "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, CLI, MCP. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
-          "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, CLI, MCP. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
+          "Hey! 👋 I'm the Poly-Glot assistant. Ask me about the product, pricing, or how to get set up — VS Code extension, GitHub App, CLI, or MCP. Or paste code and I'll explain it, find bugs, suggest refactors, or write tests.",
+          "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, GitHub App, CLI, MCP. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
+          "Hello! I'm your Poly-Glot guide. Ask about the GitHub App, VS Code extension, CLI, MCP, pricing, or any feature — or paste code to explain, debug, or refactor it.",
         ];
         const g = greetings[Math.floor(Math.random() * greetings.length)];
         setTimeout(() => {
@@ -1108,4 +1112,5 @@ When a user pastes code or asks a code question:
   }
 
 })();
+
 
