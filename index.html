@@ -156,6 +156,109 @@
       color: var(--text);
       background: rgba(255,255,255,.05);
     }
+    .pg2-nav__link--github {
+      color: #a5b4fc;
+      background: rgba(79,70,229,.1);
+      border: 1px solid rgba(79,70,229,.25);
+      border-radius: 6px;
+      font-weight: 600;
+      transition: color .15s, background .15s, border-color .15s;
+    }
+    .pg2-nav__link--github:hover {
+      color: #c7d2fe;
+      background: rgba(79,70,229,.22);
+      border-color: rgba(79,70,229,.5);
+    }
+    body.pg-light .pg2-nav__link--github {
+      color: #4f46e5;
+      background: rgba(79,70,229,.08);
+      border-color: rgba(79,70,229,.2);
+    }
+    body.pg-light .pg2-nav__link--github:hover {
+      background: rgba(79,70,229,.15);
+      border-color: rgba(79,70,229,.4);
+    }
+
+    /* ── Hamburger menu ─────────────────────────────────────── */
+    .pg2-nav__hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 34px; height: 34px;
+      background: none; border: none; cursor: pointer;
+      padding: 5px; border-radius: 6px;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .pg2-nav__hamburger:hover { background: rgba(255,255,255,.07); }
+    .pg2-nav__hamburger span {
+      display: block; width: 18px; height: 2px;
+      background: var(--text-muted); border-radius: 2px;
+      transition: transform .2s, opacity .2s, width .2s;
+      transform-origin: center;
+    }
+    .pg2-nav__hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .pg2-nav__hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+    .pg2-nav__hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile drawer */
+    .pg2-nav__mobile-menu {
+      display: none;
+      position: fixed;
+      top: 56px; left: 0; right: 0;
+      background: rgba(13,14,26,.97);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      z-index: 9996;
+      flex-direction: column;
+      padding: 12px 16px 20px;
+      gap: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      transform: translateY(-8px);
+      opacity: 0;
+      transition: transform .2s ease, opacity .2s ease;
+      pointer-events: none;
+    }
+    .pg2-nav__mobile-menu.open {
+      display: flex;
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .pg2-nav__mobile-link {
+      font-size: 14px; font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: color .15s, background .15s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pg2-nav__mobile-link:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.06);
+    }
+    .pg2-nav__mobile-link--github {
+      color: #a5b4fc;
+      background: rgba(79,70,229,.1);
+      border: 1px solid rgba(79,70,229,.2);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .pg2-nav__mobile-link--github:hover {
+      background: rgba(79,70,229,.2);
+      border-color: rgba(79,70,229,.45);
+      color: #c7d2fe;
+    }
+    body.pg-light .pg2-nav__mobile-menu {
+      background: rgba(248,250,252,.97);
+      border-bottom-color: rgba(2,132,199,.1);
+    }
+    body.pg-light .pg2-nav__mobile-link { color: #374151; }
+    body.pg-light .pg2-nav__mobile-link:hover { color: #0f172a; background: rgba(0,0,0,.04); }
+    body.pg-light .pg2-nav__mobile-link--github { color: #4f46e5; background: rgba(79,70,229,.08); }
+
     .pg2-nav__right {
       margin-left: auto;
       display: flex;
@@ -1195,6 +1298,14 @@
     /* ── RESPONSIVE NAV ─────────────────────────────────────── */
     @media (max-width: 900px) {
       .pg2-nav__links { display: none; }
+      .pg2-nav__hamburger { display: flex; }
+    }
+    /* Between 600-900px show GitHub App link only */
+    @media (max-width: 900px) and (min-width: 601px) {
+      .pg2-nav__links {
+        display: flex;
+      }
+      .pg2-nav__link:not(.pg2-nav__link--github) { display: none; }
     }
     @media (max-width: 600px) {
       .pg2-hero { padding: 48px 16px 40px; }
@@ -1287,6 +1398,7 @@
       <a href="#pg-vscode-section" class="pg2-nav__link">VS Code</a>
       <a href="#pg-cli-section" class="pg2-nav__link">CLI</a>
       <a href="#pg-copilot-section" class="pg2-nav__link">Copilot</a>
+      <a href="#pg-github-app-section" class="pg2-nav__link pg2-nav__link--github">🐙 GitHub App</a>
     </div>
 
     <!-- Right badges -->
@@ -1300,9 +1412,56 @@
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
       <!-- Sign In -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
+      <!-- Hamburger (mobile only) -->
+      <button class="pg2-nav__hamburger" id="pg2NavHamburger" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
 </nav>
+
+<!-- Mobile nav drawer -->
+<div class="pg2-nav__mobile-menu" id="pg2MobileMenu" role="dialog" aria-label="Navigation menu">
+  <a href="#commentGenerator" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🎬 Demo</a>
+  <a href="#pg-pricing-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💎 Pricing</a>
+  <a href="#pg-vscode-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💻 VS Code</a>
+  <a href="#pg-cli-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">⌨️ CLI</a>
+  <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
+  <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
+</div>
+<script>
+  (function() {
+    var btn = document.getElementById('pg2NavHamburger');
+    var menu = document.getElementById('pg2MobileMenu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isOpen = menu.classList.toggle('open');
+      btn.classList.toggle('open', isOpen);
+      btn.setAttribute('aria-expanded', isOpen);
+    });
+    document.addEventListener('click', function(e) {
+      if (!menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        menu.classList.remove('open');
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+  function closeMobileMenu() {
+    var menu = document.getElementById('pg2MobileMenu');
+    var btn = document.getElementById('pg2NavHamburger');
+    if (menu) menu.classList.remove('open');
+    if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+  }
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      HERO
@@ -2648,4 +2807,5 @@ if (enterpriseForm) {
 
 </body>
 </html>
+
 
