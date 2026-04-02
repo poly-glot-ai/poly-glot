@@ -2549,5 +2549,102 @@ if (enterpriseForm) {
 }
 </script>
 
+
+<script>
+/* ── Poly-Glot AI — GitHub App Deep-Link Handler ─────────────
+   When arriving from a GitHub PR review comment, pre-load the
+   code into the generator and scroll to it automatically.
+   URL params: code (base64), lang, style, file, ext, ref
+   ─────────────────────────────────────────────────────── */
+(function() {
+  function handleDeepLink() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var codeB64 = params.get('code');
+      var lang    = params.get('lang')  || '';
+      var style   = params.get('style') || '';
+      var file    = params.get('file')  || '';
+      var ref     = params.get('ref')   || '';
+
+      if (!codeB64) return;
+
+      // Decode base64 code
+      var code = decodeURIComponent(escape(atob(codeB64)));
+      if (!code) return;
+
+      // Wait for DOM to be ready
+      function loadCode() {
+        var textarea = document.getElementById('cgInput');
+        if (!textarea) return;
+
+        // Pre-fill the textarea
+        textarea.value = code;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Show a banner if arriving from GitHub App
+        if (ref === 'github-app') {
+          var banner = document.createElement('div');
+          banner.id = 'pg-github-deeplink-banner';
+          banner.style.cssText = [
+            'position:fixed;top:64px;left:0;right:0;z-index:9999',
+            'background:linear-gradient(90deg,#161b22,#1f2937)',
+            'border-bottom:1px solid rgba(125,211,252,.25)',
+            'padding:10px 24px',
+            'display:flex;align-items:center;justify-content:space-between;gap:12px',
+            'font-family:Inter,sans-serif;font-size:13px',
+            'box-shadow:0 2px 12px rgba(0,0,0,.4)',
+          ].join(';');
+
+          var left = document.createElement('div');
+          left.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+          left.innerHTML = [
+            '<span style="font-size:16px">🐙</span>',
+            '<strong style="color:#e2e8f0">Opened from GitHub PR Review</strong>',
+            file ? '<span style="color:#7dd3fc;font-family:Fira Code,monospace;font-size:12px;background:rgba(125,211,252,.08);border:1px solid rgba(125,211,252,.2);border-radius:6px;padding:2px 8px">' + file + '</span>' : '',
+            '<span style="color:#94a3b8">· Code pre-loaded below · Add your API key and regenerate</span>',
+          ].join('');
+
+          var close = document.createElement('button');
+          close.innerHTML = '✕';
+          close.style.cssText = 'background:none;border:none;color:#64748b;font-size:16px;cursor:pointer;padding:4px 8px;line-height:1';
+          close.onclick = function() { banner.remove(); };
+
+          banner.appendChild(left);
+          banner.appendChild(close);
+          document.body.appendChild(banner);
+        }
+
+        // Scroll to the generator
+        var gen = document.getElementById('commentGenerator');
+        if (gen) {
+          setTimeout(function() {
+            gen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 400);
+        }
+
+        // Fire GA event
+        if (typeof gtag === 'function') {
+          gtag('event', 'github_app_deeplink', {
+            event_category: 'GitHub App',
+            event_label: file || lang,
+            value: 1
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadCode);
+      } else {
+        setTimeout(loadCode, 200);
+      }
+    } catch(e) {
+      console.warn('[Poly-Glot] Deep-link handler error:', e);
+    }
+  }
+
+  handleDeepLink();
+})();
+</script>
+
 </body>
 </html>
