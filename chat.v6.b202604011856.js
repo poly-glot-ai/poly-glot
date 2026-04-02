@@ -794,6 +794,15 @@ When a user pastes code or asks a code question:
     #pg-chat-send:disabled { opacity: .35; cursor: default; transform: none; }
     #pg-chat-send svg { width: 17px; height: 17px; display: block; flex-shrink: 0; }
 
+    /* Char counter */
+    .pg-chat-char-counter {
+      font-size: 10px; color: #4b5563; text-align: right;
+      padding: 0 14px 4px; flex-shrink: 0;
+      transition: color .15s;
+    }
+    .pg-chat-char-counter.warn  { color: #f59e0b; }
+    .pg-chat-char-counter.error { color: #ef4444; font-weight: 700; }
+
     /* Tablet */
     @media (max-width: 768px) and (min-width: 481px) {
       #pg-chat-window {
@@ -968,6 +977,7 @@ When a user pastes code or asks a code question:
       </div>
       <div class="pg-chat-messages" id="pg-chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
       <div class="pg-chat-suggestions" id="pg-chat-suggestions" aria-label="Suggested question"></div>
+      <div class="pg-chat-char-counter" id="pg-chat-char-counter" aria-live="polite"></div>
       <div class="pg-chat-input-row">
         <textarea id="pg-chat-input" placeholder="Paste code or ask about Poly-Glot…" rows="1"
           aria-label="Chat message" autocomplete="off" spellcheck="true"></textarea>
@@ -997,6 +1007,8 @@ When a user pastes code or asks a code question:
     const suggestionsEl = document.getElementById('pg-chat-suggestions');
     const badge         = document.getElementById('pg-chat-badge');
     const triggerIcon   = document.getElementById('pg-trigger-icon');
+    const charCounter   = document.getElementById('pg-chat-char-counter');
+    const MAX_CHARS     = 20000;
 
     let isOpen    = false;
     let isBusy    = false;
@@ -1205,6 +1217,10 @@ When a user pastes code or asks a code question:
     async function sendMessage(text) {
       text = text.trim();
       if (!text || isBusy) return;
+      if (text.length > MAX_CHARS) {
+        appendMessage('bot', `⚠️ Message too long (${text.length.toLocaleString()} chars). Please keep it under ${MAX_CHARS.toLocaleString()} characters (~500 lines of code).`, false);
+        return;
+      }
 
       isBusy = true;
       sendBtn.disabled = true;
@@ -1280,23 +1296,42 @@ When a user pastes code or asks a code question:
     closeBtn.addEventListener('click', closeChat);
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) closeChat(); });
 
+    function updateCharCounter() {
+      const len = inputEl.value.length;
+      const remaining = MAX_CHARS - len;
+      if (len === 0) {
+        charCounter.textContent = '';
+        charCounter.className = 'pg-chat-char-counter';
+      } else if (remaining <= 0) {
+        charCounter.textContent = `0 / ${MAX_CHARS.toLocaleString()} — limit reached`;
+        charCounter.className = 'pg-chat-char-counter error';
+      } else if (remaining <= 2000) {
+        charCounter.textContent = `${remaining.toLocaleString()} chars remaining`;
+        charCounter.className = 'pg-chat-char-counter warn';
+      } else {
+        charCounter.textContent = '';
+        charCounter.className = 'pg-chat-char-counter';
+      }
+      sendBtn.disabled = !inputEl.value.trim() || len > MAX_CHARS;
+    }
+
     inputEl.addEventListener('input', () => {
-      sendBtn.disabled = !inputEl.value.trim();
       const chip = suggestionsEl.querySelector('.pg-chat-suggestion');
       if (chip) chip.classList.remove('populated');
       inputEl.style.height = 'auto';
       inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+      updateCharCounter();
     });
 
     inputEl.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (!sendBtn.disabled && !isBusy) sendMessage(inputEl.value);
+        if (!isBusy && inputEl.value.trim() && inputEl.value.length <= MAX_CHARS) sendMessage(inputEl.value);
       }
     });
 
     sendBtn.addEventListener('click', () => {
-      if (!sendBtn.disabled && !isBusy) sendMessage(inputEl.value);
+      if (!isBusy && inputEl.value.trim() && inputEl.value.length <= MAX_CHARS) sendMessage(inputEl.value);
     });
   }
 
@@ -1307,6 +1342,7 @@ When a user pastes code or asks a code question:
   }
 
 })();
+
 
 
 
