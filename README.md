@@ -59,7 +59,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 | SLA + dedicated support | ❌ | ❌ | ❌ | ✅ |
 | Priority support | ❌ | ✅ | ✅ | ✅ |
 | **Price** | **$0/mo** | **$9/mo** | **$29/mo** | **Contact us** |
-| | [Get started →](https://poly-glot.ai) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [hello@poly-glot.ai](mailto:hello@poly-glot.ai) |
+| | [Get started →](https://poly-glot.ai) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [hwmoses2@icloud.com](mailto:hwmoses2@icloud.com) |
 
 > 🎁 Use code **EARLYBIRD3** at checkout — 3 months free on Pro or Team. [See plans →](https://poly-glot.ai/#pg-pricing-section)
 
@@ -272,7 +272,7 @@ POLYGLOT_LICENSE_TOKEN=...        # Pro license token
 
 For enterprise plans, custom deployments, SSO, or volume pricing:
 
-📧 **[hello@poly-glot.ai](mailto:hello@poly-glot.ai)**
+📧 **[hwmoses2@icloud.com](mailto:hwmoses2@icloud.com)**
 🌐 **[poly-glot.ai](https://poly-glot.ai)**
 
 ---
