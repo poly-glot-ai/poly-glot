@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260403-2000">
-<html lang="en" data-build="20260403-2000">
+<html lang="en" data-build="20260403-2030">
+<html lang="en" data-build="20260403-2030">
 <head>
   <meta charset="UTF-8">
   <link rel="canonical" href="https://poly-glot.ai/">
@@ -674,14 +674,16 @@
     }
 
     .pg2-install-counter { padding: 16px 12px; }
+      .pg2-install-counter__inner { flex-wrap: wrap; gap: 14px 0; justify-content: center; }
+      .pg2-install-counter__stat { flex: 0 0 48%; min-width: 0; }
+      .pg2-install-counter__divider { display: none !important; }
       .pg2-install-counter__number { font-size: 22px; }
       .pg2-install-counter__label { font-size: 10px; }
-      .pg2-install-counter__divider { margin: 0 12px; height: 28px; }
       .pg2-install-counter__pulse { right: calc(50% - 22px); }
     }
     @media (max-width: 380px) {
       .pg2-install-counter__number { font-size: 18px; }
-      .pg2-install-counter__divider { margin: 0 8px; }
+      .pg2-install-counter__stat { flex: 0 0 48%; }
     }
 
     /* ── PRIVACY TRUST BAR ──────────────────────────────────── */
@@ -1739,7 +1741,7 @@
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__pulse"></span>
       <span class="pg2-install-counter__number" id="pg2CounterTotal" data-target="1858">1,858</span>
-      <span class="pg2-install-counter__label">total installs</span>
+      <span class="pg2-install-counter__label">npm installs</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
@@ -1748,8 +1750,13 @@
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="189">189</span>
-      <span class="pg2-install-counter__label">extension installs</span>
+      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="87">87</span>
+      <span class="pg2-install-counter__label">VS Code</span>
+    </div>
+    <div class="pg2-install-counter__divider"></div>
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="124">124</span>
+      <span class="pg2-install-counter__label">Open VSX</span>
     </div>
   </div>
 </div>
