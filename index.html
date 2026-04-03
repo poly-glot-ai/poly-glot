@@ -1849,6 +1849,27 @@ if (enterpriseForm) {
 })();
 </script>
 
+<script>
+// Force-apply step styles in case CSS is cached
+(function(){
+  var steps = document.querySelector('.pg2-steps');
+  if(steps) {
+    steps.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;gap:8px;flex-wrap:wrap;max-width:960px;margin:0 auto;';
+    var stepDivs = steps.querySelectorAll('.pg2-step');
+    stepDivs.forEach(function(s){
+      s.style.cssText = 'display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;flex:1;min-width:160px;max-width:200px;';
+    });
+    var nums = steps.querySelectorAll('.pg2-step__num');
+    nums.forEach(function(n){
+      n.style.cssText = 'width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px rgba(99,102,241,0.15);';
+    });
+    var arrows = steps.querySelectorAll('.pg2-step__arrow');
+    arrows.forEach(function(a){
+      a.style.cssText = 'font-size:22px;color:#6366f1;align-self:flex-start;margin-top:9px;padding:0 4px;';
+    });
+  }
+})();
+</script>
 </body>
 </html>
 
