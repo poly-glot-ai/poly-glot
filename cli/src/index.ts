@@ -34,7 +34,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.9.2';  // +startup version check, deprecate old versions
+const VERSION = '1.9.3';  // +startup version check, deprecate old versions
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -306,32 +306,54 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 // Fire-and-forget: checks npm registry for a newer version and warns the user.
 // Never blocks a command — resolves in background, prints after command output.
 async function checkForUpdate(): Promise<void> {
-    if (process.env.CI) return; // skip in CI/CD
+    if (process.env.CI) return;                      // skip in CI/CD
+    if (process.env.POLYGLOT_LICENSE_TOKEN) return;  // skip for enterprise env-var users
     try {
+        // Fetch full registry record — tells us both latest version AND
+        // whether THIS specific version has been deprecated
         const res = await fetch(
-            `https://registry.npmjs.org/poly-glot-ai-cli/latest`,
-            { signal: AbortSignal.timeout(2500), headers: { 'Accept': 'application/json' } }
+            `https://registry.npmjs.org/poly-glot-ai-cli`,
+            { signal: AbortSignal.timeout(3000), headers: { 'Accept': 'application/json' } }
         );
-        if (!res.ok) return;
-        const data = await res.json() as { version?: string; deprecated?: string };
-        const latest = data.version || '';
-        if (!latest || latest === VERSION) return;
+        if (!res.ok) return; // registry unreachable — fail open
 
-        // Semver compare: if latest > current, nudge upgrade
-        const pa = VERSION.split('.').map(Number);
-        const pb = latest.split('.').map(Number);
-        let isOlder = false;
-        for (let i = 0; i < 3; i++) {
-            if ((pa[i] || 0) < (pb[i] || 0)) { isOlder = true; break; }
-            if ((pa[i] || 0) > (pb[i] || 0)) break;
-        }
-        if (isOlder) {
-            console.warn(
-                `\n  \x1b[33m⚠️   Update available: v${VERSION} → v${latest}\x1b[0m` +
-                `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to upgrade.\x1b[0m\n`
+        const data = await res.json() as {
+            'dist-tags': { latest: string };
+            versions: Record<string, { deprecated?: string }>;
+        };
+
+        const latest     = data['dist-tags']?.latest || '';
+        const thisEntry  = data.versions?.[VERSION];
+        const deprecated = thisEntry?.deprecated || '';
+
+        // ── Hard exit: this exact version is marked deprecated on npm ────────
+        if (deprecated) {
+            console.error(
+                `\n  \x1b[31m✗  poly-glot v${VERSION} is no longer supported\x1b[0m\n` +
+                `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to get the latest version (v${latest}).\x1b[0m` +
+                `\n  \x1b[2mPlans: Free $0 · Pro \x1b[0m\x1b[1m$9/mo\x1b[0m\x1b[2m unlimited · Team \x1b[0m\x1b[1m$29/mo\x1b[0m\x1b[2m · Enterprise custom\x1b[0m\n` +
+                `\n  \x1b[2mUpgrade → \x1b[0m\x1b[36mhttps://poly-glot.ai/#pg-pricing-section\x1b[0m\n`
             );
+            process.exit(1);
         }
-    } catch { /* non-fatal — network down etc */ }
+
+        // ── Soft warn: a newer version exists but this one is still supported ─
+        if (latest && latest !== VERSION) {
+            const pa = VERSION.split('.').map(Number);
+            const pb = latest.split('.').map(Number);
+            let isOlder = false;
+            for (let i = 0; i < 3; i++) {
+                if ((pa[i] || 0) < (pb[i] || 0)) { isOlder = true; break; }
+                if ((pa[i] || 0) > (pb[i] || 0)) break;
+            }
+            if (isOlder) {
+                console.warn(
+                    `\n  \x1b[33m⚠️   Update available: v${VERSION} → v${latest}\x1b[0m` +
+                    `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to upgrade.\x1b[0m\n`
+                );
+            }
+        }
+    } catch { /* non-fatal — network down, registry timeout, etc. Fail open. */ }
 }
 
 async function main(): Promise<void> {
@@ -341,8 +363,8 @@ async function main(): Promise<void> {
     if (!cmd || cmd === '--help' || cmd === '-h') { printHelp(); process.exit(0); }
     if (cmd === '--version' || cmd === '-v')      { console.log(VERSION); process.exit(0); }
 
-    // Fire-and-forget version check — prints nudge after command if outdated
-    void checkForUpdate();
+    // Version check — hard exits if this version is deprecated on npm
+    await checkForUpdate();
 
     // ── Load config ───────────────────────────────────────────────────────
     const cfg = loadConfig();
