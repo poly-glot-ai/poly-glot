@@ -1,3 +1,8 @@
+## [2.1.5] — 2026-04-03
+- 🐛 fix: v2.0.0 — fix login gate, sessionToken typed in Config, verify uses /verify endpoint [deploy]
+
+---
+
 ## [1.9.9] — 2026-04-03
 - ✨ feat: v1.9.8 — close quota gaps in bugs/refactor/test/explain, full flags README [deploy]
 
