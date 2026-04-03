@@ -526,7 +526,9 @@
         </div>
       </div>`;
 
-    document.body.insertBefore(banner, document.body.firstChild);
+    // Banner disabled — removed per product decision
+    // document.body.insertBefore(banner, document.body.firstChild);
+    return; // exit early, don't show banner
 
     // Live promo countdown
     fetch('https://poly-glot.ai/api/auth/promo-count', { cache: 'no-store' })
@@ -1452,3 +1454,4 @@
   }
 
 })();
+
