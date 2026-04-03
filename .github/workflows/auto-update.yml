@@ -2,16 +2,23 @@ name: Auto-Update Site Content
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Triggers:
-#   1. Every push to main  → keeps site current immediately after any commit
-#   2. Every 3 hours       → catches new npm releases & model changes fast
-#   3. Manual dispatch     → run on-demand from Actions UI
+#   1. Every push to main              → immediate update after any commit
+#   2. Every 3 hours (cron)            → catches new npm/MCP releases fast
+#   3. Manual dispatch (workflow_dispatch) → run on-demand from Actions UI
+#   4. repository_dispatch             → fired by local macOS watcher script
+#                                         (poly-glot-version-watch.py) when a
+#                                         new VS Code Marketplace version is
+#                                         detected — ensures site updates
+#                                         within seconds of a new publish
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
     branches: [main]
   schedule:
-    - cron: '0 */3 * * *'   # every 3 hours (UTC)
+    - cron: '0 */3 * * *'      # every 3 hours (UTC)
   workflow_dispatch:
+  repository_dispatch:
+    types: [vscode_version_updated]
 
 permissions:
   contents: write
@@ -19,7 +26,7 @@ permissions:
 jobs:
   auto-update:
     runs-on: ubuntu-latest
-    # Skip if the last commit was the bot itself (prevents infinite loop)
+    # Skip bot-generated commits (prevents infinite loop)
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update')"
 
     steps:
@@ -29,11 +36,19 @@ jobs:
         with:
           fetch-depth: 1
 
-      # ── 2. Run the Python updater ────────────────────────────────────────────
+      # ── 2. Log trigger source ────────────────────────────────────────────────
+      - name: Log trigger
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "  → VS Code Marketplace version update detected by local watcher"
+          fi
+
+      # ── 3. Run the Python updater ────────────────────────────────────────────
       - name: Fetch live data & patch files
         run: python3 scripts/update-site.py
 
-      # ── 3. Commit & push only if something changed ──────────────────────────
+      # ── 4. Commit & push only if something changed ───────────────────────────
       - name: Commit changes
         run: |
           git config user.name  "github-actions[bot]"
