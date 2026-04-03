@@ -32,7 +32,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY      = 'pg_live_data_v6';
+  var CACHE_KEY      = 'pg_live_data_v7';
   var CACHE_TTL_MS   = 3 * 60 * 60 * 1000; // 3 hours
   var POLL_INTERVAL_MS = 60 * 1000;         // 60 seconds
 
@@ -194,17 +194,24 @@
         data.vscodeMarketplaceInstalls = vsInstall + vsDownload;
       } catch (e) {}
 
-      // Open VSX Registry — downloadCount
+      // ── Known floors (verified from dashboards — public API undercounts) ─
+      var VS_FLOOR  = 87;   // VS Code "Till Date" from publisher dashboard
+      var OVX_FLOOR = 124;  // Open VSX downloadCount (API accurate here)
+
+      // Open VSX — apply floor so count never goes backwards
       try {
         var ovxCount = ovxResp && typeof ovxResp.downloadCount === 'number'
                        ? ovxResp.downloadCount : 0;
-        data.openVsxInstalls = ovxCount;
-      } catch (e) {}
+        data.openVsxInstalls = Math.max(OVX_FLOOR, ovxCount);
+      } catch (e) {
+        data.openVsxInstalls = OVX_FLOOR;
+      }
 
-      // Combined extension installs: VS Code Marketplace + Open VSX
-      var mkt = data.vscodeMarketplaceInstalls || 0;
-      var ovx = data.openVsxInstalls           || 0;
-      if (mkt > 0 || ovx > 0) data.vscodeInstalls = mkt + ovx;
+      // VS Code Marketplace — apply floor (public API lags ~48hrs)
+      data.vscodeMarketplaceInstalls = Math.max(VS_FLOOR, data.vscodeMarketplaceInstalls || 0);
+
+      // Store each separately for display, combined for legacy usage
+      data.vscodeInstalls = data.vscodeMarketplaceInstalls + data.openVsxInstalls;
 
       return data;
     });
@@ -234,49 +241,29 @@
     requestAnimationFrame(step);
   }
 
+  // ── Animate first time, snap on poll updates ────────────────────────────────
+  function setCounter(el, val) {
+    if (!el || !val) return;
+    if (!el.hasAttribute('data-animated')) {
+      animateCounter(el, val);
+      el.setAttribute('data-animated', '1');
+    } else {
+      el.textContent = val.toLocaleString();
+    }
+    el.setAttribute('data-target', val);
+  }
+
   // ── Update install counter widget ───────────────────────────────────────────
   function updateInstallCounter(data) {
     try {
-      var total  = data.dlTotal        || 0;
-      var week   = data.dlWeek         || 0;
-      var vscode = data.vscodeInstalls || 0;
-
-      var elTotal  = document.getElementById('pg2CounterTotal');
-      var elWeek   = document.getElementById('pg2CounterWeek');
-      var elVSCode = document.getElementById('pg2CounterVSCode');
-
-      // On poll updates, jump directly to new value (no re-animation)
-      // Only animate on first paint (when el has no data-animated yet)
-      if (total && elTotal) {
-        if (!elTotal.hasAttribute('data-animated')) {
-          animateCounter(elTotal, total);
-          elTotal.setAttribute('data-animated', '1');
-        } else {
-          elTotal.textContent = total.toLocaleString();
-        }
-        elTotal.setAttribute('data-target', total);
-      }
-
-      if (week && elWeek) {
-        if (!elWeek.hasAttribute('data-animated')) {
-          animateCounter(elWeek, week);
-          elWeek.setAttribute('data-animated', '1');
-        } else {
-          elWeek.textContent = week.toLocaleString();
-        }
-        elWeek.setAttribute('data-target', week);
-      }
-
-      if (vscode && elVSCode) {
-        if (!elVSCode.hasAttribute('data-animated')) {
-          animateCounter(elVSCode, vscode);
-          elVSCode.setAttribute('data-animated', '1');
-        } else {
-          elVSCode.textContent = vscode.toLocaleString();
-        }
-        elVSCode.setAttribute('data-target', vscode);
-      }
-
+      // Stat 1 — npm total installs
+      setCounter(document.getElementById('pg2CounterTotal'),  data.dlTotal                      || 0);
+      // Stat 2 — npm this week
+      setCounter(document.getElementById('pg2CounterWeek'),   data.dlWeek                       || 0);
+      // Stat 3 — VS Code Marketplace (with floor)
+      setCounter(document.getElementById('pg2CounterVSCode'), data.vscodeMarketplaceInstalls     || 0);
+      // Stat 4 — Open VSX (with floor)
+      setCounter(document.getElementById('pg2CounterOVX'),    data.openVsxInstalls              || 0);
     } catch (e) { /* silent */ }
   }
 
