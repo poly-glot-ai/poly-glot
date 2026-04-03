@@ -189,6 +189,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      overflow: visible;
     }
     .pg2-nav__brand {
       display: flex;
@@ -258,6 +259,8 @@
       padding: 5px; border-radius: 6px;
       transition: background .15s;
       flex-shrink: 0;
+      order: -1;
+      z-index: 300;
     }
     .pg2-nav__hamburger:hover { background: rgba(255,255,255,.07); }
     .pg2-nav__hamburger span {
@@ -1387,6 +1390,11 @@
 <nav class="pg2-nav" role="navigation" aria-label="Main navigation">
   <div class="pg2-nav__inner">
     <!-- Brand -->
+    <!-- Hamburger (mobile only) — LEFT side -->
+    <button class="pg2-nav__hamburger" id="pg2NavHamburger" aria-label="Open navigation menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+
     <a href="/" class="pg2-nav__brand">
       <picture>
         <source srcset="parrot-logo.webp" type="image/webp">
@@ -1416,10 +1424,6 @@
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
       <!-- Sign In -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
-      <!-- Hamburger (mobile only) -->
-      <button class="pg2-nav__hamburger" id="pg2NavHamburger" aria-label="Open navigation menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
     </div>
   </div>
 </nav>
