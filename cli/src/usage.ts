@@ -121,7 +121,7 @@ export function assertQuota(filesNeeded = 1): void {
             `\n  \x1b[2mYou've used \x1b[0m\x1b[1m${used}/${FREE_MONTHLY_LIMIT}\x1b[0m\x1b[2m files on the Free plan for ${currentMonthLabel()}.\x1b[0m` +
             `\n  \x1b[2mResets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\x1b[2m · Upgrade for unlimited files.\x1b[0m\n` +
             `\n  \x1b[1mUpgrade → \x1b[36mhttps://poly-glot.ai/#pg-pricing-section\x1b[0m` +
-            `\n  \x1b[2mUse code \x1b[0m\x1b[32mEARLYBIRD3\x1b[0m\x1b[2m — 14-day free trial, 50% off first 3 months (expires May 1, 2026)\x1b[0m\n` +
+            `\n  \x1b[2mPlans: Free $0 · Pro \x1b[0m\x1b[1m$9/mo\x1b[0m\x1b[2m unlimited · Team \x1b[0m\x1b[1m$29/mo\x1b[0m\x1b[2m · Enterprise custom\x1b[0m\n` +
             `\n  \x1b[2mAlready have Pro? Run: \x1b[0m\x1b[36mpoly-glot config --token YOUR_TOKEN\x1b[0m\n`
         );
         process.exit(1);
@@ -134,7 +134,7 @@ export function assertQuota(filesNeeded = 1): void {
             `\n  \x1b[2mThis batch needs \x1b[0m\x1b[1m${filesNeeded} files\x1b[0m\x1b[2m but you only have \x1b[0m\x1b[1m${remaining} remaining\x1b[0m\x1b[2m this month.\x1b[0m` +
             `\n  \x1b[2mUsed: \x1b[0m\x1b[1m${used}/${FREE_MONTHLY_LIMIT}\x1b[0m\x1b[2m · Resets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\n` +
             `\n  \x1b[1mUpgrade → \x1b[36mhttps://poly-glot.ai/#pg-pricing-section\x1b[0m` +
-            `\n  \x1b[2mUse code \x1b[0m\x1b[32mEARLYBIRD3\x1b[0m\x1b[2m — 14-day free trial, 50% off first 3 months (expires May 1, 2026)\x1b[0m\n` +
+            `\n  \x1b[2mPlans: Free $0 · Pro \x1b[0m\x1b[1m$9/mo\x1b[0m\x1b[2m unlimited · Team \x1b[0m\x1b[1m$29/mo\x1b[0m\x1b[2m · Enterprise custom\x1b[0m\n` +
             `\n  \x1b[2mAlready have Pro? Run: \x1b[0m\x1b[36mpoly-glot config --token YOUR_TOKEN\x1b[0m\n`
         );
         process.exit(1);
