@@ -255,14 +255,21 @@ async function handleVerify(request, env) {
   let data;
   try { data = JSON.parse(raw); } catch { return json({ error: 'Malformed token data' }, 500); }
 
-  // One-time use — delete immediately
+  // One-time use — delete magic link token immediately so it can't be reused
   await env.AUTH_KV.delete(`token:${token}`);
 
   const { email, plan } = data;
-  return json({ email, plan: plan || 'free' });
+
+  // Create a long-lived session token (30 days) stored under session: prefix
+  // This is what the client stores in localStorage and uses for all future requests
+  const SESSION_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
+  const sessionPayload = JSON.stringify({ email, plan: plan || 'free', created: Date.now() });
+  await env.AUTH_KV.put(`session:${token}`, sessionPayload, { expirationTtl: SESSION_TTL });
+
+  return json({ email, plan: plan || 'free', session: token });
 }
 
-/** POST /api/auth/refresh — verify without consuming */
+/** POST /api/auth/refresh — validate a session token (NOT a magic link token) */
 async function handleRefresh(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
@@ -270,11 +277,12 @@ async function handleRefresh(request, env) {
   const token = (body.token || '').trim();
   if (!token) return json({ error: 'Token required' }, 400);
 
-  const raw = await env.AUTH_KV.get(`token:${token}`);
-  if (!raw) return json({ error: 'Invalid or expired token' }, 401);
+  // Only accept session: tokens — never raw magic-link token: keys
+  const raw = await env.AUTH_KV.get(`session:${token}`);
+  if (!raw) return json({ error: 'Invalid or expired session' }, 401);
 
   let data;
-  try { data = JSON.parse(raw); } catch { return json({ error: 'Malformed token data' }, 500); }
+  try { data = JSON.parse(raw); } catch { return json({ error: 'Malformed session data' }, 500); }
 
   return json({ email: data.email, plan: data.plan || 'free' });
 }

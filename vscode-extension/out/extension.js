@@ -227,6 +227,35 @@ async function handleChatRequest(request, _chatContext, stream, token) {
         stream.button({ command: 'polyglot.configureApiKey', title: '$(key) Configure API Key' });
         return { metadata: { command: 'setup' } };
     }
+    // ── Usage gate (free tier: 50 files/month) ────────────────────────────
+    if (cmd === 'comment' || cmd === 'why' || cmd === 'both' || cmd === 'explain' || !cmd) {
+        const pro = await hasPro();
+        if (!pro) {
+            const count = getMonthlyCount();
+            if (count >= FREE_LIMIT) {
+                stream.markdown([
+                    `## 🚫 Free plan limit reached — ${FREE_LIMIT} files this month`,
+                    '',
+                    `You've used **${count}/${FREE_LIMIT}** free files this month.`,
+                    '',
+                    '**Upgrade to Pro for unlimited files — 50% off with code `EARLYBIRD3`**',
+                    '',
+                    `[→ Upgrade at poly-glot.ai](${UPGRADE_URL})`,
+                    '',
+                    'Already subscribed? Run **Poly-Glot: Configure License Token** to unlock.',
+                ].join('\n'));
+                stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
+                return { metadata: { command: cmd } };
+            }
+            // Increment usage for chat commands
+            await incrementMonthlyCount();
+            updateStatusBarUsage(false);
+            // Soft warning at 80%
+            if (count + 1 === Math.floor(FREE_LIMIT * 0.8)) {
+                stream.markdown(`> ⚡ **${FREE_LIMIT - count - 1} free files remaining** this month — [upgrade for unlimited →](${UPGRADE_URL})\n\n`);
+            }
+        }
+    }
     // ── Check Pro gate for /why and /both ────────────────────────────────
     if (cmd === 'why' || cmd === 'both') {
         const isPro = await hasPro();
