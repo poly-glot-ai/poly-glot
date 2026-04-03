@@ -90,8 +90,10 @@ downloads_total = sum(d["downloads"] for d in npm_range.get("downloads", [])) if
 print(f"  📊 Downloads          : day={downloads_day:,}  week={downloads_week:,}  month={downloads_month:,}  total={downloads_total:,}")
 
 # VS Code Marketplace
-vscode_version  = "1.4.6"  # fallback
-vscode_installs = 0
+vscode_version       = "1.4.12"  # fallback
+vscode_installs      = 0         # install stat only (from VS Code app)
+vscode_download_count = 0        # downloadCount stat (from Marketplace web)
+vscode_combined      = 0         # install + downloadCount
 vsc_payload = json.dumps({
     "filters": [{"criteria": [{"filterType": 7, "value": "poly-glot-ai.poly-glot"}]}],
     "flags": 914
@@ -112,9 +114,23 @@ if vsc_resp:
         for s in ext.get("statistics", []):
             if s["statisticName"] == "install":
                 vscode_installs = int(s["value"])
+            if s["statisticName"] == "downloadCount":
+                vscode_download_count = int(s["value"])
+        vscode_combined = vscode_installs + vscode_download_count
     except (KeyError, IndexError, TypeError):
         pass
-print(f"  💻 VS Code extension  : {vscode_version}  (installs: {vscode_installs})")
+
+# Open VSX downloads
+ovx_resp     = fetch_json("https://open-vsx.org/api/poly-glot-ai/poly-glot")
+ovx_installs = 0
+if ovx_resp:
+    try:
+        ovx_installs = int(ovx_resp.get("downloadCount", 0))
+    except (ValueError, TypeError):
+        pass
+
+print(f"  💻 VS Code extension  : {vscode_version}  (install={vscode_installs} downloadCount={vscode_download_count} combined={vscode_combined})")
+print(f"  📦 Open VSX           : {ovx_installs} downloads")
 
 print()
 
@@ -207,6 +223,60 @@ if html != html_orig:
     write_file("index.html", html)
 else:
     print("  ℹ️  index.html — no changes needed")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2j. Auto-update VS_FLOOR and OVX_FLOOR in live-data.v10.js
+#     The public Marketplace API undercounts vs the dashboard (~6 gap).
+#     We use combined (install + downloadCount) as the new floor whenever
+#     it exceeds the current floor — so the counter never goes backwards.
+# ─────────────────────────────────────────────────────────────────────────────
+import re as _re2
+
+LIVE_DATA_FILE = "live-data.v10.js"
+try:
+    with open(LIVE_DATA_FILE, "r", encoding="utf-8") as f:
+        ld = f.read()
+
+    ld_orig = ld
+
+    # Extract current floors
+    vs_match  = _re2.search(r'var VS_FLOOR\s*=\s*(\d+)', ld)
+    ovx_match = _re2.search(r'var OVX_FLOOR\s*=\s*(\d+)', ld)
+    current_vs_floor  = int(vs_match.group(1))  if vs_match  else 0
+    current_ovx_floor = int(ovx_match.group(1)) if ovx_match else 0
+
+    # Only raise floors, never lower them
+    new_vs_floor  = max(current_vs_floor,  vscode_combined)
+    new_ovx_floor = max(current_ovx_floor, ovx_installs)
+
+    if new_vs_floor != current_vs_floor:
+        ld = _re2.sub(
+            r'(var VS_FLOOR\s*=\s*)\d+',
+            rf'\g<1>{new_vs_floor}',
+            ld
+        )
+        print(f"  ✅ VS_FLOOR updated: {current_vs_floor} → {new_vs_floor}")
+    else:
+        print(f"  ℹ️  VS_FLOOR unchanged: {current_vs_floor} (api={vscode_combined})")
+
+    if new_ovx_floor != current_ovx_floor:
+        ld = _re2.sub(
+            r'(var OVX_FLOOR\s*=\s*)\d+',
+            rf'\g<1>{new_ovx_floor}',
+            ld
+        )
+        print(f"  ✅ OVX_FLOOR updated: {current_ovx_floor} → {new_ovx_floor}")
+    else:
+        print(f"  ℹ️  OVX_FLOOR unchanged: {current_ovx_floor} (api={ovx_installs})")
+
+    if ld != ld_orig:
+        write_file(LIVE_DATA_FILE, ld)
+        print(f"  ✅ {LIVE_DATA_FILE} floors updated")
+    else:
+        print(f"  ℹ️  {LIVE_DATA_FILE} — no floor changes needed")
+
+except Exception as e:
+    print(f"  ⚠️  Could not update {LIVE_DATA_FILE}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Patch sitemap.xml
