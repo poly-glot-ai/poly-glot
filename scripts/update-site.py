@@ -3,13 +3,15 @@
 Poly-Glot Auto-Update Script
 =============================
 Fetches live data from public APIs and patches:
-  - index.html   : data-build, CLI version in terminal demo, sitemap lastmod in JSON-LD
-  - sitemap.xml  : <lastmod> date
+  - index.html   : data-build, CLI terminal version, softwareVersion JSON-LD,
+                   npm-version / mcp-version / vscode-version / dl-week / dl-total spans,
+                   download count line, live-data.js injection
+  - sitemap.xml  : <lastmod> date + changefreq → daily
   - README.md    : npm install stats block
   - cli/README.md: npm install stats block
 
 Run by GitHub Actions on every push + every 3 hours.
-Safe to run locally too: python3 scripts/update-site.py
+Safe to run locally: python3 scripts/update-site.py
 """
 
 import urllib.request
@@ -24,10 +26,14 @@ import os
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_json(url, timeout=10):
+def fetch_json(url, timeout=10, method="GET", data=None, headers=None):
     """Fetch JSON from a URL. Returns None on any error (never raises)."""
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "poly-glot-updater/1.0"})
+        hdrs = {"User-Agent": "poly-glot-updater/1.0"}
+        if headers:
+            hdrs.update(headers)
+        body = data.encode("utf-8") if isinstance(data, str) else data
+        req = urllib.request.Request(url, data=body, headers=hdrs, method=method)
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read().decode("utf-8"))
     except Exception as e:
@@ -35,19 +41,19 @@ def fetch_json(url, timeout=10):
         return None
 
 
-def read_file(path):
-    """Read a file relative to the repo root (script's parent dir)."""
+def repo_path(relative):
+    """Resolve a path relative to the repo root."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    full = os.path.join(root, path)
-    with open(full, "r", encoding="utf-8") as f:
+    return os.path.join(root, relative)
+
+
+def read_file(path):
+    with open(repo_path(path), "r", encoding="utf-8") as f:
         return f.read()
 
 
 def write_file(path, content):
-    """Write a file relative to the repo root."""
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    full = os.path.join(root, path)
-    with open(full, "w", encoding="utf-8") as f:
+    with open(repo_path(path), "w", encoding="utf-8") as f:
         f.write(content)
     print(f"  ✅ Written: {path}")
 
@@ -56,50 +62,59 @@ def write_file(path, content):
 # 1. Fetch live data
 # ─────────────────────────────────────────────────────────────────────────────
 
-today = datetime.date.today().strftime("%Y-%m-%d")
+today   = datetime.date.today().strftime("%Y-%m-%d")
 now_tag = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M")
 
 print(f"\n🔍 Fetching live data ({today}) …\n")
 
-# npm: latest version
-npm_data = fetch_json("https://registry.npmjs.org/poly-glot-ai-cli/latest")
-npm_version = npm_data.get("version", "1.9.5") if npm_data else "1.9.5"
-print(f"  📦 npm latest version : {npm_version}")
+# npm CLI: latest version
+npm_cli = fetch_json("https://registry.npmjs.org/poly-glot-ai-cli/latest")
+npm_version = npm_cli.get("version", "1.9.5") if npm_cli else "1.9.5"
+print(f"  📦 poly-glot-ai-cli   : {npm_version}")
 
-# npm: download stats
-npm_day  = fetch_json("https://api.npmjs.org/downloads/point/last-day/poly-glot-ai-cli")
-npm_week = fetch_json("https://api.npmjs.org/downloads/point/last-week/poly-glot-ai-cli")
-npm_range = fetch_json(f"https://api.npmjs.org/downloads/range/2026-01-01:2099-01-01/poly-glot-ai-cli")
-downloads_day   = npm_day.get("downloads", 0)   if npm_day   else 0
+# npm MCP: latest version
+npm_mcp = fetch_json("https://registry.npmjs.org/poly-glot-mcp/latest")
+mcp_version = npm_mcp.get("version", "1.0.0") if npm_mcp else "1.0.0"
+print(f"  📦 poly-glot-mcp      : {mcp_version}")
+
+# npm downloads
+npm_week  = fetch_json("https://api.npmjs.org/downloads/point/last-week/poly-glot-ai-cli")
+npm_month = fetch_json("https://api.npmjs.org/downloads/point/last-month/poly-glot-ai-cli")
+npm_range = fetch_json("https://api.npmjs.org/downloads/range/2026-01-01:2099-01-01/poly-glot-ai-cli")
+dl_day    = fetch_json("https://api.npmjs.org/downloads/point/last-day/poly-glot-ai-cli")
+
+downloads_day   = dl_day.get("downloads", 0)   if dl_day   else 0
 downloads_week  = npm_week.get("downloads", 0)  if npm_week  else 0
+downloads_month = npm_month.get("downloads", 0) if npm_month else 0
 downloads_total = sum(d["downloads"] for d in npm_range.get("downloads", [])) if npm_range else 0
-print(f"  📊 npm downloads      : day={downloads_day:,}  week={downloads_week:,}  total={downloads_total:,}")
+print(f"  📊 Downloads          : day={downloads_day:,}  week={downloads_week:,}  month={downloads_month:,}  total={downloads_total:,}")
 
-# VS Code marketplace: latest published version
-vscode_version = "1.4.6"   # fallback
-vscode_payload = json.dumps({
+# VS Code Marketplace
+vscode_version  = "1.4.6"  # fallback
+vscode_installs = 0
+vsc_payload = json.dumps({
     "filters": [{"criteria": [{"filterType": 7, "value": "poly-glot-ai.poly-glot"}]}],
     "flags": 914
-}).encode("utf-8")
-try:
-    req = urllib.request.Request(
-        "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery",
-        data=vscode_payload,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json;api-version=3.0-preview.1",
-            "User-Agent": "poly-glot-updater/1.0",
-        },
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=10) as r:
-        vsc = json.loads(r.read())
-        exts = vsc.get("results", [{}])[0].get("extensions", [])
-        if exts:
-            vscode_version = exts[0].get("versions", [{}])[0].get("version", vscode_version)
-except Exception as e:
-    print(f"  ⚠️  VS Code marketplace fetch failed: {e}", file=sys.stderr)
-print(f"  💻 VS Code extension  : {vscode_version}")
+})
+vsc_resp = fetch_json(
+    "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery",
+    method="POST",
+    data=vsc_payload,
+    headers={
+        "Content-Type":  "application/json",
+        "Accept":        "application/json;api-version=3.0-preview.1",
+    }
+)
+if vsc_resp:
+    try:
+        ext = vsc_resp["results"][0]["extensions"][0]
+        vscode_version = ext["versions"][0]["version"]
+        for s in ext.get("statistics", []):
+            if s["statisticName"] == "install":
+                vscode_installs = int(s["value"])
+    except (KeyError, IndexError, TypeError):
+        pass
+print(f"  💻 VS Code extension  : {vscode_version}  (installs: {vscode_installs})")
 
 print()
 
@@ -111,69 +126,74 @@ print("📝 Patching index.html …")
 html = read_file("index.html")
 html_orig = html
 
-# 2a. data-build attribute on <html> tag  →  today's date + UTC hour
-#     Pattern:  <html lang="en" data-build="20260403-ghapp">
+# 2a. data-build timestamp
 html = re.sub(
     r'(<html[^>]*\bdata-build=")[^"]*(")',
     rf'\g<1>{now_tag}\g<2>',
-    html,
-    count=1
+    html, count=1
 )
 
-# 2b. CLI terminal demo: the npm install output line
-#     Source contains the version string as:  poly-glot-ai-cli@X.X.X
-#     It appears inside a Cloudflare email-obfuscation anchor in the
-#     *served* page, but in the raw source it is plain text like:
-#         + poly-glot-ai-cli@1.5.2
-#     We target the marker comment we added AND the raw pattern.
-#
-#     Pattern inside the cli-demo-body:
-#       <div class="cli-line cli-output">+ poly-glot-ai-cli@X.X.X</div>
-#     OR (if CF already mangled it in source):
-#       <div class="cli-line cli-output">+ <a href="/cdn-cgi/...
-#
-#     Strategy: replace anything between "+ " and "</div>" on that line
-#     IF it's inside the cli-demo-body block.
-#     We use a sentinel comment we inject once, then match against it.
+# 2b. softwareVersion JSON-LD
+html = re.sub(
+    r'("softwareVersion":\s*")[^"]*(")',
+    rf'\g<1>{npm_version}\g<2>',
+    html, count=1
+)
 
-# First, check if our sentinel is already present
+# 2c. CLI terminal demo version line (with sentinel)
 if "<!-- pg-npm-version-line -->" not in html:
-    # First time: find the line and add sentinel
     html = re.sub(
-        r'(<div class="cli-line cli-output">\+\s*)'          # opening + " + "
-        r'(poly-glot-ai-cli@[\d.]+|'                         # plain version OR
-        r'<a [^>]*__cf_email__[^>]*>.*?</a>)'               # CF-mangled version
+        r'(<div class="cli-line cli-output">\+\s*)'
+        r'(poly-glot-ai-cli@[\d.]+|<a [^>]*__cf_email__[^>]*>.*?</a>)'
         r'(</div>)',
         rf'\g<1>poly-glot-ai-cli@{npm_version}\g<3><!-- pg-npm-version-line -->',
-        html,
-        count=1,
-        flags=re.DOTALL
+        html, count=1, flags=re.DOTALL
     )
 else:
-    # Subsequent runs: sentinel is present — replace version between + and sentinel
     html = re.sub(
         r'(<div class="cli-line cli-output">\+\s*)'
         r'(poly-glot-ai-cli@[\d.]+|<a [^>]*__cf_email__[^>]*>.*?</a>)'
         r'(</div><!-- pg-npm-version-line -->)',
         rf'\g<1>poly-glot-ai-cli@{npm_version}\g<3>',
-        html,
-        count=1,
-        flags=re.DOTALL
+        html, count=1, flags=re.DOTALL
     )
 
-# 2c. softwareVersion in JSON-LD schema
-#     "<softwareVersion": "2.0.0">"  →  use npm version
+# 2d. [data-live="npm-version"] spans — update hardcoded fallback value
 html = re.sub(
-    r'("softwareVersion":\s*")[^"]*(")',
+    r'(<span data-live="npm-version">)[^<]*(</span>)',
     rf'\g<1>{npm_version}\g<2>',
-    html,
-    count=1
+    html
 )
 
-# 2d. Sitemap lastmod (if referenced inline in any meta — not present but future-proof)
-# (sitemap.xml is patched separately below)
+# 2e. [data-live="mcp-version"] spans
+html = re.sub(
+    r'(<span data-live="mcp-version">)[^<]*(</span>)',
+    rf'\g<1>{mcp_version}\g<2>',
+    html
+)
 
-# 2e. Inject live-data.js script tag if not already there
+# 2f. [data-live="vscode-version"] spans
+html = re.sub(
+    r'(<span data-live="vscode-version">)[^<]*(</span>)',
+    rf'\g<1>{vscode_version}\g<2>',
+    html
+)
+
+# 2g. [data-live="dl-week"] spans
+html = re.sub(
+    r'(<span data-live="dl-week">)[^<]*(</span>)',
+    rf'\g<1>{downloads_week:,}\g<2>',
+    html
+)
+
+# 2h. [data-live="dl-total"] spans
+html = re.sub(
+    r'(<span data-live="dl-total">)[^<]*(</span>)',
+    rf'\g<1>{downloads_total:,}\g<2>',
+    html
+)
+
+# 2i. Inject live-data.js if not already present
 if 'src="live-data.js"' not in html:
     html = html.replace(
         '</body>',
@@ -183,7 +203,6 @@ if 'src="live-data.js"' not in html:
 
 if html != html_orig:
     write_file("index.html", html)
-    print("  ✅ index.html updated")
 else:
     print("  ℹ️  index.html — no changes needed")
 
@@ -192,20 +211,11 @@ else:
 # ─────────────────────────────────────────────────────────────────────────────
 
 print("\n🗺️  Patching sitemap.xml …")
-sitemap = read_file("sitemap.xml")
+sitemap      = read_file("sitemap.xml")
 sitemap_orig = sitemap
 
-sitemap = re.sub(
-    r'<lastmod>\d{4}-\d{2}-\d{2}</lastmod>',
-    f'<lastmod>{today}</lastmod>',
-    sitemap
-)
-# Also bump changefreq to daily since we now update very frequently
-sitemap = re.sub(
-    r'<changefreq>weekly</changefreq>',
-    '<changefreq>daily</changefreq>',
-    sitemap
-)
+sitemap = re.sub(r'<lastmod>\d{4}-\d{2}-\d{2}</lastmod>', f'<lastmod>{today}</lastmod>', sitemap)
+sitemap = re.sub(r'<changefreq>weekly</changefreq>', '<changefreq>daily</changefreq>', sitemap)
 
 if sitemap != sitemap_orig:
     write_file("sitemap.xml", sitemap)
@@ -213,7 +223,7 @@ else:
     print("  ℹ️  sitemap.xml — no changes needed")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. Patch README npm stats block (existing format, extended)
+# 4. Patch README npm stats blocks
 # ─────────────────────────────────────────────────────────────────────────────
 
 stats_block = f"""<!-- npm-stats-start -->
@@ -222,17 +232,15 @@ stats_block = f"""<!-- npm-stats-start -->
 > |--------|-----------|
 > | Yesterday | **{downloads_day:,}** |
 > | Last 7 days | **{downloads_week:,}** |
+> | Last 30 days | **{downloads_month:,}** |
 > | All time | **{downloads_total:,}** |
 >
-> 📦 Latest version: **{npm_version}** · 💻 VS Code: **{vscode_version}**
+> 📦 CLI: **v{npm_version}** · 🔌 MCP: **v{mcp_version}** · 💻 VS Code: **v{vscode_version}**
 >
-> *Last updated: {today}*
+> *Last updated: {today} UTC*
 <!-- npm-stats-end -->"""
 
-pattern = re.compile(
-    r'<!-- npm-stats-start -->.*?<!-- npm-stats-end -->',
-    re.DOTALL
-)
+pattern = re.compile(r'<!-- npm-stats-start -->.*?<!-- npm-stats-end -->', re.DOTALL)
 
 print("\n📖 Patching README files …")
 for readme_path in ["README.md", "cli/README.md"]:
@@ -250,14 +258,15 @@ for readme_path in ["README.md", "cli/README.md"]:
         print(f"  ⚠️  {readme_path} not found, skipping")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Done
+# Summary
 # ─────────────────────────────────────────────────────────────────────────────
 
 print(f"""
 ✅  Auto-update complete
-    npm version   : {npm_version}
-    VS Code       : {vscode_version}
-    Downloads     : {downloads_total:,} total / {downloads_week:,} this week
+    CLI version   : v{npm_version}
+    MCP version   : v{mcp_version}
+    VS Code       : v{vscode_version} ({vscode_installs} installs)
+    Downloads     : {downloads_total:,} total / {downloads_week:,} this week / {downloads_day:,} today
     Build tag     : {now_tag}
     Date          : {today}
 """)
