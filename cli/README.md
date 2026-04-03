@@ -410,3 +410,11 @@ MIT © Harold Moses
 ---
 
 Please share if you find this helpful 🚀
+
+
+---
+
+## 📬 Support & Enterprise
+
+📧 **[hwmoses2@icloud.com](mailto:hwmoses2@icloud.com)**
+🌐 **[poly-glot.ai](https://poly-glot.ai)**
