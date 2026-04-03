@@ -19,7 +19,7 @@
     pro_monthly:  'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405',
     pro_yearly:   'https://buy.stripe.com/8x214p54M9fCaMmdw814404',
     team_monthly: 'https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408',
-    team_yearly:  'https://buy.stripe.com/00w8wR7cU63q7Aa77K14406',
+    team_yearly:  'https://buy.stripe.com/aFa28teFm8by5s2eAc14409',
   };
 
   const PROMO = 'EARLYBIRD3';
