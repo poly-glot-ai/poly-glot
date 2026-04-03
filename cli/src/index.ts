@@ -939,12 +939,18 @@ async function runBugs(args: string[]): Promise<void> {
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
     await assertLanguageAllowed(lang, cfg);
+
+    // Quota check (Pro users are unlimited but usage is still tracked server-side)
+    const isPro = await hasPro(cfg);
+    if (!isPro) assertQuota(1);
+
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
     spin(`Auditing ${path.basename(absPath)} for bugs (${lang}, ${cfg.model})…`);
     const result = await gen.findBugs(code, lang);
     stopSpin();
+    if (!isPro) incrementUsage(1);
     ping({ cmd: 'bugs', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     syncUsageToServer(1).catch(() => {});
 
@@ -980,12 +986,18 @@ async function runRefactor(args: string[]): Promise<void> {
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
     await assertLanguageAllowed(lang, cfg);
+
+    // Quota check (Pro users are unlimited but usage is still tracked server-side)
+    const isPro = await hasPro(cfg);
+    if (!isPro) assertQuota(1);
+
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
     spin(`Analyzing ${path.basename(absPath)} for refactoring opportunities (${lang}, ${cfg.model})…`);
     const result = await gen.suggestRefactors(code, lang);
     stopSpin();
+    if (!isPro) incrementUsage(1);
     ping({ cmd: 'refactor', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     syncUsageToServer(1).catch(() => {});
 
@@ -1020,6 +1032,10 @@ async function runTest(args: string[]): Promise<void> {
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
     await assertLanguageAllowed(lang, cfg);
+
+    // Quota check (Pro users are unlimited but usage is still tracked server-side)
+    const isPro = await hasPro(cfg);
+    if (!isPro) assertQuota(1);
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
@@ -1037,6 +1053,7 @@ async function runTest(args: string[]): Promise<void> {
     spin(`Generating tests for ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.generateTests(code, lang);
     stopSpin();
+    if (!isPro) incrementUsage(1);
     ping({ cmd: 'test', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     syncUsageToServer(1).catch(() => {});
 
@@ -1062,6 +1079,9 @@ async function runExplain(args: string[]): Promise<void> {
     const cfg      = loadConfig();
     assertConfigured(cfg);
 
+    // explain is a Pro feature (deep code analysis)
+    await assertModeAllowed('why', cfg);
+
     const filePath = args.find(a => !a.startsWith('-'));
     if (!filePath) { error('Specify a file to explain.'); process.exit(1); }
 
@@ -1071,12 +1091,18 @@ async function runExplain(args: string[]): Promise<void> {
     const ext  = absPath.split('.').pop()!.toLowerCase();
     const lang = (flags['--lang'] as string) || SUPPORTED_EXTENSIONS[ext] || 'javascript';
     await assertLanguageAllowed(lang, cfg);
+
+    // Quota check
+    const isPro = await hasPro(cfg);
+    if (!isPro) assertQuota(1);
+
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
     spin(`Analyzing ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.explainCode(code, lang);
     stopSpin();
+    if (!isPro) incrementUsage(1);
     ping({ cmd: 'explain', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
     syncUsageToServer(1).catch(() => {});
 
