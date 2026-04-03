@@ -32,7 +32,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY      = 'pg_live_data_v7';
+  var CACHE_KEY      = 'pg_live_data_v8';
   var CACHE_TTL_MS   = 3 * 60 * 60 * 1000; // 3 hours
   var POLL_INTERVAL_MS = 60 * 1000;         // 60 seconds
 
@@ -218,13 +218,22 @@
   }
 
   // ── Animated counter roll-up ────────────────────────────────────────────────
+  // Track running animation handles per element to allow cancellation
+  var _rafHandles = {};
+
   function animateCounter(el, targetVal) {
     if (!el) return;
-    var start     = 0;
-    var duration  = 1800; // ms
+    var id = el.id || el.className;
+
+    // Cancel any existing animation on this element before starting a new one
+    if (_rafHandles[id]) {
+      cancelAnimationFrame(_rafHandles[id]);
+      delete _rafHandles[id];
+    }
+
+    var duration  = 1800;
     var startTime = null;
 
-    // Ease out cubic
     function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
     function step(ts) {
@@ -233,12 +242,13 @@
       var current  = Math.round(easeOut(progress) * targetVal);
       el.textContent = current.toLocaleString();
       if (progress < 1) {
-        requestAnimationFrame(step);
+        _rafHandles[id] = requestAnimationFrame(step);
       } else {
         el.textContent = targetVal.toLocaleString();
+        delete _rafHandles[id];
       }
     }
-    requestAnimationFrame(step);
+    _rafHandles[id] = requestAnimationFrame(step);
   }
 
   // ── Animate first time, snap on poll updates ────────────────────────────────
@@ -309,11 +319,25 @@
     var cached = readCache();
     if (cached) {
       applyData(cached);
+      // Set up IntersectionObserver — it will trigger updateInstallCounter once visible
       observeCounter(cached);
+    } else {
+      // No cache — fetchAndApply will drive first paint via IntersectionObserver
+      var el = document.getElementById('pg2InstallCounter');
+      if (el) {
+        fetchLiveData().then(function(data) {
+          if (data && Object.keys(data).length > 0) {
+            writeCache(data);
+            applyData(data);
+            observeCounter(data);
+          }
+        }).catch(function() {});
+        return; // polling started below handles subsequent updates
+      }
     }
 
-    // 2. Fetch fresh data right away (replaces cache if newer)
-    fetchAndApply();
+    // 2. Fetch fresh data — but delay slightly so observeCounter animation fires first
+    setTimeout(fetchAndApply, 2000);
 
     // 3. Poll every 60 seconds while the tab is open
     //    Uses visibilitychange to pause when tab is hidden — saves API calls
