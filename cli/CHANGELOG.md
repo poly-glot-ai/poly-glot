@@ -1,3 +1,9 @@
+## [2.1.10] — 2026-04-03
+- chore: CLI v2.1.9 — direct Stripe CTAs, zero pricing-page redirects [deploy]
+- ✨ feat: VS Code v1.4.12 + CLI v2.1.8 — zero pricing-page redirects, all CTAs direct Stripe
+
+---
+
 ## [2.1.5] — 2026-04-03
 - 🐛 fix: v2.0.0 — fix login gate, sessionToken typed in Config, verify uses /verify endpoint [deploy]
 
