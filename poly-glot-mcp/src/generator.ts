@@ -140,6 +140,8 @@ export interface ExplainResult {
   provider:       string;
   model:          string;
   costUSD:        number;
+  inputTokens:    number;
+  outputTokens:   number;
 }
 
 // ─── Generator class ──────────────────────────────────────────────────────────
@@ -201,9 +203,11 @@ export class PolyGlotGenerator {
 
     return {
       ...parsed,
-      provider: this.cfg.provider,
+      provider:     this.cfg.provider,
       model,
-      costUSD: this._calcCost(raw.inputTokens, raw.outputTokens),
+      costUSD:      this._calcCost(raw.inputTokens, raw.outputTokens),
+      inputTokens:  raw.inputTokens,
+      outputTokens: raw.outputTokens,
     };
   }
 

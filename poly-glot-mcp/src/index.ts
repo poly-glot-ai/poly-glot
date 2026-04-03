@@ -137,8 +137,8 @@ async function main() {
     },
     async ({ code, language }) => {
       try {
-        const r = await generator.addDocComments(code, language);
-        const text = r.documentedCode + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
+        const r = await generator.generateComments(code, language);
+        const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return {
@@ -167,8 +167,8 @@ async function main() {
     },
     async ({ code, language }) => {
       try {
-        const r = await generator.addWhyComments(code, language);
-        const text = r.documentedCode + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
+        const r = await generator.generateWhyComments(code, language);
+        const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return {
@@ -197,8 +197,8 @@ async function main() {
     },
     async ({ code, language }) => {
       try {
-        const r = await generator.addAllComments(code, language);
-        const text = r.documentedCode + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
+        const r = await generator.generateBoth(code, language);
+        const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return {
@@ -228,7 +228,20 @@ async function main() {
     async ({ code, language }) => {
       try {
         const r = await generator.explainCode(code, language);
-        const text = r.explanation + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
+        const text = [
+          `## 🔍 Code Analysis`,
+          `**Summary:** ${r.summary}`,
+          `**Complexity:** ${r.complexity} (score: ${r.complexityScore})`,
+          `**Language:** ${r.language}`,
+          r.functions.length ? `\n**Functions (${r.functions.length}):**\n` + r.functions.map(f =>
+            `- \`${f.name}\` — ${f.purpose}${f.params.length ? ` | params: ${f.params.join(', ')}` : ''}${f.returns ? ` | returns: ${f.returns}` : ''}`
+          ).join('\n') : '',
+          r.potentialBugs.length ? `\n**⚠️ Potential Bugs:**\n` + r.potentialBugs.map(b => `- ${b}`).join('\n') : '',
+          r.suggestions.length ? `\n**💡 Suggestions:**\n` + r.suggestions.map(s => `- ${s}`).join('\n') : '',
+          `\n**📊 Doc Quality:** ${r.docQuality.score}/100 — ${r.docQuality.label}`,
+          r.docQuality.issues.length ? r.docQuality.issues.map(i => `  - ${i}`).join('\n') : '',
+          usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD),
+        ].filter(Boolean).join('\n');
         return { content: [{ type: 'text' as const, text }] };
       } catch (err) {
         return {
