@@ -181,6 +181,7 @@
       display: flex;
       align-items: center;
       padding: 0 24px;
+      overflow: visible;
     }
     .pg2-nav__inner {
       width: 100%;
@@ -190,6 +191,7 @@
       align-items: center;
       gap: 16px;
       overflow: visible;
+      flex-wrap: nowrap;
     }
     .pg2-nav__brand {
       display: flex;
@@ -1280,24 +1282,53 @@
 
     /* Mobile: ≤600px */
     @media (max-width: 600px) {
-      /* Nav bar layout — hamburger LEFT, brand center-ish, sign-in RIGHT */
-      .pg2-nav { padding: 0 14px; }
+      /* 3-col layout: [☰] [🦜 Brand — grows] [Sign In] */
+      .pg2-nav { padding: 0 14px; overflow: visible; }
       .pg2-nav__inner {
         gap: 8px;
         overflow: visible;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
       }
-      /* Brand always visible, shrink sub-text */
-      .pg2-nav__brand { gap: 8px; flex-shrink: 0; }
+      /* Hamburger — fixed left, never shrinks */
+      .pg2-nav__hamburger {
+        display: flex !important;
+        flex-shrink: 0;
+        order: 0;
+      }
+      /* Brand — takes up remaining space, never hidden */
+      .pg2-nav__brand {
+        display: flex !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 6px;
+        flex-shrink: 1;
+        order: 1;
+      }
       .pg2-nav__brand-sub { display: none; }
-      .pg2-nav__brand-text { font-size: 13px; }
-      .pg2-nav__logo { width: 36px; height: 26px; }
+      .pg2-nav__brand-text {
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pg2-nav__logo { width: 36px; height: 26px; flex-shrink: 0; }
 
-      /* Right side — hide live badge & pricing CTA, keep Sign In always visible */
-      .pg2-nav__right { gap: 6px; flex-shrink: 0; }
-      .pg2-live-badge { display: none; }
-      .pg2-nav__pricing-cta { display: none; }
+      /* Right side — pushed to far right, never shrinks */
+      .pg2-nav__right {
+        display: flex !important;
+        flex-shrink: 0;
+        flex-grow: 0;
+        gap: 6px;
+        margin-left: auto;
+        order: 2;
+      }
+      /* Hide these on small mobile */
+      .pg2-live-badge { display: none !important; }
+      .pg2-nav__pricing-cta { display: none !important; }
+      /* Sign In always visible */
       .pg2-nav__signin {
-        display: inline-flex !important;   /* always show Sign In */
+        display: inline-flex !important;
         padding: 0 12px;
         font-size: 12px;
         height: 32px;
@@ -1346,9 +1377,9 @@
     }
 
     @media (max-width: 380px) {
-      .pg2-nav__brand-text { font-size: 12px; }
-      .pg2-nav__logo { width: 30px; height: 22px; }
-      .pg2-nav__signin { padding: 0 8px; font-size: 11px; }
+      .pg2-nav__brand-text { font-size: 11px; }
+      .pg2-nav__logo { width: 28px; height: 20px; }
+      .pg2-nav__signin { padding: 0 8px !important; font-size: 11px !important; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
@@ -1414,7 +1445,7 @@
     <a href="/" class="pg2-nav__brand">
       <picture>
         <source srcset="parrot-logo.webp" type="image/webp">
-        <img loading="lazy" src="parrot-logo.png" alt="Poly-Glot parrot logo" class="pg2-nav__logo" width="90" height="64">
+        <img loading="eager" src="parrot-logo.png" alt="Poly-Glot parrot logo" class="pg2-nav__logo" width="90" height="64">
       </picture>
       <span class="pg2-nav__brand-text">Poly-Glot AI<span class="pg2-nav__brand-sub"> · Code Comment Library</span></span>
     </a>
