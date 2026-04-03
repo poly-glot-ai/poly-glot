@@ -189,7 +189,7 @@ async function handleChatRequest(request, _chatContext, stream, token) {
             '**Pro starts at $9/month.**',
             '🎁 Use code **`EARLYBIRD3`** at checkout for **3 months completely free.**',
             '',
-            '[**→ Get Pro at poly-glot.ai**](https://poly-glot.ai/#pg-pricing-section)',
+            `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
             '',
             'After subscribing, run **Poly-Glot: Configure License Token** in the Command Palette to unlock Pro instantly.',
         ].join('\n'));
@@ -239,9 +239,9 @@ async function handleChatRequest(request, _chatContext, stream, token) {
                     '',
                     `You've used **${count}/${FREE_LIMIT}** free files this month.`,
                     '',
-                    '**Upgrade to Pro for unlimited files — 50% off with code `EARLYBIRD3`**',
+                    '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
                     '',
-                    `[→ Upgrade at poly-glot.ai](${UPGRADE_URL})`,
+                    `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
                     '',
                     'Already subscribed? Run **Poly-Glot: Configure License Token** to unlock.',
                 ].join('\n'));
@@ -266,7 +266,9 @@ async function handleChatRequest(request, _chatContext, stream, token) {
                 '',
                 `Why-comments${cmd === 'both' ? ' and Both mode' : ''} are Pro features.`,
                 '',
-                '**Get 3 months free** with code **`EARLYBIRD3`** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)',
+                '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
+                '',
+                `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
                 '',
                 'Already have Pro? Run **Poly-Glot: Configure License Token** to unlock.',
             ].join('\n'));
@@ -284,7 +286,9 @@ async function handleChatRequest(request, _chatContext, stream, token) {
                 `Free tier supports JavaScript, TypeScript, Python, and Java.`,
                 `**${langId}** is a Pro language.`,
                 '',
-                '**Get 3 months free** with code **`EARLYBIRD3`** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)',
+                '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
+                '',
+                `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
             ].join('\n'));
             stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
             return { metadata: { command: cmd } };
