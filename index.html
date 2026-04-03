@@ -330,6 +330,58 @@
     /* Theme toggle removed — always dark mode */
 
     /* Light mode removed — always dark */
+
+  /* ── How It Works steps ──────────────────────────────────── */
+  .pg2-steps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .pg2-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 160px;
+    max-width: 200px;
+  }
+  .pg2-step__num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+  }
+  .pg2-step__text {
+    font-size: 14px;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.5;
+  }
+  .pg2-step__arrow {
+    font-size: 22px;
+    color: #6366f1;
+    align-self: flex-start;
+    margin-top: 9px;
+    padding: 0 4px;
+  }
+  @media (max-width: 640px) {
+    .pg2-steps { flex-direction: column; align-items: center; gap: 16px; }
+    .pg2-step__arrow { transform: rotate(90deg); }
+    .pg2-step { max-width: 100%; }
+  }
   </style>
 </head>
 <body>
