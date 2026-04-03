@@ -9,6 +9,14 @@
 
 ---
 
+## 🎬 See It In Action
+
+[![Poly-Glot AI — Demo Video](https://img.youtube.com/vi/uIi7pbe5H6c/hqdefault.jpg)](https://youtu.be/uIi7pbe5H6c)
+
+> *Click the thumbnail to watch the demo on YouTube*
+
+---
+
 ## ✨ What is Poly-Glot?
 
 **Poly-Glot** is a VS Code extension that uses AI to write your code documentation for you — in seconds. Select a function, press a shortcut, and get perfect, language-native comments inserted directly into your file.
