@@ -250,6 +250,7 @@
 
     /* ── Hamburger menu ─────────────────────────────────────── */
     .pg2-nav__hamburger {
+      /* Hidden on desktop, shown on mobile via media query below */
       display: none;
       flex-direction: column;
       justify-content: center;
@@ -259,7 +260,6 @@
       padding: 5px; border-radius: 6px;
       transition: background .15s;
       flex-shrink: 0;
-      order: -1;
       z-index: 300;
     }
     .pg2-nav__hamburger:hover { background: rgba(255,255,255,.07); }
@@ -1267,30 +1267,48 @@
     .pg2-footer__domain { color: var(--accent); }
 
     /* ── RESPONSIVE NAV ─────────────────────────────────────── */
+
+    /* Tablet: 601–900px — hide most nav links, show hamburger + GitHub App link only */
     @media (max-width: 900px) {
-      .pg2-nav__links { display: none; }
-      .pg2-nav__hamburger { display: flex; }
+      .pg2-nav__hamburger { display: flex; }          /* show hamburger */
+      .pg2-nav__links { display: none; }              /* hide all nav links by default */
     }
-    /* Between 600-900px show GitHub App link only */
     @media (max-width: 900px) and (min-width: 601px) {
-      .pg2-nav__links {
-        display: flex;
-      }
-      .pg2-nav__link:not(.pg2-nav__link--github) { display: none; }
+      .pg2-nav__links { display: flex; }              /* show link row */
+      .pg2-nav__link:not(.pg2-nav__link--github) { display: none; } /* only GitHub App */
     }
+
+    /* Mobile: ≤600px */
     @media (max-width: 600px) {
+      /* Nav bar layout — hamburger LEFT, brand center-ish, sign-in RIGHT */
+      .pg2-nav { padding: 0 14px; }
+      .pg2-nav__inner {
+        gap: 8px;
+        overflow: visible;
+      }
+      /* Brand always visible, shrink sub-text */
+      .pg2-nav__brand { gap: 8px; flex-shrink: 0; }
+      .pg2-nav__brand-sub { display: none; }
+      .pg2-nav__brand-text { font-size: 13px; }
+      .pg2-nav__logo { width: 36px; height: 26px; }
+
+      /* Right side — hide live badge & pricing CTA, keep Sign In always visible */
+      .pg2-nav__right { gap: 6px; flex-shrink: 0; }
+      .pg2-live-badge { display: none; }
+      .pg2-nav__pricing-cta { display: none; }
+      .pg2-nav__signin {
+        display: inline-flex !important;   /* always show Sign In */
+        padding: 0 12px;
+        font-size: 12px;
+        height: 32px;
+      }
+
+      /* Hero */
       .pg2-hero { padding: 48px 16px 40px; }
       .pg2-hero__headline { font-size: 28px; }
       .pg2-hero__sub { font-size: 15px; }
       .pg2-hero__cta-primary,
       .pg2-hero__cta-secondary { height: 44px; padding: 0 20px; font-size: 14px; }
-      .pg2-live-badge .pg2-live-badge__sub { display: none; }
-      .pg2-nav__pricing-cta { display: none; }
-      .pg2-nav__brand-sub { display: none; }
-      .pg2-nav__logo { width: 40px; height: 29px; }
-      .pg2-nav { padding: 0 14px; }
-      .pg2-nav__brand { gap: 8px; }
-      .pg2-nav__signin { padding: 0 10px; font-size: 11px; }
       /* Trust bar */
       .pg2-trust-bar { padding: 12px 16px; }
       .pg2-trust-bar__inner { gap: 12px 24px; }
@@ -1309,10 +1327,6 @@
       .pg2-gen-heading p { font-size: 13px; padding-right: 60px; }
       /* Container padding */
       .container { padding: 0 14px !important; }
-      /* Nav — tighten for mobile */
-      .pg2-nav__inner { gap: 6px; }
-      .pg2-nav__right { gap: 5px; }
-      .pg2-live-badge { display: none; }
       /* Mockup chat — send button fix */
       .pg2-chat-send {
         flex: 0 0 34px !important;
@@ -1330,9 +1344,11 @@
       /* Assistant section — prevent FAB overlap */
       .pg2-assistant-section { padding-bottom: 80px; }
     }
+
     @media (max-width: 380px) {
       .pg2-nav__brand-text { font-size: 12px; }
-      .pg2-nav__logo { width: 32px; height: 23px; }
+      .pg2-nav__logo { width: 30px; height: 22px; }
+      .pg2-nav__signin { padding: 0 8px; font-size: 11px; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
@@ -1389,12 +1405,12 @@
      ════════════════════════════════════════════════════════════ -->
 <nav class="pg2-nav" role="navigation" aria-label="Main navigation">
   <div class="pg2-nav__inner">
-    <!-- Brand -->
-    <!-- Hamburger (mobile only) — LEFT side -->
+    <!-- Hamburger (mobile only) — LEFT side, always first in DOM -->
     <button class="pg2-nav__hamburger" id="pg2NavHamburger" aria-label="Open navigation menu" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
 
+    <!-- Brand — logo + name, always visible -->
     <a href="/" class="pg2-nav__brand">
       <picture>
         <source srcset="parrot-logo.webp" type="image/webp">
@@ -1403,7 +1419,7 @@
       <span class="pg2-nav__brand-text">Poly-Glot AI<span class="pg2-nav__brand-sub"> · Code Comment Library</span></span>
     </a>
 
-    <!-- Nav links -->
+    <!-- Nav links (desktop only) -->
     <div class="pg2-nav__links">
       <a href="#commentGenerator" class="pg2-nav__link">Demo</a>
       <a href="#pg-pricing-section" class="pg2-nav__link">Pricing</a>
@@ -1413,16 +1429,16 @@
       <a href="#pg-github-app-section" class="pg2-nav__link pg2-nav__link--github">🐙 GitHub App</a>
     </div>
 
-    <!-- Right badges -->
+    <!-- Right side — always visible -->
     <div class="pg2-nav__right">
       <!-- Live badge — links to pricing -->
       <a href="#pg-pricing-section" class="pg2-live-badge" onclick="if(typeof gtag==='function') gtag('event','nav_live_badge_click');">
         <span class="pg2-live-badge__dot"></span>
         <span>Poly-Glot AI is Live!</span>
       </a>
-      <!-- See Plans -->
+      <!-- See Plans (hidden on small mobile) -->
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
-      <!-- Sign In -->
+      <!-- Sign In — always visible -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
     </div>
   </div>
