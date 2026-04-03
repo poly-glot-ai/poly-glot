@@ -880,6 +880,7 @@ async function runBugs(args: string[]): Promise<void> {
     const result = await gen.findBugs(code, lang);
     stopSpin();
     ping({ cmd: 'bugs', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.red}🐛 Bug Audit — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -920,6 +921,7 @@ async function runRefactor(args: string[]): Promise<void> {
     const result = await gen.suggestRefactors(code, lang);
     stopSpin();
     ping({ cmd: 'refactor', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.yellow}⚡ Refactor Suggestions — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -970,6 +972,7 @@ async function runTest(args: string[]): Promise<void> {
     const result = await gen.generateTests(code, lang);
     stopSpin();
     ping({ cmd: 'test', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.green}🧪 Generated Tests — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -1009,6 +1012,7 @@ async function runExplain(args: string[]): Promise<void> {
     const result = await gen.explainCode(code, lang);
     stopSpin();
     ping({ cmd: 'explain', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
+    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.cyan}🔍 Code Analysis — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Cost: $${result.cost.toFixed(5)}${COLORS.reset}\n`);
