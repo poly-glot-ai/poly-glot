@@ -9,17 +9,22 @@
  * Falls back silently to whatever the HTML already shows.
  *
  * Cache strategy: sessionStorage (per browser tab session).
- *   - First page load  → fetches from APIs (≤ 4 requests, parallel)
+ *   - First page load  → fetches from APIs (≤ 6 requests, parallel)
  *   - Same-tab revisit → instant from cache (no network)
  *   - Next session     → fresh fetch
  *   - Cache TTL        → 3 hours (matches Actions cron schedule)
  *
  * data-live targets updated:
- *   npm-version    → poly-glot-ai-cli latest version  (e.g. "1.9.5")
+ *   npm-version    → poly-glot-ai-cli latest version  (e.g. "2.0.1")
  *   mcp-version    → poly-glot-mcp latest version     (e.g. "1.0.0")
- *   vscode-version → VS Code ext version              (e.g. "1.4.6")
- *   dl-week        → npm weekly downloads             (e.g. "1,758")
- *   dl-total       → npm all-time downloads           (e.g. "1,834")
+ *   vscode-version → VS Code ext version              (e.g. "1.4.10")
+ *   dl-week        → npm weekly downloads             (e.g. "936")
+ *   dl-total       → npm all-time downloads           (e.g. "1,858")
+ *
+ * Install counter widget:
+ *   pg2CounterTotal  → npm all-time downloads (animated)
+ *   pg2CounterWeek   → npm weekly downloads   (animated)
+ *   pg2CounterVSCode → combined extension installs: VS Code + Open VSX (animated)
  *
  * CLI terminal demo:
  *   Updates the npm install output line
@@ -29,7 +34,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY    = 'pg_live_data_v4';
+  var CACHE_KEY    = 'pg_live_data_v5';
   var CACHE_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
 
   // ── Tiny fetch helper — returns Promise<json|null>, never rejects ───────────
@@ -99,12 +104,7 @@
         if (dlTotal) setText(el, dlTotal.toLocaleString());
       });
 
-      // 5. VS Code install count
-      setAll('[data-live="vscode-installs"]', function (el) {
-        if (data.vscodeInstalls) setText(el, Math.round(data.vscodeInstalls).toLocaleString());
-      });
-
-      // 6. CLI terminal demo install output line
+      // 5. CLI terminal demo install output line
       //    Targets the line starting with "+" inside .cli-demo-body
       if (npmVer) {
         try {
@@ -118,7 +118,7 @@
         } catch (e) {}
       }
 
-      // 7. Set debug attributes on <html>
+      // 6. Set debug attributes on <html>
       try {
         document.documentElement.setAttribute('data-live-npm', npmVer);
         document.documentElement.setAttribute('data-live-vscode', vscVer);
@@ -160,7 +160,10 @@
             flags: 914
           })
         }
-      )
+      ),
+
+      // Open VSX Registry — extension download count
+      safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot')
 
     ]).then(function (res) {
       var cliLatest  = res[0];
@@ -168,6 +171,7 @@
       var cliWeek    = res[2];
       var cliRange   = res[3];
       var vscResp    = res[4];
+      var ovxResp    = res[5];
 
       var data = {};
 
@@ -181,17 +185,28 @@
       try {
         var ext = vscResp.results[0].extensions[0];
         data.vscodeVersion = ext.versions[0].version;
-        // capture total installs: install (via VS Code) + downloadCount (via web)
-        // These two together match the "Till Date" acquisition count in the publisher dashboard
+        // VS Code Marketplace: install (from VS Code app) + downloadCount (from web)
         var vsInstall  = 0;
         var vsDownload = 0;
         (ext.statistics || []).forEach(function (s) {
           if (s.statisticName === 'install')       vsInstall  = s.value || 0;
           if (s.statisticName === 'downloadCount') vsDownload = s.value || 0;
         });
-        var vsTotal = vsInstall + vsDownload;
-        if (vsTotal > 0) data.vscodeInstalls = vsTotal;
+        data.vscodeMarketplaceInstalls = vsInstall + vsDownload;
       } catch (e) {}
+
+      // Open VSX Registry — downloadCount
+      try {
+        var ovxCount = ovxResp && typeof ovxResp.downloadCount === 'number'
+                       ? ovxResp.downloadCount : 0;
+        data.openVsxInstalls = ovxCount;
+      } catch (e) {}
+
+      // Combined extension installs: VS Code Marketplace + Open VSX
+      // This is the true total across all stores — shown in the landing page counter
+      var mkt = data.vscodeMarketplaceInstalls || 0;
+      var ovx = data.openVsxInstalls           || 0;
+      if (mkt > 0 || ovx > 0) data.vscodeInstalls = mkt + ovx;
 
       return data;
     });
