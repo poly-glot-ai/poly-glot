@@ -46,6 +46,7 @@ Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Son
 | Shared team license token | ❌ | ❌ | ✅ | ✅ |
 | Priority support | ❌ | ✅ | ✅ | ✅ |
 | SLA + private deployment | ❌ | ❌ | ❌ | ✅ |
+| **Seats** | **1** | **1** | **Up to 5** | **Contact us** |
 | **Price** | **$0** | **$9/mo** | **$29/mo** | **Custom** |
 
 ### 💎 Upgrade
