@@ -34,7 +34,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.9.0';  // +login, +server-side usage sync
+const VERSION = '1.9.2';  // +startup version check, deprecate old versions
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -302,12 +302,47 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
+// ── Startup version check ─────────────────────────────────────────────────────
+// Fire-and-forget: checks npm registry for a newer version and warns the user.
+// Never blocks a command — resolves in background, prints after command output.
+async function checkForUpdate(): Promise<void> {
+    if (process.env.CI) return; // skip in CI/CD
+    try {
+        const res = await fetch(
+            `https://registry.npmjs.org/poly-glot-ai-cli/latest`,
+            { signal: AbortSignal.timeout(2500), headers: { 'Accept': 'application/json' } }
+        );
+        if (!res.ok) return;
+        const data = await res.json() as { version?: string; deprecated?: string };
+        const latest = data.version || '';
+        if (!latest || latest === VERSION) return;
+
+        // Semver compare: if latest > current, nudge upgrade
+        const pa = VERSION.split('.').map(Number);
+        const pb = latest.split('.').map(Number);
+        let isOlder = false;
+        for (let i = 0; i < 3; i++) {
+            if ((pa[i] || 0) < (pb[i] || 0)) { isOlder = true; break; }
+            if ((pa[i] || 0) > (pb[i] || 0)) break;
+        }
+        if (isOlder) {
+            console.warn(
+                `\n  \x1b[33m⚠️   Update available: v${VERSION} → v${latest}\x1b[0m` +
+                `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to upgrade.\x1b[0m\n`
+            );
+        }
+    } catch { /* non-fatal — network down etc */ }
+}
+
 async function main(): Promise<void> {
     const args = process.argv.slice(2);
     const cmd  = args[0];
 
     if (!cmd || cmd === '--help' || cmd === '-h') { printHelp(); process.exit(0); }
     if (cmd === '--version' || cmd === '-v')      { console.log(VERSION); process.exit(0); }
+
+    // Fire-and-forget version check — prints nudge after command if outdated
+    void checkForUpdate();
 
     // ── Load config ───────────────────────────────────────────────────────
     const cfg = loadConfig();
