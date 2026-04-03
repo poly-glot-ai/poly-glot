@@ -1527,6 +1527,13 @@
       <span class="pg2-hero__eyebrow-dot"></span>
       AI Code Documentation
     </div>
+    <!-- Open VSX / Cursor availability banner -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:#a78bfa;margin-bottom:16px;flex-wrap:wrap;justify-content:center;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm13 2v2h-2v2h2v2h2v-2h2v-2h-2v-2z"/></svg>
+      Now available on
+      <a href="https://open-vsx.org/extension/poly-glot-ai/poly-glot" target="_blank" rel="noopener" style="color:#c4b5fd;text-decoration:underline;text-underline-offset:2px;">Open VSX Registry</a>
+      — install directly in <strong style="color:#e0d7ff;">Cursor</strong> &amp; VS Code
+    </div>
     <h2 class="pg2-hero__headline">
       Add documentation to any codebase<br>
       <em>— in seconds.</em>
@@ -2659,11 +2666,16 @@ function pg2OpenAssistant(text) {
 <footer class="pg2-footer" aria-label="Site footer">
   <div class="pg2-footer__links">
     <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="pg2-footer__link">💻 VS Code Extension</a>
+    <a href="https://open-vsx.org/extension/poly-glot-ai/poly-glot" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(124,58,237,.3);color:#a78bfa;">⬛ Open VSX · Cursor ↗</a>
     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="pg2-footer__link pg2-footer__link--cli">⌨️ CLI on npm ↗</a>
     <a href="#pg-copilot-section" class="pg2-footer__link pg2-footer__link--copilot">🤖 Copilot Chat ↗</a>
     <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(99,102,241,.3);color:#818cf8;">🐙 GitHub App ↗</a>
   </div>
   <div class="pg2-footer__badges">
+    <!-- Open VSX badge -->
+    <a href="https://open-vsx.org/extension/poly-glot-ai/poly-glot" target="_blank" rel="noopener" style="display:inline-flex;opacity:0.85;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" aria-label="Available on Open VSX Registry">
+      <img src="https://img.shields.io/open-vsx/v/poly-glot-ai/poly-glot?label=Open%20VSX%20%7C%20Cursor&color=7c3aed&style=for-the-badge" alt="Open VSX Version" style="height:40px;display:block;">
+    </a>
     <a href="https://www.producthunt.com/my/products" target="_blank" rel="noopener noreferrer" style="display:inline-flex;opacity:0.85;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
       <img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=110350&theme=light" alt="Poly-Glot AI | Product Hunt" style="width:250px;height:54px;display:block;max-width:100%;" width="250" height="54">
     </a>

@@ -5,7 +5,10 @@
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/poly-glot-ai.poly-glot?label=version&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?label=installs&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/poly-glot-ai.poly-glot?label=rating&color=f5a623&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+[![Open VSX](https://img.shields.io/open-vsx/v/poly-glot-ai/poly-glot?label=Open%20VSX%20%7C%20Cursor&color=7c3aed&style=flat-square)](https://open-vsx.org/extension/poly-glot-ai/poly-glot)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+
+> 💻 **Also available on [Open VSX Registry](https://open-vsx.org/extension/poly-glot-ai/poly-glot)** — install directly in **Cursor** and other VS Code-compatible editors.
 
 ---
 

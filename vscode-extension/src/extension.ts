@@ -7,13 +7,113 @@ import { TemplatesSidebarProvider } from './sidebar';
 const AUTH_API        = 'https://poly-glot.ai/api/auth';
 const FREE_LANGUAGES  = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS       = ['pro', 'team', 'enterprise'];
-const UPGRADE_URL     = 'https://poly-glot.ai/#pg-pricing-section';
+const UPGRADE_URL     = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3';
 const PARTICIPANT_ID  = 'poly-glot.chat';
+const FREE_LIMIT      = 50;
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
 let statusBarItem: vscode.StatusBarItem;
 let aiGenerator: AIGenerator;
+let extContext: vscode.ExtensionContext;
+
+// ─── Usage Tracking ───────────────────────────────────────────────────────────
+
+/** Returns the storage key for the current month e.g. "polyglot.usage.2026-04" */
+function monthKey(): string {
+    const d = new Date();
+    return `polyglot.usage.${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Gets how many files have been processed this month */
+function getMonthlyCount(): number {
+    return extContext.globalState.get<number>(monthKey(), 0);
+}
+
+/** Increments the monthly counter and returns the new value */
+async function incrementMonthlyCount(): Promise<number> {
+    const key   = monthKey();
+    const count = extContext.globalState.get<number>(key, 0) + 1;
+    await extContext.globalState.update(key, count);
+    return count;
+}
+
+/** Updates the status bar to show usage e.g. "$(comment) Poly-Glot (12/50)" */
+function updateStatusBarUsage(isPro: boolean): void {
+    if (isPro) {
+        statusBarItem.text            = '$(comment) Poly-Glot ✨ Pro';
+        statusBarItem.backgroundColor = undefined;
+        statusBarItem.tooltip         = 'Poly-Glot Pro — unlimited files';
+    } else {
+        const count   = getMonthlyCount();
+        const remain  = Math.max(0, FREE_LIMIT - count);
+        statusBarItem.text    = `$(comment) Poly-Glot (${count}/${FREE_LIMIT})`;
+        statusBarItem.tooltip = `${remain} free file${remain === 1 ? '' : 's'} remaining this month — upgrade for unlimited`;
+        statusBarItem.backgroundColor = count >= FREE_LIMIT
+            ? new vscode.ThemeColor('statusBarItem.errorBackground')
+            : count >= FREE_LIMIT * 0.8
+            ? new vscode.ThemeColor('statusBarItem.warningBackground')
+            : undefined;
+    }
+}
+
+/**
+ * Call this after each successful generation.
+ * Shows upgrade nudge at 80% usage, hard stop at 100%.
+ * Returns false if the free limit is exceeded and user is not Pro.
+ */
+async function checkAndIncrementUsage(): Promise<boolean> {
+    if (await hasPro()) {
+        updateStatusBarUsage(true);
+        return true;
+    }
+
+    const count = await incrementMonthlyCount();
+    updateStatusBarUsage(false);
+
+    // Hard limit reached
+    if (count > FREE_LIMIT) {
+        const choice = await vscode.window.showErrorMessage(
+            `🚫 You've used all ${FREE_LIMIT} free files this month.`,
+            'Upgrade for $9/mo — EARLYBIRD3 50% off',
+            'Enter License Token',
+        );
+        if (choice === 'Upgrade for $9/mo — EARLYBIRD3 50% off') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        } else if (choice === 'Enter License Token') {
+            await cmdConfigureLicenseToken();
+        }
+        return false;
+    }
+
+    // 80% warning nudge (at file 40)
+    if (count === Math.floor(FREE_LIMIT * 0.8)) {
+        const choice = await vscode.window.showWarningMessage(
+            `⚡ You've used ${count}/${FREE_LIMIT} free files this month — ${FREE_LIMIT - count} remaining.`,
+            'Upgrade — 50% off with EARLYBIRD3',
+            'Dismiss',
+        );
+        if (choice === 'Upgrade — 50% off with EARLYBIRD3') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        }
+    }
+
+    // Last file warning (at file 50)
+    if (count === FREE_LIMIT) {
+        const choice = await vscode.window.showWarningMessage(
+            `🔴 That was your last free file for this month. Upgrade to keep going.`,
+            'Upgrade for $9/mo — EARLYBIRD3',
+            'Enter License Token',
+        );
+        if (choice === 'Upgrade for $9/mo — EARLYBIRD3') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        } else if (choice === 'Enter License Token') {
+            await cmdConfigureLicenseToken();
+        }
+    }
+
+    return true;
+}
 
 /** Per-session plan cache — verified once, reused for the session lifetime. */
 let _cachedPlan: string | null | undefined = undefined;
@@ -21,7 +121,8 @@ let _cachedPlan: string | null | undefined = undefined;
 // ─── Activation ───────────────────────────────────────────────────────────────
 
 export function activate(context: vscode.ExtensionContext): void {
-    aiGenerator = new AIGenerator(context);
+    extContext   = context;
+    aiGenerator  = new AIGenerator(context);
 
     // Status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -30,6 +131,9 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBarItem.tooltip = 'Poly-Glot: Generate doc-comments (Cmd+Shift+/)';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
+
+    // Show usage count in status bar on activation
+    hasPro().then(isPro => updateStatusBarUsage(isPro));
 
     // Sidebar
     const sidebarProvider = new TemplatesSidebarProvider(context.extensionUri);
@@ -398,6 +502,7 @@ async function cmdGenerateComments(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;
+    if (!await checkAndIncrementUsage()) return;
 
     const languageId = editor.document.languageId;
     if (!await isLanguageAllowed(languageId)) {
@@ -421,6 +526,7 @@ async function cmdWhyComments(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;
+    if (!await checkAndIncrementUsage()) return;
 
     if (!await hasPro()) {
         await showProGate('Why-comments');
@@ -449,6 +555,7 @@ async function cmdBothComments(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;
+    if (!await checkAndIncrementUsage()) return;
 
     if (!await hasPro()) {
         await showProGate('Both mode (doc + why comments)');
@@ -525,6 +632,7 @@ async function _commentDocument(doc: vscode.TextDocument, mode: 'comment' | 'why
     const code = doc.getText();
     if (!code.trim()) { vscode.window.showWarningMessage('Poly-Glot: File is empty.'); return; }
     if (!await requireApiKey()) return;
+    if (!await checkAndIncrementUsage()) return;
 
     const languageId = doc.languageId;
     const fileName   = doc.fileName.split('/').pop() ?? doc.fileName;
