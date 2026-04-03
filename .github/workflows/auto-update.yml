@@ -26,8 +26,8 @@ permissions:
 jobs:
   auto-update:
     runs-on: ubuntu-latest
-    # Skip bot-generated commits (prevents infinite loop)
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update')"
+    # Skip bot-generated commits and manual fix/feat deploys (prevents overwriting UI fixes)
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update') && !contains(github.event.head_commit.message, '[deploy]')"
 
     steps:
       # ── 1. Checkout ─────────────────────────────────────────────────────────
