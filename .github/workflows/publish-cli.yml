@@ -1,14 +1,5 @@
 name: Publish CLI to npm
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Triggers when ANY file under cli/src/ or cli/package.json changes on main.
-# Automatically:
-#   1. Bumps the patch version in cli/package.json
-#   2. Builds the TypeScript
-#   3. Publishes to npm as poly-glot-ai-cli
-#   4. Commits the version bump back to main
-#   5. Triggers the site auto-update workflow to reflect the new version
-# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
     branches: [main]
@@ -19,11 +10,11 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Version bump type'
+        description: 'Version bump (none = publish current version as-is)'
         required: false
         default: 'patch'
         type: choice
-        options: [patch, minor, major]
+        options: [patch, minor, major, none]
 
 permissions:
   contents: write
@@ -31,7 +22,11 @@ permissions:
 jobs:
   publish-cli:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update') && !contains(github.event.head_commit.message, 'chore: bump')"
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'chore: bump') &&
+      !contains(github.event.head_commit.message, 'chore: release') &&
+      !contains(github.event.head_commit.message, 'chore: auto-update')
 
     steps:
       - name: Checkout
@@ -54,14 +49,38 @@ jobs:
         working-directory: cli
         run: npm run build
 
-      - name: Bump patch version
+      - name: Determine version
+        id: version
         working-directory: cli
         run: |
-          BUMP=${{ github.event.inputs.bump || 'patch' }}
-          npm version $BUMP --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          echo "Bumped to $NEW_VERSION"
+          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          REPO_VERSION=$(node -p "require('./package.json').version")
+          NPM_VERSION=$(npm view poly-glot-ai-cli version 2>/dev/null || echo "0.0.0")
+
+          echo "Repo version : $REPO_VERSION"
+          echo "npm version  : $NPM_VERSION"
+          echo "Bump type    : $BUMP"
+
+          # If repo is already ahead of npm, publish as-is without another bump
+          python3 -c "
+          from packaging.version import Version
+          import sys
+          repo=Version('$REPO_VERSION'); npm=Version('$NPM_VERSION'); bump='$BUMP'
+          if bump == 'none' or repo > npm:
+              print('SKIP_BUMP=true')
+              print(f'NEW_VERSION=$REPO_VERSION')
+          else:
+              print('SKIP_BUMP=false')
+              print(f'NEW_VERSION=$REPO_VERSION')
+          " >> $GITHUB_ENV
+
+          if [ "$SKIP_BUMP" != "true" ] && [ "$BUMP" != "none" ]; then
+            npm version $BUMP --no-git-tag-version
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Publish to npm
         working-directory: cli
@@ -69,12 +88,59 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Commit version bump
+      - name: Generate CHANGELOG entry
+        run: |
+          LAST_TAG=$(git tag --sort=-version:refname | grep "^cli-" | head -1 || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --oneline -20 --no-merges -- cli/ \
+              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release")
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges -- cli/ \
+              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release")
+          fi
+
+          DATE=$(date -u +%Y-%m-%d)
+          VERSION="${{ steps.version.outputs.new_version }}"
+          ENTRY="## [${VERSION}] — ${DATE}"$'\n'
+          while IFS= read -r line; do
+            MSG="${line:8}"
+            if echo "$MSG" | grep -qiE "^feat"; then ENTRY+="- ✨ ${MSG}"$'\n'
+            elif echo "$MSG" | grep -qiE "^fix";  then ENTRY+="- 🐛 ${MSG}"$'\n'
+            elif echo "$MSG" | grep -qiE "^perf"; then ENTRY+="- ⚡ ${MSG}"$'\n'
+            else ENTRY+="- ${MSG}"$'\n'; fi
+          done <<< "$COMMITS"
+
+          if [ -f cli/CHANGELOG.md ]; then
+            EXISTING=$(cat cli/CHANGELOG.md)
+            echo -e "${ENTRY}\n---\n\n${EXISTING}" > cli/CHANGELOG.md
+          else
+            echo "$ENTRY" > cli/CHANGELOG.md
+          fi
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const version = '${{ steps.version.outputs.new_version }}';
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              tag_name:  `cli-v${version}`,
+              name:       `CLI v${version}`,
+              body:       `## poly-glot-ai-cli v${version}\n\n\`\`\`\nnpm install -g poly-glot-ai-cli\n\`\`\`\n\n[View on npm](https://www.npmjs.com/package/poly-glot-ai-cli)`,
+              draft:      false,
+              prerelease: false,
+            });
+            console.log(`✅ Release cli-v${version} created`);
+
+      - name: Commit version bump + CHANGELOG
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add cli/package.json cli/package-lock.json
-          git commit -m "chore: bump poly-glot-ai-cli to v${{ env.NEW_VERSION }} [skip ci]"
+          git add cli/package.json cli/package-lock.json cli/CHANGELOG.md || true
+          git diff --staged --quiet || \
+            git commit -m "chore: release cli v${{ steps.version.outputs.new_version }} [skip ci]"
           git push
 
       - name: Trigger site update
@@ -84,5 +150,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/poly-glot-ai/poly-glot/dispatches" \
-            -d '{"event_type":"npm_published","client_payload":{"package":"poly-glot-ai-cli","version":"${{ env.NEW_VERSION }}"}}'
-          echo "Site auto-update triggered"
+            -d '{"event_type":"npm_published","client_payload":{"package":"poly-glot-ai-cli","version":"${{ steps.version.outputs.new_version }}"}}'
