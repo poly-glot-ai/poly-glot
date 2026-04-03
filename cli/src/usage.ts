@@ -144,7 +144,8 @@ export function assertQuota(filesNeeded = 1): void {
     if (remaining <= 10) {
         console.warn(
             `\n  \x1b[33m⚠️   Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m\x1b[33m this month\x1b[0m` +
-            `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n`
+            `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
+            `\n  \x1b[2mPlans: Free $0 · Pro \x1b[0m\x1b[1m$9/mo\x1b[0m\x1b[2m unlimited · Team \x1b[0m\x1b[1m$29/mo\x1b[0m\x1b[2m · Enterprise custom → \x1b[0m\x1b[36mhttps://poly-glot.ai/#pg-pricing-section\x1b[0m\n`
         );
     }
 }
