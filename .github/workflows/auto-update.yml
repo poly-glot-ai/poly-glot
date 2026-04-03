@@ -1,0 +1,49 @@
+name: Auto-Update Site Content
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers:
+#   1. Every push to main  → keeps site current immediately after any commit
+#   2. Every 3 hours       → catches new npm releases & model changes fast
+#   3. Manual dispatch     → run on-demand from Actions UI
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 */3 * * *'   # every 3 hours (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+    # Skip if the last commit was the bot itself (prevents infinite loop)
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update')"
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ── 2. Run the Python updater ────────────────────────────────────────────
+      - name: Fetch live data & patch files
+        run: python3 scripts/update-site.py
+
+      # ── 3. Commit & push only if something changed ──────────────────────────
+      - name: Commit changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html sitemap.xml README.md cli/README.md
+          if git diff --staged --quiet; then
+            echo "✅ Nothing changed — site is already up to date."
+          else
+            CHANGED=$(git diff --staged --name-only | tr '\n' ' ')
+            git commit -m "chore: auto-update ${CHANGED}[skip ci]"
+            git push
+            echo "🚀 Pushed updates: ${CHANGED}"
+          fi
