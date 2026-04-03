@@ -1,3 +1,8 @@
+## [1.9.9] — 2026-04-03
+- ✨ feat: v1.9.8 — close quota gaps in bugs/refactor/test/explain, full flags README [deploy]
+
+---
+
 ## [1.9.7] — 2026-04-03
 - 🐛 fix: v1.9.6 — close quota gaps in bugs/refactor/test/explain commands [deploy]
 - 🐛 fix: correct repository URL to poly-glot-ai org, add homepage, bump to v1.9.5
@@ -14,4 +19,3 @@
 - chore(cli): bump version to 1.9.0
 - ✨ feat(cli): add poly-glot login + server-side usage sync v1.9.0
 - ✨ feat(cli): add poly-glot login command + server-side usage sync v1.9.0
-
