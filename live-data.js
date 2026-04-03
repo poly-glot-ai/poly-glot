@@ -186,11 +186,83 @@
     });
   }
 
+  // ── Animated counter roll-up ────────────────────────────────────────────────
+  function animateCounter(el, targetVal) {
+    if (!el) return;
+    var start     = 0;
+    var duration  = 1800; // ms
+    var startTime = null;
+
+    // Ease out cubic
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var progress = Math.min((ts - startTime) / duration, 1);
+      var current  = Math.round(easeOut(progress) * targetVal);
+      el.textContent = current.toLocaleString();
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = targetVal.toLocaleString();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ── Update install counter widget ───────────────────────────────────────────
+  function updateInstallCounter(data) {
+    try {
+      var total   = data.dlTotal        || 0;
+      var week    = data.dlWeek         || 0;
+      var vscode  = data.vscodeInstalls || 0;
+
+      var elTotal  = document.getElementById('pg2CounterTotal');
+      var elWeek   = document.getElementById('pg2CounterWeek');
+      var elVSCode = document.getElementById('pg2CounterVSCode');
+
+      // Only animate if we have real data
+      if (total  && elTotal)  animateCounter(elTotal,  total);
+      if (week   && elWeek)   animateCounter(elWeek,   week);
+      if (vscode && elVSCode) animateCounter(elVSCode, vscode);
+
+      // Also update data-target attributes for future reference
+      if (elTotal)  elTotal.setAttribute('data-target',  total);
+      if (elWeek)   elWeek.setAttribute('data-target',   week);
+      if (elVSCode) elVSCode.setAttribute('data-target', vscode);
+
+    } catch (e) { /* silent */ }
+  }
+
+  // ── Intersection Observer — animate when counter scrolls into view ──────────
+  function observeCounter(data) {
+    try {
+      var el = document.getElementById('pg2InstallCounter');
+      if (!el) return;
+
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              updateInstallCounter(data);
+              observer.disconnect();
+            }
+          });
+        }, { threshold: 0.3 });
+        observer.observe(el);
+      } else {
+        // Fallback — just update immediately
+        updateInstallCounter(data);
+      }
+    } catch (e) { /* silent */ }
+  }
+
   // ── Boot ────────────────────────────────────────────────────────────────────
   function init() {
     var cached = readCache();
     if (cached) {
       applyData(cached);
+      observeCounter(cached);
       return;
     }
 
@@ -199,6 +271,7 @@
         if (data && Object.keys(data).length > 0) {
           writeCache(data);
           applyData(data);
+          observeCounter(data);
         }
       })
       .catch(function () { /* silent */ });

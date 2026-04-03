@@ -536,6 +536,82 @@
       color: var(--text);
     }
 
+    /* ── REAL-TIME INSTALL COUNTER ─────────────────────────────────── */
+    .pg2-install-counter {
+      background: linear-gradient(135deg, rgba(99,102,241,.08) 0%, rgba(16,185,129,.08) 100%);
+      border-top: 1px solid rgba(99,102,241,.15);
+      border-bottom: 1px solid rgba(99,102,241,.15);
+      padding: 20px 24px;
+      width: 100%;
+    }
+    .pg2-install-counter__inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+    .pg2-install-counter__stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      position: relative;
+    }
+    .pg2-install-counter__number {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(135deg, #a78bfa, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pg2-install-counter__label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .pg2-install-counter__divider {
+      width: 1px;
+      height: 36px;
+      background: rgba(255,255,255,.1);
+      flex-shrink: 0;
+      margin: 0 24px;
+    }
+    .pg2-install-counter__pulse {
+      position: absolute;
+      top: 2px;
+      right: calc(50% - 28px);
+      width: 7px;
+      height: 7px;
+      background: #34d399;
+      border-radius: 50%;
+      animation: pgCounterPulse 2s ease-in-out infinite;
+    }
+    @keyframes pgCounterPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,.5); opacity: 1; }
+      50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); opacity: .8; }
+    }
+    @media (max-width: 600px) {
+      .pg2-install-counter { padding: 16px 12px; }
+      .pg2-install-counter__number { font-size: 22px; }
+      .pg2-install-counter__label { font-size: 10px; }
+      .pg2-install-counter__divider { margin: 0 12px; height: 28px; }
+      .pg2-install-counter__pulse { right: calc(50% - 22px); }
+    }
+    @media (max-width: 380px) {
+      .pg2-install-counter__number { font-size: 18px; }
+      .pg2-install-counter__divider { margin: 0 8px; }
+    }
+
     /* ── PRIVACY TRUST BAR ──────────────────────────────────── */
     .pg2-trust-bar {
       background: rgba(16,185,129,.04);
@@ -1582,6 +1658,29 @@
     </div>
   </div>
 </section>
+
+<!-- ════════════════════════════════════════════════════════════
+     REAL-TIME INSTALL COUNTER
+     ════════════════════════════════════════════════════════════ -->
+<div class="pg2-install-counter" id="pg2InstallCounter" aria-label="Live install statistics">
+  <div class="pg2-install-counter__inner">
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__pulse"></span>
+      <span class="pg2-install-counter__number" id="pg2CounterTotal" data-target="1858">1,858</span>
+      <span class="pg2-install-counter__label">total installs</span>
+    </div>
+    <div class="pg2-install-counter__divider"></div>
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__number" id="pg2CounterWeek" data-target="936">936</span>
+      <span class="pg2-install-counter__label">this week</span>
+    </div>
+    <div class="pg2-install-counter__divider"></div>
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="87">87</span>
+      <span class="pg2-install-counter__label">VS Code installs</span>
+    </div>
+  </div>
+</div>
 
 <!-- ════════════════════════════════════════════════════════════
      PRIVACY TRUST BAR
