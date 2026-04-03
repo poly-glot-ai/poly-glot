@@ -12,6 +12,33 @@
  * Env vars   : RESEND_API_KEY, BASE_URL
  */
 
+/* ── Version gate ─────────────────────────────────────────────────────────── */
+const MINIMUM_CLI_VERSION = '1.9.0';
+
+function semverLt(a, b) {
+  // Returns true if version string a is less than b (e.g. '1.6.2' < '1.9.0')
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) < (pb[i] || 0)) return true;
+    if ((pa[i] || 0) > (pb[i] || 0)) return false;
+  }
+  return false;
+}
+
+function checkVersion(request) {
+  const clientVersion = (request.headers.get('X-CLI-Version') || '').trim();
+  if (!clientVersion) return null; // no header = non-CLI client (web, curl) — allow through
+  if (semverLt(clientVersion, MINIMUM_CLI_VERSION)) {
+    return json({
+      error: 'upgrade_required',
+      message: `poly-glot v${clientVersion} is no longer supported. Run: npm install -g poly-glot-ai-cli`,
+      minimum_version: MINIMUM_CLI_VERSION,
+    }, 426);
+  }
+  return null; // version ok
+}
+
 /* ── Disposable email domain blocklist ─────────────────────────────────────── */
 const DISPOSABLE_DOMAINS = new Set([
   'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
@@ -437,6 +464,10 @@ export default {
 
     const url      = new URL(request.url);
     const pathname = url.pathname.replace(/\/$/, '');
+
+    // Version gate — reject CLI clients older than MINIMUM_CLI_VERSION
+    const versionError = checkVersion(request);
+    if (versionError) return versionError;
 
     // GET endpoints — public or token-authed
     if (request.method === 'GET') {
