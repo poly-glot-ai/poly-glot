@@ -391,7 +391,7 @@ async function main(): Promise<void> {
     // ── Login gate — require account before any real command ─────────────
     // Exceptions: CI/CD (POLYGLOT_LICENSE_TOKEN or CI env), demo command
     const isCI         = !!process.env.CI || !!process.env.POLYGLOT_LICENSE_TOKEN;
-    const hasSession   = !!(cfg as any).sessionToken;
+    const hasSession   = !!cfg.sessionToken;
     const gatedCmds    = ['comment', 'why', 'both', 'bugs', 'refactor', 'test', 'explain'];
 
     if (!hasSession && !isCI && gatedCmds.includes(cmd)) {
@@ -422,7 +422,7 @@ ${COLORS.reset}`);
 
         // Re-check session after login
         const cfgAfter = loadConfig();
-        if (!(cfgAfter as any).sessionToken) {
+        if (!cfgAfter.sessionToken) {
             error('Login required to use Poly-Glot CLI. Run: poly-glot login');
             process.exit(1);
         }
@@ -591,46 +591,71 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
     const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
     await new Promise<void>(res => rl2.question(`  Press ${COLORS.bold}Enter${COLORS.reset} once you've clicked the link… `, () => { rl2.close(); res(); }));
 
+    // Ask user to paste the token from the magic link URL (?token=...)
+    console.log(`  ${COLORS.dim}The magic link looks like:${COLORS.reset}`);
+    console.log(`  ${COLORS.cyan}https://poly-glot.ai/?token=abc123...&plan=free&email=you@example.com${COLORS.reset}\n`);
+
+    const rl3 = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const rawToken = await new Promise<string>(res => rl3.question(`  Paste the ${COLORS.bold}?token=...${COLORS.reset} value from the link: `, res));
+    rl3.close();
+
+    // Extract token — accept full URL or bare token
+    let token = rawToken.trim();
+    const tokenMatch = token.match(/[?&]token=([^&\s]+)/);
+    if (tokenMatch) token = tokenMatch[1];
+
+    if (!token) {
+        error('No token provided. Please click the magic link and copy the token value.');
+        process.exit(1);
+    }
+
     process.stdout.write(`\n  ${COLORS.dim}Verifying…${COLORS.reset}`);
     let verified = false;
-    for (let i = 0; i < 10; i++) {
-        try {
-            const res = await fetch(`${AUTH_API}/refresh`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
-                body:    JSON.stringify({ email }),
-                signal:  AbortSignal.timeout(5000),
-            });
-            if (res.ok) {
-                const data = await res.json() as { token?: string; plan?: string };
-                if (data.token) {
-                    const cfg = loadConfig();
-                    (cfg as any).sessionToken = data.token;
-                    (cfg as any).sessionEmail  = email;
-                    saveConfig(cfg);
-                    const plan      = data.plan || 'free';
-                    const planLabel = PRO_PLANS.includes(plan)
-                        ? `${COLORS.cyan}${plan.charAt(0).toUpperCase() + plan.slice(1)}${COLORS.reset}`
-                        : `${COLORS.dim}Free${COLORS.reset}`;
-                    console.log(`\n\n  ${COLORS.green}${COLORS.bold}✓ Signed in as ${email}${COLORS.reset}`);
-                    console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
-                    if (!PRO_PLANS.includes(plan)) {
-                        console.log(`  ${COLORS.dim}Free plan: 50 files/month · Python, JS, Java · doc-comments only${COLORS.reset}`);
-                        console.log(`  ${COLORS.dim}Upgrade at ${COLORS.reset}${COLORS.cyan}https://poly-glot.ai/#pg-pricing-section${COLORS.reset}`);
-                        console.log(`  ${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} — 3 months free on any paid plan${COLORS.reset}\n`);
-                    }
-                    verified = true;
-                    break;
-                }
+    try {
+        const res = await fetch(`${AUTH_API}/verify`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
+            body:    JSON.stringify({ token }),
+            signal:  AbortSignal.timeout(8000),
+        });
+        if (res.ok) {
+            const data = await res.json() as { email?: string; plan?: string; session?: string };
+            const sessionToken = data.session || token;
+            const verifiedEmail = data.email || email;
+            const plan = (data.plan || 'free').toLowerCase();
+
+            const cfg = loadConfig();
+            cfg.sessionToken = sessionToken;
+            cfg.sessionEmail  = verifiedEmail;
+            saveConfig(cfg);
+
+            const planLabel = PRO_PLANS.includes(plan)
+                ? `${COLORS.cyan}${plan.charAt(0).toUpperCase() + plan.slice(1)}${COLORS.reset}`
+                : `${COLORS.dim}Free${COLORS.reset}`;
+
+            console.log(`\n\n  ${COLORS.green}${COLORS.bold}✓ Signed in as ${verifiedEmail}${COLORS.reset}`);
+            console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
+            if (!PRO_PLANS.includes(plan)) {
+                console.log(`  ${COLORS.dim}Free plan: 50 files/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
+                console.log(`  ${COLORS.dim}Upgrade at ${COLORS.reset}${COLORS.cyan}https://poly-glot.ai/#pg-pricing-section${COLORS.reset}`);
+                console.log(`  ${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} for 50% off your first 3 months${COLORS.reset}\n`);
             }
-        } catch { /* retry */ }
-        await new Promise(r => setTimeout(r, 2000));
-        process.stdout.write('.');
+            verified = true;
+        } else {
+            const err = await res.json() as { error?: string };
+            console.log('');
+            error(err.error || 'Token invalid or expired. Request a new magic link and try again.');
+            process.exit(1);
+        }
+    } catch {
+        console.log('');
+        error('Network error — check your connection and try again.');
+        process.exit(1);
     }
 
     if (!verified) {
-        console.log(`\n\n  ${COLORS.yellow}⚠️  Could not verify session.${COLORS.reset}`);
-        console.log(`  ${COLORS.dim}Try clicking the magic link again, then run ${COLORS.reset}${COLORS.cyan}poly-glot login${COLORS.reset}${COLORS.dim} once more.${COLORS.reset}\n`);
+        console.log(`\n\n  ${COLORS.yellow}⚠️  Could not verify token.${COLORS.reset}`);
+        console.log(`  ${COLORS.dim}Run ${COLORS.reset}${COLORS.cyan}poly-glot login${COLORS.reset}${COLORS.dim} again and paste the full magic link URL.${COLORS.reset}\n`);
         process.exit(1);
     }
 }
@@ -639,7 +664,7 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
 
 async function syncUsageToServer(count = 1): Promise<void> {
     const cfg          = loadConfig();
-    const sessionToken = (cfg as any).sessionToken as string | undefined;
+    const sessionToken = cfg.sessionToken;
     if (!sessionToken) return;
     try {
         await fetch(`${AUTH_API}/track-usage`, {
@@ -653,7 +678,7 @@ async function syncUsageToServer(count = 1): Promise<void> {
 
 async function getServerUsage(): Promise<{ used: number; limit: number; plan: string } | null> {
     const cfg          = loadConfig();
-    const sessionToken = (cfg as any).sessionToken as string | undefined;
+    const sessionToken = cfg.sessionToken;
     if (!sessionToken) return null;
     try {
         const res = await fetch(`${AUTH_API}/get-usage`, {

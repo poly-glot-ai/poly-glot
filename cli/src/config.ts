@@ -12,6 +12,8 @@ export interface Config {
     defaultMode:     CommentMode;      // default commenting mode (comment / why / both)
     lastSeenVersion: string;           // last version the user ran — used for one-time "what's new" notices
     licenseToken:    string;           // Pro/Team license token from poly-glot.ai
+    sessionToken:    string;           // Auth session token from poly-glot.ai login
+    sessionEmail:    string;           // Email address associated with the session
 }
 
 const CONFIG_DIR  = path.join(os.homedir(), '.config', 'polyglot');
@@ -28,9 +30,9 @@ export function loadConfig(): Config {
             model:           process.env.POLYGLOT_MODEL    || 'gpt-4.1-mini',
             defaultMode:     validModes.includes(envMode!) ? envMode! : 'comment',
             lastSeenVersion: '',
-            // POLYGLOT_LICENSE_TOKEN — Pro license token for CI/CD environments
             licenseToken:    process.env.POLYGLOT_LICENSE_TOKEN || '',
-            // CI/CD: respect POLYGLOT_TELEMETRY=0 to disable, default off in CI
+            sessionToken:    '',
+            sessionEmail:    '',
             telemetry: process.env.POLYGLOT_TELEMETRY === '1' ? true
                      : process.env.POLYGLOT_TELEMETRY === '0' ? false
                      : process.env.CI ? false
@@ -39,7 +41,7 @@ export function loadConfig(): Config {
     }
 
     if (!fs.existsSync(CONFIG_FILE)) {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '', sessionToken: '', sessionEmail: '' };
     }
 
     try {
@@ -47,18 +49,20 @@ export function loadConfig(): Config {
         const parsed = JSON.parse(raw) as Partial<Config>;
         const validModes: CommentMode[] = ['comment', 'why', 'both'];
         return {
-            apiKey:          parsed.apiKey    || '',
-            provider:        parsed.provider  || 'openai',
-            model:           parsed.model     || 'gpt-4o-mini',
-            telemetry:       parsed.telemetry ?? null,
+            apiKey:          parsed.apiKey       || '',
+            provider:        parsed.provider     || 'openai',
+            model:           parsed.model        || 'gpt-4.1-mini',
+            telemetry:       parsed.telemetry    ?? null,
             defaultMode:     validModes.includes(parsed.defaultMode as CommentMode)
                                  ? (parsed.defaultMode as CommentMode)
                                  : 'comment',
             lastSeenVersion: parsed.lastSeenVersion || '',
-            licenseToken:    parsed.licenseToken || '',
+            licenseToken:    parsed.licenseToken    || '',
+            sessionToken:    parsed.sessionToken    || '',
+            sessionEmail:    parsed.sessionEmail    || '',
         };
     } catch {
-        return { apiKey: '', provider: 'openai', model: 'gpt-4o-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '' };
+        return { apiKey: '', provider: 'openai', model: 'gpt-4.1-mini', telemetry: null, defaultMode: 'comment', lastSeenVersion: '', licenseToken: '', sessionToken: '', sessionEmail: '' };
     }
 }
 
