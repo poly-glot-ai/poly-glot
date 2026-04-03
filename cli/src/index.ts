@@ -321,6 +321,48 @@ async function main(): Promise<void> {
 
     if (cmd === 'login')    { await runLogin(); return; }
     if (cmd === 'config')   { await runConfig(args.slice(1)); return; }
+
+    // ── Login gate — require account before any real command ─────────────
+    // Exceptions: CI/CD (POLYGLOT_LICENSE_TOKEN or CI env), demo command
+    const isCI         = !!process.env.CI || !!process.env.POLYGLOT_LICENSE_TOKEN;
+    const hasSession   = !!(cfg as any).sessionToken;
+    const gatedCmds    = ['comment', 'why', 'both', 'bugs', 'refactor', 'test', 'explain'];
+
+    if (!hasSession && !isCI && gatedCmds.includes(cmd)) {
+        console.log(`
+${COLORS.bold}${COLORS.cyan}Welcome to Poly-Glot CLI v${VERSION}${COLORS.reset} — AI code documentation for 12 languages.
+
+${COLORS.dim}A free account is required to get started.${COLORS.reset}
+${COLORS.dim}It takes 30 seconds — just your email, no password needed.${COLORS.reset}
+
+  • Free plan:  50 files/month · Python, JS, Java · doc-comments
+  • Pro (\$9/mo): All 12 languages · why-comments · both mode · unlimited files
+  • Team (\$29/mo): 5 seats · team analytics
+
+${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} for 3 months free on any paid plan.${COLORS.reset}
+`);
+        const rl  = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const ans = await new Promise<string>(res => rl.question(`  Create your free account now? (Y/n) `, res));
+        rl.close();
+
+        if (ans.trim().toLowerCase() === 'n') {
+            console.log(`
+  ${COLORS.dim}Run ${COLORS.reset}${COLORS.cyan}poly-glot login${COLORS.reset}${COLORS.dim} when you're ready.
+${COLORS.reset}`);
+            process.exit(0);
+        }
+
+        await runLogin();
+
+        // Re-check session after login
+        const cfgAfter = loadConfig();
+        if (!(cfgAfter as any).sessionToken) {
+            error('Login required to use Poly-Glot CLI. Run: poly-glot login');
+            process.exit(1);
+        }
+        // Continue with original command after successful login
+        Object.assign(cfg, cfgAfter);
+    }
     if (cmd === 'comment')  { await runComment(args.slice(1)); return; }
     if (cmd === 'why')      { await runWhy(args.slice(1)); return; }
     if (cmd === 'both')     { await runBoth(args.slice(1)); return; }
