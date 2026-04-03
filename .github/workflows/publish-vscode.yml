@@ -1,0 +1,123 @@
+name: Publish VS Code Extension
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers when ANY file under vscode-extension/src/ changes on main.
+# Automatically:
+#   1. Bumps the patch version in vscode-extension/package.json
+#   2. Compiles TypeScript  
+#   3. Packages the .vsix with vsce
+#   4. Publishes to VS Code Marketplace (requires VSCE_PAT secret)
+#   5. Saves .vsix as a build artifact (downloaded by local watcher)
+#   6. Commits version bump + new .vsix back to repo
+#   7. Fires repository_dispatch so local macOS watcher picks up the new .vsix
+#      and notifies Harold with a native macOS notification
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'vscode-extension/src/**'
+      - 'vscode-extension/package.json'
+      - 'vscode-extension/tsconfig.json'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-vscode:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore: auto-update') && !contains(github.event.head_commit.message, 'chore: bump')"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install vsce + dependencies
+        working-directory: vscode-extension
+        run: |
+          npm install -g @vscode/vsce
+          npm ci --ignore-scripts
+
+      - name: Compile TypeScript
+        working-directory: vscode-extension
+        run: npm run compile
+
+      - name: Bump patch version
+        working-directory: vscode-extension
+        run: |
+          BUMP=${{ github.event.inputs.bump || 'patch' }}
+          npm version $BUMP --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "VSIX_NAME=poly-glot-${NEW_VERSION}.vsix" >> $GITHUB_ENV
+          echo "Bumped to $NEW_VERSION"
+
+      - name: Package .vsix
+        working-directory: vscode-extension
+        run: vsce package --no-dependencies --out poly-glot-${{ env.NEW_VERSION }}.vsix
+
+      - name: Publish to Marketplace
+        working-directory: vscode-extension
+        run: vsce publish --no-dependencies --packagePath poly-glot-${{ env.NEW_VERSION }}.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Upload .vsix as Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: poly-glot-${{ env.NEW_VERSION }}.vsix
+          path: vscode-extension/poly-glot-${{ env.NEW_VERSION }}.vsix
+          retention-days: 90
+
+      - name: Copy .vsix into repo for watcher to download
+        run: |
+          cp vscode-extension/poly-glot-${{ env.NEW_VERSION }}.vsix \
+             vscode-extension/poly-glot-${{ env.NEW_VERSION }}.vsix
+
+      - name: Commit version bump + .vsix
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add vscode-extension/package.json vscode-extension/package-lock.json
+          git add "vscode-extension/poly-glot-${{ env.NEW_VERSION }}.vsix"
+          git commit -m "chore: bump VS Code extension to v${{ env.NEW_VERSION }} [skip ci]"
+          git push
+
+      - name: Notify local watcher via repository_dispatch
+        # This fires the macOS watcher which will:
+        # - download the .vsix to Desktop/Poly-Glot Marketplace builds/
+        # - send a native macOS notification to Harold
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/poly-glot-ai/poly-glot/dispatches" \
+            -d "{\"event_type\":\"vscode_version_updated\",\"client_payload\":{\"version\":\"${{ env.NEW_VERSION }}\",\"vsix\":\"poly-glot-${{ env.NEW_VERSION }}.vsix\"}}"
+          echo "Local watcher notified — Harold will get a macOS notification"
+
+      - name: Trigger site update
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/poly-glot-ai/poly-glot/dispatches" \
+            -d "{\"event_type\":\"vscode_version_updated\"}"
+          echo "Site auto-update triggered"
