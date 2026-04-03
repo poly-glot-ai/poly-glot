@@ -30,28 +30,31 @@ Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Son
 
 ---
 
-## 🆓 Free vs 💎 Pro
+## 🆓 Free vs 💎 Pro vs 👥 Team vs 🏢 Enterprise
 
-| Feature | Free | Pro |
-|---|:---:|:---:|
-| Generate doc-comments (JSDoc, Javadoc, PyDoc…) | ✅ | ✅ |
-| Explain Code — deep AI analysis panel | ✅ | ✅ |
-| JavaScript, TypeScript, Python, Java | ✅ | ✅ |
-| C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, SQL | 🔒 | ✅ |
-| **Why-Comments** — intent & trade-off inline notes | 🔒 | ✅ |
-| **Both Mode** — doc + why comments in one pass | 🔒 | ✅ |
-| Templates Sidebar | ✅ | ✅ |
-| Real-time cost tracking in status bar | ✅ | ✅ |
-| Files generated per month | 50 | **Unlimited** |
-| Priority support | ❌ | ✅ |
+| Feature | Free | Pro | Team | Enterprise |
+|---|:---:|:---:|:---:|:---:|
+| Generate doc-comments (JSDoc, Javadoc, PyDoc…) | ✅ | ✅ | ✅ | ✅ |
+| Explain Code — deep AI analysis panel | ✅ | ✅ | ✅ | ✅ |
+| JavaScript, TypeScript, Python, Java | ✅ | ✅ | ✅ | ✅ |
+| C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, SQL | 🔒 | ✅ | ✅ | ✅ |
+| **Why-Comments** — intent & trade-off inline notes | 🔒 | ✅ | ✅ | ✅ |
+| **Both Mode** — doc + why comments in one pass | 🔒 | ✅ | ✅ | ✅ |
+| Templates Sidebar | ✅ | ✅ | ✅ | ✅ |
+| Real-time cost tracking in status bar | ✅ | ✅ | ✅ | ✅ |
+| Files generated per month | 50 | **Unlimited** | **Unlimited** | **Unlimited** |
+| Shared team license token | ❌ | ❌ | ✅ | ✅ |
+| Priority support | ❌ | ✅ | ✅ | ✅ |
+| SLA + private deployment | ❌ | ❌ | ❌ | ✅ |
+| **Price** | **$0** | **$9/mo** | **$29/mo** | **Custom** |
 
-### 🎉 Start Free — 14-Day Trial, Code `EARLYBIRD3`
+### 💎 Upgrade
 
-**Pro starts at $9/month.** Start with a **14-day free trial** — no charge until day 15. Use code **`EARLYBIRD3`** at checkout for 50% off your first 3 months. Early bird price locked at $9/mo forever (offer expires May 1, 2026).
+👉 **[View plans → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
 
-👉 **[Start your 14-day free trial → poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
+📧 **Enterprise & Team inquiries: [hwmoses2@icloud.com](mailto:hwmoses2@icloud.com)**
 
-After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) → **`Poly-Glot: Configure License Token`** to activate Pro instantly.
+After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) → **`Poly-Glot: Configure License Token`** to activate instantly.
 
 ---
 
