@@ -162,7 +162,10 @@
       ),
 
       // Open VSX Registry — extension download count
-      safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot')
+      safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot'),
+
+      // GitHub App — installation count
+      safeFetch('https://poly-glot-github-app.onrender.com/stats')
 
     ]).then(function (res) {
       var cliLatest  = res[0];
@@ -171,6 +174,7 @@
       var cliRange   = res[3];
       var vscResp    = res[4];
       var ovxResp    = res[5];
+      var ghResp     = res[6];
 
       var data = {};
 
@@ -212,6 +216,13 @@
 
       // Store each separately for display, combined for legacy usage
       data.vscodeInstalls = data.vscodeMarketplaceInstalls + data.openVsxInstalls;
+
+      // GitHub App installations
+      try {
+        if (ghResp && typeof ghResp.installations === 'number') {
+          data.githubInstallations = ghResp.installations;
+        }
+      } catch (e) {}
 
       return data;
     });
@@ -274,6 +285,11 @@
       setCounter(document.getElementById('pg2CounterVSCode'), data.vscodeMarketplaceInstalls     || 0);
       // Stat 4 — Open VSX (with floor)
       setCounter(document.getElementById('pg2CounterOVX'),    data.openVsxInstalls              || 0);
+      // Stat 5 — GitHub App installations
+      var ghEl = document.getElementById('pg2CounterGitHub');
+      if (ghEl && data.githubInstallations) {
+        setCounter(ghEl, data.githubInstallations);
+      }
     } catch (e) { /* silent */ }
   }
 
