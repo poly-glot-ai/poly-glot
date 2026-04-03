@@ -2,7 +2,7 @@
   "name": "poly-glot",
   "displayName": "Poly-Glot AI",
   "description": "AI-powered code comments & documentation for 12 languages. Auto-generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments & docstrings. GPT-4.1, GPT-4o, Claude 4 & custom models. Free tier included.",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "pricing": "Trial",
   "publisher": "poly-glot-ai",
   "license": "MIT",
