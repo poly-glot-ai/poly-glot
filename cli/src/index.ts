@@ -47,6 +47,14 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
 
 const AUTH_API = 'https://poly-glot.ai/api/auth';
 
+function handleUpgradeRequired(version: string): never {
+    console.error(
+        `\n  \x1b[31m✗  poly-glot v${version} is no longer supported\x1b[0m\n` +
+        `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to get the latest version.\x1b[0m\n`
+    );
+    process.exit(1);
+}
+
 // Free tier: Python, JavaScript, Java — doc-comments only
 const FREE_LANGUAGES  = ['python', 'javascript', 'java'];
 
@@ -75,10 +83,11 @@ async function verifyLicense(token: string): Promise<string | null> {
     try {
         const res = await fetch(`${AUTH_API}/verify`, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
             body:    JSON.stringify({ token }),
             signal:  AbortSignal.timeout(3000),
         });
+        if (res.status === 426) handleUpgradeRequired(VERSION);
         if (!res.ok) { _cachedPlan = null; return null; }
         const data = await res.json() as { valid: boolean; plan?: string };
         _cachedPlan = (data.valid && data.plan) ? data.plan : null;
@@ -503,7 +512,7 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
     try {
         const res = await fetch(`${AUTH_API}/login`, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
             body:    JSON.stringify({ email }),
             signal:  AbortSignal.timeout(8000),
         });
@@ -531,7 +540,7 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
         try {
             const res = await fetch(`${AUTH_API}/refresh`, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
                 body:    JSON.stringify({ email }),
                 signal:  AbortSignal.timeout(5000),
             });
@@ -578,7 +587,7 @@ async function syncUsageToServer(count = 1): Promise<void> {
     try {
         await fetch(`${AUTH_API}/track-usage`, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
             body:    JSON.stringify({ token: sessionToken, count }),
             signal:  AbortSignal.timeout(3000),
         });
@@ -592,7 +601,7 @@ async function getServerUsage(): Promise<{ used: number; limit: number; plan: st
     try {
         const res = await fetch(`${AUTH_API}/get-usage`, {
             method:  'GET',
-            headers: { 'Authorization': `Bearer ${sessionToken}` },
+            headers: { 'Authorization': `Bearer ${sessionToken}`, 'X-CLI-Version': VERSION },
             signal:  AbortSignal.timeout(3000),
         });
         if (!res.ok) return null;
