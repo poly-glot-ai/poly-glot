@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260403-2107">
+<html lang="en" data-build="20260403-2100">
+<html lang="en" data-build="20260403-2100">
 <head>
   <meta charset="UTF-8">
   <link rel="canonical" href="https://poly-glot.ai/">
@@ -536,6 +537,42 @@
     }
 
     /* ── REAL-TIME INSTALL COUNTER ─────────────────────────────────── */
+    /* ── Demo gate overlay ───────────────────────────────────────────────── */
+    #pg2DemoGate {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      border-radius: 10px;
+      animation: pgGateFadeIn .25s ease;
+    }
+    @keyframes pgGateFadeIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+    #pg2DemoGateInner {
+      text-align: center;
+      padding: 32px 28px;
+      max-width: 340px;
+    }
+    .pg2-gate-btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity .15s, transform .15s;
+    }
+    .pg2-gate-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .pg2-gate-btn--primary {
+      background: linear-gradient(135deg, #a78bfa, #34d399);
+      color: #000;
+    }
+
     .pg2-install-counter {
       background: linear-gradient(135deg, rgba(99,102,241,.08) 0%, rgba(16,185,129,.08) 100%);
       border-top: 1px solid rgba(99,102,241,.15);
@@ -600,15 +637,53 @@
       50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); opacity: .8; }
     }
     @media (max-width: 600px) {
-      .pg2-install-counter { padding: 16px 12px; }
+      /* ── Demo gate overlay ───────────────────────────────────────────────── */
+    #pg2DemoGate {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      border-radius: 10px;
+      animation: pgGateFadeIn .25s ease;
+    }
+    @keyframes pgGateFadeIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+    #pg2DemoGateInner {
+      text-align: center;
+      padding: 32px 28px;
+      max-width: 340px;
+    }
+    .pg2-gate-btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity .15s, transform .15s;
+    }
+    .pg2-gate-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .pg2-gate-btn--primary {
+      background: linear-gradient(135deg, #a78bfa, #34d399);
+      color: #000;
+    }
+
+    .pg2-install-counter { padding: 16px 12px; }
+      .pg2-install-counter__inner { flex-wrap: wrap; gap: 14px 0; justify-content: center; }
+      .pg2-install-counter__stat { flex: 0 0 48%; min-width: 0; }
+      .pg2-install-counter__divider { display: none !important; }
       .pg2-install-counter__number { font-size: 22px; }
       .pg2-install-counter__label { font-size: 10px; }
-      .pg2-install-counter__divider { margin: 0 12px; height: 28px; }
       .pg2-install-counter__pulse { right: calc(50% - 22px); }
     }
     @media (max-width: 380px) {
       .pg2-install-counter__number { font-size: 18px; }
-      .pg2-install-counter__divider { margin: 0 8px; }
+      .pg2-install-counter__stat { flex: 0 0 48%; }
     }
 
     /* ── PRIVACY TRUST BAR ──────────────────────────────────── */
@@ -1666,7 +1741,7 @@
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__pulse"></span>
       <span class="pg2-install-counter__number" id="pg2CounterTotal" data-target="1858">1,858</span>
-      <span class="pg2-install-counter__label">total installs</span>
+      <span class="pg2-install-counter__label">npm installs</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
@@ -1676,7 +1751,12 @@
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="87">87</span>
-      <span class="pg2-install-counter__label">VS Code installs</span>
+      <span class="pg2-install-counter__label">VS Code</span>
+    </div>
+    <div class="pg2-install-counter__divider"></div>
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="124">124</span>
+      <span class="pg2-install-counter__label">Open VSX</span>
     </div>
   </div>
 </div>
@@ -2005,7 +2085,7 @@ for (const user of users) {
     <h2 class="overview-heading" id="cli-demo-heading">
       <span class="cli-icon">⌨️</span>
       CLI Tool
-      <span class="live-badge">v<span data-live="npm-version">2.1.4</span> on npm</span>
+      <span class="live-badge">v<span data-live="npm-version">1.9.9</span> on npm</span>
     </h2>
     <p class="overview-text">Comment code from your terminal. <strong>poly-glot-ai-cli</strong> is a zero-dependency command-line tool for batch commenting, CI/CD pipelines, and scripting — powered by the same AI engine as the web app.</p>
     <p style="font-size:12px;color:var(--text-dim);margin:4px 0 0 0;">📦 <span data-live="dl-week">936</span> downloads this week · <span data-live="dl-total">1,858</span> total</p>
@@ -2019,7 +2099,7 @@ for (const user of users) {
       </div>
       <div class="cli-demo-body">
         <div class="cli-line"><span class="cli-prompt">$</span> <span class="cli-cmd">npm install -g poly-glot-ai-cli</span></div>
-        <div class="cli-line cli-output">+ poly-glot-ai-cli@1.9.9</div><!-- pg-npm-version-line -->
+        <div class="cli-line cli-output">+ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e4948b889dc983888b90c9858dc987888da4d5caddcadd">[email&#160;protected]</a></div><!-- pg-npm-version-line -->
         <div class="cli-line" style="margin-top:8px;"><span class="cli-prompt">$</span> <span class="cli-cmd">poly-glot comment vectorStore.py --why</span></div>
         <div class="cli-line cli-output">Poly-Glot — 📝 doc-comments + 💬 why-comments</div>
         <div class="cli-line cli-output">✓ Processing vectorStore.py (Python · PyDoc)</div>
@@ -2229,6 +2309,97 @@ for (const user of users) {
             </div>
           </div>
         </div>
+        <!-- I/O Flags -->
+        <div class="flags-group">
+          <h4 class="flags-group-title">📥 I/O Flags</h4>
+          <div class="flags-table">
+            <div class="flags-row flags-row-header"><span>Flag</span><span>What it does</span><span>Example</span></div>
+            <div class="flags-row">
+              <code class="flags-code">--output &lt;file&gt;</code>
+              <span>Write output to a specific file (single-file mode)</span>
+              <code class="flags-example">poly-glot comment auth.js --output auth.commented.js</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--stdin</code>
+              <span>Read code from stdin, write to stdout (pipe-friendly)</span>
+              <code class="flags-example">cat auth.js | poly-glot comment --stdin --lang javascript</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--mode &lt;m&gt;</code>
+              <span>Set mode explicitly: <code>comment</code> | <code>why</code> | <code>both</code></span>
+              <code class="flags-example">poly-glot comment auth.js --mode both</code>
+            </div>
+          </div>
+        </div>
+        <!-- Config Flags -->
+        <div class="flags-group">
+          <h4 class="flags-group-title">⚙️ Config Flags</h4>
+          <div class="flags-table">
+            <div class="flags-row flags-row-header"><span>Flag</span><span>What it does</span><span>Example</span></div>
+            <div class="flags-row">
+              <code class="flags-code">--key &lt;key&gt;</code>
+              <span>Set OpenAI or Anthropic API key non-interactively</span>
+              <code class="flags-example">poly-glot config --key sk-...</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--token &lt;token&gt;</code>
+              <span>Set Pro license token — unlocks all 12 languages + why-comments</span>
+              <code class="flags-example">poly-glot config --token YOUR_TOKEN</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--telemetry</code>
+              <span>Enable anonymous usage stats</span>
+              <code class="flags-example">poly-glot config --telemetry</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--no-telemetry</code>
+              <span>Disable anonymous usage stats</span>
+              <code class="flags-example">poly-glot config --no-telemetry</code>
+            </div>
+          </div>
+        </div>
+        <!-- Commands -->
+        <div class="flags-group">
+          <h4 class="flags-group-title">🚀 All Commands</h4>
+          <div class="flags-table">
+            <div class="flags-row flags-row-header"><span>Command</span><span>What it does</span><span>Example</span></div>
+            <div class="flags-row">
+              <code class="flags-code">login</code>
+              <span>Sign in or create a free account (magic link)</span>
+              <code class="flags-example">poly-glot login</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">config</code>
+              <span>Interactive setup — API key, provider, default mode</span>
+              <code class="flags-example">poly-glot config</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">demo</code>
+              <span>See Poly-Glot in action with interactive examples</span>
+              <code class="flags-example">poly-glot demo</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">why &lt;file&gt;</code>
+              <span>Shorthand — add why-comments to a file</span>
+              <code class="flags-example">poly-glot why src/auth.js</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">both &lt;file&gt;</code>
+              <span>Shorthand — add doc + why-comments in one pass</span>
+              <code class="flags-example">poly-glot both src/auth.js</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--version / -v</code>
+              <span>Print CLI version</span>
+              <code class="flags-example">poly-glot --version</code>
+            </div>
+            <div class="flags-row">
+              <code class="flags-code">--help / -h</code>
+              <span>Show full help text</span>
+              <code class="flags-example">poly-glot --help</code>
+            </div>
+          </div>
+        </div>
         <!-- CLI terminal example -->
         <div class="cli-flags-terminal" style="margin-top:16px;">
           <div class="cli-flags-terminal-bar">
@@ -2258,7 +2429,7 @@ for (const user of users) {
 </div>
 
 <!-- Live RAG/GEO score watcher — updates when CLI lang OR mode changes -->
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 (function() {
   function refreshCliScore() {
     var lang = (document.getElementById('cliDemoLanguage') || {}).value || 'python';
@@ -2530,7 +2701,7 @@ function pg2OpenAssistant(text) {
             <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);">🔒 <strong style="color:var(--text);">Pro plan gating</strong> — WHY &amp; Both locked on Free</div>
           </div>
           <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="live-badge" style="font-size:11px;">✓ v<span data-live="vscode-version">1.4.11</span> on Marketplace</span>
+            <span class="live-badge" style="font-size:11px;">✓ v<span data-live="vscode-version">1.4.10</span> on Marketplace</span>
             <span style="font-size:11px;color:var(--text-dim);">Requires VS Code 1.95+</span>
           </div>
         </div>
@@ -2847,7 +3018,7 @@ function pg2OpenAssistant(text) {
 <script defer src="analytics.b202604011856.js"></script>
 <script defer src="ai-generator.v221.b202604011856.js"></script>
 <script defer src="scorer.b202604011856.js"></script>
-<script defer src="app.v220.b202604011856.js"></script>
+<script defer src="app.v221.b202604031950.js"></script>
 <script defer src="cli-terminal-demo.b202604011856.js"></script>
 <script defer src="rag-scores.b202604011856.js"></script>
 <script defer src="waitlist.b202604011856.js"></script>

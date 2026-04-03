@@ -34,7 +34,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '1.9.5';  // +startup version check, deprecate old versions
+const VERSION = '2.1.4';  // server-side quota, direct Stripe CTAs, EARLYBIRD3
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -45,7 +45,7 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
-const AUTH_API = 'https://poly-glot.ai/api/auth';
+const AUTH_API = 'https://poly-glot.ai/api';
 
 function handleUpgradeRequired(version: string): never {
     console.error(
@@ -660,36 +660,7 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
     }
 }
 
-// ─── Server-side usage sync ──────────────────────────────────────────────
-
-async function syncUsageToServer(count = 1): Promise<void> {
-    const cfg          = loadConfig();
-    const sessionToken = cfg.sessionToken;
-    if (!sessionToken) return;
-    try {
-        await fetch(`${AUTH_API}/track-usage`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
-            body:    JSON.stringify({ token: sessionToken, count }),
-            signal:  AbortSignal.timeout(3000),
-        });
-    } catch { /* non-fatal */ }
-}
-
-async function getServerUsage(): Promise<{ used: number; limit: number; plan: string } | null> {
-    const cfg          = loadConfig();
-    const sessionToken = cfg.sessionToken;
-    if (!sessionToken) return null;
-    try {
-        const res = await fetch(`${AUTH_API}/get-usage`, {
-            method:  'GET',
-            headers: { 'Authorization': `Bearer ${sessionToken}`, 'X-CLI-Version': VERSION },
-            signal:  AbortSignal.timeout(3000),
-        });
-        if (!res.ok) return null;
-        return await res.json() as { used: number; limit: number; plan: string };
-    } catch { return null; }
-}
+// syncUsageToServer and getServerUsage are now handled inside usage.ts (server-side quota)
 
 // ─── Command: comment ─────────────────────────────────────────────────────────
 
@@ -746,7 +717,7 @@ async function runComment(args: string[]): Promise<void> {
         await assertLanguageAllowed(lang, cfg);
 
         // Quota check for free users (Pro users skip)
-        if (!await hasPro(cfg)) assertQuota(1);
+        if (!await hasPro(cfg)) await assertQuota(1);
 
         const code = await readStdin();
         if (!code.trim()) { error('No input received on stdin.'); process.exit(1); }
@@ -756,7 +727,7 @@ async function runComment(args: string[]): Promise<void> {
         stopSpin();
 
         // Increment only after successful generation
-        if (!isDryRun && !await hasPro(cfg)) { incrementUsage(1); syncUsageToServer(1).catch(() => {}); }
+        if (!isDryRun && !await hasPro(cfg)) { await incrementUsage(1); }
 
         ping({ cmd: 'comment', lang, provider: cfg.provider, mode: 'stdin', version: VERSION }, !!cfg.telemetry);
 
@@ -785,7 +756,7 @@ async function runComment(args: string[]): Promise<void> {
 
         // ── Quota check for free users (upfront, before any work) ────────────
         const isPaidUser = await hasPro(cfg);
-        if (!isPaidUser && !isDryRun) assertQuota(files.length);
+        if (!isPaidUser && !isDryRun) await assertQuota(files.length);
 
         const outputDir = flags['--output-dir'] as string | undefined;
         const verb      = isDryRun ? 'Would process' : 'About to process';
@@ -832,7 +803,7 @@ async function runComment(args: string[]): Promise<void> {
                     if (isDiff)  printDiff(rel, code, output);
                     fs.writeFileSync(outPath, output, 'utf8');
                     ok++;
-                    if (!isPaidUser) incrementUsage(1);
+                    if (!isPaidUser) await incrementUsage(1);
                     console.log(`${COLORS.green}✓${COLORS.reset}`);
                 }
             } catch (e: unknown) {
@@ -967,7 +938,7 @@ async function runBugs(args: string[]): Promise<void> {
 
     // Quota check (Pro users are unlimited but usage is still tracked server-side)
     const isPro = await hasPro(cfg);
-    if (!isPro) assertQuota(1);
+    if (!isPro) await assertQuota(1);
 
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
@@ -975,9 +946,8 @@ async function runBugs(args: string[]): Promise<void> {
     spin(`Auditing ${path.basename(absPath)} for bugs (${lang}, ${cfg.model})…`);
     const result = await gen.findBugs(code, lang);
     stopSpin();
-    if (!isPro) incrementUsage(1);
+    if (!isPro) await incrementUsage(1);
     ping({ cmd: 'bugs', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.red}🐛 Bug Audit — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -1014,7 +984,7 @@ async function runRefactor(args: string[]): Promise<void> {
 
     // Quota check (Pro users are unlimited but usage is still tracked server-side)
     const isPro = await hasPro(cfg);
-    if (!isPro) assertQuota(1);
+    if (!isPro) await assertQuota(1);
 
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
@@ -1022,9 +992,8 @@ async function runRefactor(args: string[]): Promise<void> {
     spin(`Analyzing ${path.basename(absPath)} for refactoring opportunities (${lang}, ${cfg.model})…`);
     const result = await gen.suggestRefactors(code, lang);
     stopSpin();
-    if (!isPro) incrementUsage(1);
+    if (!isPro) await incrementUsage(1);
     ping({ cmd: 'refactor', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.yellow}⚡ Refactor Suggestions — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -1060,7 +1029,7 @@ async function runTest(args: string[]): Promise<void> {
 
     // Quota check (Pro users are unlimited but usage is still tracked server-side)
     const isPro = await hasPro(cfg);
-    if (!isPro) assertQuota(1);
+    if (!isPro) await assertQuota(1);
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
 
@@ -1078,9 +1047,8 @@ async function runTest(args: string[]): Promise<void> {
     spin(`Generating tests for ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.generateTests(code, lang);
     stopSpin();
-    if (!isPro) incrementUsage(1);
+    if (!isPro) await incrementUsage(1);
     ping({ cmd: 'test', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.green}🧪 Generated Tests — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Language: ${lang}${COLORS.reset}\n`);
@@ -1119,7 +1087,7 @@ async function runExplain(args: string[]): Promise<void> {
 
     // Quota check
     const isPro = await hasPro(cfg);
-    if (!isPro) assertQuota(1);
+    if (!isPro) await assertQuota(1);
 
     const code = fs.readFileSync(absPath, 'utf8');
     const gen  = new PolyGlotGenerator(cfg);
@@ -1127,9 +1095,8 @@ async function runExplain(args: string[]): Promise<void> {
     spin(`Analyzing ${path.basename(absPath)} (${lang}, ${cfg.model})…`);
     const result = await gen.explainCode(code, lang);
     stopSpin();
-    if (!isPro) incrementUsage(1);
+    if (!isPro) await incrementUsage(1);
     ping({ cmd: 'explain', lang, provider: cfg.provider, mode: 'file', version: VERSION }, !!cfg.telemetry);
-    syncUsageToServer(1).catch(() => {});
 
     console.log(`\n${COLORS.bold}${COLORS.cyan}🔍 Code Analysis — ${path.basename(absPath)}${COLORS.reset}`);
     console.log(`${COLORS.dim}Model: ${result.model} | Cost: $${result.cost.toFixed(5)}${COLORS.reset}\n`);

@@ -7,7 +7,8 @@ import { TemplatesSidebarProvider } from './sidebar';
 const AUTH_API        = 'https://poly-glot.ai/api/auth';
 const FREE_LANGUAGES  = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS       = ['pro', 'team', 'enterprise'];
-const UPGRADE_URL     = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3';
+const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3'; // Pro $9/mo
+const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3'; // Team $249/yr
 const PARTICIPANT_ID  = 'poly-glot.chat';
 const FREE_LIMIT      = 50;
 

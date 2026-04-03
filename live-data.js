@@ -1,7 +1,7 @@
 /**
- * Poly-Glot Live Data Injector v9
+ * Poly-Glot Live Data Injector
  * ─────────────────────────────────────────────────────────────────────────────
- * Fetches live npm + VS Code + Open VSX data at page load and patches the UI
+ * Fetches live npm + VS Code marketplace data at page load and patches the UI
  * with up-to-the-minute values — without requiring a site redeploy.
  *
  * Runs AFTER all other scripts (loaded last, defer).
@@ -9,52 +9,38 @@
  * Falls back silently to whatever the HTML already shows.
  *
  * Cache strategy: sessionStorage (per browser tab session).
- *   - First page load  → fetches from APIs (6 parallel requests)
- *   - Same-tab revisit → instant from cache (no network)
- *   - Next session     → fresh fetch
- *   - Cache TTL        → 3 hours
+ *   - First page load  → fetches from APIs immediately
+ *   - Poll interval    → re-fetches every 60 seconds while tab is visible
+ *   - Tab hidden       → polling pauses (saves API calls)
+ *   - Tab refocused    → fetches immediately + resumes polling
+ *   - Cache TTL        → 3 hours (used only for instant first paint)
  *
- * Polling: every 60 seconds while tab is visible. Pauses when hidden.
+ * pg2CounterVSCode → combined extension installs: VS Code + Open VSX (animated)
  *
  * data-live targets updated:
- *   npm-version    → poly-glot-ai-cli latest version  (e.g. "2.1.4")
+ *   npm-version    → poly-glot-ai-cli latest version  (e.g. "2.0.1")
  *   mcp-version    → poly-glot-mcp latest version     (e.g. "1.0.0")
- *   vscode-version → VS Code ext version              (e.g. "1.4.11")
+ *   vscode-version → VS Code ext version              (e.g. "1.4.10")
  *   dl-week        → npm weekly downloads             (e.g. "936")
  *   dl-total       → npm all-time downloads           (e.g. "1,858")
  *
  * CLI terminal demo:
  *   Updates the npm install output line
  *   (.cli-demo-body .cli-line.cli-output starting with "+")
- *
- * Install counters (IDs):
- *   pg2CounterTotal  → dlTotal
- *   pg2CounterWeek   → dlWeek
- *   pg2CounterVSCode → vscodeInstalls (VS Code Marketplace + Open VSX combined)
- *
- * Floor logic (never show less than dashboard numbers):
- *   VS_FLOOR  = 87   (VS Code Marketplace "Till Date" dashboard count)
- *   OVX_FLOOR = 124  (Open VSX all-time count)
- *   Combined  = Math.max(VS_FLOOR, api) + Math.max(OVX_FLOOR, ovxApi)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 (function () {
   'use strict';
 
-  var CACHE_KEY    = 'pg_live_data_v9';
-  var CACHE_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
-  var VS_FLOOR     = 87;   // VS Code Marketplace dashboard minimum
-  var OVX_FLOOR    = 124;  // Open VSX minimum
-  var POLL_MS      = 60 * 1000; // 60-second poll interval
-
-  // Track running requestAnimationFrame handles to prevent concurrent animations
-  var _rafHandles  = {};
+  var CACHE_KEY      = 'pg_live_data_v8';
+  var CACHE_TTL_MS   = 3 * 60 * 60 * 1000; // 3 hours
+  var POLL_INTERVAL_MS = 60 * 1000;         // 60 seconds
 
   // ── Tiny fetch helper — returns Promise<json|null>, never rejects ───────────
   function safeFetch(url, opts) {
-    return fetch(url, opts)
+    return fetch(url, opts || {})
       .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function ()  { return null; });
+      .catch(function () { return null; });
   }
 
   // ── sessionStorage cache ────────────────────────────────────────────────────
@@ -64,60 +50,77 @@
       if (!raw) return null;
       var obj = JSON.parse(raw);
       if (Date.now() - obj._ts > CACHE_TTL_MS) return null;
-      return obj.data;
+      return obj;
     } catch (e) { return null; }
   }
 
   function writeCache(data) {
     try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ _ts: Date.now(), data: data }));
-    } catch (e) { /* quota exceeded — ignore */ }
+      data._ts = Date.now();
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch (e) { /* quota / private mode — ignore */ }
   }
 
-  // ── Apply data to DOM ───────────────────────────────────────────────────────
+  // ── DOM helpers ─────────────────────────────────────────────────────────────
   function setAll(selector, fn) {
-    try {
-      document.querySelectorAll(selector).forEach(function (el) {
-        var val = fn(el);
-        if (val != null) el.textContent = val;
-      });
-    } catch (e) { /* silent */ }
+    try { document.querySelectorAll(selector).forEach(fn); } catch (e) {}
   }
 
+  function setText(el, text) {
+    try { if (el) el.textContent = text; } catch (e) {}
+  }
+
+  // ── Apply fetched data to the DOM ───────────────────────────────────────────
   function applyData(data) {
     try {
-      // 1. [data-live="npm-version"] spans
-      setAll('[data-live="npm-version"]', function () { return data.npmVersion || null; });
+      var npmVer  = data.npmVersion    || '';
+      var mcpVer  = data.mcpVersion    || '';
+      var vscVer  = data.vscodeVersion || '';
+      var dlWeek  = data.dlWeek        || 0;
+      var dlTotal = data.dlTotal       || 0;
 
-      // 2. [data-live="mcp-version"] spans
-      setAll('[data-live="mcp-version"]', function () { return data.mcpVersion || null; });
-
-      // 3. [data-live="vscode-version"] spans
-      setAll('[data-live="vscode-version"]', function () { return data.vscodeVersion || null; });
-
-      // 4. [data-live="dl-week"] spans
-      setAll('[data-live="dl-week"]', function () {
-        return data.dlWeek != null ? Number(data.dlWeek).toLocaleString() : null;
+      // 1. All [data-live="npm-version"] spans
+      setAll('[data-live="npm-version"]', function (el) {
+        if (npmVer) setText(el, npmVer);
       });
 
-      // 5. [data-live="dl-total"] spans
-      setAll('[data-live="dl-total"]', function () {
-        return data.dlTotal != null ? Number(data.dlTotal).toLocaleString() : null;
+      // 2. All [data-live="mcp-version"] spans
+      setAll('[data-live="mcp-version"]', function (el) {
+        if (mcpVer) setText(el, mcpVer);
       });
 
-      // 6. CLI terminal demo install output line
-      try {
-        var cliOut = document.querySelector('.cli-demo-body .cli-line.cli-output');
-        if (cliOut && data.npmVersion) {
-          var txt = cliOut.textContent || '';
-          if (txt.startsWith('+')) {
-            cliOut.textContent = '+ poly-glot-ai-cli@' + data.npmVersion + ' installed';
-          }
-        }
-      } catch (e) {}
+      // 3. All [data-live="vscode-version"] spans
+      setAll('[data-live="vscode-version"]', function (el) {
+        if (vscVer) setText(el, vscVer);
+      });
 
-      // 7. data-build meta (for debugging)
+      // 4. Download counts
+      setAll('[data-live="dl-week"]', function (el) {
+        if (dlWeek) setText(el, dlWeek.toLocaleString());
+      });
+
+      setAll('[data-live="dl-total"]', function (el) {
+        if (dlTotal) setText(el, dlTotal.toLocaleString());
+      });
+
+      // 5. CLI terminal demo install output line
+      //    Targets the line starting with "+" inside .cli-demo-body
+      if (npmVer) {
+        try {
+          var termLines = document.querySelectorAll('.cli-demo-body .cli-line.cli-output');
+          termLines.forEach(function (el) {
+            var txt = (el.textContent || '').trim();
+            if (txt.charAt(0) === '+' && txt.indexOf('poly-glot') !== -1) {
+              el.innerHTML = '+ poly-glot-ai-cli@' + npmVer;
+            }
+          });
+        } catch (e) {}
+      }
+
+      // 6. Set debug attributes on <html>
       try {
+        document.documentElement.setAttribute('data-live-npm', npmVer);
+        document.documentElement.setAttribute('data-live-vscode', vscVer);
         document.documentElement.setAttribute('data-live-fetched', new Date().toISOString());
       } catch (e) {}
 
@@ -130,19 +133,19 @@
   function fetchLiveData() {
     return Promise.all([
 
-      // 1. npm CLI — latest version
+      // npm CLI — latest version
       safeFetch('https://registry.npmjs.org/poly-glot-ai-cli/latest'),
 
-      // 2. npm MCP — latest version
+      // npm MCP — latest version
       safeFetch('https://registry.npmjs.org/poly-glot-mcp/latest'),
 
-      // 3. npm CLI — weekly downloads
+      // npm CLI — weekly downloads
       safeFetch('https://api.npmjs.org/downloads/point/last-week/poly-glot-ai-cli'),
 
-      // 4. npm CLI — total downloads (all time)
+      // npm CLI — total downloads (all time)
       safeFetch('https://api.npmjs.org/downloads/range/2026-01-01:2099-01-01/poly-glot-ai-cli'),
 
-      // 5. VS Code Marketplace — extension version + install count
+      // VS Code Marketplace — extension version + install count
       safeFetch(
         'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',
         {
@@ -158,7 +161,7 @@
         }
       ),
 
-      // 6. Open VSX Registry — install count
+      // Open VSX Registry — extension download count
       safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot')
 
     ]).then(function (res) {
@@ -171,64 +174,66 @@
 
       var data = {};
 
-      if (cliLatest && cliLatest.version) data.npmVersion = cliLatest.version;
-      if (mcpLatest && mcpLatest.version) data.mcpVersion = mcpLatest.version;
-      if (cliWeek   && typeof cliWeek.downloads === 'number') data.dlWeek  = cliWeek.downloads;
-      if (cliRange  && Array.isArray(cliRange.downloads)) {
-        data.dlTotal = cliRange.downloads.reduce(function (s, d) { return s + (d.downloads || 0); }, 0);
-      }
-
-      // VS Code Marketplace: combine install + downloadCount, apply floor
+      if (cliLatest && cliLatest.version)  data.npmVersion    = cliLatest.version;
+      if (mcpLatest && mcpLatest.version)  data.mcpVersion    = mcpLatest.version;
+      if (cliWeek   && typeof cliWeek.downloads === 'number')
+                                           data.dlWeek        = cliWeek.downloads;
+      if (cliRange  && Array.isArray(cliRange.downloads))
+                                           data.dlTotal       = cliRange.downloads
+                                             .reduce(function (s, d) { return s + (d.downloads || 0); }, 0);
       try {
-        var ext     = vscResp.results[0].extensions[0];
+        var ext = vscResp.results[0].extensions[0];
         data.vscodeVersion = ext.versions[0].version;
-        var vsInstall = 0, vsDownload = 0;
+        // VS Code Marketplace: install (from VS Code app) + downloadCount (from web)
+        var vsInstall  = 0;
+        var vsDownload = 0;
         (ext.statistics || []).forEach(function (s) {
           if (s.statisticName === 'install')       vsInstall  = s.value || 0;
           if (s.statisticName === 'downloadCount') vsDownload = s.value || 0;
         });
-        data.vscodeMarketplaceInstalls = Math.max(VS_FLOOR, vsInstall + vsDownload);
-      } catch (e) {
-        data.vscodeMarketplaceInstalls = VS_FLOOR;
-      }
+        data.vscodeMarketplaceInstalls = vsInstall + vsDownload;
+      } catch (e) {}
 
-      // Open VSX: apply floor
+      // ── Known floors (verified from dashboards — public API undercounts) ─
+      var VS_FLOOR  = 87;   // VS Code "Till Date" from publisher dashboard
+      var OVX_FLOOR = 124;  // Open VSX downloadCount (API accurate here)
+
+      // Open VSX — apply floor so count never goes backwards
       try {
-        var ovxCount = 0;
-        if (ovxResp) {
-          ovxCount = ovxResp.downloadCount || ovxResp.allVersions && ovxResp.allVersions.reduce
-            ? 0
-            : 0;
-          // Try downloadCount directly
-          if (typeof ovxResp.downloadCount === 'number') ovxCount = ovxResp.downloadCount;
-        }
+        var ovxCount = ovxResp && typeof ovxResp.downloadCount === 'number'
+                       ? ovxResp.downloadCount : 0;
         data.openVsxInstalls = Math.max(OVX_FLOOR, ovxCount);
       } catch (e) {
         data.openVsxInstalls = OVX_FLOOR;
       }
 
-      // Combined VS Code installs (both registries)
-      data.vscodeInstalls = (data.vscodeMarketplaceInstalls || VS_FLOOR) + (data.openVsxInstalls || OVX_FLOOR);
+      // VS Code Marketplace — apply floor (public API lags ~48hrs)
+      data.vscodeMarketplaceInstalls = Math.max(VS_FLOOR, data.vscodeMarketplaceInstalls || 0);
+
+      // Store each separately for display, combined for legacy usage
+      data.vscodeInstalls = data.vscodeMarketplaceInstalls + data.openVsxInstalls;
 
       return data;
     });
   }
 
   // ── Animated counter roll-up ────────────────────────────────────────────────
+  // Track running animation handles per element to allow cancellation
+  var _rafHandles = {};
+
   function animateCounter(el, targetVal) {
     if (!el) return;
-    var id = el.id || ('_el_' + Math.random());
+    var id = el.id || el.className;
 
-    // Cancel any running animation on this element
+    // Cancel any existing animation on this element before starting a new one
     if (_rafHandles[id]) {
       cancelAnimationFrame(_rafHandles[id]);
       delete _rafHandles[id];
     }
 
-    var duration  = 1800; // ms
+    var duration  = 1800;
     var startTime = null;
 
-    // Ease out cubic
     function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
     function step(ts) {
@@ -246,43 +251,35 @@
     _rafHandles[id] = requestAnimationFrame(step);
   }
 
+  // ── Animate first time, snap on poll updates ────────────────────────────────
+  function setCounter(el, val) {
+    if (!el || !val) return;
+    if (!el.hasAttribute('data-animated')) {
+      animateCounter(el, val);
+      el.setAttribute('data-animated', '1');
+    } else {
+      el.textContent = val.toLocaleString();
+    }
+    el.setAttribute('data-target', val);
+  }
+
   // ── Update install counter widget ───────────────────────────────────────────
-  function updateInstallCounter(data, forceAnimate) {
+  function updateInstallCounter(data) {
     try {
-      var total  = data.dlTotal        || 0;
-      var week   = data.dlWeek         || 0;
-      var vscode = data.vscodeInstalls || 0;
-
-      var elTotal  = document.getElementById('pg2CounterTotal');
-      var elWeek   = document.getElementById('pg2CounterWeek');
-      var elVSCode = document.getElementById('pg2CounterVSCode');
-
-      // Animate on first view, snap on subsequent polls
-      function applyCounter(el, val) {
-        if (!el || !val) return;
-        var alreadyAnimated = el.getAttribute('data-animated') === '1';
-        if (!alreadyAnimated || forceAnimate) {
-          animateCounter(el, val);
-          el.setAttribute('data-animated', '1');
-        } else {
-          // Snap silently to new value
-          el.textContent = Number(val).toLocaleString();
-        }
-        el.setAttribute('data-target', val);
-      }
-
-      applyCounter(elTotal,  total);
-      applyCounter(elWeek,   week);
-      applyCounter(elVSCode, vscode);
-
+      // Stat 1 — npm total installs
+      setCounter(document.getElementById('pg2CounterTotal'),  data.dlTotal                      || 0);
+      // Stat 2 — npm this week
+      setCounter(document.getElementById('pg2CounterWeek'),   data.dlWeek                       || 0);
+      // Stat 3 — VS Code Marketplace (with floor)
+      setCounter(document.getElementById('pg2CounterVSCode'), data.vscodeMarketplaceInstalls     || 0);
+      // Stat 4 — Open VSX (with floor)
+      setCounter(document.getElementById('pg2CounterOVX'),    data.openVsxInstalls              || 0);
     } catch (e) { /* silent */ }
   }
 
   // ── Intersection Observer — animate when counter scrolls into view ──────────
-  var _counterObserved = false;
   function observeCounter(data) {
     try {
-      if (_counterObserved) return;
       var el = document.getElementById('pg2InstallCounter');
       if (!el) return;
 
@@ -290,72 +287,86 @@
         var observer = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) {
             if (entry.isIntersecting) {
-              _counterObserved = true;
-              updateInstallCounter(data, false);
+              updateInstallCounter(data);
               observer.disconnect();
             }
           });
         }, { threshold: 0.3 });
         observer.observe(el);
       } else {
-        _counterObserved = true;
-        updateInstallCounter(data, false);
+        // Fallback — just update immediately
+        updateInstallCounter(data);
       }
     } catch (e) { /* silent */ }
   }
 
-  // ── Fetch + apply (used for both init and polling) ──────────────────────────
-  var _latestData = null;
-
+  // ── Single fetch + apply cycle ───────────────────────────────────────────────
   function fetchAndApply() {
-    return fetchLiveData()
+    fetchLiveData()
       .then(function (data) {
         if (data && Object.keys(data).length > 0) {
-          _latestData = data;
           writeCache(data);
           applyData(data);
-          // If counter already in view, update it (snap, no re-animation)
-          if (_counterObserved) {
-            updateInstallCounter(data, false);
-          }
+          updateInstallCounter(data);
         }
       })
       .catch(function () { /* silent */ });
   }
 
-  // ── 60-second polling (pauses when tab hidden) ──────────────────────────────
-  var _pollTimer = null;
-
-  function startPolling() {
-    if (_pollTimer) return;
-    _pollTimer = setInterval(function () {
-      if (!document.hidden) {
-        fetchAndApply();
-      }
-    }, POLL_MS);
-  }
-
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) {
-      // Tab became visible — fetch immediately then resume polling
-      fetchAndApply();
-    }
-  });
-
   // ── Boot ────────────────────────────────────────────────────────────────────
   function init() {
+    // 1. Paint immediately from cache if available (instant render)
     var cached = readCache();
     if (cached) {
-      _latestData = cached;
       applyData(cached);
+      // Set up IntersectionObserver — it will trigger updateInstallCounter once visible
       observeCounter(cached);
-      startPolling();
-      return;
+    } else {
+      // No cache — fetchAndApply will drive first paint via IntersectionObserver
+      var el = document.getElementById('pg2InstallCounter');
+      if (el) {
+        fetchLiveData().then(function(data) {
+          if (data && Object.keys(data).length > 0) {
+            writeCache(data);
+            applyData(data);
+            observeCounter(data);
+          }
+        }).catch(function() {});
+        return; // polling started below handles subsequent updates
+      }
     }
 
-    fetchAndApply().then(function () {
-      if (_latestData) observeCounter(_latestData);
-      startPolling();
+    // 2. Fetch fresh data — but delay slightly so observeCounter animation fires first
+    setTimeout(fetchAndApply, 2000);
+
+    // 3. Poll every 60 seconds while the tab is open
+    //    Uses visibilitychange to pause when tab is hidden — saves API calls
+    var pollTimer = null;
+
+    function startPolling() {
+      if (pollTimer) return; // already running
+      pollTimer = setInterval(fetchAndApply, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    // Start polling immediately
+    startPolling();
+
+    // Pause when tab is hidden, resume when visible
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Tab came back into focus — fetch immediately then resume polling
+        fetchAndApply();
+        startPolling();
+      }
     });
   }
 
