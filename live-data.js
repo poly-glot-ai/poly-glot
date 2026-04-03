@@ -9,10 +9,13 @@
  * Falls back silently to whatever the HTML already shows.
  *
  * Cache strategy: sessionStorage (per browser tab session).
- *   - First page load  → fetches from APIs (≤ 6 requests, parallel)
- *   - Same-tab revisit → instant from cache (no network)
- *   - Next session     → fresh fetch
- *   - Cache TTL        → 3 hours (matches Actions cron schedule)
+ *   - First page load  → fetches from APIs immediately
+ *   - Poll interval    → re-fetches every 60 seconds while tab is visible
+ *   - Tab hidden       → polling pauses (saves API calls)
+ *   - Tab refocused    → fetches immediately + resumes polling
+ *   - Cache TTL        → 3 hours (used only for instant first paint)
+ *
+ * pg2CounterVSCode → combined extension installs: VS Code + Open VSX (animated)
  *
  * data-live targets updated:
  *   npm-version    → poly-glot-ai-cli latest version  (e.g. "2.0.1")
@@ -20,11 +23,6 @@
  *   vscode-version → VS Code ext version              (e.g. "1.4.10")
  *   dl-week        → npm weekly downloads             (e.g. "936")
  *   dl-total       → npm all-time downloads           (e.g. "1,858")
- *
- * Install counter widget:
- *   pg2CounterTotal  → npm all-time downloads (animated)
- *   pg2CounterWeek   → npm weekly downloads   (animated)
- *   pg2CounterVSCode → combined extension installs: VS Code + Open VSX (animated)
  *
  * CLI terminal demo:
  *   Updates the npm install output line
@@ -34,8 +32,9 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY    = 'pg_live_data_v5';
-  var CACHE_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
+  var CACHE_KEY      = 'pg_live_data_v6';
+  var CACHE_TTL_MS   = 3 * 60 * 60 * 1000; // 3 hours
+  var POLL_INTERVAL_MS = 60 * 1000;         // 60 seconds
 
   // ── Tiny fetch helper — returns Promise<json|null>, never rejects ───────────
   function safeFetch(url, opts) {
@@ -203,7 +202,6 @@
       } catch (e) {}
 
       // Combined extension installs: VS Code Marketplace + Open VSX
-      // This is the true total across all stores — shown in the landing page counter
       var mkt = data.vscodeMarketplaceInstalls || 0;
       var ovx = data.openVsxInstalls           || 0;
       if (mkt > 0 || ovx > 0) data.vscodeInstalls = mkt + ovx;
@@ -239,23 +237,45 @@
   // ── Update install counter widget ───────────────────────────────────────────
   function updateInstallCounter(data) {
     try {
-      var total   = data.dlTotal        || 0;
-      var week    = data.dlWeek         || 0;
-      var vscode  = data.vscodeInstalls || 0;
+      var total  = data.dlTotal        || 0;
+      var week   = data.dlWeek         || 0;
+      var vscode = data.vscodeInstalls || 0;
 
       var elTotal  = document.getElementById('pg2CounterTotal');
       var elWeek   = document.getElementById('pg2CounterWeek');
       var elVSCode = document.getElementById('pg2CounterVSCode');
 
-      // Only animate if we have real data
-      if (total  && elTotal)  animateCounter(elTotal,  total);
-      if (week   && elWeek)   animateCounter(elWeek,   week);
-      if (vscode && elVSCode) animateCounter(elVSCode, vscode);
+      // On poll updates, jump directly to new value (no re-animation)
+      // Only animate on first paint (when el has no data-animated yet)
+      if (total && elTotal) {
+        if (!elTotal.hasAttribute('data-animated')) {
+          animateCounter(elTotal, total);
+          elTotal.setAttribute('data-animated', '1');
+        } else {
+          elTotal.textContent = total.toLocaleString();
+        }
+        elTotal.setAttribute('data-target', total);
+      }
 
-      // Also update data-target attributes for future reference
-      if (elTotal)  elTotal.setAttribute('data-target',  total);
-      if (elWeek)   elWeek.setAttribute('data-target',   week);
-      if (elVSCode) elVSCode.setAttribute('data-target', vscode);
+      if (week && elWeek) {
+        if (!elWeek.hasAttribute('data-animated')) {
+          animateCounter(elWeek, week);
+          elWeek.setAttribute('data-animated', '1');
+        } else {
+          elWeek.textContent = week.toLocaleString();
+        }
+        elWeek.setAttribute('data-target', week);
+      }
+
+      if (vscode && elVSCode) {
+        if (!elVSCode.hasAttribute('data-animated')) {
+          animateCounter(elVSCode, vscode);
+          elVSCode.setAttribute('data-animated', '1');
+        } else {
+          elVSCode.textContent = vscode.toLocaleString();
+        }
+        elVSCode.setAttribute('data-target', vscode);
+      }
 
     } catch (e) { /* silent */ }
   }
@@ -283,24 +303,60 @@
     } catch (e) { /* silent */ }
   }
 
-  // ── Boot ────────────────────────────────────────────────────────────────────
-  function init() {
-    var cached = readCache();
-    if (cached) {
-      applyData(cached);
-      observeCounter(cached);
-      return;
-    }
-
+  // ── Single fetch + apply cycle ───────────────────────────────────────────────
+  function fetchAndApply() {
     fetchLiveData()
       .then(function (data) {
         if (data && Object.keys(data).length > 0) {
           writeCache(data);
           applyData(data);
-          observeCounter(data);
+          updateInstallCounter(data);
         }
       })
       .catch(function () { /* silent */ });
+  }
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
+  function init() {
+    // 1. Paint immediately from cache if available (instant render)
+    var cached = readCache();
+    if (cached) {
+      applyData(cached);
+      observeCounter(cached);
+    }
+
+    // 2. Fetch fresh data right away (replaces cache if newer)
+    fetchAndApply();
+
+    // 3. Poll every 60 seconds while the tab is open
+    //    Uses visibilitychange to pause when tab is hidden — saves API calls
+    var pollTimer = null;
+
+    function startPolling() {
+      if (pollTimer) return; // already running
+      pollTimer = setInterval(fetchAndApply, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    // Start polling immediately
+    startPolling();
+
+    // Pause when tab is hidden, resume when visible
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Tab came back into focus — fetch immediately then resume polling
+        fetchAndApply();
+        startPolling();
+      }
+    });
   }
 
   if (document.readyState === 'loading') {
