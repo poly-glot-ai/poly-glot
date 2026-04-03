@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build="20260403-1900">
+<html lang="en" data-build="20260403-1930">
 <head>
   <meta charset="UTF-8">
   <link rel="canonical" href="https://poly-glot.ai/">
@@ -198,7 +198,7 @@
       align-items: center;
       gap: 10px;
       text-decoration: none;
-      flex-shrink: 0;
+      flex-shrink: 1;
     }
     .pg2-nav__logo {
       width: 64px; /* 200% — v20260401 */
@@ -1284,65 +1284,76 @@
 
     /* Mobile: ≤600px */
     @media (max-width: 600px) {
-      /* 3-col layout: [☰] [🦜 Brand — grows] [Sign In] */
-      .pg2-nav { padding: 0 12px; overflow: visible; }
+      /* ── MOBILE NAV: [☰] [Logo + Name ···] [Sign In] ── */
+      .pg2-nav {
+        padding: 0 12px !important;
+        overflow: visible !important;
+        height: 52px !important;
+      }
       .pg2-nav__inner {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
         gap: 0 !important;
-        overflow: visible;
-        justify-content: space-between;
-        width: 100%;
+        width: 100% !important;
+        overflow: visible !important;
       }
-      /* Hamburger — leftmost, never shrinks, no order tricks needed */
+      /* Hamburger: fixed 38px left slot */
       .pg2-nav__hamburger {
         display: flex !important;
-        flex: 0 0 auto;
-        width: 38px;
-        height: 38px;
-        margin-right: 6px;
+        flex: 0 0 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        margin-right: 4px !important;
       }
-      /* Brand — fills all remaining space between hamburger and sign-in */
+      /* Brand: grows to fill remaining space, clips if needed */
       .pg2-nav__brand {
         display: flex !important;
-        flex: 1 1 0;
-        min-width: 0;
-        align-items: center;
-        gap: 6px;
-        overflow: hidden;
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        max-width: calc(100% - 38px - 80px) !important;
+        align-items: center !important;
+        gap: 6px !important;
+        overflow: hidden !important;
+        flex-shrink: 1 !important;
       }
-      .pg2-nav__brand-sub { display: none; }
+      .pg2-nav__logo {
+        width: 28px !important;
+        height: 20px !important;
+        flex-shrink: 0 !important;
+      }
+      .pg2-nav__brand-sub { display: none !important; }
       .pg2-nav__brand-text {
-        font-size: 13px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 13px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        color: var(--text) !important;
       }
-      .pg2-nav__logo { width: 32px; height: 23px; flex-shrink: 0; }
-
-      /* Nav links hidden on mobile — shown in drawer */
+      /* Nav links: hidden on mobile — in drawer */
       .pg2-nav__links { display: none !important; }
-
-      /* Right side — rightmost, never shrinks, reset margin-left */
+      /* Right side: fixed right slot, reset margin-left */
       .pg2-nav__right {
         display: flex !important;
-        flex: 0 0 auto;
-        align-items: center;
-        gap: 6px;
-        margin-left: 6px;
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+        align-items: center !important;
+        gap: 4px !important;
+        margin-left: auto !important;
       }
-      /* Hide these on small mobile */
+      /* Hide noisy items on small mobile */
       .pg2-live-badge { display: none !important; }
       .pg2-nav__pricing-cta { display: none !important; }
-      /* Sign In always visible */
+      /* Sign In: always visible */
       .pg2-nav__signin {
         display: inline-flex !important;
         padding: 0 12px !important;
         font-size: 12px !important;
         height: 32px !important;
-        white-space: nowrap;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
       }
 
       /* Hero */
@@ -1456,7 +1467,7 @@
     <a href="/" class="pg2-nav__brand">
       <picture>
         <source srcset="parrot-logo.webp" type="image/webp">
-        <img loading="eager" src="parrot-logo.png" alt="Poly-Glot parrot logo" class="pg2-nav__logo" width="90" height="64">
+        <img loading="eager" src="parrot-logo.png" alt="Poly-Glot parrot logo" class="pg2-nav__logo">
       </picture>
       <span class="pg2-nav__brand-text">Poly-Glot AI<span class="pg2-nav__brand-sub"> · Code Comment Library</span></span>
     </a>
