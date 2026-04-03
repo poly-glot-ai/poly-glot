@@ -32,7 +32,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY      = 'pg_live_data_v8';
+  var CACHE_KEY      = 'pg_live_data_v10';
   var CACHE_TTL_MS   = 3 * 60 * 60 * 1000; // 3 hours
   var POLL_INTERVAL_MS = 60 * 1000;         // 60 seconds
 
@@ -195,8 +195,8 @@
       } catch (e) {}
 
       // ── Known floors (verified from dashboards — public API undercounts) ─
-      var VS_FLOOR  = 87;   // VS Code "Till Date" from publisher dashboard
-      var OVX_FLOOR = 124;  // Open VSX downloadCount (API accurate here)
+      var VS_FLOOR  = 96;   // VS Code "Till Date" dashboard (verified Apr 3 2026)
+      var OVX_FLOOR = 236;  // Open VSX downloadCount (verified Apr 3 2026)
 
       // Open VSX — apply floor so count never goes backwards
       try {
