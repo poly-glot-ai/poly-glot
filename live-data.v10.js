@@ -285,10 +285,14 @@
       setCounter(document.getElementById('pg2CounterVSCode'), data.vscodeMarketplaceInstalls     || 0);
       // Stat 4 — Open VSX (with floor)
       setCounter(document.getElementById('pg2CounterOVX'),    data.openVsxInstalls              || 0);
-      // Stat 5 — GitHub App installations
-      var ghEl = document.getElementById('pg2CounterGitHub');
-      if (ghEl && data.githubInstallations) {
+      // Stat 5 — GitHub App installations (hidden until we get a real value)
+      var ghEl      = document.getElementById('pg2CounterGitHub');
+      var ghStat    = document.getElementById('pg2StatGitHub');
+      var ghDivider = document.getElementById('pg2DividerGitHub');
+      if (ghEl && data.githubInstallations > 0) {
         setCounter(ghEl, data.githubInstallations);
+        if (ghStat)    ghStat.style.display    = '';
+        if (ghDivider) ghDivider.style.display = '';
       }
     } catch (e) { /* silent */ }
   }
