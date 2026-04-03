@@ -29,7 +29,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY    = 'pg_live_data_v3';
+  var CACHE_KEY    = 'pg_live_data_v4';
   var CACHE_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
 
   // ── Tiny fetch helper — returns Promise<json|null>, never rejects ───────────
@@ -99,7 +99,12 @@
         if (dlTotal) setText(el, dlTotal.toLocaleString());
       });
 
-      // 5. CLI terminal demo install output line
+      // 5. VS Code install count
+      setAll('[data-live="vscode-installs"]', function (el) {
+        if (data.vscodeInstalls) setText(el, Math.round(data.vscodeInstalls).toLocaleString());
+      });
+
+      // 6. CLI terminal demo install output line
       //    Targets the line starting with "+" inside .cli-demo-body
       if (npmVer) {
         try {
@@ -113,7 +118,7 @@
         } catch (e) {}
       }
 
-      // 6. Set debug attributes on <html>
+      // 7. Set debug attributes on <html>
       try {
         document.documentElement.setAttribute('data-live-npm', npmVer);
         document.documentElement.setAttribute('data-live-vscode', vscVer);
@@ -176,10 +181,16 @@
       try {
         var ext = vscResp.results[0].extensions[0];
         data.vscodeVersion = ext.versions[0].version;
-        // also capture install count for potential future use
+        // capture total installs: install (via VS Code) + downloadCount (via web)
+        // These two together match the "Till Date" acquisition count in the publisher dashboard
+        var vsInstall  = 0;
+        var vsDownload = 0;
         (ext.statistics || []).forEach(function (s) {
-          if (s.statisticName === 'install') data.vscodeInstalls = s.value;
+          if (s.statisticName === 'install')       vsInstall  = s.value || 0;
+          if (s.statisticName === 'downloadCount') vsDownload = s.value || 0;
         });
+        var vsTotal = vsInstall + vsDownload;
+        if (vsTotal > 0) data.vscodeInstalls = vsTotal;
       } catch (e) {}
 
       return data;
