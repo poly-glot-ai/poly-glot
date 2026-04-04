@@ -3508,19 +3508,53 @@ function initCommentGenerator() {
     }
 
     // ── Save API key ──
+    // ── Helper: show status message that cannot be hidden by CSS ────────────
+    function showKeyStatus(msg, type) {
+        // type: 'ok' | 'err' | 'info'
+        var colors = {
+            ok:   { color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  },
+            err:  { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.3)' },
+            info: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' }
+        };
+        var c = colors[type] || colors.info;
+        var el = document.getElementById('cgKeyStatus');
+        if (!el) {
+            // Status span missing — create and inject it
+            el = document.createElement('span');
+            el.id = 'cgKeyStatus';
+            var wrap = document.getElementById('cgSaveKey');
+            if (wrap && wrap.parentNode) wrap.parentNode.insertAdjacentElement('afterend', el);
+        }
+        el.style.cssText = [
+            'display:inline-flex !important',
+            'visibility:visible !important',
+            'opacity:1 !important',
+            'font-size:12px',
+            'font-weight:600',
+            'padding:3px 10px',
+            'border-radius:5px',
+            'margin-top:4px',
+            'color:' + c.color,
+            'background:' + c.bg,
+            'border:1px solid ' + c.border
+        ].join(';');
+        el.className = 'pg-key-status ' + (type === 'ok' ? 'ok' : type === 'err' ? 'err' : '');
+        el.innerHTML = msg;
+    }
+
     cgSaveKey.addEventListener('click', async () => {
         // Always grab fresh reference in case DOM was re-rendered
         const cgKeyStatus = document.getElementById('cgKeyStatus');
 
         // ── Auth gate — must have account before saving a key ────────────────
         if (!isAuthed()) {
-            if (cgKeyStatus) {
-                cgKeyStatus.className = 'pg-key-status err';
-                cgKeyStatus.innerHTML = '🔐 <strong>Free account required</strong> — ' +
-                    '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
-                    'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
-                    ' &nbsp;·&nbsp; takes 30 seconds, no credit card';
-            }
+            showKeyStatus(
+                '🔐 <strong>Free account required</strong> — ' +
+                '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
+                ' &nbsp;·&nbsp; takes 30 seconds, no credit card',
+                'err'
+            );
             return;
         }
 
@@ -3529,13 +3563,13 @@ function initCommentGenerator() {
 
         // ── No provider ──
         if (!provider) {
-            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Please select a provider (OpenAI or Anthropic) and enter your API key'; cgKeyStatus.className = 'pg-key-status err'; }
+            showKeyStatus('❌ Please select a provider (OpenAI or Anthropic) and enter your API key', 'err');
             return;
         }
 
         // ── Empty key ──
         if (!key) {
-            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Please enter your API key — select a provider first, then paste your key'; cgKeyStatus.className = 'pg-key-status err'; }
+            showKeyStatus('❌ Please enter your API key — select a provider first, then paste your key', 'err');
             return;
         }
 
@@ -3543,19 +3577,19 @@ function initCommentGenerator() {
         const looksOpenAI    = key.startsWith('sk-') && !key.startsWith('sk-ant-');
         const looksAnthropic = key.startsWith('sk-ant-');
         if (provider === 'openai' && looksAnthropic) {
-            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ This looks like an Anthropic key — switch provider to Anthropic'; cgKeyStatus.className = 'pg-key-status err'; }
+            showKeyStatus('❌ This looks like an Anthropic key — switch provider to Anthropic', 'err');
             return;
         }
         if (provider === 'anthropic' && looksOpenAI) {
-            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ This looks like an OpenAI key — switch provider to OpenAI'; cgKeyStatus.className = 'pg-key-status err'; }
+            showKeyStatus('❌ This looks like an OpenAI key — switch provider to OpenAI', 'err');
             return;
         }
         if (!looksOpenAI && !looksAnthropic) {
-            if (cgKeyStatus) { cgKeyStatus.textContent = '❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-'; cgKeyStatus.className = 'pg-key-status err'; }
+            showKeyStatus('❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-', 'err');
             return;
         }
 
-        // ── Save & validate in background ──
+        // ── Save & validate ──
         localStorage.setItem(LS.key,      key);
         localStorage.setItem(LS.provider, provider);
         const resolvedModel = resolveCgModel();
@@ -3564,14 +3598,10 @@ function initCommentGenerator() {
             localStorage.setItem(CG_CUSTOM_KEY, cgCustomModelInput.value.trim());
         }
 
-        // Show saving state
-        cgKeyStatus.textContent = '💾 Saving & verifying…';
-        cgKeyStatus.className   = 'pg-key-status';
+        showKeyStatus('💾 Saving & verifying…', 'info');
 
         try {
             const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
-
-            // ── Server-side validation via auth worker (proven working approach) ──
             const res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3580,8 +3610,7 @@ function initCommentGenerator() {
             const data = await res.json().catch(() => ({}));
 
             if (res.ok && data.ok === true) {
-                cgKeyStatus.textContent = `✅ ${provLabel} key saved & verified — ready to generate`;
-                cgKeyStatus.className   = 'pg-key-status ok';
+                showKeyStatus('✅ ' + provLabel + ' key saved & verified — ready to generate', 'ok');
             } else {
                 const raw = (data?.error || '').toLowerCase();
                 let msg = '';
@@ -3596,14 +3625,12 @@ function initCommentGenerator() {
                 } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
                     msg = '❌ Key lacks permissions — ensure it has API access enabled';
                 } else {
-                    msg = `❌ Key saved but validation failed — ${data?.error || 'check your key and provider'}`;
+                    msg = '❌ Key saved but validation failed — ' + (data?.error || 'check your key and provider');
                 }
-                cgKeyStatus.textContent = msg;
-                cgKeyStatus.className   = 'pg-key-status err';
+                showKeyStatus(msg, 'err');
             }
         } catch (e) {
-            cgKeyStatus.textContent = '✅ Key saved (offline — will verify on first generate)';
-            cgKeyStatus.className   = 'pg-key-status ok';
+            showKeyStatus('✅ Key saved (offline — will verify on first generate)', 'ok');
         }
 
         if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
