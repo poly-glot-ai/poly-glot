@@ -4305,8 +4305,12 @@ function initCommentGenerator() {
                 cgOutputFooter.parentNode.insertBefore(softWarn, cgOutputFooter.nextSibling);
             }
 
-            cgCopyBtn.disabled  = false;
-            cgScoreBtn.disabled = false;
+            cgCopyBtn.disabled     = false;
+            cgDownloadBtn.disabled = false;
+            cgScoreBtn.disabled    = false;
+            // Remove stale "Pro only" tooltip from download wrap
+            var dlWrap = cgDownloadBtn.closest('.pg-download-wrap');
+            if (dlWrap) dlWrap.removeAttribute('title');
 
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
                 provider: result.provider, model: result.model,
