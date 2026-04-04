@@ -200,7 +200,7 @@
 
       // ── Known floors (verified from dashboards — public API undercounts) ─
       var VS_FLOOR  = 96;   // VS Code "Till Date" dashboard (verified Apr 3 2026)
-      var OVX_FLOOR = 350;  // Open VSX downloadCount (verified Apr 3 2026)
+      var OVX_FLOOR = 360;  // Open VSX downloadCount (verified Apr 3 2026)
 
       // Open VSX — apply floor so count never goes backwards
       try {
