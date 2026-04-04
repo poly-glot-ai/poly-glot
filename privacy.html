@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Poly-Glot AI</title>
+  <meta name="description" content="Poly-Glot AI Privacy Policy. Your code and API keys go directly to your AI provider — never to us. Zero data retention, zero telemetry.">
+  <link rel="canonical" href="https://poly-glot.ai/privacy">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0a0b14;
+      --bg-alt:      #0f1117;
+      --bg-card:     #13141f;
+      --accent:      #7dd3fc;
+      --accent2:     #38bdf8;
+      --purple:      #a78bfa;
+      --green:       #10b981;
+      --border:      rgba(255,255,255,0.07);
+      --border-accent: rgba(125,211,252,0.2);
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-dim:    #64748b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,11,20,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav__logo {
+      font-size: 18px; font-weight: 700; text-decoration: none; color: var(--text);
+    }
+    .nav__logo span { color: var(--accent); }
+    .nav__back {
+      font-size: 13px; color: var(--text-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: color .15s;
+    }
+    .nav__back:hover { color: var(--accent); }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 72px 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero__badge {
+      display: inline-block;
+      background: rgba(125,211,252,.1);
+      border: 1px solid var(--border-accent);
+      color: var(--accent);
+      font-size: 12px; font-weight: 600; letter-spacing: .06em;
+      padding: 4px 12px; border-radius: 99px; margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800; margin: 0 0 12px;
+      letter-spacing: -.02em;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero__sub {
+      color: var(--text-muted); font-size: 16px; margin: 0 auto;
+      max-width: 520px;
+    }
+    .hero__date {
+      margin-top: 16px; font-size: 13px; color: var(--text-dim);
+    }
+
+    /* ── TL;DR card ── */
+    .tldr {
+      max-width: 760px; margin: 48px auto 0;
+      background: rgba(16,185,129,.08);
+      border: 1px solid rgba(16,185,129,.25);
+      border-radius: 12px; padding: 28px 32px;
+    }
+    .tldr__title {
+      font-size: 13px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--green); margin-bottom: 16px;
+    }
+    .tldr__list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .tldr__list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: 15px; color: var(--text);
+    }
+    .tldr__list li span:first-child { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Main content ── */
+    .content {
+      max-width: 760px; margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+
+    .section {
+      margin-bottom: 56px;
+    }
+
+    .section__num {
+      font-size: 11px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 22px; font-weight: 700;
+      margin: 0 0 16px; letter-spacing: -.01em;
+    }
+
+    p {
+      color: var(--text-muted); margin: 0 0 14px;
+    }
+
+    ul.prose {
+      color: var(--text-muted);
+      padding-left: 20px; margin: 0 0 14px;
+    }
+    ul.prose li { margin-bottom: 8px; }
+
+    .highlight {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 20px 0;
+    }
+
+    .table-wrap { overflow-x: auto; margin: 20px 0; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 10px 16px; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    td:first-child { color: var(--text); font-weight: 500; }
+    tr:last-child td { border-bottom: none; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 0 0 56px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 13px; color: var(--text-dim);
+    }
+    .footer a { color: var(--text-muted); }
+    .footer a:hover { color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .tldr { padding: 20px; }
+      .content { padding: 40px 16px 64px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a href="/" class="nav__logo">Poly-Glot<span>.ai</span></a>
+    <a href="/" class="nav__back">← Back to poly-glot.ai</a>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero__badge">Privacy Policy</div>
+    <h1>Your code stays <span>yours</span>.</h1>
+    <p class="hero__sub">Poly-Glot AI is built on a simple principle: your code and your API keys never touch our servers.</p>
+    <p class="hero__date">Last updated: April 4, 2026</p>
+
+    <!-- TL;DR -->
+    <div class="tldr">
+      <div class="tldr__title">TL;DR — The short version</div>
+      <ul class="tldr__list">
+        <li><span>🔑</span><span>Your API key is stored locally in your browser or OS keychain — never sent to Poly-Glot.</span></li>
+        <li><span>📡</span><span>Your code goes directly from your device to your chosen AI provider. Poly-Glot has no backend that ever sees it.</span></li>
+        <li><span>🚫</span><span>We collect zero telemetry, zero usage data, and zero personal information.</span></li>
+        <li><span>🏠</span><span>You own your data. Always.</span></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="content">
+
+    <div class="section">
+      <div class="section__num">01</div>
+      <h2>Who we are</h2>
+      <p>Poly-Glot AI is an AI-powered code documentation tool available at <a href="https://poly-glot.ai">poly-glot.ai</a>, as a VS Code extension, CLI, MCP server, GitHub App, and Chrome extension. It is developed and operated by Harold Moses.</p>
+      <p>Contact: <a href="mailto:hello@poly-glot.ai">hello@poly-glot.ai</a></p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">02</div>
+      <h2>What data we collect</h2>
+      <p><strong>We collect no personal data.</strong> Specifically, Poly-Glot AI does not collect, store, or transmit:</p>
+      <ul class="prose">
+        <li>Your name, email address, or any personally identifiable information</li>
+        <li>Your source code or any code you paste into the tool</li>
+        <li>Your API keys (OpenAI, Anthropic, Google, or any other provider)</li>
+        <li>Your IP address or device identifiers</li>
+        <li>Usage statistics, analytics, or telemetry of any kind</li>
+      </ul>
+      <div class="highlight">
+        The only data stored is your settings (provider preference, model choice) and API key — saved locally in your browser's <code>localStorage</code> or your OS keychain (VS Code extension). This data never leaves your device.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">03</div>
+      <h2>How the AI generation works</h2>
+      <p>When you generate code comments, Poly-Glot sends your code directly from your browser (or editor) to your chosen AI provider using your own API key. The request path is:</p>
+      <div class="highlight">
+        Your device → Your AI provider (OpenAI / Anthropic / Google / etc.) → Your device
+      </div>
+      <p>Poly-Glot AI has no server or backend in this flow. We never see your code, your API key, or the AI's response.</p>
+      <p>Your use of each AI provider is also subject to their respective privacy policies:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Privacy Policy</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>OpenAI</td><td><a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">openai.com/policies/privacy-policy ↗</a></td></tr>
+            <tr><td>Anthropic</td><td><a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">anthropic.com/privacy ↗</a></td></tr>
+            <tr><td>Google (Gemini)</td><td><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy ↗</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">04</div>
+      <h2>Cookies &amp; local storage</h2>
+      <p>Poly-Glot AI uses <strong>browser localStorage</strong> to save your preferences (selected provider, model, language, comment style) and your API key on your local device only. We do not use tracking cookies, advertising cookies, or any third-party cookies.</p>
+      <p>Standard web analytics (Google Analytics 4) is used on the poly-glot.ai website to understand aggregate page traffic. This collects anonymized data such as page views and session counts — no personally identifiable information, no code, no API keys.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">05</div>
+      <h2>Third-party services</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Service</th><th>Purpose</th><th>Data shared</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Google Analytics 4</td><td>Aggregate website traffic</td><td>Anonymized page views — no code, no keys</td></tr>
+            <tr><td>Lemon Squeezy</td><td>Pro subscription billing</td><td>Email + payment info (handled entirely by Lemon Squeezy)</td></tr>
+            <tr><td>GitHub</td><td>GitHub App PR documentation</td><td>Changed PR file contents (read-only, never stored)</td></tr>
+            <tr><td>Cloudflare Workers</td><td>Auth token proxy for free-tier usage</td><td>Request metadata only — no code, no keys</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">06</div>
+      <h2>GitHub App</h2>
+      <p>The Poly-Glot AI GitHub App fetches changed files from pull requests to generate documentation suggestions. This code is:</p>
+      <ul class="prose">
+        <li>Fetched temporarily at the time of the PR event</li>
+        <li>Sent directly to your configured AI provider using your API key</li>
+        <li>Never stored, logged, or retained by Poly-Glot</li>
+      </ul>
+      <p>The GitHub App requests only the minimum necessary permissions: <code>pull_requests: write</code>, <code>checks: write</code>, <code>contents: read</code>, <code>metadata: read</code>.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">07</div>
+      <h2>Data retention</h2>
+      <p>Because we collect no personal data, there is nothing to retain or delete. Your locally stored settings and API key can be cleared at any time by clearing your browser's localStorage or removing the VS Code extension.</p>
+      <p>If you have a Pro subscription, your email address is retained by our billing provider (Lemon Squeezy) for subscription management. You can request deletion by emailing <a href="mailto:hello@poly-glot.ai">hello@poly-glot.ai</a>.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">08</div>
+      <h2>Children's privacy</h2>
+      <p>Poly-Glot AI is not directed at children under the age of 13. We do not knowingly collect any information from children under 13.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">09</div>
+      <h2>Changes to this policy</h2>
+      <p>We may update this privacy policy from time to time. When we do, we will update the "Last updated" date at the top of this page. Continued use of Poly-Glot AI after changes constitutes acceptance of the updated policy.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">10</div>
+      <h2>Contact</h2>
+      <p>Questions about this privacy policy? Email us at <a href="mailto:hello@poly-glot.ai">hello@poly-glot.ai</a>.</p>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© 2026 <strong style="color:#94a3b8">Harold Moses</strong> · <a href="/">poly-glot.ai</a> · <a href="/privacy">Privacy Policy</a></p>
+  </footer>
+
+</body>
+</html>
