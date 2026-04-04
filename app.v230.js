@@ -4085,6 +4085,8 @@ function initCommentGenerator() {
         lastOutputText = '';
         lastInputText  = '';
         if (cgImpBadges) cgImpBadges.innerHTML = '';
+        var _stale = document.getElementById('cgRagGeoPanel');
+        if (_stale) _stale.remove();
     }
 
     // ── Input validation — runs before every generate call ──────────────
@@ -4465,6 +4467,142 @@ function initCommentGenerator() {
                 provider: result.provider, model: result.model,
                 language: cgLanguage.value, style: cgStyle.value
             });
+
+            // ── Animated RAG & GEO Impact Panel ────────────────────────────────
+            // Remove any stale panel from a previous generation
+            var stalePanel = document.getElementById('cgRagGeoPanel');
+            if (stalePanel) stalePanel.remove();
+
+            // Compute real scores from actual input → output
+            if (typeof PolyGlotScorer !== 'undefined' && lastInputText && lastOutputText) {
+                var lang      = cgLanguage.value || 'javascript';
+                var ragBefore = PolyGlotScorer.scoreRAGCode ? PolyGlotScorer.scoreRAGCode(lastInputText,  lang) : 0;
+                var ragAfter  = PolyGlotScorer.scoreRAGCode ? PolyGlotScorer.scoreRAGCode(lastOutputText, lang) : 0;
+                var geoBefore = PolyGlotScorer.scoreGEOCode ? PolyGlotScorer.scoreGEOCode(lastInputText,  lang) : 0;
+                var geoAfter  = PolyGlotScorer.scoreGEOCode ? PolyGlotScorer.scoreGEOCode(lastOutputText, lang) : 0;
+
+                // Clamp 0–100
+                ragBefore = Math.min(100, Math.max(0, Math.round(ragBefore)));
+                ragAfter  = Math.min(100, Math.max(0, Math.round(ragAfter)));
+                geoBefore = Math.min(100, Math.max(0, Math.round(geoBefore)));
+                geoAfter  = Math.min(100, Math.max(0, Math.round(geoAfter)));
+
+                // Color helpers
+                function _scorecol(n) {
+                    return n >= 75 ? '#22c55e' : n >= 45 ? '#f59e0b' : '#ef4444';
+                }
+
+                var ragCol = _scorecol(ragAfter);
+                var geoCol = _scorecol(geoAfter);
+
+                // Build panel HTML — matches the screenshot exactly
+                var panelHTML = [
+                    '<div id="cgRagGeoPanel" style="',
+                        'margin:12px 0 4px;',
+                        'padding:14px 18px 16px;',
+                        'background:rgba(255,255,255,0.03);',
+                        'border:1px solid rgba(255,255,255,0.08);',
+                        'border-radius:10px;',
+                        'font-size:12px;',
+                        'color:#94a3b8;',
+                    '">',
+
+                    // Header row
+                    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">',
+                        '<span style="font-size:12px;font-weight:700;color:#e2e8f0;letter-spacing:0.01em;">',
+                            '📊 RAG &amp; GEO IMPACT — with Poly-Glot doc-comments',
+                        '</span>',
+                        '<button id="cgRagGeoClose" style="background:none;border:none;color:#475569;cursor:pointer;font-size:14px;padding:0;line-height:1;" title="Dismiss">✕</button>',
+                    '</div>',
+
+                    // RAG row
+                    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">',
+                        '<span style="width:28px;font-size:11px;font-weight:600;color:#94a3b8;flex-shrink:0;">RAG</span>',
+                        '<div style="flex:1;position:relative;height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">',
+                            '<div style="position:absolute;left:0;top:0;height:100%;border-radius:4px;background:rgba(255,255,255,0.12);width:' + ragBefore + '%;"></div>',
+                            '<div id="cgRagBar" style="position:absolute;left:0;top:0;height:100%;border-radius:4px;background:' + ragCol + ';width:0%;transition:width 1.1s cubic-bezier(0.22,1,0.36,1);"></div>',
+                        '</div>',
+                        '<span id="cgRagScore" style="width:22px;text-align:right;font-weight:700;color:' + ragCol + ';">0</span>',
+                        '<span style="color:#334155;font-size:11px;">/ 100</span>',
+                    '</div>',
+
+                    // GEO row
+                    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">',
+                        '<span style="width:28px;font-size:11px;font-weight:600;color:#94a3b8;flex-shrink:0;">GEO</span>',
+                        '<div style="flex:1;position:relative;height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">',
+                            '<div style="position:absolute;left:0;top:0;height:100%;border-radius:4px;background:rgba(255,255,255,0.12);width:' + geoBefore + '%;"></div>',
+                            '<div id="cgGeoBar" style="position:absolute;left:0;top:0;height:100%;border-radius:4px;background:' + geoCol + ';width:0%;transition:width 1.1s cubic-bezier(0.22,1,0.36,1);"></div>',
+                        '</div>',
+                        '<span id="cgGeoScore" style="width:22px;text-align:right;font-weight:700;color:' + geoCol + ';">0</span>',
+                        '<span style="color:#334155;font-size:11px;">/ 100</span>',
+                    '</div>',
+
+                    // Tagline
+                    '<div style="font-size:11px;color:#475569;line-height:1.5;">',
+                        '⚡ Google/Perplexity searches are actively guided by RAG chunkers — best-in-class doc-only retrieval score.',
+                    '</div>',
+
+                    '</div>'
+                ].join('');
+
+                // Inject below outputPanel
+                var outputPanel = document.getElementById('outputPanel');
+                if (outputPanel && outputPanel.parentNode) {
+                    outputPanel.insertAdjacentHTML('afterend', panelHTML);
+                }
+
+                // Wire close button
+                var closeBtn = document.getElementById('cgRagGeoClose');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function() {
+                        var p = document.getElementById('cgRagGeoPanel');
+                        if (p) p.remove();
+                    });
+                }
+
+                // Animate bars + count-up after a brief delay (let DOM paint first)
+                setTimeout(function() {
+                    // Animate RAG bar
+                    var ragBar = document.getElementById('cgRagBar');
+                    if (ragBar) ragBar.style.width = ragAfter + '%';
+
+                    // Count up RAG score
+                    var ragEl = document.getElementById('cgRagScore');
+                    if (ragEl) {
+                        var ragStart = performance.now();
+                        (function tickRag(now) {
+                            var p = Math.min((now - ragStart) / 1100, 1);
+                            var e = 1 - Math.pow(1 - p, 3);
+                            ragEl.textContent = Math.round(ragAfter * e);
+                            if (p < 1) requestAnimationFrame(tickRag);
+                        })(performance.now());
+                    }
+
+                    // Animate GEO bar after short stagger
+                    setTimeout(function() {
+                        var geoBar = document.getElementById('cgGeoBar');
+                        if (geoBar) geoBar.style.width = geoAfter + '%';
+
+                        var geoEl = document.getElementById('cgGeoScore');
+                        if (geoEl) {
+                            var geoStart = performance.now();
+                            (function tickGeo(now) {
+                                var p = Math.min((now - geoStart) / 1100, 1);
+                                var e = 1 - Math.pow(1 - p, 3);
+                                geoEl.textContent = Math.round(geoAfter * e);
+                                if (p < 1) requestAnimationFrame(tickGeo);
+                            })(performance.now());
+                        }
+                    }, 200);
+
+                }, 120);
+
+                if (typeof gtag !== 'undefined') gtag('event', 'cg_rag_geo_shown', {
+                    rag_before: ragBefore, rag_after: ragAfter,
+                    geo_before: geoBefore, geo_after: geoAfter,
+                    language: lang
+                });
+            }
 
         } catch (err) {
             showCgInlineError(
