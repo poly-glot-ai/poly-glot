@@ -579,6 +579,7 @@
       border-bottom: 1px solid rgba(99,102,241,.15);
       padding: 20px 24px;
       width: 100%;
+      position: relative;
     }
     .pg2-install-counter__inner {
       max-width: 640px;
@@ -624,8 +625,9 @@
     }
     .pg2-install-counter__pulse {
       position: absolute;
-      top: 2px;
-      right: calc(50% - 28px);
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
       width: 7px;
       height: 7px;
       background: #34d399;
@@ -679,7 +681,7 @@
       .pg2-install-counter__divider { display: none !important; }
       .pg2-install-counter__number { font-size: 22px; }
       .pg2-install-counter__label { font-size: 10px; }
-      .pg2-install-counter__pulse { right: calc(50% - 22px); }
+      .pg2-install-counter__pulse { left: 50%; transform: translateX(-50%); }
     }
     @media (max-width: 380px) {
       .pg2-install-counter__number { font-size: 18px; }
@@ -1737,9 +1739,9 @@
      REAL-TIME INSTALL COUNTER
      ════════════════════════════════════════════════════════════ -->
 <div class="pg2-install-counter" id="pg2InstallCounter" aria-label="Live install statistics">
+  <span class="pg2-install-counter__pulse"></span>
   <div class="pg2-install-counter__inner">
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__pulse"></span>
       <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="96">96</span>
       <span class="pg2-install-counter__label">VS Code</span>
     </div>
