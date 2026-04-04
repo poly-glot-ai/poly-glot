@@ -132,6 +132,19 @@ if ovx_resp:
 print(f"  💻 VS Code extension  : {vscode_version}  (install={vscode_installs} downloadCount={vscode_download_count} combined={vscode_combined})")
 print(f"  📦 Open VSX           : {ovx_installs} downloads")
 
+# Chrome Web Store — via cws-proxy worker (OAuth2 → CWS Publish API)
+# Returns { installs: N } once OAuth secrets are configured in Cloudflare
+chrome_installs = 0
+try:
+    cws_resp = fetch_json("https://poly-glot.ai/api/auth/cws-proxy")
+    if cws_resp and isinstance(cws_resp.get("installs"), int):
+        chrome_installs = cws_resp["installs"]
+        print(f"  🌐 Chrome Web Store   : {chrome_installs} installs (live via cws-proxy)")
+    else:
+        print(f"  🌐 Chrome Web Store   : proxy returned {cws_resp} — OAuth secrets not yet configured")
+except Exception as e:
+    print(f"  🌐 Chrome Web Store   : cws-proxy error ({e}) — using floor")
+
 print()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -281,10 +294,19 @@ try:
     else:
         print(f"  ℹ️  {LIVE_DATA_FILE} OVX_FLOOR unchanged: {current_ovx_floor} (api={ovx_installs})")
 
-    # Chrome Web Store — no public API; floor stays until manually updated
+    # Chrome Web Store — auto-raise floor from cws-proxy (raise-only, never lower)
     chrome_match = _re2.search(r'var CHROME_FLOOR\s*=\s*(\d+)', ld)
     current_chrome_floor = int(chrome_match.group(1)) if chrome_match else 0
-    print(f"  ℹ️  {LIVE_DATA_FILE} CHROME_FLOOR: {current_chrome_floor} (no public API — update manually)")
+    new_chrome_floor = max(current_chrome_floor, chrome_installs)
+    if new_chrome_floor != current_chrome_floor:
+        ld = _re2.sub(
+            r'(var CHROME_FLOOR\s*=\s*)\d+',
+            rf'\g<1>{new_chrome_floor}',
+            ld
+        )
+        print(f"  ✅ {LIVE_DATA_FILE} CHROME_FLOOR updated: {current_chrome_floor} → {new_chrome_floor}")
+    else:
+        print(f"  ℹ️  {LIVE_DATA_FILE} CHROME_FLOOR: {current_chrome_floor} (cws-proxy={chrome_installs})")
 
     if ld != ld_orig:
         write_file(LIVE_DATA_FILE, ld)
@@ -317,6 +339,13 @@ try:
         print(f"  ✅ {DASHBOARD_FILE} vscInstall floor updated: {current_db_vs_floor} → {new_vs_floor}")
     else:
         print(f"  ℹ️  {DASHBOARD_FILE} vscInstall floor unchanged: {current_db_vs_floor}")
+
+    # Also sync Chrome floor in dashboard if cws-proxy returned a live count
+    if chrome_installs > 0:
+        db_chrome_match = _re2.search(r'Math\.max\((\d+),\s*cwsData\.installs\)', db)
+        # Dashboard uses live cws-proxy fetch — no hardcoded floor needed there
+        # but update the CHROME_FLOOR comment for reference
+        pass
 
     if db != db_orig:
         write_file(DASHBOARD_FILE, db)

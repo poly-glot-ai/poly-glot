@@ -176,7 +176,10 @@
       safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot'),
 
       // GitHub App — routed through auth worker proxy (avoids Render CORS issue)
-      safeFetch('https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats')
+      safeFetch('https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats'),
+
+      // Chrome Web Store — via cws-proxy (OAuth2 refresh → access token → CWS API)
+      safeFetch('https://poly-glot.ai/api/auth/cws-proxy')
 
     ]).then(function (res) {
       var cliLatest = res[0];
@@ -184,6 +187,7 @@
       var vscResp   = res[2];
       var ovxResp   = res[3];
       var ghResp    = res[4];
+      // res[5] = cwsResp — handled below
 
       var data = {};
 
@@ -220,8 +224,14 @@
         data.githubInstallations = 0;
       }
 
-      // Chrome Web Store — no public API; floor applied via applyFloors()
-      data.chromeInstalls = 0;
+      // Chrome Web Store — via cws-proxy worker (OAuth2 → CWS Publish API)
+      var cwsResp = res[5];
+      try {
+        data.chromeInstalls = (cwsResp && typeof cwsResp.installs === 'number')
+          ? cwsResp.installs : 0;
+      } catch (e) {
+        data.chromeInstalls = 0;
+      }
 
       // Apply all floors in one place (VS Code, Open VSX, Chrome)
       applyFloors(data);

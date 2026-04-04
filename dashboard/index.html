@@ -271,6 +271,8 @@ const VSC_BODY = JSON.stringify({
   flags: 914
 });
 
+const CWS_PROXY = 'https://poly-glot.ai/api/auth/cws-proxy';
+
 const ENDPOINTS = [
   { method:'GET',  key:'site',      url:'https://poly-glot.ai',                                                    label:'poly-glot.ai',         desc:'Main site · GitHub Pages + Cloudflare' },
   { method:'GET',  key:'chrome',    url:'https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai', label:'Chrome Web Store',     desc:'Extension listing · Chrome Web Store' },
@@ -378,11 +380,22 @@ async function collectAll() {
     }
   } catch {}
 
-  // Chrome Web Store — no public count API; track reachability only
+  // Chrome Web Store — reachability via ENDPOINTS + install count via cws-proxy
   try {
     m.chromeOk = map.chrome?.r?.ok === true;
     m.chromeStatus = m.chromeOk ? 'Listed ✓' : 'Checking…';
   } catch { m.chromeStatus = '—'; }
+
+  // Chrome install count — via OAuth2 cws-proxy worker
+  try {
+    const cwsRes = await fetch(CWS_PROXY);
+    if (cwsRes.ok) {
+      const cwsData = await cwsRes.json();
+      if (typeof cwsData.installs === 'number') {
+        m.chromeInstalls = Math.max(0, cwsData.installs);
+      }
+    }
+  } catch { m.chromeInstalls = null; }
 
   return { epStatus, m };
 }
@@ -470,8 +483,8 @@ function renderMetrics(m) {
          `Total acquisitions (install + download) · rating: ${m.vscRating ?? '—'} ★ · v${m.vscVer || '—'}`),
     card('🧩', 'Open VSX Downloads',  num(m.ovxDl),
          `open-vsx.org · v${m.ovxVer || '—'}`),
-    card('🌐', 'Chrome Web Store',    m.chromeStatus || '—',
-         'chromewebstore.google.com · in review / live'),
+    card('🌐', 'Chrome Web Store',    m.chromeInstalls != null ? num(m.chromeInstalls) : (m.chromeStatus || '—'),
+         `chromewebstore.google.com · ${m.chromeStatus || ''}${m.chromeInstalls != null ? ' · ' + m.chromeInstalls.toLocaleString() + ' installs' : ''}`),
     card('🐙', 'GitHub App Installs', num(m.ghInstalls),
          m.ghTs ? `as of ${new Date(m.ghTs).toLocaleTimeString()}` : 'via GitHub App API · 5-min cache'),
 
@@ -491,7 +504,7 @@ function renderVersions(m) {
     card('🔌', 'MCP Version',           m.mcpVer       || '—', 'poly-glot-mcp · npm'),
     card('💙', 'VS Code Extension',     m.vscVer       || '—', `VS Code Marketplace · ${m.vscInstall != null ? m.vscInstall.toLocaleString() + ' total acquisitions' : 'loading…'}`),
     card('🧩', 'Open VSX Extension',    m.ovxVer       || '—', `open-vsx.org · ${m.ovxDl != null ? m.ovxDl.toLocaleString() + ' downloads' : 'loading…'}`),
-    card('🌐', 'Chrome Web Store',      m.chromeStatus || '—', 'chromewebstore.google.com'),
+    card('🌐', 'Chrome Web Store',      m.chromeStatus || '—', `chromewebstore.google.com · ${m.chromeInstalls != null ? m.chromeInstalls.toLocaleString() + ' installs' : 'pending OAuth setup'}`),
   ].join('');
 }
 

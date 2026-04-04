@@ -5598,8 +5598,20 @@ kbd.btn-kbd {
     position: relative;
     opacity: 0.55 !important;
     cursor: not-allowed !important;
-    pointer-events: none;
+    pointer-events: none !important;
     gap: 6px;
+}
+
+/* Hard CSS lock — cannot be overridden by JS disabled=false.
+   Any button with .action-btn--paid is permanently non-interactive
+   at the CSS layer, regardless of the disabled attribute state. */
+.pg-tool-panel .action-btn.action-btn--paid,
+.pg-tool-panel button.action-btn--paid,
+button.action-btn--paid {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.55 !important;
+    user-select: none !important;
 }
 
 .paid-badge {
