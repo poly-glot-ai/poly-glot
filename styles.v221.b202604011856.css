@@ -3735,6 +3735,9 @@ kbd {
     display: flex;
     gap: 6px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
 /* Action buttons — exact match to markdown .action-btn */
@@ -5730,4 +5733,52 @@ kbd.btn-kbd {
     padding: 1px 5px;
     border-radius: 4px;
     font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Panel actions — mobile responsive
+   Prevents buttons overflowing the panel header on narrow screens.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+    .pg-tool-panel .panel-header,
+    .pg-ref-panel .panel-header {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 10px 12px;
+    }
+    .pg-tool-panel .panel-title {
+        flex-shrink: 0;
+    }
+    .pg-tool-panel .panel-actions {
+        flex: 1;
+        min-width: 0;
+        gap: 5px;
+    }
+    .pg-tool-panel .action-btn,
+    .pg-tool-panel .upload-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        flex-shrink: 1;
+        min-width: 0;
+    }
+    /* Hide emoji on very small screens to save space */
+    .pg-tool-panel .action-btn .btn-emoji {
+        display: none;
+    }
+    .pg-download-wrap {
+        flex-shrink: 1;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 400px) {
+    .pg-tool-panel .action-btn,
+    .pg-tool-panel .upload-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+    .paid-badge {
+        font-size: 8px;
+        padding: 1px 4px;
+    }
 }

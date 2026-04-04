@@ -4548,39 +4548,49 @@ function initCommentGenerator() {
                 if (outputPanel) outputPanel.appendChild(softWarn);
             }
 
-            // ── Re-enable buttons — but respect auth/plan locks ──────────────
+            // ── Re-enable buttons — always respect auth.v7 lock state ──────────
             // Score is always available (free feature)
             cgScoreBtn.disabled = false;
 
-            // Copy + Download: only re-enable if auth.v7 hasn't locked them.
-            // auth.v7 adds .action-btn--paid to free/unauthed users — never
-            // override that lock here. If not locked, enable normally.
-            const _isPaidUser = (function () {
-                try {
-                    if (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function') {
-                        const p = (window.PolyGlotAuth.getPlan() || 'free').toLowerCase();
-                        return ['pro', 'team', 'enterprise'].includes(p);
-                    }
-                    const p = (localStorage.getItem('pg_plan') || 'free').toLowerCase();
-                    return ['pro', 'team', 'enterprise'].includes(p);
-                } catch (e) { return false; }
-            })();
+            // Copy + Download: use DOM as source of truth.
+            // auth.v7 stamps .action-btn--paid on free/unauthed users.
+            // We NEVER call .disabled=false on a paid-locked button —
+            // regardless of race-condition timing with PolyGlotAuth init.
+            // This is the only correct gate: if the class is present, the
+            // button stays locked. No JS plan check needed here.
+            const _copyLocked = cgCopyBtn.classList.contains('action-btn--paid');
+            const _dlLocked   = cgDownloadBtn.classList.contains('action-btn--paid');
 
-            if (_isPaidUser) {
-                // Paid user — unlock both fully
-                cgCopyBtn.disabled     = false;
+            if (!_copyLocked) cgCopyBtn.disabled = false;
+            if (!_dlLocked) {
                 cgDownloadBtn.disabled = false;
                 var dlWrap = cgDownloadBtn.closest('.pg-download-wrap');
                 if (dlWrap) dlWrap.removeAttribute('title');
-            } else if (isAuthed()) {
-                // Free signed-in user — Copy locked (Pro), Download locked (Pro)
-                // auth.v7 already set .action-btn--paid; leave disabled, just ensure badge present
-                cgCopyBtn.disabled     = true;
-                cgDownloadBtn.disabled = true;
-            } else {
-                // Unauthenticated — both locked
-                cgCopyBtn.disabled     = true;
-                cgDownloadBtn.disabled = true;
+            }
+
+            // Belt-and-suspenders: if PolyGlotAuth isn't paid, re-lock now
+            // (covers the edge case where auth.v7 hasn't run yet at generation time)
+            try {
+                const _plan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+                    ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+                    : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+                const _paid = ['pro', 'team', 'enterprise'].includes(_plan);
+                if (!_paid) {
+                    cgCopyBtn.disabled     = true;
+                    cgDownloadBtn.disabled = true;
+                    // Ensure paid-badge is present on both
+                    [cgCopyBtn, cgDownloadBtn].forEach(function(btn) {
+                        btn.classList.add('action-btn--paid');
+                        if (!btn.querySelector('.paid-badge')) {
+                            var b = document.createElement('span');
+                            b.className   = 'paid-badge';
+                            b.textContent = 'Pro';
+                            btn.appendChild(b);
+                        }
+                    });
+                }
+            } catch(e) {
+                // If PolyGlotAuth unavailable, DOM class check above is sufficient
             }
 
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_success', {
