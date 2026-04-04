@@ -33,12 +33,14 @@ const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefill
 type UsageStore = Record<string, number>; // { "2026-04": 12 }
 
 interface ServerUsageResponse {
+    ok?:       boolean;        // present on track-usage responses
     used:      number;
     limit:     number | null;  // null = unlimited (Pro/Team)
     remaining: number | null;
     allowed?:  boolean;
-    month:     string;
+    month?:    string;
     plan?:     string;
+    error?:    string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -159,8 +161,44 @@ export async function incrementUsage(count = 1): Promise<void> {
     store[key]  = (store[key] ?? 0) + count;
     writeStore(store);
 
-    // Sync server in background (fire-and-forget)
-    incrementServerUsage(count).catch(() => {});
+    // Sync server — await so we can surface post-generation warnings
+    try {
+        const result = await incrementServerUsage(count);
+        if (!result) {
+            // Server unreachable — show local-based warning only
+            const localUsed      = store[key] ?? 0;
+            const localRemaining = Math.max(0, FREE_MONTHLY_LIMIT - localUsed);
+            if (localRemaining <= 10 && localRemaining > 0) {
+                printSoftWarning(localRemaining);
+            }
+            return;
+        }
+
+        // Server authoritative — sync local to match
+        syncLocalToServer(result.used);
+
+        if (result.limit === null) return; // Pro/Team — unlimited, no warnings
+
+        const remaining = Math.max(0, (result.limit ?? FREE_MONTHLY_LIMIT) - result.used);
+
+        // Hard stop — server rejected the increment (403)
+        if (!result.ok && remaining <= 0) {
+            printHardStop(result.used, result.limit ?? FREE_MONTHLY_LIMIT);
+            process.exit(1);
+        }
+
+        // Soft warnings — shown after successful generation
+        if (remaining <= 0) {
+            printHardStop(result.used, result.limit ?? FREE_MONTHLY_LIMIT);
+            process.exit(1);
+        } else if (remaining <= 5) {
+            printSoftWarning(remaining, true); // urgent
+        } else if (remaining <= 10) {
+            printSoftWarning(remaining, false);
+        }
+    } catch {
+        // Non-fatal — local already updated
+    }
 }
 
 /**
@@ -190,13 +228,12 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
             process.exit(1);
         }
 
-        if (remaining <= 10) {
-            printSoftWarning(remaining);
-        }
+        if (remaining <= 5)  { printSoftWarning(remaining, true);  }
+        else if (remaining <= 10) { printSoftWarning(remaining, false); }
         return;
     }
 
-    // ── Fallback: local ──────────────────────────────────────────────────────
+    // ── Fallback: local (offline) ────────────────────────────────────────────
     const used      = getMonthlyUsage();
     const remaining = FREE_MONTHLY_LIMIT - used;
 
@@ -210,9 +247,8 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
         process.exit(1);
     }
 
-    if (remaining <= 10) {
-        printSoftWarning(remaining);
-    }
+    if (remaining <= 5)  { printSoftWarning(remaining, true);  }
+    else if (remaining <= 10) { printSoftWarning(remaining, false); }
 }
 
 // ─── Upgrade messages ────────────────────────────────────────────────────────
@@ -241,9 +277,11 @@ function printBatchExceeds(filesNeeded: number, remaining: number, used: number,
     );
 }
 
-function printSoftWarning(remaining: number): void {
+function printSoftWarning(remaining: number, urgent = false): void {
+    const color  = urgent ? '\x1b[31m' : '\x1b[33m'; // red if ≤5, yellow if ≤10
+    const icon   = urgent ? '🚨' : '⚠️ ';
     console.warn(
-        `\n  \x1b[33m⚠️   Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m\x1b[33m this month\x1b[0m` +
+        `\n  ${color}${icon}  Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m${color} this month\x1b[0m` +
         `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
         `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m for 50% off your first 3 months\x1b[0m\n` +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
