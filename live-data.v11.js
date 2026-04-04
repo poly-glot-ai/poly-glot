@@ -127,9 +127,9 @@
       // npm MCP — latest version
       safeFetch('https://registry.npmjs.org/poly-glot-mcp/latest'),
 
-      // VS Code Marketplace — extension version + install count
+      // VS Code Marketplace — routed through our auth worker proxy (avoids CORS block)
       safeFetch(
-        'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',
+        'https://poly-glot.ai/api/auth/vsc-proxy',
         {
           method: 'POST',
           headers: {
@@ -146,8 +146,8 @@
       // Open VSX Registry — extension download count
       safeFetch('https://open-vsx.org/api/poly-glot-ai/poly-glot'),
 
-      // GitHub App — installation count (uses live GitHub API via our server)
-      safeFetch('https://poly-glot-github-app.onrender.com/stats')
+      // GitHub App — routed through auth worker proxy (avoids Render CORS issue)
+      safeFetch('https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats')
 
     ]).then(function (res) {
       var cliLatest = res[0];

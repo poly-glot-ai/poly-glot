@@ -4147,33 +4147,9 @@ function initCommentGenerator() {
         if (validationError) { showInputError(validationError); return; }
         clearInputError();
 
-        const key = localStorage.getItem(LS.key) || '';
-        if (!key || key.length < 10) {
-            // Scroll to and highlight the API key field so the user knows exactly what to do
-            const cgApiKeyEl = document.getElementById('cgApiKey');
-            if (cgApiKeyEl) {
-                cgApiKeyEl.focus();
-                cgApiKeyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                cgApiKeyEl.style.transition = 'box-shadow 0.15s';
-                cgApiKeyEl.style.boxShadow  = '0 0 0 3px rgba(248,113,113,0.55)';
-                setTimeout(() => { cgApiKeyEl.style.boxShadow = ''; }, 1800);
-            }
-            showCgInlineError(
-                '<div style="padding:24px;color:#fbbf24;font-size:14px;line-height:1.9;">' +
-                '🔑 <strong>API key required.</strong><br>' +
-                'Paste your key in <strong>API Settings → API Key</strong> above and click <strong>Save Key</strong>.<br>' +
-                '<span style="font-size:12px;color:#9ca3af;">' +
-                'No Poly-Glot account needed — your key goes directly to the AI provider.<br>' +
-                '→ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an OpenAI key ↗</a>' +
-                '&nbsp;&nbsp;·&nbsp;&nbsp;' +
-                '<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an Anthropic key ↗</a>' +
-                '</span>' +
-                '</div>'
-            );
-            return;
-        }
-
-        // ── Auth gate — sign-up required to generate ─────────────────────────
+        // ── Auth gate — sign-up required before anything else ────────────────
+        // Check auth FIRST so unauthenticated users see the sign-up CTA,
+        // not the API key error (they can't set a key until they have an account).
         if (!isAuthed()) {
             showCgInlineError(
                 '<div style="padding:28px 24px;text-align:center;">' +
@@ -4194,6 +4170,32 @@ function initCommentGenerator() {
                 '</div>'
             );
             if (typeof gtag !== 'undefined') gtag('event', 'cg_auth_gate_shown');
+            return;
+        }
+
+        // ── API key check (signed-in users only — auth gate passed) ──────────
+        const key = localStorage.getItem(LS.key) || '';
+        if (!key || key.length < 10) {
+            const cgApiKeyEl = document.getElementById('cgApiKey');
+            if (cgApiKeyEl) {
+                cgApiKeyEl.focus();
+                cgApiKeyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                cgApiKeyEl.style.transition = 'box-shadow 0.15s';
+                cgApiKeyEl.style.boxShadow  = '0 0 0 3px rgba(248,113,113,0.55)';
+                setTimeout(() => { cgApiKeyEl.style.boxShadow = ''; }, 1800);
+            }
+            showCgInlineError(
+                '<div style="padding:24px;color:#fbbf24;font-size:14px;line-height:1.9;">' +
+                '🔑 <strong>API key required.</strong><br>' +
+                'Paste your key in <strong>API Settings → API Key</strong> above and click <strong>Save Key</strong>.<br>' +
+                '<span style="font-size:12px;color:#9ca3af;">' +
+                'Your key is stored locally and sent directly to the AI provider — never to Poly-Glot.<br>' +
+                '→ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an OpenAI key ↗</a>' +
+                '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+                '<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an Anthropic key ↗</a>' +
+                '</span>' +
+                '</div>'
+            );
             return;
         }
 
