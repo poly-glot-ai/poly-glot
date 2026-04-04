@@ -10,6 +10,12 @@
  *   - Counter widget: VS Code · Open VSX · GitHub repos (3 stats)
  *   - applyData() no longer writes dl-week / dl-total targets (removed from HTML)
  *
+ * Floor fix (Apr 4 2026):
+ *   - VS_FLOOR / OVX_FLOOR lifted to module scope
+ *   - applyFloors() called on BOTH cached and fresh data before any render
+ *   - Guarantees counters never animate to a sub-floor value, even from cache
+ *   - Cache key bumped → pg_live_data_v13 to bust all stale sub-floor entries
+ *
  * Cache strategy: sessionStorage (per browser tab session).
  *   - First page load  → fetches from APIs immediately
  *   - Poll interval    → re-fetches every 60 seconds while tab is visible
@@ -26,14 +32,23 @@
  *   pg2CounterVSCode  → VS Code Marketplace installs  (animated, with floor)
  *   pg2CounterOVX     → Open VSX downloads            (animated, with floor)
  *   pg2CounterGitHub  → GitHub App installations      (animated, always shown)
+ *   pg2CounterChrome  → Chrome Web Store installs     (floor-based, manual update)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 (function () {
   'use strict';
 
-  var CACHE_KEY        = 'pg_live_data_v12';  // bumped: forces fresh fetch after floor fix (Apr 4 2026)
+  var CACHE_KEY        = 'pg_live_data_v13';  // bumped: bust stale sub-floor cache entries (Apr 4 2026)
   var CACHE_TTL_MS     = 3 * 60 * 60 * 1000; // 3 hours
   var POLL_INTERVAL_MS = 60 * 1000;           // 60 seconds
+
+  // ── Known floors (module scope — applied to BOTH cached and fresh data) ──────
+  // These are verified "Total Acquisition Till Date" values from publisher dashboards.
+  // The public APIs undercount vs dashboard by ~48 hrs; floors ensure we never
+  // animate backwards to a stale API value.
+  var VS_FLOOR     = 100;  // VS Code "Total Acquisition Till Date" (verified Apr 4 2026)
+  var OVX_FLOOR    = 236;  // Open VSX downloadCount               (verified Apr 3 2026)
+  var CHROME_FLOOR = 0;    // Chrome Web Store — no public API (updated by scripts/update-site.py)
 
   // ── Tiny fetch helper — returns Promise<json|null>, never rejects ───────────
   function safeFetch(url, opts) {
@@ -49,6 +64,9 @@
       if (!raw) return null;
       var obj = JSON.parse(raw);
       if (!obj || (Date.now() - (obj._ts || 0)) > CACHE_TTL_MS) return null;
+      // Re-apply floors on read — guards against any cached value written before
+      // a floor was raised (e.g. old entry with vscodeMarketplaceInstalls: 96).
+      applyFloors(obj);
       return obj;
     } catch (e) { return null; }
   }
@@ -67,6 +85,17 @@
 
   function setText(el, text) {
     try { if (el) el.textContent = text; } catch (e) {}
+  }
+
+  // ── Apply floors to any data object (cached or fresh) ───────────────────────
+  // Must be called before any data is rendered or written to cache.
+  // Guarantees counters never display a value below the verified dashboard floor.
+  function applyFloors(data) {
+    if (!data) return data;
+    data.vscodeMarketplaceInstalls = Math.max(VS_FLOOR,     data.vscodeMarketplaceInstalls || 0);
+    data.openVsxInstalls           = Math.max(OVX_FLOOR,    data.openVsxInstalls           || 0);
+    data.chromeInstalls            = Math.max(CHROME_FLOOR, data.chromeInstalls             || 0);
+    return data;
   }
 
   // ── Apply fetched data to the DOM ───────────────────────────────────────────
@@ -174,20 +203,12 @@
         data.vscodeMarketplaceInstalls = vsInstall + vsDownload;
       } catch (e) {}
 
-      // ── Known floors (verified from dashboards — public API undercounts) ─
-      var VS_FLOOR  = 100;  // VS Code "Total Acquisition Till Date" dashboard (verified Apr 4 2026)
-      var OVX_FLOOR = 236;  // Open VSX downloadCount (verified Apr 3 2026)
-
-      // VS Code — apply floor (public API lags ~48 hrs)
-      data.vscodeMarketplaceInstalls = Math.max(VS_FLOOR, data.vscodeMarketplaceInstalls || 0);
-
-      // Open VSX — apply floor so count never goes backwards
+      // Open VSX — raw count (floor applied later via applyFloors)
       try {
-        var ovxCount = ovxResp && typeof ovxResp.downloadCount === 'number'
-                       ? ovxResp.downloadCount : 0;
-        data.openVsxInstalls = Math.max(OVX_FLOOR, ovxCount);
+        data.openVsxInstalls = (ovxResp && typeof ovxResp.downloadCount === 'number')
+          ? ovxResp.downloadCount : 0;
       } catch (e) {
-        data.openVsxInstalls = OVX_FLOOR;
+        data.openVsxInstalls = 0;
       }
 
       // GitHub App installations — always set (0 is a valid starting value)
@@ -199,9 +220,11 @@
         data.githubInstallations = 0;
       }
 
-      // Chrome Web Store — no public API; use floor (updated by update-site.py)
-      var CHROME_FLOOR = 0; // updated by scripts/update-site.py
-      data.chromeInstalls = CHROME_FLOOR;
+      // Chrome Web Store — no public API; floor applied via applyFloors()
+      data.chromeInstalls = 0;
+
+      // Apply all floors in one place (VS Code, Open VSX, Chrome)
+      applyFloors(data);
 
       return data;
     });
