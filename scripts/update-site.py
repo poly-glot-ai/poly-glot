@@ -245,6 +245,9 @@ try:
     current_vs_floor  = int(vs_match.group(1))  if vs_match  else 0
     current_ovx_floor = int(ovx_match.group(1)) if ovx_match else 0
 
+    # VS Code: use total acquisition (install + downloadCount), floor 100
+    vscode_combined = max(100, vscode_combined)
+
     # Only raise floors, never lower them
     new_vs_floor  = max(current_vs_floor,  vscode_combined)
     new_ovx_floor = max(current_ovx_floor, ovx_installs)
@@ -268,6 +271,11 @@ try:
         print(f"  ✅ OVX_FLOOR updated: {current_ovx_floor} → {new_ovx_floor}")
     else:
         print(f"  ℹ️  OVX_FLOOR unchanged: {current_ovx_floor} (api={ovx_installs})")
+
+    # Chrome Web Store — no public API; floor stays at 0 until manually updated
+    chrome_match = _re2.search(r'var CHROME_FLOOR\s*=\s*(\d+)', ld)
+    current_chrome_floor = int(chrome_match.group(1)) if chrome_match else 0
+    print(f"  ℹ️  CHROME_FLOOR: {current_chrome_floor} (no public API — update manually)")
 
     if ld != ld_orig:
         write_file(LIVE_DATA_FILE, ld)

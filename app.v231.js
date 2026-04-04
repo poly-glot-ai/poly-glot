@@ -4736,6 +4736,42 @@ function initCommentGenerator() {
     // ── Download ──
     cgDownloadBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
+
+        // ── Auth gate — must be signed in ───────────────────────────────────
+        if (!isAuthed()) {
+            showCgInlineError(
+                '<div style="padding:24px;text-align:center;">' +
+                '  <div style="font-size:32px;margin-bottom:10px;">🔐</div>' +
+                '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Free account required to download</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:16px;">Sign up free — takes 30 seconds, no credit card needed.</div>' +
+                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'download-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">🚀 Sign up free</a>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_download_auth_gate');
+            return;
+        }
+
+        // ── Pro gate — download is a Pro feature ────────────────────────────
+        const plan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+            ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+            : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        const isPaid = ['pro', 'team', 'enterprise'].includes(plan);
+        if (!isPaid) {
+            showCgInlineError(
+                '<div style="padding:24px;text-align:center;">' +
+                '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
+                '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Download is a Pro feature</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to download documented files.</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> for 3 months free</div>' +
+                '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
+                '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_download_pro_gate');
+            return;
+        }
+
         const blob = new Blob([lastOutputText], { type: 'text/plain' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');

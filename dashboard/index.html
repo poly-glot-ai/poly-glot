@@ -273,6 +273,7 @@ const VSC_BODY = JSON.stringify({
 
 const ENDPOINTS = [
   { method:'GET',  key:'site',      url:'https://poly-glot.ai',                                                    label:'poly-glot.ai',         desc:'Main site · GitHub Pages + Cloudflare' },
+  { method:'GET',  key:'chrome',    url:'https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai', label:'Chrome Web Store',     desc:'Extension listing · Chrome Web Store' },
   { method:'GET',  key:'ghHealth',  url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=health',                 label:'GitHub App /health',   desc:'Render service heartbeat (via proxy)' },
   { method:'GET',  key:'ghStats',   url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats',                  label:'GitHub App /stats',    desc:'Live installation count via GitHub API (via proxy)' },
   { method:'GET',  key:'telHealth', url:'https://telemetry.poly-glot.ai/health',                                   label:'Telemetry /health',    desc:'Cloudflare Worker heartbeat' },
@@ -282,7 +283,7 @@ const ENDPOINTS = [
   { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
   { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
-  { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Install + download count · rating (via proxy)' },
+  { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -365,17 +366,23 @@ async function collectAll() {
     if (d) { m.ovxVer = d.version; m.ovxDl = Math.max(236, d.downloadCount || 0); }
   } catch {}
 
-  // VS Code Marketplace
+  // VS Code Marketplace — total acquisition = install + downloadCount, floor 100
   try {
     const ext   = map.vsc.r.data?.results?.[0]?.extensions?.[0];
     if (ext) {
       m.vscVer  = ext.versions?.[0]?.version;
       const st  = {};
       (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
-      m.vscInstall = Math.max(97, (st.install || 0) + (st.downloadCount || 0));
+      m.vscInstall = Math.max(100, (st.install || 0) + (st.downloadCount || 0));
       m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
     }
   } catch {}
+
+  // Chrome Web Store — no public count API; track reachability only
+  try {
+    m.chromeOk = map.chrome?.r?.ok === true;
+    m.chromeStatus = m.chromeOk ? 'Listed ✓' : 'Checking…';
+  } catch { m.chromeStatus = '—'; }
 
   return { epStatus, m };
 }
@@ -410,6 +417,7 @@ function card(icon, label, val, meta) {
 function renderSvcs(epStatus) {
   const SVCS = [
     { key:'site',      icon:'🌐', name:'poly-glot.ai',         desc:'Main website · GitHub Pages + Cloudflare' },
+    { key:'chrome',    icon:'🟢', name:'Chrome Web Store',     desc:'chromewebstore.google.com · poly-glot-ai' },
     { key:'ghHealth',  icon:'🐙', name:'GitHub App',           desc:'poly-glot-github-app.onrender.com' },
     { key:'ghStats',   icon:'📊', name:'GitHub App /stats',    desc:'Installation count endpoint' },
     { key:'telHealth', icon:'📡', name:'Telemetry Worker',     desc:'telemetry.poly-glot.ai' },
@@ -458,10 +466,12 @@ function renderEpTable(epStatus) {
 
 function renderMetrics(m) {
   document.getElementById('metricsGrid').innerHTML = [
-    card('💙', 'VS Code Marketplace', num(m.vscInstall),
-         `installs + downloads · rating: ${m.vscRating ?? '—'} ★ · v${m.vscVer || '—'}`),
+    card('💙', 'VS Code Acquisitions', num(m.vscInstall),
+         `Total acquisitions (install + download) · rating: ${m.vscRating ?? '—'} ★ · v${m.vscVer || '—'}`),
     card('🧩', 'Open VSX Downloads',  num(m.ovxDl),
          `open-vsx.org · v${m.ovxVer || '—'}`),
+    card('🌐', 'Chrome Web Store',    m.chromeStatus || '—',
+         'chromewebstore.google.com · in review / live'),
     card('🐙', 'GitHub App Installs', num(m.ghInstalls),
          m.ghTs ? `as of ${new Date(m.ghTs).toLocaleTimeString()}` : 'via GitHub App API · 5-min cache'),
 
@@ -477,10 +487,11 @@ function renderStats(m) {
 
 function renderVersions(m) {
   document.getElementById('versionsGrid').innerHTML = [
-    card('⚡', 'CLI Version',           m.cliVer || '—', 'poly-glot-ai-cli · npm'),
-    card('🔌', 'MCP Version',           m.mcpVer || '—', 'poly-glot-mcp · npm'),
-    card('💙', 'VS Code Extension',     m.vscVer || '—', 'VS Code Marketplace'),
-    card('🧩', 'Open VSX Extension',    m.ovxVer || '—', 'open-vsx.org'),
+    card('⚡', 'CLI Version',           m.cliVer       || '—', 'poly-glot-ai-cli · npm'),
+    card('🔌', 'MCP Version',           m.mcpVer       || '—', 'poly-glot-mcp · npm'),
+    card('💙', 'VS Code Extension',     m.vscVer       || '—', `VS Code Marketplace · ${m.vscInstall != null ? m.vscInstall.toLocaleString() + ' total acquisitions' : 'loading…'}`),
+    card('🧩', 'Open VSX Extension',    m.ovxVer       || '—', `open-vsx.org · ${m.ovxDl != null ? m.ovxDl.toLocaleString() + ' downloads' : 'loading…'}`),
+    card('🌐', 'Chrome Web Store',      m.chromeStatus || '—', 'chromewebstore.google.com'),
   ].join('');
 }
 

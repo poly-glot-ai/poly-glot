@@ -238,6 +238,23 @@
       color: var(--text);
       background: rgba(255,255,255,.05);
     }
+    .pg2-nav__link--chrome {
+      border-color: rgba(66,133,244,.3);
+      color: #60a5fa;
+    }
+    .pg2-nav__link--chrome:hover {
+      background: rgba(66,133,244,.08);
+      border-color: rgba(66,133,244,.5);
+      color: #93c5fd;
+    }
+    .pg2-nav__mobile-link--chrome {
+      border-color: rgba(66,133,244,.3);
+      color: #60a5fa;
+    }
+    .pg2-nav__mobile-link--chrome:hover {
+      background: rgba(66,133,244,.08);
+      color: #93c5fd;
+    }
     .pg2-nav__link--github {
       color: #a5b4fc;
       background: rgba(79,70,229,.1);
@@ -1647,6 +1664,7 @@
       <a href="#pg-vscode-section" class="pg2-nav__link">VS Code</a>
       <a href="#pg-cli-section" class="pg2-nav__link">CLI</a>
       <a href="#pg-copilot-section" class="pg2-nav__link">Copilot</a>
+      <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__link pg2-nav__link--chrome">🌐 Chrome</a>
       <a href="#pg-github-app-section" class="pg2-nav__link pg2-nav__link--github">🐙 GitHub App</a>
     </div>
 
@@ -1672,6 +1690,7 @@
   <a href="#pg-vscode-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💻 VS Code</a>
   <a href="#pg-cli-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">⌨️ CLI</a>
   <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
+  <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension</a>
   <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
 </div>
 <script>
@@ -1756,17 +1775,22 @@
 <div class="pg2-install-counter" id="pg2InstallCounter" aria-label="Live install statistics">
   <div class="pg2-install-counter__live-label">
     <span class="pg2-install-counter__pulse"></span>
-    <span class="pg2-install-counter__live-text">Live · updated periodically</span>
+    <span class="pg2-install-counter__live-text">Live · Total Acquisitions · updated periodically</span>
   </div>
   <div class="pg2-install-counter__inner">
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="97">97</span>
+      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="100">100</span>
       <span class="pg2-install-counter__label">VS Code</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="236">236</span>
       <span class="pg2-install-counter__label">Open VSX</span>
+    </div>
+    <div class="pg2-install-counter__divider"></div>
+    <div class="pg2-install-counter__stat">
+      <span class="pg2-install-counter__number" id="pg2CounterChrome" data-target="0">0</span>
+      <span class="pg2-install-counter__label">Chrome</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">

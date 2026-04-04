@@ -175,7 +175,7 @@
       } catch (e) {}
 
       // ── Known floors (verified from dashboards — public API undercounts) ─
-      var VS_FLOOR  = 97;   // VS Code "Till Date" dashboard (verified Apr 4 2026)
+      var VS_FLOOR  = 100;  // VS Code "Total Acquisition Till Date" dashboard (verified Apr 4 2026)
       var OVX_FLOOR = 236;  // Open VSX downloadCount (verified Apr 3 2026)
 
       // VS Code — apply floor (public API lags ~48 hrs)
@@ -198,6 +198,10 @@
       } catch (e) {
         data.githubInstallations = 0;
       }
+
+      // Chrome Web Store — no public API; use floor (updated by update-site.py)
+      var CHROME_FLOOR = 0; // updated by scripts/update-site.py
+      data.chromeInstalls = CHROME_FLOOR;
 
       return data;
     });
@@ -252,11 +256,13 @@
   function updateInstallCounter(data) {
     try {
       // VS Code Marketplace (with floor)
-      setCounter(document.getElementById('pg2CounterVSCode'), data.vscodeMarketplaceInstalls || 0);
+      setCounter(document.getElementById('pg2CounterVSCode'),  data.vscodeMarketplaceInstalls || 0);
       // Open VSX (with floor)
-      setCounter(document.getElementById('pg2CounterOVX'),    data.openVsxInstalls           || 0);
+      setCounter(document.getElementById('pg2CounterOVX'),     data.openVsxInstalls           || 0);
       // GitHub App — always shown, even at 0
-      setCounter(document.getElementById('pg2CounterGitHub'), data.githubInstallations        || 0);
+      setCounter(document.getElementById('pg2CounterGitHub'),  data.githubInstallations        || 0);
+      // Chrome Web Store — floor-based, updated manually until CWS API available
+      setCounter(document.getElementById('pg2CounterChrome'),  data.chromeInstalls             || 0);
     } catch (e) { /* silent */ }
   }
 
