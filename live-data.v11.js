@@ -31,7 +31,7 @@
 (function () {
   'use strict';
 
-  var CACHE_KEY        = 'pg_live_data_v11';
+  var CACHE_KEY        = 'pg_live_data_v12';  // bumped: forces fresh fetch after floor fix (Apr 4 2026)
   var CACHE_TTL_MS     = 3 * 60 * 60 * 1000; // 3 hours
   var POLL_INTERVAL_MS = 60 * 1000;           // 60 seconds
 
