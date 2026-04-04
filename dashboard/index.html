@@ -464,8 +464,7 @@ function renderMetrics(m) {
          `open-vsx.org · v${m.ovxVer || '—'}`),
     card('🐙', 'GitHub App Installs', num(m.ghInstalls),
          m.ghTs ? `as of ${new Date(m.ghTs).toLocaleTimeString()}` : 'via GitHub App API · 5-min cache'),
-    card('📦', 'npm CLI Downloads',   num(m.npmDl),
-         'lifetime · telemetry worker · poly-glot-ai-cli'),
+
   ].join('');
 }
 
