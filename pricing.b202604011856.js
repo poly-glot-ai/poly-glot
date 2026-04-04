@@ -44,7 +44,7 @@
       desc:      'Perfect for exploring. 50 files/month, always free.',
       cta:       'Start for Free',
       ctaClass:  'pg-cta-free',
-      ctaAction: 'scroll',
+      ctaAction: 'signup',
       popular:   false,
       features: [
         { text: '50 files / month',           check: true  },
@@ -345,7 +345,17 @@
         gtag('event', 'pricing_cta_click', { plan, billing: isYearly ? 'yearly' : 'monthly' });
       }
 
-      if (action === 'scroll') {
+      if (action === 'signup') {
+        // Free plan — open sign-up/login modal so new users create an account
+        if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+          window.PolyGlotAuth.openLoginModal('pricing_free_cta');
+        } else {
+          // Fallback: click the header sign-in button
+          var signInBtn = document.getElementById('headerSignInBtn');
+          if (signInBtn) signInBtn.click();
+        }
+        if (typeof gtag === 'function') gtag('event', 'pricing_free_signup_click');
+      } else if (action === 'scroll') {
         document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
         /* ── Stripe checkout ── */

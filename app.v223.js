@@ -4124,8 +4124,8 @@ function initCommentGenerator() {
             '  <div style="font-size:32px;margin-bottom:10px;">🔒</div>',
             '  <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f4f4f6;font-family:inherit;">You\'ve used your 3 free generations</h3>',
             '  <p style="margin:0 0 20px;font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;">Sign up free &mdash; 50 files/month, no credit card required.</p>',
-            '  <a href="#" onclick="document.getElementById(\'signInBtn\') && document.getElementById(\'signInBtn\').click(); return false;" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.45);font-family:inherit;">🚀 Sign Up Free</a>',
-            '  <p style="margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.35);">Already have an account? <a href="#" onclick="document.getElementById(\'signInBtn\') && document.getElementById(\'signInBtn\').click(); return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></p>',
+            '  <a href="#" onclick="if(window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'demo-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.45);font-family:inherit;">🚀 Sign Up Free</a>',
+            '  <p style="margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.35);">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'demo-gate-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></p>',
             '</div>'
         ].join('');
         // Position over output area
