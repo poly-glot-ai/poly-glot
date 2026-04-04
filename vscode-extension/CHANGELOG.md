@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.4.14] — 2026-04-04
+
+### ✨ New
+- **Google Gemini support** — add your Google AI Studio key (`AIza…`) and generate documentation with Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash Lite, or Gemini 2.0 Flash. All four models available via the OpenAI-compatible Generative Language API endpoint.
+- **Chrome Web Store** — Poly-Glot is now available on the Chrome Web Store (`hjpdgilolgcanemmngagpobdgdhpplai`). Use it directly in the browser alongside the VS Code and CLI tools.
+
+### Improved
+- **Provider picker** — Google now listed alongside OpenAI and Anthropic in `Configure API Key` quick-pick with `AIza…` placeholder and link to AI Studio
+- **Key validation** — cross-provider key detection: warns if you paste an OpenAI key into Google or vice versa
+- **README** — Google Gemini section with all 4 models, pricing, and quick-start. Chrome Web Store badge now links to the live store listing.
+
+### Fixed
+- **Acquisition counter** — VS Code floor synced to 104 (true publisher dashboard value); auto-raises via PAT API on every cron run — counter never dips below verified value
+
+---
+
 ## [1.4.2] — 2026-03-31
 
 ### ✨ New

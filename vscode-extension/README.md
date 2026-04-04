@@ -485,7 +485,7 @@ Have a feature request? [Open an issue on GitHub](https://github.com/poly-glot-a
 
 ## 📦 About
 
-**Version:** 1.4.13  
+**Version:** 1.4.14  
 **Publisher:** poly-glot-ai  
 **Marketplace:** [poly-glot-ai.poly-glot](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)  
 **Open VSX:** [open-vsx.org/extension/poly-glot-ai/poly-glot](https://open-vsx.org/extension/poly-glot-ai/poly-glot)  
