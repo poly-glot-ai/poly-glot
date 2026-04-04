@@ -366,14 +366,14 @@ async function collectAll() {
     if (d) { m.ovxVer = d.version; m.ovxDl = Math.max(236, d.downloadCount || 0); }
   } catch {}
 
-  // VS Code Marketplace — total acquisition = install + downloadCount, floor 100
+  // VS Code Marketplace — total acquisition = install + downloadCount, floor 102
   try {
     const ext   = map.vsc.r.data?.results?.[0]?.extensions?.[0];
     if (ext) {
       m.vscVer  = ext.versions?.[0]?.version;
       const st  = {};
       (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
-      m.vscInstall = Math.max(100, (st.install || 0) + (st.downloadCount || 0));
+      m.vscInstall = Math.max(102, (st.install || 0) + (st.downloadCount || 0));
       m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
     }
   } catch {}
