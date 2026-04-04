@@ -277,7 +277,7 @@ const ENDPOINTS = [
   { method:'GET',  key:'ghStats',   url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats',                  label:'GitHub App /stats',    desc:'Live installation count via GitHub API (via proxy)' },
   { method:'GET',  key:'telHealth', url:'https://telemetry.poly-glot.ai/health',                                   label:'Telemetry /health',    desc:'Cloudflare Worker heartbeat' },
   { method:'GET',  key:'telStats',  url:`https://telemetry.poly-glot.ai/stats?secret=${TEL_SECRET}`,               label:'Telemetry /stats',     desc:'CLI command count + milestones' },
-  { method:'GET',  key:'promo',     url:'https://poly-glot.ai/api/auth/promo-count',                               label:'Auth /promo-count',    desc:'Cloudflare KV · promo signup count' },
+
   { method:'GET',  key:'npmCli',    url:'https://registry.npmjs.org/poly-glot-ai-cli/latest',                      label:'npm CLI',              desc:'poly-glot-ai-cli latest version' },
   { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
   { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
@@ -351,11 +351,7 @@ async function collectAll() {
     if (d) { m.cliCommands = d.total_commands; m.nextMilestone = d.next_milestone; m.npmDl = d.npm_downloads; }
   } catch {}
 
-  // Promo count
-  try {
-    const d = map.promo.r.data;
-    if (d) { m.promoCount = d.count; m.promoRemaining = d.remaining; }
-  } catch {}
+
 
   // npm CLI
   try { if (map.npmCli.r.data) m.cliVer = map.npmCli.r.data.version; } catch {}
@@ -418,7 +414,6 @@ function renderSvcs(epStatus) {
     { key:'ghStats',   icon:'📊', name:'GitHub App /stats',    desc:'Installation count endpoint' },
     { key:'telHealth', icon:'📡', name:'Telemetry Worker',     desc:'telemetry.poly-glot.ai' },
     { key:'telStats',  icon:'📈', name:'Telemetry /stats',     desc:'CLI command + milestone data' },
-    { key:'promo',     icon:'🔐', name:'Auth Worker',          desc:'poly-glot.ai/api/auth/promo-count' },
     { key:'npmCli',    icon:'📦', name:'npm CLI Registry',     desc:'registry.npmjs.org · poly-glot-ai-cli' },
     { key:'ovx',       icon:'🧩', name:'Open VSX',             desc:'open-vsx.org · poly-glot-ai/poly-glot' },
     { key:'vsc',       icon:'💙', name:'VS Code Marketplace',  desc:'marketplace.visualstudio.com' },
@@ -478,8 +473,6 @@ function renderStats(m) {
   document.getElementById('statsGrid').innerHTML = [
     card('🖥', 'CLI Commands Run', num(m.cliCommands),
          `opt-in telemetry only · next milestone: ${num(m.nextMilestone)}`),
-    card('🎟', 'Promo Signups', num(m.promoCount),
-         `${num(m.promoRemaining)} spots remaining · code EARLYBIRD3`),
   ].join('');
 }
 

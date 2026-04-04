@@ -1001,7 +1001,7 @@ function renderTemplateContent() {
             break;
     }
     
-    content.innerHTML = html;
+    if (content) content.innerHTML = html;
 }
 
 function renderSyntaxTemplates(lang) {
@@ -1476,6 +1476,7 @@ ${lang.bestPractices.map((p, i) => `${i + 1}. ${p}`).join('\n')}
 }
 
 function setupEventListeners() {
+    if (!document.getElementById('language')) return;
     document.getElementById('language').addEventListener('change', (e) => {
         currentLanguage = e.target.value;
         renderTemplateContent();
@@ -1971,6 +1972,9 @@ function initializeDemo() {
     const langSelect = document.getElementById('demoDemoLang');
     const demoPanels = document.querySelectorAll('.demo-panel');
 
+    // Guard — these elements only exist on pages that include the demo section
+    if (!playBtn || !resetBtn || !demoStats) return;
+
     let isPlaying = false;
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -2239,7 +2243,7 @@ function initializeAISettings() {
     const generateBtn = document.getElementById('generateBtn');
     const whyBtn      = document.getElementById('whyBtn');
     const explainBtn  = document.getElementById('explainBtn');
-    
+
     const providerSelect = document.getElementById('aiProvider');
     const modelSelect = document.getElementById('aiModel');
     const customModelRow   = document.getElementById('customModelRow');
@@ -2247,6 +2251,9 @@ function initializeAISettings() {
     const apiKeyInput = document.getElementById('apiKey');
     const toggleVisibilityBtn = document.getElementById('toggleApiKeyVisibility');
     const apiStatus = document.getElementById('apiStatus');
+
+    // Guard — these elements only exist on the markdown tool page, not the main landing page
+    if (!modal || !aiSettingsBtn || !generateBtn) return;
 
     const CUSTOM_MODEL_KEY   = 'polyglot_custom_model';
     const CUSTOM_OPTION_VALUE = '__custom__';
