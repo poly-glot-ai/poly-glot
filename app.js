@@ -3657,6 +3657,7 @@ function initCommentGenerator() {
         cgDownloadBtn.disabled       = true;
         cgScoreBtn.disabled          = true;
         cgScoreBtn.classList.remove('active');
+        hideCgInlineError();
         // Remove any ISP panels from both tool panels
         ['inputPanel','outputPanel'].forEach(id => {
             const p = document.getElementById(id);
@@ -3667,12 +3668,61 @@ function initCommentGenerator() {
         if (cgImpBadges) cgImpBadges.innerHTML = '';
     }
 
+    // ── Inline error helper (replaces alert() for better UX) ──
+    const cgInlineError = document.getElementById('cgInlineError');
+    function showCgInlineError(html) {
+        cgPlaceholder.style.display  = 'none';
+        cgOutput.style.display       = 'none';
+        cgOutputFooter.style.display = 'none';
+        if (cgInlineError) {
+            cgInlineError.innerHTML    = html;
+            cgInlineError.style.display = 'block';
+        }
+    }
+    function hideCgInlineError() {
+        if (cgInlineError) {
+            cgInlineError.style.display = 'none';
+            cgInlineError.innerHTML = '';
+        }
+    }
+
     // ── Generate Comments ──
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
-        if (!code) { alert('Please paste or upload some code first.'); return; }
+        if (!code) {
+            showCgInlineError(
+                '<div style="padding:24px;color:#f87171;font-size:14px;line-height:1.7;">' +
+                '⚠️ <strong>No code to document.</strong><br>' +
+                'Paste your code in the left panel or click <strong>📁 Upload</strong> to load a file.' +
+                '</div>'
+            );
+            cgInput.focus();
+            return;
+        }
         const key = localStorage.getItem(LS.key) || '';
-        if (!key || key.length < 10) { alert('Please enter and save your API key in the settings above.'); return; }
+        if (!key || key.length < 10) {
+            // Highlight the API key input with a shake so user knows exactly what to do
+            if (cgApiKey) {
+                cgApiKey.focus();
+                cgApiKey.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                cgApiKey.style.transition = 'box-shadow 0.15s';
+                cgApiKey.style.boxShadow  = '0 0 0 3px rgba(248,113,113,0.55)';
+                setTimeout(() => { cgApiKey.style.boxShadow = ''; }, 1800);
+            }
+            showCgInlineError(
+                '<div style="padding:24px;color:#fbbf24;font-size:14px;line-height:1.9;">' +
+                '🔑 <strong>API key required.</strong><br>' +
+                'Paste your key in <strong>API Settings → API Key</strong> above and click <strong>Save Key</strong>.<br>' +
+                '<span style="font-size:12px;color:#9ca3af;">' +
+                'No Poly-Glot account needed — your key goes directly to the AI provider.<br>' +
+                '→ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an OpenAI key ↗</a>' +
+                '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+                '<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an Anthropic key ↗</a>' +
+                '</span>' +
+                '</div>'
+            );
+            return;
+        }
 
         // Temporarily configure shared aiGenerator
         const orig = { key: window.aiGenerator.apiKey, prov: window.aiGenerator.provider, model: window.aiGenerator.model };
@@ -3685,6 +3735,7 @@ function initCommentGenerator() {
 
         try {
             lastInputText  = code;
+            hideCgInlineError();
             const result   = await window.aiGenerator.generateComments(code, cgLanguage.value, cgStyle.value);
             lastOutputText = result.code;
 
@@ -3718,9 +3769,12 @@ function initCommentGenerator() {
             });
 
         } catch (err) {
-            cgPlaceholder.style.display = 'none';
-            cgOutput.style.display      = 'block';
-            cgOutput.textContent        = '❌ Error: ' + err.message;
+            showCgInlineError(
+                '<div style="padding:24px;color:#f87171;font-size:14px;line-height:1.8;">' +
+                '❌ <strong>Generation failed.</strong><br>' +
+                '<span style="color:#9ca3af;">' + (err.message || 'Unknown error. Please try again.') + '</span>' +
+                '</div>'
+            );
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_error', { error: err.message });
         } finally {
             // Restore original aiGenerator state
@@ -3758,7 +3812,14 @@ function initCommentGenerator() {
     // ── Score Input (Your Code) ────────────────────────────────────────────
     cgScoreInputBtn.addEventListener('click', () => {
         const code = cgInput.value.trim();
-        if (!code) { alert('Paste or upload some code first.'); return; }
+        if (!code) {
+            cgInput.focus();
+            cgInput.placeholder = '⚠️ Paste or upload some code first…';
+            setTimeout(() => {
+                cgInput.placeholder = 'Paste your code here or upload a file…\n\nLanguage & comment style auto-detect from file extension.';
+            }, 2500);
+            return;
+        }
 
         // Always re-detect at click time — catches the case where code was
         // pasted just before clicking Score (debounce may not have fired yet)
