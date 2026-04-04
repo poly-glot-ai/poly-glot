@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poly-Glot AI — Health Dashboard</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root {
+    --bg:      #0a0a12;
+    --bg2:     #12121e;
+    --bg3:     #1a1a2e;
+    --border:  rgba(255,255,255,.07);
+    --border2: rgba(255,255,255,.13);
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --purple:  #7c3aed;
+    --purple2: #a78bfa;
+    --green:   #22c55e;
+    --yellow:  #f59e0b;
+    --red:     #ef4444;
+    --blue:    #3b82f6;
+    --cyan:    #06b6d4;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* ── Header ── */
+  .hdr {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .hdr-left   { display: flex; align-items: center; gap: 10px; }
+  .hdr-title  { font-size: 15px; font-weight: 700; }
+  .hdr-sub    { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .hdr-right  { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .hdr-ts     { font-size: 11px; color: var(--muted); }
+  .hdr-ts span{ color: var(--purple2); font-weight: 600; }
+  .btn-refresh {
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); padding: 6px 14px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: background .15s;
+  }
+  .btn-refresh:hover   { background: rgba(124,58,237,.25); border-color: var(--purple); }
+  .btn-refresh:disabled{ opacity: .5; cursor: not-allowed; }
+
+  /* ── Status banner ── */
+  .banner {
+    margin: 18px 24px 0;
+    padding: 11px 16px;
+    border-radius: 10px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all .3s;
+  }
+  .banner.ok      { background:rgba(34,197,94,.07);  border-color:rgba(34,197,94,.3);  color:var(--green);  }
+  .banner.warn    { background:rgba(245,158,11,.07); border-color:rgba(245,158,11,.3); color:var(--yellow); }
+  .banner.error   { background:rgba(239,68,68,.07);  border-color:rgba(239,68,68,.3);  color:var(--red);    }
+  .banner.loading { background:rgba(255,255,255,.03);border-color:var(--border);       color:var(--muted);  }
+  .dot {
+    width:9px; height:9px; border-radius:50%; background:currentColor; flex-shrink:0;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+  /* ── Poll bar ── */
+  .poll-row {
+    margin: 12px 24px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .poll-lbl  { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .poll-track{ flex:1; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .poll-fill {
+    height:3px; border-radius:2px;
+    background: linear-gradient(90deg, var(--purple), var(--cyan));
+    transition: width 1s linear;
+  }
+  .poll-num  { font-size:11px; color:var(--purple2); font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+  /* ── Section ── */
+  .section { padding: 22px 24px 0; }
+  .sec-title {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── Grids ── */
+  .grid      { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); }
+  .grid-wide { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); }
+
+  /* ── Service card ── */
+  .svc {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:10px; padding:13px 16px;
+    display:flex; align-items:center; gap:12px;
+    transition:border-color .2s;
+  }
+  .svc:hover { border-color: var(--border2); }
+  .svc-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .svc-dot.ok    { background:var(--green);  box-shadow:0 0 7px rgba(34,197,94,.6); }
+  .svc-dot.warn  { background:var(--yellow); box-shadow:0 0 7px rgba(245,158,11,.6); }
+  .svc-dot.error { background:var(--red);    box-shadow:0 0 7px rgba(239,68,68,.6); }
+  .svc-dot.loading { background:var(--muted); }
+  .svc-body   { flex:1; min-width:0; }
+  .svc-name   { font-size:13px; font-weight:600; }
+  .svc-desc   { font-size:10px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .svc-right  { text-align:right; flex-shrink:0; }
+  .svc-st     { font-size:11px; font-weight:700; }
+  .svc-st.ok    { color:var(--green);  }
+  .svc-st.error { color:var(--red);    }
+  .svc-st.warn  { color:var(--yellow); }
+  .svc-st.loading { color:var(--muted); }
+  .svc-ms     { font-size:10px; color:var(--muted); margin-top:2px; }
+
+  /* ── Metric card ── */
+  .card {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:10px; padding:15px 16px;
+    transition:border-color .2s;
+  }
+  .card:hover { border-color:var(--border2); }
+  .card-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .card-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  .card-icon{ font-size:17px; }
+  .card-val {
+    font-size:26px; font-weight:800; line-height:1;
+    margin-bottom:4px; font-variant-numeric:tabular-nums;
+  }
+  .card-val.empty { color:var(--muted); font-size:18px; }
+  .card-meta{ font-size:11px; color:var(--muted); }
+
+  /* ── Endpoint table ── */
+  .ep-wrap {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:10px; overflow:hidden;
+  }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th {
+    text-align:left; padding:8px 12px;
+    color:var(--muted); font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.05em;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.02);
+  }
+  td { padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,.015); }
+  .meth {
+    font-size:9px; font-weight:700; padding:2px 6px;
+    border-radius:4px; font-family:monospace;
+  }
+  .meth.GET  { background:rgba(34,197,94,.12);  color:var(--green); }
+  .meth.POST { background:rgba(59,130,246,.12); color:var(--blue);  }
+  .ep-path { font-family:monospace; color:var(--purple2); font-size:11px; }
+  .badge {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px;
+  }
+  .badge.ok    { background:rgba(34,197,94,.12);  color:var(--green); }
+  .badge.error { background:rgba(239,68,68,.12);  color:var(--red);   }
+  .badge.loading{ background:rgba(255,255,255,.05);color:var(--muted); }
+  .ep-desc { color:var(--muted); font-size:11px; }
+  .ep-ms   { color:var(--muted); font-variant-numeric:tabular-nums; }
+
+  @media(max-width:600px){
+    .hdr { flex-direction:column; align-items:flex-start; }
+    .grid,.grid-wide{ grid-template-columns:1fr; }
+    table { font-size:11px; }
+    th,td { padding:6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="hdr">
+  <div class="hdr-left">
+    <span style="font-size:22px">🦜</span>
+    <div>
+      <div class="hdr-title">Poly-Glot AI — Health Dashboard</div>
+      <div class="hdr-sub">All services · auto-polls every 15 min</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-ts">Last updated: <span id="lastUpdated">—</span></div>
+    <button class="btn-refresh" id="refreshBtn" onclick="runAll()">⟳ Refresh Now</button>
+  </div>
+</header>
+
+<!-- Overall status -->
+<div class="banner loading" id="banner">
+  <span class="dot"></span>
+  <span id="bannerText">Checking all services…</span>
+</div>
+
+<!-- Poll countdown bar -->
+<div class="poll-row">
+  <span class="poll-lbl">Next poll in</span>
+  <div class="poll-track"><div class="poll-fill" id="pollFill" style="width:100%"></div></div>
+  <span class="poll-num" id="pollNum">15:00</span>
+</div>
+
+<!-- Section 1: Services -->
+<div class="section">
+  <div class="sec-title">🟢 Services</div>
+  <div class="grid-wide" id="svcGrid"></div>
+</div>
+
+<!-- Section 2: Endpoint health table -->
+<div class="section">
+  <div class="sec-title">🔌 API Endpoint Health</div>
+  <div class="ep-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>Description</th>
+        </tr>
+      </thead>
+      <tbody id="epBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 3: Install metrics -->
+<div class="section">
+  <div class="sec-title">📦 Install &amp; Download Metrics</div>
+  <div class="grid" id="metricsGrid"></div>
+</div>
+
+<!-- Section 4: Platform stats -->
+<div class="section">
+  <div class="sec-title">📊 Platform Stats</div>
+  <div class="grid" id="statsGrid"></div>
+</div>
+
+<!-- Section 5: Versions -->
+<div class="section">
+  <div class="sec-title">🏷 Published Versions</div>
+  <div class="grid" id="versionsGrid"></div>
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const POLL_MS  = 15 * 60 * 1000;
+const TEL_SECRET = 'polyglot-stats-2026';
+const VSC_BODY = JSON.stringify({
+  filters:[{criteria:[{filterType:7,value:'poly-glot-ai.poly-glot'}]}],
+  flags: 914
+});
+
+const ENDPOINTS = [
+  { method:'GET',  key:'site',      url:'https://poly-glot.ai',                                                    label:'poly-glot.ai',         desc:'Main site · GitHub Pages + Cloudflare' },
+  { method:'GET',  key:'ghHealth',  url:'https://poly-glot-github-app.onrender.com/health',                        label:'GitHub App /health',   desc:'Render service heartbeat' },
+  { method:'GET',  key:'ghStats',   url:'https://poly-glot-github-app.onrender.com/stats',                         label:'GitHub App /stats',    desc:'Live installation count via GitHub API' },
+  { method:'GET',  key:'telHealth', url:'https://telemetry.poly-glot.ai/health',                                   label:'Telemetry /health',    desc:'Cloudflare Worker heartbeat' },
+  { method:'GET',  key:'telStats',  url:`https://telemetry.poly-glot.ai/stats?secret=${TEL_SECRET}`,               label:'Telemetry /stats',     desc:'CLI command count + milestones' },
+  { method:'GET',  key:'promo',     url:'https://poly-glot.ai/api/auth/promo-count',                               label:'Auth /promo-count',    desc:'Cloudflare KV · promo signup count' },
+  { method:'GET',  key:'npmCli',    url:'https://registry.npmjs.org/poly-glot-ai-cli/latest',                      label:'npm CLI',              desc:'poly-glot-ai-cli latest version' },
+  { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
+  { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
+  { method:'POST', key:'vsc',       url:'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', label:'VS Code Marketplace',  desc:'Install + download count · rating' },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let pollTimer, cdTimer, nextPollAt;
+
+// ─── Fetch one endpoint ───────────────────────────────────────────────────────
+async function fetchOne(ep) {
+  const t0  = Date.now();
+  const ctrl = new AbortController();
+  const to   = setTimeout(() => ctrl.abort(), 12000);
+  const opts = { method: ep.method, signal: ctrl.signal };
+  if (ep.method === 'POST') {
+    opts.headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json;api-version=3.0-preview.1'
+    };
+    opts.body = VSC_BODY;
+  }
+  try {
+    const res  = await fetch(ep.url, opts);
+    clearTimeout(to);
+    const ms   = Date.now() - t0;
+    let   data = null;
+    try { data = await res.json(); } catch {}
+    return { ok: res.ok, status: res.status, ms, data };
+  } catch(e) {
+    clearTimeout(to);
+    return { ok: false, status: 0, ms: Date.now() - t0, data: null, error: e.message };
+  }
+}
+
+// ─── Collect everything in parallel ──────────────────────────────────────────
+async function collectAll() {
+  const raw = await Promise.all(ENDPOINTS.map(ep => fetchOne(ep)));
+  const map = {};
+  ENDPOINTS.forEach((ep, i) => { map[ep.key] = { ep, r: raw[i] }; });
+
+  // ── Endpoint statuses ──────────────────────────────────────────────────────
+  const epStatus = {};
+  ENDPOINTS.forEach((ep, i) => {
+    epStatus[ep.key] = {
+      ok:  raw[i].ok,
+      ms:  raw[i].ms,
+      err: raw[i].error || null,
+    };
+  });
+
+  // ── Parsed metrics ─────────────────────────────────────────────────────────
+  const m = {};
+
+  // GitHub App stats
+  try {
+    const d = map.ghStats.r.data;
+    if (d) { m.ghInstalls = d.installations; m.ghTs = d.timestamp; }
+  } catch {}
+
+  // Telemetry stats
+  try {
+    const d = map.telStats.r.data;
+    if (d) { m.cliCommands = d.total_commands; m.nextMilestone = d.next_milestone; m.npmDl = d.npm_downloads; }
+  } catch {}
+
+  // Promo count
+  try {
+    const d = map.promo.r.data;
+    if (d) { m.promoCount = d.count; m.promoRemaining = d.remaining; }
+  } catch {}
+
+  // npm CLI
+  try { if (map.npmCli.r.data) m.cliVer = map.npmCli.r.data.version; } catch {}
+
+  // npm MCP
+  try { if (map.npmMcp.r.data) m.mcpVer = map.npmMcp.r.data.version; } catch {}
+
+  // Open VSX
+  try {
+    const d = map.ovx.r.data;
+    if (d) { m.ovxVer = d.version; m.ovxDl = d.downloadCount; }
+  } catch {}
+
+  // VS Code Marketplace
+  try {
+    const ext   = map.vsc.r.data?.results?.[0]?.extensions?.[0];
+    if (ext) {
+      m.vscVer  = ext.versions?.[0]?.version;
+      const st  = {};
+      (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
+      m.vscInstall = (st.install || 0) + (st.downloadCount || 0);
+      m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
+    }
+  } catch {}
+
+  return { epStatus, m };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function ms2str(ms) {
+  if (ms == null) return '—';
+  return ms < 1000 ? `${ms}ms` : `${(ms/1000).toFixed(1)}s`;
+}
+function num(v) {
+  return v != null ? Number(v).toLocaleString() : '—';
+}
+function badge(ok, label) {
+  const cls = ok == null ? 'loading' : ok ? 'ok' : 'error';
+  const ico  = ok == null ? '…'       : ok ? '✓' : '✗';
+  return `<span class="badge ${cls}">${ico} ${label || cls.toUpperCase()}</span>`;
+}
+
+// ─── Render helpers ───────────────────────────────────────────────────────────
+function card(icon, label, val, meta) {
+  const valHtml = (val != null && val !== '')
+    ? `<div class="card-val">${val}</div>`
+    : `<div class="card-val empty">—</div>`;
+  return `<div class="card">
+    <div class="card-hdr"><div class="card-lbl">${label}</div><div class="card-icon">${icon}</div></div>
+    ${valHtml}
+    <div class="card-meta">${meta || ''}</div>
+  </div>`;
+}
+
+// ─── Render sections ──────────────────────────────────────────────────────────
+function renderSvcs(epStatus) {
+  const SVCS = [
+    { key:'site',      icon:'🌐', name:'poly-glot.ai',         desc:'Main website · GitHub Pages + Cloudflare' },
+    { key:'ghHealth',  icon:'🐙', name:'GitHub App',           desc:'poly-glot-github-app.onrender.com' },
+    { key:'ghStats',   icon:'📊', name:'GitHub App /stats',    desc:'Installation count endpoint' },
+    { key:'telHealth', icon:'📡', name:'Telemetry Worker',     desc:'telemetry.poly-glot.ai' },
+    { key:'telStats',  icon:'📈', name:'Telemetry /stats',     desc:'CLI command + milestone data' },
+    { key:'promo',     icon:'🔐', name:'Auth Worker',          desc:'poly-glot.ai/api/auth/promo-count' },
+    { key:'npmCli',    icon:'📦', name:'npm CLI Registry',     desc:'registry.npmjs.org · poly-glot-ai-cli' },
+    { key:'ovx',       icon:'🧩', name:'Open VSX',             desc:'open-vsx.org · poly-glot-ai/poly-glot' },
+    { key:'vsc',       icon:'💙', name:'VS Code Marketplace',  desc:'marketplace.visualstudio.com' },
+  ];
+  document.getElementById('svcGrid').innerHTML = SVCS.map(s => {
+    const d  = epStatus[s.key] || {};
+    const st = d.ok == null ? 'loading' : d.ok ? 'ok' : 'error';
+    const stLabel = { ok:'● Online', error:'● Error / Unreachable', loading:'● Checking…' }[st];
+    return `<div class="svc">
+      <div class="svc-dot ${st}"></div>
+      <div class="svc-body">
+        <div class="svc-name">${s.icon} ${s.name}</div>
+        <div class="svc-desc">${s.desc}</div>
+      </div>
+      <div class="svc-right">
+        <div class="svc-st ${st}">${stLabel}</div>
+        <div class="svc-ms">${ms2str(d.ms)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderEpTable(epStatus) {
+  document.getElementById('epBody').innerHTML = ENDPOINTS.map(ep => {
+    const d   = epStatus[ep.key] || {};
+    const ok  = d.ok;
+    const shortUrl = ep.url.replace('https://','').split('?')[0];
+    return `<tr>
+      <td><span class="meth ${ep.method}">${ep.method}</span></td>
+      <td><span class="ep-path">${shortUrl}</span></td>
+      <td>${badge(ok)}</td>
+      <td class="ep-ms">${ms2str(d.ms)}</td>
+      <td class="ep-desc">${ep.desc}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMetrics(m) {
+  document.getElementById('metricsGrid').innerHTML = [
+    card('💙', 'VS Code Marketplace', num(m.vscInstall),
+         `installs + downloads · rating: ${m.vscRating ?? '—'} ★ · v${m.vscVer || '—'}`),
+    card('🧩', 'Open VSX Downloads',  num(m.ovxDl),
+         `open-vsx.org · v${m.ovxVer || '—'}`),
+    card('🐙', 'GitHub App Installs', num(m.ghInstalls),
+         m.ghTs ? `as of ${new Date(m.ghTs).toLocaleTimeString()}` : 'via GitHub App API · 5-min cache'),
+    card('📦', 'npm CLI Downloads',   num(m.npmDl),
+         'lifetime · telemetry worker · poly-glot-ai-cli'),
+  ].join('');
+}
+
+function renderStats(m) {
+  document.getElementById('statsGrid').innerHTML = [
+    card('🖥', 'CLI Commands Run', num(m.cliCommands),
+         `opt-in telemetry only · next milestone: ${num(m.nextMilestone)}`),
+    card('🎟', 'Promo Signups', num(m.promoCount),
+         `${num(m.promoRemaining)} spots remaining · code EARLYBIRD3`),
+  ].join('');
+}
+
+function renderVersions(m) {
+  document.getElementById('versionsGrid').innerHTML = [
+    card('⚡', 'CLI Version',           m.cliVer || '—', 'poly-glot-ai-cli · npm'),
+    card('🔌', 'MCP Version',           m.mcpVer || '—', 'poly-glot-mcp · npm'),
+    card('💙', 'VS Code Extension',     m.vscVer || '—', 'VS Code Marketplace'),
+    card('🧩', 'Open VSX Extension',    m.ovxVer || '—', 'open-vsx.org'),
+  ].join('');
+}
+
+function renderBanner(epStatus) {
+  const vals   = Object.values(epStatus);
+  const errors  = vals.filter(d => d.ok === false).length;
+  const loading = vals.filter(d => d.ok == null).length;
+  const total   = ENDPOINTS.length;
+  const el      = document.getElementById('banner');
+  const tx      = document.getElementById('bannerText');
+  if (loading && !errors) {
+    el.className = 'banner loading';
+    tx.textContent = `Checking ${loading} of ${total} services…`;
+  } else if (!errors) {
+    el.className = 'banner ok';
+    tx.textContent = `✅ All ${total} services operational`;
+  } else if (errors <= 2) {
+    el.className = 'banner warn';
+    tx.textContent = `⚠️ ${errors} service${errors>1?'s':''} degraded or unreachable`;
+  } else {
+    el.className = 'banner error';
+    tx.textContent = `🔴 ${errors} services are down — action needed`;
+  }
+}
+
+// ─── Countdown bar ────────────────────────────────────────────────────────────
+function startCountdown() {
+  clearInterval(cdTimer);
+  nextPollAt = Date.now() + POLL_MS;
+  cdTimer = setInterval(() => {
+    const rem  = Math.max(0, nextPollAt - Date.now());
+    const pct  = (rem / POLL_MS) * 100;
+    const m    = Math.floor(rem / 60000);
+    const s    = Math.floor((rem % 60000) / 1000);
+    document.getElementById('pollFill').style.width = pct + '%';
+    document.getElementById('pollNum').textContent  =
+      `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+// ─── Main run ─────────────────────────────────────────────────────────────────
+async function runAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Polling…';
+
+  // Optimistic loading state
+  const loadingEp = {};
+  ENDPOINTS.forEach(ep => { loadingEp[ep.key] = { ok: null, ms: null }; });
+  renderSvcs(loadingEp);
+  renderEpTable(loadingEp);
+  renderBanner(loadingEp);
+
+  try {
+    const { epStatus, m } = await collectAll();
+    renderSvcs(epStatus);
+    renderEpTable(epStatus);
+    renderMetrics(m);
+    renderStats(m);
+    renderVersions(m);
+    renderBanner(epStatus);
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    document.getElementById('bannerText').textContent = '❌ Dashboard error — check console';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⟳ Refresh Now';
+  startCountdown();
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+runAll();
+pollTimer = setInterval(runAll, POLL_MS);
+
+// Refresh on tab focus if stale > 5 min
+let lastRun = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - lastRun > 5 * 60 * 1000) {
+    lastRun = Date.now();
+    runAll();
+  }
+});
+</script>
+</body>
+</html>
