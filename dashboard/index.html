@@ -280,17 +280,19 @@ const ENDPOINTS = [
   { method:'GET',  key:'npmCli',    url:'https://registry.npmjs.org/poly-glot-ai-cli/latest',                      label:'npm CLI',              desc:'poly-glot-ai-cli latest version' },
   { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
   { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
-  { method:'POST', key:'vsc',       url:'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', label:'VS Code Marketplace',  desc:'Install + download count · rating' },
+  // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
+  { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Install + download count · rating (via proxy)' },
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let pollTimer, cdTimer, nextPollAt;
 
 // ─── Fetch one endpoint ───────────────────────────────────────────────────────
-async function fetchOne(ep) {
-  const t0  = Date.now();
+async function fetchOne(ep, timeoutMs) {
+  const t0   = Date.now();
+  const tout = timeoutMs || (ep.key.startsWith('gh') ? 20000 : 12000); // Render cold start = up to 15s
   const ctrl = new AbortController();
-  const to   = setTimeout(() => ctrl.abort(), 12000);
+  const to   = setTimeout(() => ctrl.abort(), tout);
   const opts = { method: ep.method, signal: ctrl.signal };
   if (ep.method === 'POST') {
     opts.headers = {
@@ -308,7 +310,10 @@ async function fetchOne(ep) {
     return { ok: res.ok, status: res.status, ms, data };
   } catch(e) {
     clearTimeout(to);
-    return { ok: false, status: 0, ms: Date.now() - t0, data: null, error: e.message };
+    const ms = Date.now() - t0;
+    // If it was a Render cold-start timeout, flag as warn not error
+    const isColdStart = ep.key.startsWith('gh') && ms >= tout - 500;
+    return { ok: false, status: 0, ms, data: null, error: e.message, coldStart: isColdStart };
   }
 }
 
@@ -321,10 +326,12 @@ async function collectAll() {
   // ── Endpoint statuses ──────────────────────────────────────────────────────
   const epStatus = {};
   ENDPOINTS.forEach((ep, i) => {
+    const r = raw[i];
     epStatus[ep.key] = {
-      ok:  raw[i].ok,
-      ms:  raw[i].ms,
-      err: raw[i].error || null,
+      ok:        r.ok,
+      ms:        r.ms,
+      err:       r.error || null,
+      coldStart: r.coldStart || false,
     };
   });
 
@@ -417,8 +424,13 @@ function renderSvcs(epStatus) {
   ];
   document.getElementById('svcGrid').innerHTML = SVCS.map(s => {
     const d  = epStatus[s.key] || {};
-    const st = d.ok == null ? 'loading' : d.ok ? 'ok' : 'error';
-    const stLabel = { ok:'● Online', error:'● Error / Unreachable', loading:'● Checking…' }[st];
+    const st = d.ok == null ? 'loading' : d.ok ? 'ok' : d.coldStart ? 'warn' : 'error';
+    const stLabel = {
+      ok:      '● Online',
+      error:   '● Error / Unreachable',
+      warn:    '● Waking up…',
+      loading: '● Checking…'
+    }[st];
     return `<div class="svc">
       <div class="svc-dot ${st}"></div>
       <div class="svc-body">
@@ -480,24 +492,29 @@ function renderVersions(m) {
 }
 
 function renderBanner(epStatus) {
-  const vals   = Object.values(epStatus);
-  const errors  = vals.filter(d => d.ok === false).length;
-  const loading = vals.filter(d => d.ok == null).length;
-  const total   = ENDPOINTS.length;
-  const el      = document.getElementById('banner');
-  const tx      = document.getElementById('bannerText');
-  if (loading && !errors) {
+  const vals      = Object.values(epStatus);
+  const hardErrors = vals.filter(d => d.ok === false && !d.coldStart).length;
+  const coldStarts = vals.filter(d => d.ok === false && d.coldStart).length;
+  const loading    = vals.filter(d => d.ok == null).length;
+  const total      = ENDPOINTS.length;
+  const el         = document.getElementById('banner');
+  const tx         = document.getElementById('bannerText');
+
+  if (loading && !hardErrors) {
     el.className = 'banner loading';
     tx.textContent = `Checking ${loading} of ${total} services…`;
-  } else if (!errors) {
+  } else if (!hardErrors && !coldStarts) {
     el.className = 'banner ok';
     tx.textContent = `✅ All ${total} services operational`;
-  } else if (errors <= 2) {
+  } else if (!hardErrors && coldStarts) {
     el.className = 'banner warn';
-    tx.textContent = `⚠️ ${errors} service${errors>1?'s':''} degraded or unreachable`;
+    tx.textContent = `⏳ ${coldStarts} service${coldStarts>1?'s are':' is'} waking up (Render cold start) — will be online shortly`;
+  } else if (hardErrors <= 2) {
+    el.className = 'banner warn';
+    tx.textContent = `⚠️ ${hardErrors} service${hardErrors>1?'s':''} degraded or unreachable`;
   } else {
     el.className = 'banner error';
-    tx.textContent = `🔴 ${errors} services are down — action needed`;
+    tx.textContent = `🔴 ${hardErrors} services are down — action needed`;
   }
 }
 
