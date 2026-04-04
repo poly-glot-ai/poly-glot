@@ -175,7 +175,7 @@
       } catch (e) {}
 
       // ── Known floors (verified from dashboards — public API undercounts) ─
-      var VS_FLOOR  = 96;   // VS Code "Till Date" dashboard (verified Apr 3 2026)
+      var VS_FLOOR  = 97;   // VS Code "Till Date" dashboard (verified Apr 4 2026)
       var OVX_FLOOR = 236;  // Open VSX downloadCount (verified Apr 3 2026)
 
       // VS Code — apply floor (public API lags ~48 hrs)
