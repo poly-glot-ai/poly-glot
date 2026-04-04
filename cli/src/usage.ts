@@ -100,15 +100,12 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null
 
 async function getServerUsage(): Promise<ServerUsageResponse | null> {
     try {
-        const cfg   = loadConfig();
+        const cfg = loadConfig();
         if (!cfg.sessionToken) return null;
         const res = await withTimeout(
-            fetch(`${AUTH_API}/usage/get`, {
-                method:  'POST',
-                headers: {
-                    'Authorization': `Bearer ${cfg.sessionToken}`,
-                    'Content-Type':  'application/json',
-                },
+            fetch(`${AUTH_API}/auth/get-usage?token=${encodeURIComponent(cfg.sessionToken)}`, {
+                method:  'GET',
+                headers: { 'Content-Type': 'application/json' },
             }),
             4000
         );
@@ -121,18 +118,18 @@ async function incrementServerUsage(count = 1): Promise<ServerUsageResponse | nu
     try {
         const cfg = loadConfig();
         if (!cfg.sessionToken) return null;
-        const res = await fetch(`${AUTH_API}/usage/increment`, {
+        const res = await fetch(`${AUTH_API}/auth/track-usage`, {
             method:  'POST',
-            headers: {
-                'Authorization': `Bearer ${cfg.sessionToken}`,
-                'Content-Type':  'application/json',
-            },
-            body: JSON.stringify({ files: count }),
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ token: cfg.sessionToken, count }),
         });
-        if (res.status === 429) {
-            const data = await res.json() as ServerUsageResponse;
-            syncLocalToServer(data.used);
-            return data;
+        if (res.status === 403 || res.status === 429) {
+            // Server says limit reached — sync local and surface to caller
+            try {
+                const data = await res.json() as ServerUsageResponse;
+                syncLocalToServer(data.used);
+                return data;
+            } catch { return null; }
         }
         if (!res.ok) return null;
         const data = await res.json() as ServerUsageResponse;
