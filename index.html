@@ -623,11 +623,25 @@
       flex-shrink: 0;
       margin: 0 24px;
     }
+    .pg2-install-counter__live-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .pg2-install-counter__live-text {
+      font-size: 11px;
+      color: rgba(52, 211, 153, 0.75);
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
     .pg2-install-counter__pulse {
-      position: absolute;
-      top: 8px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: relative;
+      top: auto;
+      left: auto;
+      transform: none;
+      flex-shrink: 0;
       width: 7px;
       height: 7px;
       background: #34d399;
@@ -681,7 +695,7 @@
       .pg2-install-counter__divider { display: none !important; }
       .pg2-install-counter__number { font-size: 22px; }
       .pg2-install-counter__label { font-size: 10px; }
-      .pg2-install-counter__pulse { left: 50%; transform: translateX(-50%); }
+      .pg2-install-counter__live-text { font-size: 10px; }
     }
     @media (max-width: 380px) {
       .pg2-install-counter__number { font-size: 18px; }
@@ -1739,7 +1753,10 @@
      REAL-TIME INSTALL COUNTER
      ════════════════════════════════════════════════════════════ -->
 <div class="pg2-install-counter" id="pg2InstallCounter" aria-label="Live install statistics">
-  <span class="pg2-install-counter__pulse"></span>
+  <div class="pg2-install-counter__live-label">
+    <span class="pg2-install-counter__pulse"></span>
+    <span class="pg2-install-counter__live-text">Live · updated periodically</span>
+  </div>
   <div class="pg2-install-counter__inner">
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="96">96</span>
