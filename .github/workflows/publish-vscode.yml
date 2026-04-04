@@ -19,18 +19,12 @@ name: Publish VS Code Extension
 #  11. Trigger site auto-update workflow
 # ─────────────────────────────────────────────────────────────────────────────
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'vscode-extension/src/**'
-      - 'vscode-extension/package.json'
-      - 'vscode-extension/tsconfig.json'
   workflow_dispatch:
     inputs:
       bump:
         description: 'Version bump (none = publish current version as-is)'
         required: false
-        default: 'patch'
+        default: 'none'
         type: choice
         options: [patch, minor, major, none]
 
