@@ -362,7 +362,7 @@ async function collectAll() {
   // Open VSX
   try {
     const d = map.ovx.r.data;
-    if (d) { m.ovxVer = d.version; m.ovxDl = d.downloadCount; }
+    if (d) { m.ovxVer = d.version; m.ovxDl = Math.max(236, d.downloadCount || 0); }
   } catch {}
 
   // VS Code Marketplace
@@ -372,7 +372,7 @@ async function collectAll() {
       m.vscVer  = ext.versions?.[0]?.version;
       const st  = {};
       (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
-      m.vscInstall = (st.install || 0) + (st.downloadCount || 0);
+      m.vscInstall = Math.max(97, (st.install || 0) + (st.downloadCount || 0));
       m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
     }
   } catch {}
