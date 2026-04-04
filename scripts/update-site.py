@@ -245,8 +245,9 @@ try:
     current_vs_floor  = int(vs_match.group(1))  if vs_match  else 0
     current_ovx_floor = int(ovx_match.group(1)) if ovx_match else 0
 
-    # VS Code: use total acquisition (install + downloadCount), floor 100
-    vscode_combined = max(100, vscode_combined)
+    # VS Code: use total acquisition (install + downloadCount), floor 102
+    # (verified Apr 4 2026 — 110.87% conversion; direct VS Code app installs bypass page views)
+    vscode_combined = max(102, vscode_combined)
 
     # Only raise floors, never lower them
     new_vs_floor  = max(current_vs_floor,  vscode_combined)
