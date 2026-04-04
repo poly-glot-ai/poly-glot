@@ -3419,7 +3419,16 @@ function initCommentGenerator() {
         const key      = localStorage.getItem(LS.key)      || '';
         const provider = localStorage.getItem(LS.provider) || 'openai';
         const model    = localStorage.getItem(LS.model)    || 'gpt-4o-mini';
-        if (key) { cgApiKey.value = key; cgKeyStatus.textContent = '✅ Key saved — ready to generate'; cgKeyStatus.className = 'pg-key-status ok'; }
+        if (key) {
+            // Set value directly on the DOM property (not via setAttribute) so
+            // the 'input' event does NOT fire — avoids immediately clearing the status.
+            cgApiKey.value = key;
+            // Show status AFTER setting value so it isn't wiped by any listener.
+            setTimeout(() => {
+                cgKeyStatus.textContent = '✅ Key saved — ready to generate';
+                cgKeyStatus.className   = 'pg-key-status ok';
+            }, 0);
+        }
         cgProvider.value = provider;
         updateModelDropdown(provider, model);
         // Sync comment style to match default language on page load
@@ -3613,6 +3622,15 @@ function initCommentGenerator() {
             if (testOk) {
                 cgKeyStatus.textContent = `✅ ${provLabel} key saved & verified — ready to generate`;
                 cgKeyStatus.className   = 'pg-key-status ok';
+                // Re-apply after a tick to win any race with input listeners
+                const snapText = cgKeyStatus.textContent;
+                const snapClass = cgKeyStatus.className;
+                setTimeout(() => {
+                    if (!cgKeyStatus.textContent) {
+                        cgKeyStatus.textContent = snapText;
+                        cgKeyStatus.className   = snapClass;
+                    }
+                }, 50);
             } else {
                 cgKeyStatus.textContent = testMsg || `❌ Key saved but could not verify — check your ${provLabel} key`;
                 cgKeyStatus.className   = 'pg-key-status err';
@@ -3626,16 +3644,32 @@ function initCommentGenerator() {
         if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
     });
 
-    // ── Clear status on any input change ──
-    ['cgApiKey', 'cgProvider', 'cgModel'].forEach(function(id) {
+    // ── Clear status when provider or model changes (not on key input — that
+    //    would wipe the ✅ message the moment the user starts typing) ──────
+    ['cgProvider', 'cgModel'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) {
-            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function() {
+            el.addEventListener('change', function() {
                 var st = document.getElementById('cgKeyStatus');
                 if (st && st.textContent) { st.textContent = ''; st.className = 'pg-key-status'; }
             });
         }
     });
+    // Clear status when user types a NEW key (only after they clear and retype,
+    // not just on focus/blur — check if value differs from saved key).
+    if (cgApiKey) {
+        cgApiKey.addEventListener('input', function() {
+            var saved = localStorage.getItem(LS.key) || '';
+            if (cgApiKey.value !== saved) {
+                var st = document.getElementById('cgKeyStatus');
+                if (st) { st.textContent = ''; st.className = 'pg-key-status'; }
+            }
+        });
+    }
+
+    // ── Wire modal Save Key button (pgKeySaveBtn) to same handler as cgSaveKey ──
+    var pgKeySaveBtn = document.getElementById('pgKeySaveBtn');
+    if (pgKeySaveBtn) pgKeySaveBtn.addEventListener('click', () => cgSaveKey.click());
 
     // ── Toggle API key visibility (inline bar) ──
     if (cgToggleKey) {
