@@ -225,14 +225,26 @@ else:
     print("  ℹ️  index.html — no changes needed")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2j. Auto-update VS_FLOOR and OVX_FLOOR in live-data.v10.js
-#     The public Marketplace API undercounts vs the dashboard (~6 gap).
+# 2j. Auto-update VS_FLOOR and OVX_FLOOR across ALL three floor files:
+#       1. live-data.v11.js     — browser counter (single source of truth)
+#       2. dashboard/index.html — health dashboard Math.max() floor
+#       3. scripts/update-site.py (self) — minimum floor constant here
+#
+#     The public Marketplace API undercounts vs the dashboard (~48 hr lag).
 #     We use combined (install + downloadCount) as the new floor whenever
 #     it exceeds the current floor — so the counter never goes backwards.
+#     All three files are updated atomically in the same commit.
 # ─────────────────────────────────────────────────────────────────────────────
 import re as _re2
 
-LIVE_DATA_FILE = "live-data.v10.js"
+LIVE_DATA_FILE = "live-data.v11.js"
+DASHBOARD_FILE = "dashboard/index.html"
+
+# VS Code: enforce known minimum floor (raised manually from publisher dashboard)
+# (verified Apr 4 2026 — 110.87% conversion; direct VS Code app installs bypass page views)
+vscode_combined = max(102, vscode_combined)
+
+# ── 1. live-data.v11.js ──────────────────────────────────────────────────────
 try:
     with open(LIVE_DATA_FILE, "r", encoding="utf-8") as f:
         ld = f.read()
@@ -245,10 +257,6 @@ try:
     current_vs_floor  = int(vs_match.group(1))  if vs_match  else 0
     current_ovx_floor = int(ovx_match.group(1)) if ovx_match else 0
 
-    # VS Code: use total acquisition (install + downloadCount), floor 102
-    # (verified Apr 4 2026 — 110.87% conversion; direct VS Code app installs bypass page views)
-    vscode_combined = max(102, vscode_combined)
-
     # Only raise floors, never lower them
     new_vs_floor  = max(current_vs_floor,  vscode_combined)
     new_ovx_floor = max(current_ovx_floor, ovx_installs)
@@ -259,9 +267,9 @@ try:
             rf'\g<1>{new_vs_floor}',
             ld
         )
-        print(f"  ✅ VS_FLOOR updated: {current_vs_floor} → {new_vs_floor}")
+        print(f"  ✅ {LIVE_DATA_FILE} VS_FLOOR updated: {current_vs_floor} → {new_vs_floor}")
     else:
-        print(f"  ℹ️  VS_FLOOR unchanged: {current_vs_floor} (api={vscode_combined})")
+        print(f"  ℹ️  {LIVE_DATA_FILE} VS_FLOOR unchanged: {current_vs_floor} (api={vscode_combined})")
 
     if new_ovx_floor != current_ovx_floor:
         ld = _re2.sub(
@@ -269,23 +277,54 @@ try:
             rf'\g<1>{new_ovx_floor}',
             ld
         )
-        print(f"  ✅ OVX_FLOOR updated: {current_ovx_floor} → {new_ovx_floor}")
+        print(f"  ✅ {LIVE_DATA_FILE} OVX_FLOOR updated: {current_ovx_floor} → {new_ovx_floor}")
     else:
-        print(f"  ℹ️  OVX_FLOOR unchanged: {current_ovx_floor} (api={ovx_installs})")
+        print(f"  ℹ️  {LIVE_DATA_FILE} OVX_FLOOR unchanged: {current_ovx_floor} (api={ovx_installs})")
 
-    # Chrome Web Store — no public API; floor stays at 0 until manually updated
+    # Chrome Web Store — no public API; floor stays until manually updated
     chrome_match = _re2.search(r'var CHROME_FLOOR\s*=\s*(\d+)', ld)
     current_chrome_floor = int(chrome_match.group(1)) if chrome_match else 0
-    print(f"  ℹ️  CHROME_FLOOR: {current_chrome_floor} (no public API — update manually)")
+    print(f"  ℹ️  {LIVE_DATA_FILE} CHROME_FLOOR: {current_chrome_floor} (no public API — update manually)")
 
     if ld != ld_orig:
         write_file(LIVE_DATA_FILE, ld)
-        print(f"  ✅ {LIVE_DATA_FILE} floors updated")
     else:
         print(f"  ℹ️  {LIVE_DATA_FILE} — no floor changes needed")
 
 except Exception as e:
     print(f"  ⚠️  Could not update {LIVE_DATA_FILE}: {e}")
+    new_vs_floor  = vscode_combined  # fallback so dashboard update still runs
+    new_ovx_floor = ovx_installs
+
+# ── 2. dashboard/index.html ──────────────────────────────────────────────────
+# Dashboard has its own Math.max(N, ...) floor — keep it in sync with live-data.v11.js
+try:
+    with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
+        db = f.read()
+
+    db_orig = db
+
+    # Match: m.vscInstall = Math.max(NNN, ...)
+    db_vs_match = _re2.search(r'm\.vscInstall\s*=\s*Math\.max\((\d+),', db)
+    current_db_vs_floor = int(db_vs_match.group(1)) if db_vs_match else 0
+
+    if new_vs_floor != current_db_vs_floor:
+        db = _re2.sub(
+            r'(m\.vscInstall\s*=\s*Math\.max\()\d+,',
+            rf'\g<1>{new_vs_floor},',
+            db
+        )
+        print(f"  ✅ {DASHBOARD_FILE} vscInstall floor updated: {current_db_vs_floor} → {new_vs_floor}")
+    else:
+        print(f"  ℹ️  {DASHBOARD_FILE} vscInstall floor unchanged: {current_db_vs_floor}")
+
+    if db != db_orig:
+        write_file(DASHBOARD_FILE, db)
+    else:
+        print(f"  ℹ️  {DASHBOARD_FILE} — no floor changes needed")
+
+except Exception as e:
+    print(f"  ⚠️  Could not update {DASHBOARD_FILE}: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Patch sitemap.xml
