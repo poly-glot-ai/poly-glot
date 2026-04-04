@@ -2,23 +2,38 @@ import * as vscode from 'vscode';
 
 // ─── Pricing tables ───────────────────────────────────────────────────────────
 const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
+    'gpt-4.1':          { input: 0.002,   output: 0.008  },
+    'gpt-4.1-mini':     { input: 0.0004,  output: 0.0016 },
+    'gpt-4.1-nano':     { input: 0.0001,  output: 0.0004 },
     'gpt-4o':           { input: 0.0025,  output: 0.010  },
     'gpt-4o-mini':      { input: 0.00015, output: 0.0006 },
+    'o3':               { input: 0.010,   output: 0.040  },
+    'o3-mini':          { input: 0.0011,  output: 0.0044 },
+    'o1':               { input: 0.015,   output: 0.060  },
+    'o1-mini':          { input: 0.0011,  output: 0.0044 },
     'gpt-4-turbo':      { input: 0.01,    output: 0.03   },
     'gpt-4':            { input: 0.03,    output: 0.06   },
     'gpt-3.5-turbo':    { input: 0.0005,  output: 0.0015 },
-    // fallback
     '_default':         { input: 0.002,   output: 0.008  },
 };
 
 const ANTHROPIC_PRICING: Record<string, { input: number; output: number }> = {
-    'claude-3-5-sonnet-20241022': { input: 0.003,  output: 0.015 },
-    'claude-3-5-haiku-20241022':  { input: 0.0008, output: 0.004 },
-    'claude-3-opus-20240229':     { input: 0.015,  output: 0.075 },
-    'claude-3-sonnet-20240229':   { input: 0.003,  output: 0.015 },
-    'claude-3-haiku-20240307':    { input: 0.00025,output: 0.00125 },
-    // fallback
-    '_default':                   { input: 0.003,  output: 0.015 },
+    'claude-sonnet-4-5':          { input: 0.003,   output: 0.015   },
+    'claude-opus-4-5':            { input: 0.015,   output: 0.075   },
+    'claude-haiku-4-5':           { input: 0.0008,  output: 0.004   },
+    'claude-3-5-sonnet-20241022': { input: 0.003,   output: 0.015   },
+    'claude-3-5-haiku-20241022':  { input: 0.0008,  output: 0.004   },
+    'claude-3-opus-20240229':     { input: 0.015,   output: 0.075   },
+    'claude-3-haiku-20240307':    { input: 0.00025, output: 0.00125 },
+    '_default':                   { input: 0.003,   output: 0.015   },
+};
+
+const GOOGLE_PRICING: Record<string, { input: number; output: number }> = {
+    'gemini-2.5-flash':      { input: 0.0003,  output: 0.0025 },
+    'gemini-2.5-pro':        { input: 0.00125, output: 0.010  },
+    'gemini-2.5-flash-lite': { input: 0.0001,  output: 0.0004 },
+    'gemini-2.0-flash-001':  { input: 0.0001,  output: 0.0004 },
+    '_default':              { input: 0.0003,  output: 0.0025 },
 };
 
 // ─── Language → comment-style map ────────────────────────────────────────────
@@ -125,17 +140,34 @@ export class AIGenerator {
         const p = provider ?? this.getProvider();
         if (p === 'anthropic') {
             return [
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet',    cost: 'medium' },
-                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku',     cost: 'low'    },
-                { value: 'claude-3-opus-20240229',      label: 'Claude 3 Opus',        cost: 'high'   },
-                { value: 'claude-3-haiku-20240307',     label: 'Claude 3 Haiku',       cost: 'low'    },
+                { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (recommended)', cost: 'low'      },
+                { value: 'claude-opus-4-5',            label: 'Claude Opus 4 (most powerful)',    cost: 'high'     },
+                { value: 'claude-haiku-4-5',           label: 'Claude Haiku 4 (fast)',            cost: 'very low' },
+                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet',               cost: 'low'      },
+                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku',                cost: 'very low' },
+                { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus (legacy)',          cost: 'high'     },
+                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (legacy)',         cost: 'very low' },
             ];
         }
+        if (p === 'google') {
+            return [
+                { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash ✨ (recommended)', cost: 'low'      },
+                { value: 'gemini-2.5-pro',        label: 'Gemini 2.5 Pro (most powerful)',    cost: 'medium'   },
+                { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (cheapest)',  cost: 'very low' },
+                { value: 'gemini-2.0-flash-001',  label: 'Gemini 2.0 Flash (stable)',         cost: 'very low' },
+            ];
+        }
+        // openai (default)
         return [
-            { value: 'gpt-4o-mini',   label: 'GPT-4o Mini (Recommended)', cost: 'very low' },
-            { value: 'gpt-4o',        label: 'GPT-4o',                     cost: 'medium'   },
-            { value: 'gpt-4-turbo',   label: 'GPT-4 Turbo',               cost: 'high'     },
-            { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo',            cost: 'low'      },
+            { value: 'gpt-4.1-mini',   label: 'GPT-4.1 Mini ✨ (recommended)', cost: 'very low' },
+            { value: 'gpt-4.1',        label: 'GPT-4.1 (best)',                cost: 'low'      },
+            { value: 'gpt-4.1-nano',   label: 'GPT-4.1 Nano (cheapest)',       cost: 'minimal'  },
+            { value: 'gpt-4o',         label: 'GPT-4o',                        cost: 'low'      },
+            { value: 'gpt-4o-mini',    label: 'GPT-4o Mini',                   cost: 'very low' },
+            { value: 'o3-mini',        label: 'o3-mini (reasoning)',           cost: 'low'      },
+            { value: 'o3',             label: 'o3 (reasoning, powerful)',      cost: 'high'     },
+            { value: 'gpt-4-turbo',    label: 'GPT-4 Turbo',                  cost: 'high'     },
+            { value: 'gpt-3.5-turbo',  label: 'GPT-3.5 Turbo (legacy)',       cost: 'very low' },
         ];
     }
 
@@ -153,6 +185,9 @@ export class AIGenerator {
         if (provider === 'anthropic') {
             return this.callAnthropic(apiKey, model, prompt, code);
         }
+        if (provider === 'google') {
+            return this.callGoogle(apiKey, model, prompt, code);
+        }
         return this.callOpenAI(apiKey, model, prompt, code);
     }
 
@@ -168,6 +203,9 @@ export class AIGenerator {
 
         if (provider === 'anthropic') {
             return this.callAnthropic(apiKey, model, prompt, code);
+        }
+        if (provider === 'google') {
+            return this.callGoogle(apiKey, model, prompt, code);
         }
         return this.callOpenAI(apiKey, model, prompt, code);
     }
@@ -187,6 +225,10 @@ export class AIGenerator {
 
         if (provider === 'anthropic') {
             const res = await this.callAnthropicRaw(apiKey, model, prompt);
+            raw  = res.content;
+            cost = res.cost;
+        } else if (provider === 'google') {
+            const res = await this.callGoogleRaw(apiKey, model, prompt);
             raw  = res.content;
             cost = res.cost;
         } else {
@@ -355,6 +397,58 @@ ${code}
         const outputTok  = data.usage?.output_tokens ?? 0;
         const tokensUsed = inputTok + outputTok;
         const pricing    = ANTHROPIC_PRICING[model] ?? ANTHROPIC_PRICING['_default'];
+        const cost       = (inputTok / 1_000_000) * pricing.input + (outputTok / 1_000_000) * pricing.output;
+
+        return { content, tokensUsed, cost };
+    }
+
+    // ── Google Gemini (OpenAI-compatible endpoint) ────────────────────────────
+
+    private async callGoogle(
+        apiKey: string, model: string, prompt: string, _originalCode: string
+    ): Promise<GenerateResult> {
+        const res = await this.callGoogleRaw(apiKey, model, prompt);
+        return {
+            commentedCode: res.content,
+            model,
+            cost: res.cost,
+            tokensUsed: res.tokensUsed,
+        };
+    }
+
+    private async callGoogleRaw(apiKey: string, model: string, prompt: string) {
+        const response = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.3,
+                    max_tokens: 4096,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+            const msg = (err as any).error?.message ?? response.statusText;
+            if (response.status === 400 || response.status === 403 || msg.toLowerCase().includes('api key not valid')) {
+                throw new Error(`Invalid Google AI key (${response.status}): ${msg} — get a key at aistudio.google.com/app/apikey`);
+            }
+            throw new Error(`Google API error ${response.status}: ${msg}`);
+        }
+
+        const data = await response.json() as any;
+        const content    = data.choices?.[0]?.message?.content ?? '';
+        const inputTok   = data.usage?.prompt_tokens     ?? 0;
+        const outputTok  = data.usage?.completion_tokens ?? 0;
+        const tokensUsed = inputTok + outputTok;
+        const pricing    = GOOGLE_PRICING[model] ?? GOOGLE_PRICING['_default'];
         const cost       = (inputTok / 1_000_000) * pricing.input + (outputTok / 1_000_000) * pricing.output;
 
         return { content, tokensUsed, cost };

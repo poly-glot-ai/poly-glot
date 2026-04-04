@@ -67,7 +67,7 @@
         "name": "Does Poly-Glot AI store my code?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Poly-Glot AI makes direct API calls from your machine to OpenAI or Anthropic using your own API key. Your code never touches Poly-Glot servers. There is zero data retention and no telemetry."
+          "text": "No. Poly-Glot AI makes direct API calls from your machine to OpenAI, Anthropic, or Google using your own API key. Your code never touches Poly-Glot servers. There is zero data retention and no telemetry."
         }
       },
       {
@@ -91,7 +91,7 @@
         "name": "What AI models does Poly-Glot support?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Poly-Glot AI works with any model from OpenAI (GPT-4.1, GPT-4o, o3) or Anthropic (Claude Sonnet 4, Claude Opus 4, Claude Haiku). You bring your own API key and choose your model."
+          "text": "Poly-Glot AI works with any model from OpenAI (GPT-4.1, GPT-4o, o3), Anthropic (Claude Sonnet 4, Claude Opus 4, Claude Haiku), or Google (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash Lite). You bring your own API key and choose your model."
         }
       }
     ]
@@ -104,6 +104,8 @@
   <!-- DNS preconnect for external APIs -->
   <link rel="preconnect" href="https://api.openai.com">
   <link rel="preconnect" href="https://api.anthropic.com">
+  <link rel="preconnect" href="https://generativelanguage.googleapis.com">
+  <link rel="preconnect" href="https://generativelanguage.googleapis.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://www.googletagmanager.com">
 
@@ -1834,7 +1836,7 @@ for (const user of users) {
     <div class="pg2-steps">
       <div class="pg2-step">
         <div class="pg2-step__num">1</div>
-        <div class="pg2-step__text">Add your OpenAI or Anthropic API key</div>
+        <div class="pg2-step__text">Add your OpenAI, Anthropic, or Google API key</div>
       </div>
       <div class="pg2-step__arrow">→</div>
       <div class="pg2-step">
@@ -1864,7 +1866,7 @@ for (const user of users) {
   <div class="pg2-gen-heading">
     <div class="pg2-eyebrow" style="justify-content:center;">🧑‍💻 Paste Code. Get Documentation.</div>
     <h2>Try it free — sign up takes 30 seconds</h2>
-    <p>Create a free account, paste your OpenAI or Anthropic key, and generate documentation instantly. Your key goes directly to the provider — never to us. Get an <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Anthropic</a> or <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">OpenAI</a> key ↗ &nbsp;·&nbsp; or <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">install the CLI ↗</a></p>
+    <p>Create a free account, paste your OpenAI, Anthropic, or Google key, and generate documentation instantly. Your key goes directly to the provider — never to us. Get an <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Anthropic</a> or <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">OpenAI</a> or <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Google AI Studio</a> key ↗ &nbsp;·&nbsp; or <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">install the CLI ↗</a></p>
   </div>
 
   <!-- Sign-up CTA banner — shown to unauthenticated users, hidden after sign-in -->
@@ -1873,7 +1875,7 @@ for (const user of users) {
     <div style="font-size:17px;font-weight:700;color:#f4f4f6;margin-bottom:6px;">Create your free account to get started</div>
     <div style="font-size:13px;color:#94a3b8;margin-bottom:18px;line-height:1.6;">
       50 files/month free · no credit card · takes 30 seconds<br>
-      Your API key goes directly to OpenAI or Anthropic — never to us.
+      Your API key goes directly to OpenAI, Anthropic, or Google — never to us.
     </div>
     <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('signup-banner');}else{var b=document.getElementById('headerSignInBtn');if(b)b.click();} return false;"
        style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);margin-bottom:10px;">
@@ -1906,7 +1908,7 @@ for (const user of users) {
             </div>
             <span id="cgKeyStatusModal" class="pg-key-status"></span>
             <div class="pg-apikey-helper">
-              <span id="cgApiKeyHelper">🔑 No API key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key in 2 min ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · Your key is saved locally, never sent to us.</span>
+              <span id="cgApiKeyHelper">🔑 No API key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio ↗</a> · Your key is saved locally, never sent to us.</span>
             </div>
           </div>
           <div class="settings-section">
@@ -1982,6 +1984,7 @@ for (const user of users) {
           <select id="cgProvider" class="pg-select">
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
+            <option value="google">Google</option>
           </select>
         </div>
         <!-- Model -->
@@ -2011,6 +2014,12 @@ for (const user of users) {
               <option value="claude-3-opus-20240229">Claude 3 Opus (legacy)</option>
               <option value="claude-3-haiku-20240307">Claude 3 Haiku (legacy)</option>
             </optgroup>
+            <optgroup label="── Google ──">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash ✨ (recommended)</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro (most powerful)</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (cheapest)</option>
+              <option value="gemini-2.0-flash-001">Gemini 2.0 Flash (stable)</option>
+            </optgroup>
             <optgroup label="── Custom ──">
               <option value="__cg_custom__">✏️ Custom model…</option>
             </optgroup>
@@ -2036,7 +2045,7 @@ for (const user of users) {
             <span style="font-size:11px;color:#64748b;opacity:.8;">— uses zero tokens</span>
           </div>
           <div class="pg-apikey-helper" style="margin-top:6px;">
-            <span id="cgApiKeyHelper">🔑 No key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · Stored locally — never sent to Poly-Glot.</span>
+            <span id="cgApiKeyHelper">🔑 No key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio ↗</a> · Stored locally — never sent to Poly-Glot.</span>
           </div>
         </div>
       </div>
@@ -2326,7 +2335,7 @@ for (const user of users) {
             <div class="flags-row flags-row-header"><span>Flag</span><span>What it does</span><span>Example</span></div>
             <div class="flags-row">
               <code class="flags-code">--provider</code>
-              <span>Set AI provider: openai or anthropic</span>
+              <span>Set AI provider: openai, anthropic, or google</span>
               <code class="flags-example">poly-glot comment auth.js --provider anthropic</code>
             </div>
             <div class="flags-row">
@@ -2370,7 +2379,7 @@ for (const user of users) {
             <div class="flags-row flags-row-header"><span>Flag</span><span>What it does</span><span>Example</span></div>
             <div class="flags-row">
               <code class="flags-code">--key &lt;key&gt;</code>
-              <span>Set OpenAI or Anthropic API key non-interactively</span>
+              <span>Set OpenAI, Anthropic, or Google API key non-interactively</span>
               <code class="flags-example">poly-glot config --key sk-...</code>
             </div>
             <div class="flags-row">
@@ -2993,6 +3002,7 @@ function pg2OpenAssistant(text) {
   <div class="pg2-footer__links">
     <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="pg2-footer__link">💻 VS Code Extension</a>
     <a href="https://open-vsx.org/extension/poly-glot-ai/poly-glot" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(124,58,237,.3);color:#a78bfa;">⬛ Open VSX · Cursor ↗</a>
+    <a href="https://chromewebstore.google.com/detail/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(66,133,244,.3);color:#60a5fa;">🌐 Chrome Web Store ↗</a>
     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="pg2-footer__link pg2-footer__link--cli">⌨️ CLI on npm ↗</a>
     <a href="#pg-copilot-section" class="pg2-footer__link pg2-footer__link--copilot">🤖 Copilot Chat ↗</a>
     <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(99,102,241,.3);color:#818cf8;">🐙 GitHub App ↗</a>

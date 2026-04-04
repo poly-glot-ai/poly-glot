@@ -249,12 +249,15 @@ async function handleChatRequest(
         stream.markdown([
             '## 🔑 API Key Required',
             '',
-            'Poly-Glot uses your own OpenAI or Anthropic API key — your code never goes through our servers.',
+            'Poly-Glot uses your own API key — your code never goes through our servers.',
             '',
             '**Set it up in 10 seconds:**',
             '1. Open Command Palette (`Cmd+Shift+P`)',
             '2. Run **Poly-Glot: Configure API Key**',
-            '3. Choose OpenAI or Anthropic and paste your key',
+            '3. Choose **OpenAI**, **Anthropic**, or **Google** and paste your key',
+            '   - OpenAI: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)',
+            '   - Anthropic: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)',
+            '   - Google: [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)',
             '',
             'Then come back and try again!',
         ].join('\n'));
@@ -738,22 +741,31 @@ async function cmdExplainCode(): Promise<void> {
 async function cmdConfigureApiKey(): Promise<void> {
     const provider = await vscode.window.showQuickPick(
         [
-            { label: '$(cloud) OpenAI',    description: 'GPT-4o, GPT-4o-mini, GPT-4 Turbo…',  value: 'openai'    },
-            { label: '$(cloud) Anthropic', description: 'Claude Sonnet 4, Claude 3.5 Sonnet…', value: 'anthropic' },
+            { label: '$(cloud) OpenAI',    description: 'GPT-4.1, GPT-4.1 Mini, GPT-4o, o3…',          value: 'openai'    },
+            { label: '$(cloud) Anthropic', description: 'Claude Sonnet 4, Claude Opus 4, Haiku 4…',     value: 'anthropic' },
+            { label: '$(cloud) Google',    description: 'Gemini 2.5 Flash, Gemini 2.5 Pro, Flash Lite…', value: 'google'   },
         ],
         { title: 'Poly-Glot: Select AI Provider', placeHolder: 'Choose your provider' },
     );
     if (!provider) return;
 
+    const keyPrompt = provider.value === 'anthropic'
+        ? 'Get your key at console.anthropic.com/settings/keys'
+        : provider.value === 'google'
+        ? 'Get your key at aistudio.google.com/app/apikey'
+        : 'Get your key at platform.openai.com/api-keys';
+
+    const keyPlaceholder = provider.value === 'anthropic' ? 'sk-ant-…'
+                         : provider.value === 'google'    ? 'AIza…'
+                         : 'sk-…';
+
     const apiKey = await vscode.window.showInputBox({
-        title:       `Poly-Glot: Enter ${provider.value === 'anthropic' ? 'Anthropic' : 'OpenAI'} API Key`,
-        prompt:      provider.value === 'anthropic'
-            ? 'Get your key at console.anthropic.com/settings/keys'
-            : 'Get your key at platform.openai.com/api-keys',
-        placeHolder: provider.value === 'anthropic' ? 'sk-ant-…' : 'sk-…',
-        password:    true,
+        title:          `Poly-Glot: Enter ${provider.value === 'anthropic' ? 'Anthropic' : provider.value === 'google' ? 'Google AI' : 'OpenAI'} API Key`,
+        prompt:         keyPrompt,
+        placeHolder:    keyPlaceholder,
+        password:       true,
         ignoreFocusOut: true,
-        validateInput: val => val && val.trim().length > 10 ? null : 'Key must be at least 10 characters',
+        validateInput:  val => val && val.trim().length > 10 ? null : 'Key must be at least 10 characters',
     });
     if (!apiKey) return;
 
@@ -769,7 +781,10 @@ async function cmdConfigureApiKey(): Promise<void> {
         await vscode.workspace.getConfiguration('polyglot').update('model', modelChoice.value, vscode.ConfigurationTarget.Global);
     }
 
-    vscode.window.showInformationMessage(`✅ Poly-Glot: ${provider.value === 'anthropic' ? 'Anthropic' : 'OpenAI'} configured!`);
+    const provName = provider.value === 'anthropic' ? 'Anthropic'
+                   : provider.value === 'google'    ? 'Google AI'
+                   : 'OpenAI';
+    vscode.window.showInformationMessage(`✅ Poly-Glot: ${provName} configured!`);
 }
 
 // ─── Command: Configure License Token ────────────────────────────────────────

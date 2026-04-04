@@ -3400,6 +3400,12 @@ function initCommentGenerator() {
             { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku' },
             { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus' },
             { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (legacy)' }
+        ],
+        google: [
+            { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash ✨ (recommended)' },
+            { value: 'gemini-2.5-pro',        label: 'Gemini 2.5 Pro (most powerful)' },
+            { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (cheapest)' },
+            { value: 'gemini-2.0-flash-001',  label: 'Gemini 2.0 Flash (stable)' }
         ]
     };
 
@@ -3459,10 +3465,31 @@ function initCommentGenerator() {
         }
     }
 
-    // ── Provider change → update model dropdown ──
+    // ── Provider change → update model dropdown + API key helper ──
     cgProvider.addEventListener('change', () => {
         const prov = cgProvider.value;
-        updateModelDropdown(prov, prov === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4.1-mini');
+        const defaultModel = prov === 'anthropic' ? 'claude-sonnet-4-5'
+                           : prov === 'google'    ? 'gemini-2.5-flash'
+                           : 'gpt-4.1-mini';
+        updateModelDropdown(prov, defaultModel);
+        // Update the API key helper hint
+        var helper = document.getElementById('cgApiKeyHelper');
+        if (helper) {
+            if (prov === 'google') {
+                helper.innerHTML = '🔑 No key yet? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a Google AI Studio key ↗</a> · Stored locally — never sent to Poly-Glot.';
+            } else if (prov === 'anthropic') {
+                helper.innerHTML = '🔑 No key yet? <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get an Anthropic key ↗</a> · Stored locally — never sent to Poly-Glot.';
+            } else {
+                helper.innerHTML = '🔑 No key yet? <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key ↗</a> · <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic ↗</a> · Stored locally — never sent to Poly-Glot.';
+            }
+        }
+        // Update placeholder text to match provider key format
+        var keyInput = document.getElementById('cgApiKey');
+        if (keyInput) {
+            keyInput.placeholder = prov === 'google'    ? 'AIza… (Google AI Studio key)'
+                                 : prov === 'anthropic' ? 'sk-ant-… (Anthropic key)'
+                                 : 'sk-… (OpenAI key)';
+        }
     });
 
     // ── Custom model row: show/hide + persist ──
@@ -3637,7 +3664,7 @@ function initCommentGenerator() {
 
             // ── 2. Provider selected ──────────────────────────────────────────
             if (!provider) {
-                showKeyStatus('❌ Select a provider (OpenAI or Anthropic) first', 'err');
+                showKeyStatus('❌ Select a provider (OpenAI, Anthropic, or Google) first', 'err');
                 return;
             }
 
@@ -3650,15 +3677,28 @@ function initCommentGenerator() {
             // ── 4. Format check ───────────────────────────────────────────────
             var looksOpenAI    = key.startsWith('sk-') && !key.startsWith('sk-ant-');
             var looksAnthropic = key.startsWith('sk-ant-');
+            var looksGoogle    = key.startsWith('AIza');
             if (provider === 'openai' && looksAnthropic) {
                 showKeyStatus('❌ That looks like an Anthropic key — switch provider to Anthropic', 'err');
+                return;
+            }
+            if (provider === 'openai' && looksGoogle) {
+                showKeyStatus('❌ That looks like a Google AI key — switch provider to Google', 'err');
                 return;
             }
             if (provider === 'anthropic' && looksOpenAI) {
                 showKeyStatus('❌ That looks like an OpenAI key — switch provider to OpenAI', 'err');
                 return;
             }
-            if (!looksOpenAI && !looksAnthropic) {
+            if (provider === 'anthropic' && looksGoogle) {
+                showKeyStatus('❌ That looks like a Google AI key — switch provider to Google', 'err');
+                return;
+            }
+            if (provider === 'google' && (looksOpenAI || looksAnthropic)) {
+                showKeyStatus('❌ That doesn\'t look like a Google AI key — Google keys start with <code>AIza</code>', 'err');
+                return;
+            }
+            if (provider !== 'google' && !looksOpenAI && !looksAnthropic) {
                 showKeyStatus('❌ Invalid format — OpenAI keys start with <code>sk-</code>, Anthropic with <code>sk-ant-</code>', 'err');
                 return;
             }
@@ -3675,43 +3715,69 @@ function initCommentGenerator() {
             // ── 6. Server validate (zero-token call via Cloudflare Worker) ────
             showKeyStatus('💾 Saving & verifying…', 'info');
 
-            var provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+            var provLabel = provider === 'anthropic' ? 'Anthropic'
+                          : provider === 'google'    ? 'Google'
+                          : 'OpenAI';
             var validateOk  = false;
             var validateMsg = '';
 
             try {
-                var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({
-                        provider: provider,
-                        apiKey:   key,
-                        token:    PolyGlotAuth.getToken() || ''   // session gate (required server-side)
-                    })
-                });
-                var data = await res.json().catch(function() { return {}; });
-
-                if (res.ok && data.ok === true) {
-                    validateOk = true;
-                } else {
-                    var raw = (data && data.error ? data.error : '').toLowerCase();
-                    if (raw.includes('incorrect') || raw.includes('invalid') || raw.includes('no such')) {
-                        validateMsg = '❌ Invalid API key — check for typos or regenerate at your provider';
-                    } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
-                        validateMsg = '❌ Key expired or revoked — generate a new key at your provider';
-                    } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('credit') || raw.includes('insufficient')) {
-                        validateMsg = '❌ Billing issue — check your account balance at ' + provLabel;
-                    } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
-                        validateOk  = true; // rate-limited = key is valid
-                        validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
-                    } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
-                        validateMsg = '❌ Key lacks permissions — ensure API access is enabled';
+                // Google keys: validate directly against the Gemini API (no server hop needed)
+                if (provider === 'google') {
+                    var gRes = await fetch(
+                        'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key)
+                    );
+                    if (gRes.ok) {
+                        validateOk = true;
                     } else {
-                        validateMsg = '❌ Validation failed — ' + (data && data.error ? data.error : 'check your key and provider');
+                        var gD = await gRes.json().catch(function() { return {}; });
+                        var gErr = (gD && gD.error && gD.error.message) ? gD.error.message : ('HTTP ' + gRes.status);
+                        var gStatus = gRes.status;
+                        if (gStatus === 400 || gStatus === 403 || gErr.toLowerCase().includes('api key not valid') || gErr.toLowerCase().includes('invalid')) {
+                            validateMsg = '❌ Invalid Google AI key — check it at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#7dd3fc">aistudio.google.com ↗</a>';
+                        } else if (gStatus === 429) {
+                            validateOk  = true;
+                            validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
+                        } else if (gErr.toLowerCase().includes('billing') || gErr.toLowerCase().includes('quota')) {
+                            validateMsg = '❌ Quota exceeded — check your Google AI Studio usage limits';
+                        } else {
+                            validateMsg = '❌ Google key validation failed — ' + gErr;
+                        }
+                    }
+                } else {
+                    // OpenAI / Anthropic — validate via Poly-Glot server proxy
+                    var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({
+                            provider: provider,
+                            apiKey:   key,
+                            token:    PolyGlotAuth.getToken() || ''
+                        })
+                    });
+                    var data = await res.json().catch(function() { return {}; });
+
+                    if (res.ok && data.ok === true) {
+                        validateOk = true;
+                    } else {
+                        var raw = (data && data.error ? data.error : '').toLowerCase();
+                        if (raw.includes('incorrect') || raw.includes('invalid') || raw.includes('no such')) {
+                            validateMsg = '❌ Invalid API key — check for typos or regenerate at your provider';
+                        } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
+                            validateMsg = '❌ Key expired or revoked — generate a new key at your provider';
+                        } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('credit') || raw.includes('insufficient')) {
+                            validateMsg = '❌ Billing issue — check your account balance at ' + provLabel;
+                        } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
+                            validateOk  = true;
+                            validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
+                        } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
+                            validateMsg = '❌ Key lacks permissions — ensure API access is enabled';
+                        } else {
+                            validateMsg = '❌ Validation failed — ' + (data && data.error ? data.error : 'check your key and provider');
+                        }
                     }
                 }
             } catch (_fetchErr) {
-                // Network unavailable — key is saved locally, validate on first generate
                 validateOk  = true;
                 validateMsg = '✅ ' + provLabel + ' key saved (offline — verified on first generate)';
             }
@@ -3790,7 +3856,9 @@ function initCommentGenerator() {
             clearKeyStatus();
 
             try {
-                var provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+                var provLabel = provider === 'anthropic' ? 'Anthropic'
+                              : provider === 'google'    ? 'Google'
+                              : 'OpenAI';
                 var testOk  = false;
                 var testMsg = '';
 
@@ -3803,11 +3871,11 @@ function initCommentGenerator() {
                     } else {
                         var oD = await oRes.json().catch(function() { return {}; });
                         testMsg = (oD && oD.error && oD.error.message) ? oD.error.message : ('HTTP ' + oRes.status);
-                        if (oRes.status === 401) testMsg = 'Invalid API key — check it and try again';
+                        if (oRes.status === 401) testMsg = 'Invalid API key — check it at platform.openai.com';
                         if (oRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
                     }
-                } else {
-                    // Anthropic — minimal 1-token call
+                } else if (provider === 'anthropic') {
+                    // Minimal 1-token call to verify key
                     var aRes = await fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
                         headers: {
@@ -3819,12 +3887,32 @@ function initCommentGenerator() {
                         body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] })
                     });
                     if (aRes.ok || aRes.status === 529) {
-                        testOk = true; // 529 = overloaded but key valid
+                        testOk = true; // 529 = overloaded but key is valid
                     } else {
                         var aD = await aRes.json().catch(function() { return {}; });
                         testMsg = (aD && aD.error && aD.error.message) ? aD.error.message : ('HTTP ' + aRes.status);
-                        if (aRes.status === 401) testMsg = 'Invalid API key — check it and try again';
+                        if (aRes.status === 401) testMsg = 'Invalid API key — check it at console.anthropic.com';
                         if (aRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
+                    }
+                } else if (provider === 'google') {
+                    // List models endpoint — zero quota used, instant auth check
+                    var gRes = await fetch(
+                        'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key)
+                    );
+                    if (gRes.ok) {
+                        testOk = true;
+                    } else {
+                        var gD = await gRes.json().catch(function() { return {}; });
+                        var gErr = (gD && gD.error && gD.error.message) ? gD.error.message : ('HTTP ' + gRes.status);
+                        if (gRes.status === 400 || gRes.status === 403 || gErr.toLowerCase().includes('api key not valid') || gErr.toLowerCase().includes('invalid')) {
+                            testMsg = 'Invalid key — check it at aistudio.google.com/app/apikey';
+                        } else if (gRes.status === 429) {
+                            testOk = true; testMsg = 'Rate limited — key is valid, ready to use';
+                        } else if (gErr.toLowerCase().includes('billing') || gErr.toLowerCase().includes('quota')) {
+                            testMsg = 'Quota exceeded — check your Google AI Studio usage limits';
+                        } else {
+                            testMsg = gErr || ('HTTP ' + gRes.status);
+                        }
                     }
                 }
 

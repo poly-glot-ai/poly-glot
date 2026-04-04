@@ -1,8 +1,8 @@
 {
   "name": "poly-glot",
   "displayName": "Poly-Glot AI",
-  "description": "AI-powered code comments & documentation for 12 languages. Auto-generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments & docstrings. GPT-4.1, GPT-4o, Claude 4 & custom models. Free tier included.",
-  "version": "1.4.12",
+  "description": "AI-powered code comments & documentation for 12 languages. Auto-generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments & docstrings. GPT-4.1, Claude 4, Gemini 2.5 & custom models. Free tier included.",
+  "version": "1.4.13",
   "pricing": "Trial",
   "publisher": "poly-glot-ai",
   "license": "MIT",
@@ -51,6 +51,9 @@
     "phpdoc",
     "openai",
     "anthropic",
+    "google",
+    "gemini",
+    "gemini 2.5",
     "claude",
     "gpt-4",
     "gpt-4.1",
@@ -240,18 +243,20 @@
           "default": "openai",
           "enum": [
             "openai",
-            "anthropic"
+            "anthropic",
+            "google"
           ],
           "enumDescriptions": [
-            "Use OpenAI (GPT-4.1, GPT-4o, o3, o1, and more)",
-            "Use Anthropic (Claude 4, Claude 3.5, and more)"
+            "Use OpenAI (GPT-4.1, GPT-4.1 Mini, GPT-4o, o3, and more)",
+            "Use Anthropic (Claude Sonnet 4, Claude Opus 4, Claude Haiku 4, and more)",
+            "Use Google (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash Lite, and more)"
           ],
           "description": "AI provider for comment generation."
         },
         "polyglot.model": {
           "type": "string",
           "default": "gpt-4.1-mini",
-          "description": "Any valid model ID from your provider — e.g. gpt-4.1-mini, gpt-4.1-nano, claude-sonnet-4-5, claude-haiku-4-5. Custom/unlisted model IDs are supported."
+          "description": "Any valid model ID from your provider — e.g. gpt-4.1-mini, claude-sonnet-4-5, gemini-2.5-flash. Custom/unlisted model IDs are supported."
         },
         "polyglot.commentStyle": {
           "type": "string",
@@ -308,6 +313,16 @@
       "url": "https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?color=60b4f6&label=installs",
       "href": "https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot",
       "description": "Installs"
+    },
+    {
+      "url": "https://img.shields.io/open-vsx/v/poly-glot-ai/poly-glot?label=Open%20VSX%20%7C%20Cursor&color=7c3aed",
+      "href": "https://open-vsx.org/extension/poly-glot-ai/poly-glot",
+      "description": "Open VSX Registry"
+    },
+    {
+      "url": "https://img.shields.io/badge/Chrome%20Web%20Store-coming%20soon-4285F4?logo=googlechrome&logoColor=white",
+      "href": "https://poly-glot.ai",
+      "description": "Chrome Web Store"
     },
     {
       "url": "https://img.shields.io/badge/free%20tier-included-34d399",

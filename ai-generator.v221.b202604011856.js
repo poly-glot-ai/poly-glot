@@ -36,10 +36,11 @@ class AICommentGenerator {
     /** Load model preference from localStorage */
     loadModel() {
         const defaultModels = {
-            openai: 'gpt-4.1-mini',
-            anthropic: 'claude-sonnet-4-5'
+            openai:    'gpt-4.1-mini',
+            anthropic: 'claude-sonnet-4-5',
+            google:    'gemini-2.5-flash'
         };
-        return localStorage.getItem('polyglot_ai_model') || defaultModels[this.provider];
+        return localStorage.getItem('polyglot_ai_model') || defaultModels[this.provider] || 'gpt-4.1-mini';
     }
 
     /** Save model preference */
@@ -59,24 +60,36 @@ class AICommentGenerator {
      */
     _parseError(error, provider) {
         const msg = error?.message || '';
+        const providerName = provider === 'anthropic' ? 'Anthropic'
+                           : provider === 'google'    ? 'Google'
+                           : 'OpenAI';
 
         // Network/CORS failure — fetch itself throws a TypeError
         if (error instanceof TypeError || msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
+            if (provider === 'google') {
+                return 'Network error reaching Google. Make sure your API key is correct, the Generative Language API is enabled in your Google Cloud project, and your network allows outbound HTTPS.';
+            }
             if (provider === 'anthropic') {
                 return 'Network error reaching Anthropic. Make sure your API key is correct and your network allows outbound HTTPS. If you are behind a VPN or firewall, try disabling it.';
             }
             return 'Network error reaching OpenAI. Make sure your API key is correct and your network allows outbound HTTPS. If you are behind a VPN or firewall, try disabling it.';
         }
-        if (msg.includes('401') || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('authentication')) {
-            return `Invalid API key. Please check your ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API key and try again.`;
+        if (msg.includes('401') || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('authentication') || msg.toLowerCase().includes('api key not valid')) {
+            if (provider === 'google') {
+                return 'Invalid Google AI key. Get or regenerate your key at aistudio.google.com/app/apikey and make sure the Generative Language API is enabled.';
+            }
+            return `Invalid API key. Please check your ${providerName} API key and try again.`;
         }
-        if (msg.includes('429') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('quota')) {
+        if (msg.includes('429') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('resource_exhausted')) {
+            if (provider === 'google') {
+                return 'Google AI quota exceeded. You may need to enable billing in Google Cloud Console or wait for your quota to reset.';
+            }
             return 'Rate limit or quota exceeded. Please wait a moment and try again, or check your API plan limits.';
         }
         if (msg.includes('500') || msg.includes('502') || msg.includes('503')) {
-            return `${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} servers are temporarily unavailable. Please try again in a moment.`;
+            return `${providerName} servers are temporarily unavailable. Please try again in a moment.`;
         }
-        return msg || `Unknown error from ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}. Please try again.`;
+        return msg || `Unknown error from ${providerName}. Please try again.`;
     }
 
     /**
@@ -91,6 +104,8 @@ class AICommentGenerator {
                 return await this.generateWithOpenAI(code, language, commentStyle, onChunk);
             } else if (this.provider === 'anthropic') {
                 return await this.generateWithAnthropic(code, language, commentStyle, onChunk);
+            } else if (this.provider === 'google') {
+                return await this.generateWithGoogle(code, language, commentStyle, onChunk);
             } else {
                 throw new Error('Invalid provider selected.');
             }
@@ -263,6 +278,84 @@ class AICommentGenerator {
     }
 
     /**
+     * Generate comments using Google Gemini API — streaming via SSE.
+     * Uses the OpenAI-compatible endpoint so we can reuse the same streaming pattern.
+     */
+    async generateWithGoogle(code, language, commentStyle, onChunk) {
+        const prompt    = this.buildPrompt(code, language, commentStyle);
+        const maxTokens = Math.min(Math.max(code.split('\n').length * 20, 512), 2048);
+        const systemMsg = 'You are a code documentation engineer. Add doc-comments to every function, class, and method. Return ONLY the commented code — no fences, no explanations.';
+
+        let response;
+        try {
+            response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            { role: 'system', content: systemMsg },
+                            { role: 'user',   content: prompt }
+                        ],
+                        temperature: 0,
+                        max_tokens: maxTokens,
+                        stream: true
+                    })
+                }
+            );
+        } catch (networkErr) {
+            throw new Error(this._parseError(networkErr, 'google'));
+        }
+
+        if (!response.ok) {
+            let errBody = {};
+            try { errBody = await response.json(); } catch (_) {}
+            const msg = errBody?.error?.message || `Google error ${response.status}`;
+            throw new Error(this._parseError(new Error(msg), 'google'));
+        }
+
+        // Read SSE stream (same format as OpenAI)
+        let fullText = '';
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') break;
+                try {
+                    const json  = JSON.parse(data);
+                    const delta = json.choices?.[0]?.delta?.content || '';
+                    if (delta) { fullText += delta; if (onChunk) onChunk(delta); }
+                } catch (_) { /* malformed SSE line — skip */ }
+            }
+        }
+
+        const inputTokens  = Math.ceil(prompt.length / 4);
+        const outputTokens = Math.ceil(fullText.length / 4);
+        this.costEstimate  = this.calculateGoogleCost(inputTokens, outputTokens);
+
+        return {
+            code: this._stripFences(fullText),
+            provider: 'google',
+            model: this.model,
+            cost: this.costEstimate
+        };
+    }
+
+    /**
      * Analyze / explain code using AI
      */
     async analyzeCode(code, language) {
@@ -364,6 +457,53 @@ class AICommentGenerator {
                     cost: this.costEstimate
                 };
 
+            } else if (this.provider === 'google') {
+                // Google Gemini via OpenAI-compatible endpoint (non-streaming for JSON response)
+                let gResponse;
+                try {
+                    gResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: this.model,
+                                messages: [
+                                    { role: 'system', content: 'You are a senior software engineer and code reviewer. Provide deep, structured analysis of code. Be concise but thorough. Always respond with valid JSON.' },
+                                    { role: 'user',   content: prompt }
+                                ],
+                                temperature: 0.2,
+                                max_tokens: 2000
+                            })
+                        }
+                    );
+                } catch (networkErr) {
+                    throw new Error(this._parseError(networkErr, 'google'));
+                }
+
+                if (!gResponse.ok) {
+                    let errBody = {};
+                    try { errBody = await gResponse.json(); } catch (_) {}
+                    const msg = errBody?.error?.message || `Google error ${gResponse.status}`;
+                    throw new Error(this._parseError(new Error(msg), 'google'));
+                }
+
+                const gData = await gResponse.json();
+                const gInputTokens  = gData.usage?.prompt_tokens     || 0;
+                const gOutputTokens = gData.usage?.completion_tokens || 0;
+                this.costEstimate   = this.calculateGoogleCost(gInputTokens, gOutputTokens);
+
+                return {
+                    analysis: JSON.parse(gData.choices[0].message.content.trim()),
+                    provider: 'google',
+                    model: this.model,
+                    usage: gData.usage,
+                    cost: this.costEstimate
+                };
+
             } else {
                 throw new Error('Invalid provider selected.');
             }
@@ -384,12 +524,13 @@ class AICommentGenerator {
             throw new Error('API key not configured. Please add your API key in settings.');
         }
         const prompt = this.buildWhyPrompt(code, language);
+        const sysMsg = 'You are a senior software engineer doing a code review. Add inline why-comments that explain reasoning and intent. Return ONLY the commented code, no explanations.';
         if (this.provider === 'openai') {
-            return await this._callOpenAIRaw(prompt,
-                'You are a senior software engineer doing a code review. Add inline why-comments that explain reasoning and intent. Return ONLY the commented code, no explanations.');
+            return await this._callOpenAIRaw(prompt, sysMsg);
         } else if (this.provider === 'anthropic') {
-            return await this._callAnthropicRaw(prompt,
-                'You are a senior software engineer doing a code review. Add inline why-comments that explain reasoning and intent. Return ONLY the commented code, no explanations.');
+            return await this._callAnthropicRaw(prompt, sysMsg);
+        } else if (this.provider === 'google') {
+            return await this._callGoogleRaw(prompt, sysMsg);
         }
         throw new Error('Invalid provider selected.');
     }
@@ -408,6 +549,8 @@ class AICommentGenerator {
             return await this._callOpenAIRaw(prompt, systemMsg);
         } else if (this.provider === 'anthropic') {
             return await this._callAnthropicRaw(prompt, systemMsg);
+        } else if (this.provider === 'google') {
+            return await this._callGoogleRaw(prompt, systemMsg);
         }
         throw new Error('Invalid provider selected.');
     }
@@ -450,6 +593,39 @@ class AICommentGenerator {
         const outputTokens = data.usage?.completion_tokens || 0;
         this.costEstimate  = this.calculateOpenAICost(inputTokens, outputTokens);
         return { code: this._stripFences(data.choices[0].message.content), provider: 'openai', model: this.model, cost: this.costEstimate };
+    }
+
+    /** Shared Google Gemini call (OpenAI-compatible endpoint) returning { code, provider, model, cost } */
+    async _callGoogleRaw(prompt, systemMsg) {
+        let response;
+        try {
+            response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            { role: 'system', content: systemMsg },
+                            { role: 'user',   content: prompt }
+                        ],
+                        temperature: 0,
+                        max_tokens: 2048
+                    })
+                }
+            );
+        } catch (e) { throw new Error(this._parseError(e, 'google')); }
+        if (!response.ok) {
+            let b = {}; try { b = await response.json(); } catch (_) {}
+            const msg = b?.error?.message || `Google error ${response.status}`;
+            throw new Error(this._parseError(new Error(msg), 'google'));
+        }
+        const data = await response.json();
+        const inputTokens  = data.usage?.prompt_tokens     || 0;
+        const outputTokens = data.usage?.completion_tokens || 0;
+        this.costEstimate  = this.calculateGoogleCost(inputTokens, outputTokens);
+        return { code: this._stripFences(data.choices[0].message.content), provider: 'google', model: this.model, cost: this.costEstimate };
     }
 
     /** Shared Anthropic call returning { code, provider, model, cost } */
@@ -778,6 +954,18 @@ ${code}`;
             .trim();
     }
 
+    /** Calculate Google Gemini API cost estimate */
+    calculateGoogleCost(inputTokens, outputTokens) {
+        const pricing = {
+            'gemini-2.5-flash':      { input: 0.0003  / 1000, output: 0.0025 / 1000 },
+            'gemini-2.5-pro':        { input: 0.00125 / 1000, output: 0.010  / 1000 },
+            'gemini-2.5-flash-lite': { input: 0.0001  / 1000, output: 0.0004 / 1000 },
+            'gemini-2.0-flash-001':  { input: 0.0001  / 1000, output: 0.0004 / 1000 },
+        };
+        const p = pricing[this.model] || pricing['gemini-2.5-flash'];
+        return (inputTokens * p.input) + (outputTokens * p.output);
+    }
+
     /** Calculate OpenAI API cost estimate */
     calculateOpenAICost(inputTokens, outputTokens) {
         const pricing = {
@@ -817,27 +1005,33 @@ ${code}`;
     getAvailableModels() {
         const models = {
             openai: [
-                { value: 'gpt-4.1',        label: 'GPT-4.1 ✨ (Recommended)', cost: 'Low' },
-                { value: 'gpt-4.1-mini',   label: 'GPT-4.1 Mini (Fast)', cost: 'Very Low' },
-                { value: 'gpt-4.1-nano',   label: 'GPT-4.1 Nano (Cheapest)', cost: 'Minimal' },
-                { value: 'gpt-4o',         label: 'GPT-4o', cost: 'Low' },
-                { value: 'gpt-4o-mini',    label: 'GPT-4o Mini', cost: 'Very Low' },
-                { value: 'o3',             label: 'o3 (Reasoning)', cost: 'High' },
-                { value: 'o3-mini',        label: 'o3-mini (Reasoning, Fast)', cost: 'Low' },
-                { value: 'o1',             label: 'o1 (Reasoning)', cost: 'Very High' },
-                { value: 'o1-mini',        label: 'o1-mini (Reasoning, Fast)', cost: 'Low' },
-                { value: 'gpt-4-turbo',    label: 'GPT-4 Turbo', cost: 'High' },
-                { value: 'gpt-4',          label: 'GPT-4', cost: 'Very High' },
-                { value: 'gpt-3.5-turbo',  label: 'GPT-3.5 Turbo (Legacy)', cost: 'Very Low' }
+                { value: 'gpt-4.1-mini',   label: 'GPT-4.1 Mini ✨ (Recommended)', cost: 'Very Low' },
+                { value: 'gpt-4.1',        label: 'GPT-4.1 (Best)',                cost: 'Low'      },
+                { value: 'gpt-4.1-nano',   label: 'GPT-4.1 Nano (Cheapest)',       cost: 'Minimal'  },
+                { value: 'gpt-4o',         label: 'GPT-4o',                        cost: 'Low'      },
+                { value: 'gpt-4o-mini',    label: 'GPT-4o Mini',                   cost: 'Very Low' },
+                { value: 'o3',             label: 'o3 (Reasoning)',                cost: 'High'     },
+                { value: 'o3-mini',        label: 'o3-mini (Reasoning, Fast)',     cost: 'Low'      },
+                { value: 'o1',             label: 'o1 (Reasoning)',                cost: 'Very High' },
+                { value: 'o1-mini',        label: 'o1-mini (Reasoning, Fast)',     cost: 'Low'      },
+                { value: 'gpt-4-turbo',    label: 'GPT-4 Turbo',                  cost: 'High'     },
+                { value: 'gpt-4',          label: 'GPT-4',                         cost: 'Very High' },
+                { value: 'gpt-3.5-turbo',  label: 'GPT-3.5 Turbo (Legacy)',       cost: 'Very Low' }
             ],
             anthropic: [
-                { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (Recommended)', cost: 'Low' },
-                { value: 'claude-opus-4-5',            label: 'Claude Opus 4 (Most Powerful)', cost: 'Very High' },
-                { value: 'claude-haiku-4-5',           label: 'Claude Haiku 4 (Fast)', cost: 'Very Low' },
-                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', cost: 'Low' },
-                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku', cost: 'Very Low' },
-                { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus', cost: 'High' },
-                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (Legacy)', cost: 'Minimal' }
+                { value: 'claude-sonnet-4-5',          label: 'Claude Sonnet 4 ✨ (Recommended)', cost: 'Low'      },
+                { value: 'claude-opus-4-5',            label: 'Claude Opus 4 (Most Powerful)',    cost: 'Very High' },
+                { value: 'claude-haiku-4-5',           label: 'Claude Haiku 4 (Fast)',            cost: 'Very Low' },
+                { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet',               cost: 'Low'      },
+                { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku',                cost: 'Very Low' },
+                { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus',                   cost: 'High'     },
+                { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku (Legacy)',         cost: 'Minimal'  }
+            ],
+            google: [
+                { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash ✨ (Recommended)', cost: 'Low'      },
+                { value: 'gemini-2.5-pro',        label: 'Gemini 2.5 Pro (Most Powerful)',    cost: 'Medium'   },
+                { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (Cheapest)',  cost: 'Minimal'  },
+                { value: 'gemini-2.0-flash-001',  label: 'Gemini 2.0 Flash (Stable)',         cost: 'Very Low' }
             ]
         };
         return models[this.provider] || [];

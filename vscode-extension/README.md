@@ -1,22 +1,23 @@
 # Poly-Glot — AI Code Comments, JSDoc Generator & Code Documentation
 
-> **The fastest way to generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, and "why" comments** — powered by OpenAI (GPT-4.1, GPT-4o, o3) or Anthropic (Claude Sonnet 4, Claude Opus 4, Claude Haiku 4). Works in VS Code, CLI, MCP, and Copilot Chat. 100% client-side. Your API key never leaves your machine.
+> **The fastest way to generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, and "why" comments** — powered by **OpenAI** (GPT-4.1, GPT-4o, o3), **Anthropic** (Claude Sonnet 4, Claude Opus 4, Claude Haiku 4), or **Google** (Gemini 2.5 Flash, Gemini 2.5 Pro). Works in VS Code, CLI, MCP, and Copilot Chat. 100% client-side. Your API key never leaves your machine.
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/poly-glot-ai.poly-glot?label=version&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/poly-glot-ai.poly-glot?label=installs&color=007acc&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/poly-glot-ai.poly-glot?label=rating&color=f5a623&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![Open VSX](https://img.shields.io/open-vsx/v/poly-glot-ai/poly-glot?label=Open%20VSX%20%7C%20Cursor&color=7c3aed&style=flat-square)](https://open-vsx.org/extension/poly-glot-ai/poly-glot)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-coming%20soon-4285F4?logo=googlechrome&logoColor=white&style=flat-square)](https://poly-glot.ai)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-> 💻 **Also available on [Open VSX Registry](https://open-vsx.org/extension/poly-glot-ai/poly-glot)** — install directly in **Cursor** and other VS Code-compatible editors.
+> 💻 **Also available on [Open VSX Registry](https://open-vsx.org/extension/poly-glot-ai/poly-glot)** — install directly in **Cursor**, **Windsurf**, and other VS Code-compatible editors.
 
 ---
 
 ## 🎬 See It In Action
 
-[![Poly-Glot AI — Demo Video](https://img.youtube.com/vi/uIi7pbe5H6c/hqdefault.jpg)](https://youtu.be/uIi7pbe5H6c)
+[![Poly-Glot AI — Demo Video](https://img.youtube.com/vi/uIi7pbe5H6c/maxresdefault.jpg)](https://youtu.be/uIi7pbe5H6c)
 
-> *Click the thumbnail to watch the demo on YouTube*
+> *Click to watch the full demo on YouTube — see JSDoc, Javadoc, PyDoc, why-comments and Copilot Chat in action.*
 
 ---
 
@@ -37,7 +38,7 @@
 - 🎯 **KDoc** for Kotlin
 - 🗃 **SQL header blocks** for SQL
 
-Powered by **OpenAI** (GPT-4o, GPT-4, o1, o3-mini) and **Anthropic** (Claude Sonnet 4, Claude Opus 4, Claude Haiku). You bring your own API key — **no middleman, no markup, no data collection**.
+Powered by **OpenAI** (GPT-4.1, GPT-4o, o3), **Anthropic** (Claude Sonnet 4, Claude Opus 4, Claude Haiku 4), and **Google** (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash Lite). You bring your own API key — **no middleman, no markup, no data collection**.
 
 ---
 
@@ -74,8 +75,8 @@ After subscribing, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) →
 
 1. **Install** Poly-Glot from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 2. **Add your API key** → Command Palette → `Poly-Glot: Configure API Key`
-   - Choose **OpenAI** or **Anthropic** as your provider
-   - Pick your preferred model (we recommend `gpt-4.1-mini` or `claude-sonnet-4-5`) — or enter any custom model ID
+   - Choose **OpenAI**, **Anthropic**, or **Google** as your provider
+   - Pick your preferred model (we recommend `gpt-4.1-mini`, `claude-sonnet-4-5`, or `gemini-2.5-flash`) — or enter any custom model ID
    - Paste your API key (stored securely in the OS keychain — never in `settings.json`)
 3. **Select any function or block of code** in the editor
 4. **Press `Cmd+Shift+/`** (`Ctrl+Shift+/` on Windows/Linux) → comments appear inline instantly
@@ -171,7 +172,7 @@ Every generation displays the **exact token cost in the status bar**. A typical 
 
 | Setting | Default | Description |
 |---|---|---|
-| `polyglot.provider` | `openai` | AI provider: `openai` or `anthropic` |
+| `polyglot.provider` | `openai` | AI provider: `openai`, `anthropic`, or `google` |
 | `polyglot.model` | `gpt-4.1-mini` | Any valid model ID from your provider (see tables below, or enter a custom ID) |
 | `polyglot.licenseToken` | — | Pro license token from poly-glot.ai |
 | `polyglot.insertInline` | `true` | `true` = insert into file · `false` = open side panel |
@@ -181,7 +182,7 @@ Every generation displays the **exact token cost in the status bar**. A typical 
 
 ## 🤖 Supported AI Models
 
-Poly-Glot accepts **any valid model ID** from OpenAI or Anthropic — including models not listed here. Just type the model ID into the `polyglot.model` setting. The extension will use it directly.
+Poly-Glot accepts **any valid model ID** from OpenAI, Anthropic, or Google — including models not listed here. Just type the model ID into the `polyglot.model` setting.
 
 ### OpenAI Models
 
@@ -197,10 +198,9 @@ Poly-Glot accepts **any valid model ID** from OpenAI or Anthropic — including 
 | `o1-mini` | Budget reasoning | ~$0.002 |
 | `o1` | Full reasoning, slower | ~$0.027 |
 | `gpt-4-turbo` | Previous-gen turbo | ~$0.014 |
-| `gpt-4` | Classic GPT-4 | ~$0.030 |
 | `gpt-3.5-turbo` | Legacy, lightest output | ~$0.0007 |
 
-Get an OpenAI API key at [platform.openai.com](https://platform.openai.com).
+Get an OpenAI API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
 
 ### Anthropic Models
 
@@ -214,16 +214,27 @@ Get an OpenAI API key at [platform.openai.com](https://platform.openai.com).
 | `claude-3-opus-20240229` | Deep reasoning, older gen | ~$0.033 |
 | `claude-3-haiku-20240307` | Lightest legacy Claude | ~$0.0006 |
 
-Get an Anthropic API key at [console.anthropic.com](https://console.anthropic.com).
+Get an Anthropic API key at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys).
 
-> \* **Estimates** based on ~200-token input / 400-token output (a typical small function). Costs scale with file size. Check [platform.openai.com/pricing](https://platform.openai.com/pricing) and [anthropic.com/pricing](https://www.anthropic.com/pricing) for current rates.
+### Google Gemini Models 🆕
+
+| Model | Notes | Est. cost / request* |
+|---|---|---|
+| `gemini-2.5-flash` ⭐ **Recommended** | Best speed & quality balance, 1M context | ~$0.001 |
+| `gemini-2.5-pro` 🏆 **Most Powerful** | Deepest code reasoning, 1M context | ~$0.005 |
+| `gemini-2.5-flash-lite` 💵 **Cheapest** | Ultra-fast, lowest cost | ~$0.0003 |
+| `gemini-2.0-flash-001` | Stable GA release | ~$0.0003 |
+
+Get a Google AI key (free) at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
+
+> \* **Estimates** based on ~200-token input / 400-token output (a typical small function). Costs scale with file size. Check [platform.openai.com/pricing](https://platform.openai.com/pricing), [anthropic.com/pricing](https://www.anthropic.com/pricing), and [ai.google.dev/pricing](https://ai.google.dev/pricing) for current rates.
 
 ### Using a custom or unlisted model
 
 Set `polyglot.model` in VS Code settings to any model ID your provider supports:
 
 ```json
-// settings.json
+// settings.json — OpenAI
 {
   "polyglot.provider": "openai",
   "polyglot.model": "gpt-4o-2024-11-20"
@@ -231,9 +242,18 @@ Set `polyglot.model` in VS Code settings to any model ID your provider supports:
 ```
 
 ```json
+// Anthropic
 {
   "polyglot.provider": "anthropic",
   "polyglot.model": "claude-3-7-sonnet-20250219"
+}
+```
+
+```json
+// Google
+{
+  "polyglot.provider": "google",
+  "polyglot.model": "gemini-2.5-flash"
 }
 ```
 
@@ -369,7 +389,7 @@ Why is the time complexity O(n²) here? Can it be improved?
 ### ❓ Copilot Chat FAQ
 
 **Does `@poly-glot` use my API key?**
-Yes — Poly-Glot uses the OpenAI or Anthropic key you configured in the extension. GitHub Copilot and Poly-Glot are completely separate; Poly-Glot does not use your Copilot subscription's token budget.
+Yes — Poly-Glot uses whichever OpenAI, Anthropic, or Google key you configured in the extension. GitHub Copilot and Poly-Glot are completely separate; Poly-Glot does not use your Copilot subscription's token budget.
 
 **Why doesn't `@poly-glot` appear in chat?**
 The participant only registers if the extension is active and VS Code v1.95+ is installed. Try: Command Palette → `Developer: Reload Window`.
@@ -387,11 +407,11 @@ Yes — any VS Code build ≥ 1.95 with Copilot Chat enabled works.
 Your code and API keys are **100% private**:
 
 - 🔑 **API keys stored in OS keychain** — VS Code `SecretStorage` (macOS Keychain, Windows Credential Manager, Linux `libsecret`). Never written to `settings.json` or any log file.
-- 📡 **Direct API calls only** — requests go from your machine straight to OpenAI or Anthropic. Poly-Glot has no backend server, no relay, no proxy.
+- 📡 **Direct API calls only** — requests go from your machine straight to OpenAI, Anthropic, or Google. Poly-Glot has no backend server, no relay, no proxy.
 - 🚫 **Zero telemetry** — no usage data, no error reporting, no analytics are ever collected.
 - 🏠 **Your code never touches our servers** — because we don't have any.
 
-**OpenAI** and **Anthropic** may use API request data per their own privacy policies. If you're working with sensitive code, check your provider's data-handling settings (both offer zero-data-retention options for API users).
+**OpenAI**, **Anthropic**, and **Google** may use API request data per their own privacy policies. If you're working with sensitive code, check your provider's data-handling settings (all three offer zero-data-retention options for API users).
 
 ---
 
@@ -416,13 +436,16 @@ Pro unlocks:
 ## ❓ FAQ
 
 **Do I need a Poly-Glot account?**
-No account is required for the Free tier. Just bring your own OpenAI or Anthropic API key.
+No account is required for the Free tier. Just bring your own OpenAI, Anthropic, or Google API key.
 
 **Does Poly-Glot work offline?**
-No — it needs to reach the OpenAI or Anthropic API. But no other internet connection is required.
+No — it needs to reach the OpenAI, Anthropic, or Google API. But no other internet connection is required.
 
-**Can I use both OpenAI and Anthropic?**
-You can switch providers any time via `Poly-Glot: Configure API Key`. Only one provider is active at a time.
+**Can I switch between OpenAI, Anthropic, and Google?**
+Yes — switch providers any time via `Poly-Glot: Configure API Key`. Only one provider is active at a time.
+
+**Do I need a paid Google account?**
+No — Google AI Studio API keys are free to create at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey). Free-tier rate limits apply; enabling billing in Google Cloud unlocks higher quotas.
 
 **Will comments be inserted into my file or shown in a panel?**
 By default, comments are inserted **inline** at the correct position in your file. Set `polyglot.insertInline: false` to open a diff panel instead.
@@ -447,14 +470,28 @@ Have a feature request? [Open an issue on GitHub](https://github.com/poly-glot-a
 
 ---
 
+## 🌐 Get It Everywhere
+
+| Platform | Link |
+|---|---|
+| 💻 VS Code Marketplace | [marketplace.visualstudio.com](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot) |
+| ⬛ Open VSX · Cursor · Windsurf | [open-vsx.org](https://open-vsx.org/extension/poly-glot-ai/poly-glot) |
+| 🌐 Web App | [poly-glot.ai](https://poly-glot.ai) |
+| ⌨️ CLI | [npmjs.com/package/poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli) |
+| 🔌 MCP Server | [npmjs.com/package/poly-glot-mcp](https://www.npmjs.com/package/poly-glot-mcp) |
+| 🐙 GitHub App | [github.com/apps/poly-glot-ai](https://github.com/apps/poly-glot-ai) |
+
+---
+
 ## 📦 About
 
-**Version:** 1.4.2  
+**Version:** 1.4.13  
 **Publisher:** poly-glot-ai  
 **Marketplace:** [poly-glot-ai.poly-glot](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)  
+**Open VSX:** [open-vsx.org/extension/poly-glot-ai/poly-glot](https://open-vsx.org/extension/poly-glot-ai/poly-glot)  
 **Website:** [poly-glot.ai](https://poly-glot.ai)  
 **License:** MIT © Harold Moses
 
 ---
 
-*Keywords: AI code comments, JSDoc generator, Javadoc generator, PyDoc generator, Doxygen, KDoc, rustdoc, GoDoc, PHPDoc, YARD, Swift markup, code documentation, why comments, code explainer, OpenAI, Anthropic, Claude, GPT-4, GPT-4o, o3-mini, Claude Sonnet, Claude Opus, AI documentation, automatic comments, VS Code AI, code commenting tool*
+*Keywords: AI code comments, JSDoc generator, Javadoc generator, PyDoc generator, Doxygen, KDoc, rustdoc, GoDoc, PHPDoc, YARD, Swift markup, code documentation, why comments, code explainer, OpenAI, Anthropic, Google, Gemini, Gemini 2.5, Claude, GPT-4, GPT-4o, GPT-4.1, o3-mini, Claude Sonnet, Claude Opus, AI documentation, automatic comments, VS Code AI, code commenting tool*
