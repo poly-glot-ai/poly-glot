@@ -3683,7 +3683,11 @@ function initCommentGenerator() {
                 var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ provider: provider, apiKey: key })
+                    body:    JSON.stringify({
+                        provider: provider,
+                        apiKey:   key,
+                        token:    PolyGlotAuth.getToken() || ''   // session gate (required server-side)
+                    })
                 });
                 var data = await res.json().catch(function() { return {}; });
 

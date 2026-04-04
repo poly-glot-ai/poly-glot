@@ -322,12 +322,19 @@ async function incrementPromoCount(env, email) {
 /* ─────────────────────────────────────────────────────────────────────────────
    POST /api/auth/validate-key
    Validates an OpenAI or Anthropic API key server-side (zero tokens burned).
-   Body: { provider: 'openai'|'anthropic', apiKey: 'sk-...' }
+   Body: { provider: 'openai'|'anthropic', apiKey: 'sk-...', token: 'session-token' }
    Returns: { ok: true } or { ok: false, error: '...' }
+   Requires: valid session token — prevents use as an open key-validation oracle.
 ───────────────────────────────────────────────────────────────────────────── */
-async function handleValidateKey(request) {
+async function handleValidateKey(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
+
+  // ── Session gate — must be a signed-in user ──────────────────────────────
+  const sessionToken = (body.token || '').trim();
+  if (!sessionToken) return json({ ok: false, error: 'Sign in required to validate keys' }, 401);
+  const sessionRaw = await env.AUTH_KV.get(`session:${sessionToken}`);
+  if (!sessionRaw)   return json({ ok: false, error: 'Invalid or expired session' }, 401);
 
   const provider = (body.provider || 'openai').toLowerCase();
   const apiKey   = (body.apiKey   || '').trim();
@@ -469,9 +476,20 @@ function monthKey() {
    POST /api/auth/vsc-proxy
    Server-side proxy for VS Code Marketplace extension query API.
    Needed because marketplace.visualstudio.com blocks browser CORS requests.
-   No auth required — public data only.
+   Origin-locked — only poly-glot.ai browsers and our own server may call this.
 ───────────────────────────────────────────────────────────────────────────── */
+function isAllowedOrigin(request) {
+  const origin  = request.headers.get('Origin')     || '';
+  const referer = request.headers.get('Referer')    || '';
+  const ua      = request.headers.get('User-Agent') || '';
+  // Allow poly-glot.ai browser requests or our own server-side User-Agent
+  return origin.startsWith('https://poly-glot.ai') ||
+         referer.startsWith('https://poly-glot.ai') ||
+         ua.startsWith('poly-glot-');
+}
+
 async function handleVscProxy(request) {
+  if (!isAllowedOrigin(request)) return json({ error: 'Forbidden' }, 403);
   try {
     const body = await request.text();
     const res  = await fetch(
@@ -500,9 +518,10 @@ async function handleVscProxy(request) {
    GET /api/auth/gh-proxy?endpoint=health|stats
    Server-side proxy for GitHub App server (Render).
    Needed because Render's CORS headers are not yet deployed.
-   No auth required — public data only.
+   Origin-locked — only poly-glot.ai browsers and our own server may call this.
 ───────────────────────────────────────────────────────────────────────────── */
 async function handleGhProxy(request) {
+  if (!isAllowedOrigin(request)) return json({ error: 'Forbidden' }, 403);
   const url      = new URL(request.url);
   const endpoint = url.searchParams.get('endpoint') || 'health';
 
@@ -554,7 +573,7 @@ export default {
     if (pathname === '/api/auth/login')        return handleLogin(request, env);
     if (pathname === '/api/auth/verify')       return handleVerify(request, env);
     if (pathname === '/api/auth/refresh')      return handleRefresh(request, env);
-    if (pathname === '/api/auth/validate-key') return handleValidateKey(request);
+    if (pathname === '/api/auth/validate-key') return handleValidateKey(request, env);
     if (pathname === '/api/auth/track-usage')  return handleTrackUsage(request, env);
     if (pathname === '/api/auth/vsc-proxy')    return handleVscProxy(request);
 
