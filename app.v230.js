@@ -4238,6 +4238,17 @@ function initCommentGenerator() {
     // Render on init
     renderUsageCounter();
 
+    // ── Sign-up banner — show when not authed, hide when authed ─────────────
+    function updateSignupBanner() {
+        var banner = document.getElementById('pgSignupBanner');
+        if (!banner) return;
+        banner.style.display = isAuthed() ? 'none' : 'block';
+    }
+    updateSignupBanner();
+    // Re-check after auth.v7 finishes initialising (fires pg:authed event)
+    document.addEventListener('pg:authed', updateSignupBanner);
+    document.addEventListener('pg:signedout', updateSignupBanner);
+
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
 
