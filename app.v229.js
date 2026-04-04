@@ -3338,7 +3338,9 @@ function initCommentGenerator() {
     const cgApiKey       = document.getElementById('cgApiKey');
     const cgToggleKey    = document.getElementById('cgToggleKey');
     const cgSaveKey      = document.getElementById('cgSaveKey');
-    const cgKeyStatus    = document.getElementById('cgKeyStatus');
+    // NOTE: cgKeyStatus is intentionally NOT captured as a closure variable.
+    // All status updates go through showKeyStatus() which always re-fetches
+    // via document.getElementById('cgKeyStatus') — immune to DOM re-renders.
 
     // Panel elements
     const cgFileUpload   = document.getElementById('cgFileUpload');
@@ -3414,19 +3416,18 @@ function initCommentGenerator() {
     let lastOutputText = '';
     let lastFilename   = 'commented-code.txt';
 
-    // ── Restore saved settings ──
+    // ── Restore saved settings ──────────────────────────────────────────────
+    // Uses showKeyStatus() — never the closure-captured cgKeyStatus variable.
+    // Delayed by one tick so the 'input' listener fires before the status is set,
+    // preventing the listener from immediately clearing the "Key saved" message.
     function restoreSettings() {
-        const key      = localStorage.getItem(LS.key)      || '';
-        const provider = localStorage.getItem(LS.provider) || 'openai';
-        const model    = localStorage.getItem(LS.model)    || 'gpt-4o-mini';
+        var key      = localStorage.getItem(LS.key)      || '';
+        var provider = localStorage.getItem(LS.provider) || 'openai';
+        var model    = localStorage.getItem(LS.model)    || 'gpt-4.1-mini';
         if (key) {
-            // Set value directly on the DOM property (not via setAttribute) so
-            // the 'input' event does NOT fire — avoids immediately clearing the status.
-            cgApiKey.value = key;
-            // Show status AFTER setting value so it isn't wiped by any listener.
-            setTimeout(() => {
-                cgKeyStatus.textContent = '✅ Key saved — ready to generate';
-                cgKeyStatus.className   = 'pg-key-status ok';
+            cgApiKey.value = key; // Set DOM property — does NOT fire 'input' event
+            setTimeout(function() {
+                showKeyStatus('✅ Key saved — ready to generate', 'ok');
             }, 0);
         }
         cgProvider.value = provider;
@@ -3495,230 +3496,308 @@ function initCommentGenerator() {
     // ── Toggle API key visibility ──
     // (handled below with fresh DOM refs – see "Toggle API key visibility (inline bar)")
 
-    // ── Auto-clear status after delay ──
-    let _keyStatusTimer = null;
-    function autoClearKeyStatus(el, ms) {
-        if (_keyStatusTimer) clearTimeout(_keyStatusTimer);
-        if (!el) return;
-        _keyStatusTimer = setTimeout(() => {
-            el.textContent = '';
-            el.className   = 'pg-key-status';
-            _keyStatusTimer = null;
-        }, ms || 5000);
-    }
+    // ══════════════════════════════════════════════════════════════════════
+    // KEY STATUS MESSAGING
+    // Two-channel approach:
+    //   1. Inline: updates #cgKeyStatus span below the key field
+    //   2. Toast:  fixed-position div appended to document.body — completely
+    //              outside the CSS cascade, impossible to hide
+    // Both channels fire on every showKeyStatus() call.
+    // ══════════════════════════════════════════════════════════════════════
+    var _keyStatusTimer = null;
+    var _toastTimer     = null;
 
-    // ── Save API key ──
-    // ── Helper: show status message that cannot be hidden by CSS ────────────
     function showKeyStatus(msg, type) {
-        // type: 'ok' | 'err' | 'info'
-        var colors = {
-            ok:   { color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  },
-            err:  { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.3)' },
-            info: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' }
+        var palette = {
+            ok:   { color: '#10b981', bg: '#0d2b22', border: '#10b981' },
+            err:  { color: '#f87171', bg: '#2b0d0d', border: '#f87171' },
+            info: { color: '#94a3b8', bg: '#1a1f2e', border: '#334155' }
         };
-        var c = colors[type] || colors.info;
-        var el = document.getElementById('cgKeyStatus');
-        if (!el) {
-            // Status span missing — create and inject it
-            el = document.createElement('span');
-            el.id = 'cgKeyStatus';
-            var wrap = document.getElementById('cgSaveKey');
-            if (wrap && wrap.parentNode) wrap.parentNode.insertAdjacentElement('afterend', el);
+        var p = palette[type] || palette.info;
+        var plain = msg.replace(/<[^>]+>/g, ''); // strip HTML for toast text
+
+        // ── Channel 1: inline span ────────────────────────────────────────
+        // Replace the span entirely so no CSS transition state carries over
+        var oldEl = document.getElementById('cgKeyStatus');
+        var parent = oldEl ? oldEl.parentNode : null;
+        if (!parent) {
+            // Fallback: find the row that contains the save button
+            var sb = document.getElementById('cgSaveKey');
+            parent = sb ? sb.closest('div') : null;
         }
-        el.style.cssText = [
-            'display:inline-flex !important',
-            'visibility:visible !important',
-            'opacity:1 !important',
-            'font-size:12px',
+        if (parent) {
+            var newEl = document.createElement('span');
+            newEl.id        = 'cgKeyStatus';
+            newEl.className = 'pg-key-status ' + (type || '');
+            newEl.innerHTML = msg;
+            // Nuclear inline style — no class, no cascade, no transition
+            newEl.setAttribute('style', [
+                'display:inline-flex',
+                'visibility:visible',
+                'opacity:1',
+                'align-items:center',
+                'font-size:12px',
+                'font-weight:600',
+                'padding:4px 10px',
+                'border-radius:6px',
+                'margin-top:4px',
+                'line-height:1.5',
+                'transition:none',
+                'color:' + p.color,
+                'background:' + p.bg,
+                'border:1px solid ' + p.border
+            ].join(';'));
+            if (oldEl && parent.contains(oldEl)) {
+                parent.replaceChild(newEl, oldEl);
+            } else {
+                parent.appendChild(newEl);
+            }
+        }
+
+        // ── Channel 2: body-level toast ───────────────────────────────────
+        // Remove any existing toast first
+        var oldToast = document.getElementById('pgKeyToast');
+        if (oldToast) oldToast.remove();
+        if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+        var toast = document.createElement('div');
+        toast.id = 'pgKeyToast';
+        toast.textContent = plain;
+        toast.setAttribute('style', [
+            'position:fixed',
+            'bottom:28px',
+            'left:50%',
+            'transform:translateX(-50%)',
+            'z-index:999999',
+            'padding:12px 24px',
+            'border-radius:10px',
+            'font-size:13px',
             'font-weight:600',
-            'padding:3px 10px',
-            'border-radius:5px',
-            'margin-top:4px',
-            'color:' + c.color,
-            'background:' + c.bg,
-            'border:1px solid ' + c.border
-        ].join(';');
-        el.className = 'pg-key-status ' + (type === 'ok' ? 'ok' : type === 'err' ? 'err' : '');
-        el.innerHTML = msg;
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+            'line-height:1.4',
+            'pointer-events:none',
+            'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+            'color:' + p.color,
+            'background:' + p.bg,
+            'border:1px solid ' + p.border
+        ].join(';'));
+        document.body.appendChild(toast);
+
+        // Auto-dismiss toast after 5 seconds
+        _toastTimer = setTimeout(function() {
+            var t = document.getElementById('pgKeyToast');
+            if (t) t.remove();
+            _toastTimer = null;
+        }, 5000);
     }
 
-    cgSaveKey.addEventListener('click', async () => {
-        // Always grab fresh reference in case DOM was re-rendered
-        const cgKeyStatus = document.getElementById('cgKeyStatus');
-
-        // ── Auth gate — must have account before saving a key ────────────────
-        if (!isAuthed()) {
-            showKeyStatus(
-                '🔐 <strong>Free account required</strong> — ' +
-                '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
-                'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
-                ' &nbsp;·&nbsp; takes 30 seconds, no credit card',
-                'err'
-            );
-            return;
+    function clearKeyStatus() {
+        if (_keyStatusTimer) { clearTimeout(_keyStatusTimer); _keyStatusTimer = null; }
+        if (_toastTimer)     { clearTimeout(_toastTimer);     _toastTimer = null; }
+        var t = document.getElementById('pgKeyToast');
+        if (t) t.remove();
+        var el = document.getElementById('cgKeyStatus');
+        if (el) {
+            el.innerHTML  = '';
+            el.className  = 'pg-key-status';
+            el.removeAttribute('style');
         }
+    }
 
-        const key      = (document.getElementById('cgApiKey') || cgApiKey).value.trim();
-        const provider = (document.getElementById('cgProvider') || cgProvider).value || '';
-
-        // ── No provider ──
-        if (!provider) {
-            showKeyStatus('❌ Please select a provider (OpenAI or Anthropic) and enter your API key', 'err');
-            return;
-        }
-
-        // ── Empty key ──
-        if (!key) {
-            showKeyStatus('❌ Please enter your API key — select a provider first, then paste your key', 'err');
-            return;
-        }
-
-        // ── Format check ──
-        const looksOpenAI    = key.startsWith('sk-') && !key.startsWith('sk-ant-');
-        const looksAnthropic = key.startsWith('sk-ant-');
-        if (provider === 'openai' && looksAnthropic) {
-            showKeyStatus('❌ This looks like an Anthropic key — switch provider to Anthropic', 'err');
-            return;
-        }
-        if (provider === 'anthropic' && looksOpenAI) {
-            showKeyStatus('❌ This looks like an OpenAI key — switch provider to OpenAI', 'err');
-            return;
-        }
-        if (!looksOpenAI && !looksAnthropic) {
-            showKeyStatus('❌ Invalid key format — OpenAI keys start with sk-, Anthropic with sk-ant-', 'err');
-            return;
-        }
-
-        // ── Save & validate ──
-        localStorage.setItem(LS.key,      key);
-        localStorage.setItem(LS.provider, provider);
-        const resolvedModel = resolveCgModel();
-        localStorage.setItem(LS.model, resolvedModel);
-        if (cgModel.value === CG_CUSTOM_VAL && cgCustomModelInput) {
-            localStorage.setItem(CG_CUSTOM_KEY, cgCustomModelInput.value.trim());
-        }
-
-        showKeyStatus('💾 Saving & verifying…', 'info');
+    // ══════════════════════════════════════════════════════════════════════
+    // SAVE KEY BUTTON — rebuilt from scratch
+    // Gate order: auth → provider → key present → format → server validate
+    // The button is re-enabled in `finally` regardless of which path runs.
+    // ══════════════════════════════════════════════════════════════════════
+    cgSaveKey.addEventListener('click', async function() {
+        cgSaveKey.disabled = true;
 
         try {
-            const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
-            const res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ provider, apiKey: key }),
-            });
-            const data = await res.json().catch(() => ({}));
-
-            if (res.ok && data.ok === true) {
-                showKeyStatus('✅ ' + provLabel + ' key saved & verified — ready to generate', 'ok');
-            } else {
-                const raw = (data?.error || '').toLowerCase();
-                let msg = '';
-                if (raw.includes('incorrect') || raw.includes('invalid') || raw.includes('no such')) {
-                    msg = '❌ Invalid API key — check for typos or regenerate at your provider';
-                } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
-                    msg = '❌ Key expired or revoked — generate a new key at your provider';
-                } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('credit') || raw.includes('insufficient')) {
-                    msg = '❌ Account billing issue — check your balance at your provider dashboard';
-                } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
-                    msg = '⚠️ Rate limited — key is valid, wait a moment and try again';
-                } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
-                    msg = '❌ Key lacks permissions — ensure it has API access enabled';
-                } else {
-                    msg = '❌ Key saved but validation failed — ' + (data?.error || 'check your key and provider');
-                }
-                showKeyStatus(msg, 'err');
+            // ── 1. Auth gate ─────────────────────────────────────────────────
+            if (!isAuthed()) {
+                showKeyStatus(
+                    '🔐 <strong>Free account required</strong> — ' +
+                    '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                    'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
+                    ' &nbsp;·&nbsp; 30 seconds, no credit card',
+                    'err'
+                );
+                return;
             }
-        } catch (e) {
-            showKeyStatus('✅ Key saved (offline — will verify on first generate)', 'ok');
-        }
 
-        if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider, model: resolvedModel });
+            var key      = (document.getElementById('cgApiKey')   || cgApiKey).value.trim();
+            var provider = (document.getElementById('cgProvider') || cgProvider).value || '';
+
+            // ── 2. Provider selected ──────────────────────────────────────────
+            if (!provider) {
+                showKeyStatus('❌ Select a provider (OpenAI or Anthropic) first', 'err');
+                return;
+            }
+
+            // ── 3. Key not empty ──────────────────────────────────────────────
+            if (!key) {
+                showKeyStatus('❌ Paste your API key above, then click Save', 'err');
+                return;
+            }
+
+            // ── 4. Format check ───────────────────────────────────────────────
+            var looksOpenAI    = key.startsWith('sk-') && !key.startsWith('sk-ant-');
+            var looksAnthropic = key.startsWith('sk-ant-');
+            if (provider === 'openai' && looksAnthropic) {
+                showKeyStatus('❌ That looks like an Anthropic key — switch provider to Anthropic', 'err');
+                return;
+            }
+            if (provider === 'anthropic' && looksOpenAI) {
+                showKeyStatus('❌ That looks like an OpenAI key — switch provider to OpenAI', 'err');
+                return;
+            }
+            if (!looksOpenAI && !looksAnthropic) {
+                showKeyStatus('❌ Invalid format — OpenAI keys start with <code>sk-</code>, Anthropic with <code>sk-ant-</code>', 'err');
+                return;
+            }
+
+            // ── 5. Persist locally before server call ─────────────────────────
+            localStorage.setItem(LS.key,      key);
+            localStorage.setItem(LS.provider, provider);
+            var resolvedModel = resolveCgModel();
+            localStorage.setItem(LS.model, resolvedModel);
+            if (cgModel.value === CG_CUSTOM_VAL && cgCustomModelInput) {
+                localStorage.setItem(CG_CUSTOM_KEY, cgCustomModelInput.value.trim());
+            }
+
+            // ── 6. Server validate (zero-token call via Cloudflare Worker) ────
+            showKeyStatus('💾 Saving & verifying…', 'info');
+
+            var provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+            var validateOk  = false;
+            var validateMsg = '';
+
+            try {
+                var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ provider: provider, apiKey: key })
+                });
+                var data = await res.json().catch(function() { return {}; });
+
+                if (res.ok && data.ok === true) {
+                    validateOk = true;
+                } else {
+                    var raw = (data && data.error ? data.error : '').toLowerCase();
+                    if (raw.includes('incorrect') || raw.includes('invalid') || raw.includes('no such')) {
+                        validateMsg = '❌ Invalid API key — check for typos or regenerate at your provider';
+                    } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
+                        validateMsg = '❌ Key expired or revoked — generate a new key at your provider';
+                    } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('credit') || raw.includes('insufficient')) {
+                        validateMsg = '❌ Billing issue — check your account balance at ' + provLabel;
+                    } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
+                        validateOk  = true; // rate-limited = key is valid
+                        validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
+                    } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
+                        validateMsg = '❌ Key lacks permissions — ensure API access is enabled';
+                    } else {
+                        validateMsg = '❌ Validation failed — ' + (data && data.error ? data.error : 'check your key and provider');
+                    }
+                }
+            } catch (_fetchErr) {
+                // Network unavailable — key is saved locally, validate on first generate
+                validateOk  = true;
+                validateMsg = '✅ ' + provLabel + ' key saved (offline — verified on first generate)';
+            }
+
+            if (validateOk) {
+                showKeyStatus(validateMsg || ('✅ ' + provLabel + ' key saved & verified — ready to generate'), 'ok');
+            } else {
+                showKeyStatus(validateMsg, 'err');
+            }
+
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_api_key_saved', { provider: provider, model: resolvedModel, ok: validateOk });
+
+        } finally {
+            // Always re-enable — even if an unexpected error was thrown
+            cgSaveKey.disabled = false;
+        }
     });
 
-    // ── Clear status on provider/model change or new key typed ──────────────
+    // ══════════════════════════════════════════════════════════════════════
+    // CLEAR STATUS listeners
+    // Status clears ONLY on provider/model dropdown change (stale status).
+    // The key input field NEVER clears status — any input event (including
+    // password-manager autofill, focus shifts, browser synthetic events)
+    // racing with the async save would wipe the just-shown message.
+    // ══════════════════════════════════════════════════════════════════════
     ['cgProvider', 'cgModel'].forEach(function(id) {
         var el = document.getElementById(id);
-        if (el) el.addEventListener('change', function() {
-            var st = document.getElementById('cgKeyStatus');
-            if (st) { st.textContent = ''; st.className = 'pg-key-status'; }
-        });
+        if (el) el.addEventListener('change', clearKeyStatus);
     });
-    if (cgApiKey) {
-        cgApiKey.addEventListener('input', function() {
-            var saved = localStorage.getItem(LS.key) || '';
-            if (cgApiKey.value.trim() !== saved) {
-                var st = document.getElementById('cgKeyStatus');
-                if (st) { st.textContent = ''; st.className = 'pg-key-status'; }
-            }
-        });
-    }
 
     // ── Wire modal Save Key button to same handler ──────────────────────────
     var pgKeySaveBtn = document.getElementById('pgKeySaveBtn');
-    if (pgKeySaveBtn) pgKeySaveBtn.addEventListener('click', () => cgSaveKey.click());
+    if (pgKeySaveBtn) pgKeySaveBtn.addEventListener('click', function() { cgSaveKey.click(); });
 
-    // ── Toggle API key visibility (inline bar) ──
+    // ── Toggle API key visibility (inline bar) ──────────────────────────────
     if (cgToggleKey) {
-        cgToggleKey.addEventListener('click', () => {
-            const inp = document.getElementById('cgApiKey');
+        cgToggleKey.addEventListener('click', function() {
+            var inp = document.getElementById('cgApiKey');
             if (!inp) return;
-            const isHidden = inp.type === 'password';
+            var isHidden = inp.type === 'password';
             inp.type = isHidden ? 'text' : 'password';
             cgToggleKey.textContent = isHidden ? '🙈 Hide' : '👁 Show';
         });
     }
 
-    // ── Test Connection (inline bar) ──
+    // ══════════════════════════════════════════════════════════════════════
+    // TEST CONNECTION BUTTON — rebuilt from scratch
+    // Gate order: auth → key present → live API call → result via showKeyStatus
+    // ══════════════════════════════════════════════════════════════════════
     var cgTestKey = document.getElementById('cgTestKey');
     if (cgTestKey) {
-        cgTestKey.addEventListener('click', async () => {
-            const key      = (document.getElementById('cgApiKey') || {}).value?.trim();
-            const provider = (document.getElementById('cgProvider') || {}).value || 'openai';
-            const status   = document.getElementById('cgKeyStatus');
+        cgTestKey.addEventListener('click', async function() {
+            var key      = (document.getElementById('cgApiKey')   || {value:''}).value.trim();
+            var provider = (document.getElementById('cgProvider') || {value:'openai'}).value || 'openai';
 
-            // ── Auth gate ──
+            // ── 1. Auth gate ─────────────────────────────────────────────────
             if (!isAuthed()) {
-                if (status) {
-                    status.className = 'pg-key-status err';
-                    status.innerHTML = '🔐 <strong>Free account required</strong> — ' +
-                        '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'test-conn\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
-                        'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>';
-                }
+                showKeyStatus(
+                    '🔐 <strong>Free account required</strong> — ' +
+                    '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'test-conn\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                    'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>',
+                    'err'
+                );
                 return;
             }
 
+            // ── 2. Key present ────────────────────────────────────────────────
             if (!key) {
-                if (status) { status.textContent = '❌ Enter an API key first'; status.className = 'pg-key-status err'; }
+                showKeyStatus('❌ Paste and save an API key first, then test it', 'err', 5000);
                 return;
             }
 
+            // ── 3. Live test ──────────────────────────────────────────────────
             cgTestKey.disabled    = true;
             cgTestKey.textContent = '🔍 Testing…';
-            if (status) { status.textContent = ''; status.className = 'pg-key-status'; }
+            clearKeyStatus();
 
             try {
-                const provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
-                let testOk = false;
-                let testMsg = '';
+                var provLabel = provider === 'anthropic' ? 'Anthropic' : 'OpenAI';
+                var testOk  = false;
+                var testMsg = '';
 
                 if (provider === 'openai') {
-                    // Cheapest possible OpenAI call — 1 token, models endpoint
-                    const res = await fetch('https://api.openai.com/v1/models', {
-                        headers: { 'Authorization': `Bearer ${key}` }
+                    var oRes = await fetch('https://api.openai.com/v1/models', {
+                        headers: { 'Authorization': 'Bearer ' + key }
                     });
-                    if (res.ok) {
+                    if (oRes.ok) {
                         testOk = true;
                     } else {
-                        const d = await res.json().catch(() => ({}));
-                        testMsg = d?.error?.message || `HTTP ${res.status}`;
-                        if (res.status === 401) testMsg = 'Invalid API key — check it and try again';
-                        if (res.status === 429) testMsg = 'Key valid but rate-limited — ready to use';
-                        if (res.status === 429) testOk = true; // rate limit = key is valid
+                        var oD = await oRes.json().catch(function() { return {}; });
+                        testMsg = (oD && oD.error && oD.error.message) ? oD.error.message : ('HTTP ' + oRes.status);
+                        if (oRes.status === 401) testMsg = 'Invalid API key — check it and try again';
+                        if (oRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
                     }
-                } else if (provider === 'anthropic') {
-                    // Anthropic: minimal message call
-                    const res = await fetch('https://api.anthropic.com/v1/messages', {
+                } else {
+                    // Anthropic — minimal 1-token call
+                    var aRes = await fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
                         headers: {
                             'x-api-key': key,
@@ -3726,37 +3805,32 @@ function initCommentGenerator() {
                             'content-type': 'application/json',
                             'anthropic-dangerous-direct-browser-access': 'true'
                         },
-                        body: JSON.stringify({
-                            model: 'claude-haiku-4-5',
-                            max_tokens: 1,
-                            messages: [{ role: 'user', content: 'hi' }]
-                        })
+                        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] })
                     });
-                    if (res.ok || res.status === 529) {
-                        testOk = true; // 529 = overloaded but key is valid
+                    if (aRes.ok || aRes.status === 529) {
+                        testOk = true; // 529 = overloaded but key valid
                     } else {
-                        const d = await res.json().catch(() => ({}));
-                        testMsg = d?.error?.message || `HTTP ${res.status}`;
-                        if (res.status === 401) testMsg = 'Invalid API key — check it and try again';
-                        if (res.status === 429) { testMsg = 'Key valid but rate-limited — ready to use'; testOk = true; }
+                        var aD = await aRes.json().catch(function() { return {}; });
+                        testMsg = (aD && aD.error && aD.error.message) ? aD.error.message : ('HTTP ' + aRes.status);
+                        if (aRes.status === 401) testMsg = 'Invalid API key — check it and try again';
+                        if (aRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
                     }
                 }
 
                 if (testOk) {
-                    if (status) { status.textContent = `✅ ${provLabel} key valid — ready to generate`; status.className = 'pg-key-status ok'; }
-                    // Don't auto-clear success — leave it visible
-                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_success', { provider });
+                    showKeyStatus('✅ ' + provLabel + ' key valid — ready to generate', 'ok');
+                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_success', { provider: provider });
                 } else {
-                    if (status) { status.textContent = `❌ ${testMsg}`; status.className = 'pg-key-status err'; }
-                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_failed', { provider, error: testMsg });
+                    showKeyStatus('❌ ' + testMsg, 'err');
+                    if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_failed', { provider: provider, error: testMsg });
                 }
-            } catch (err) {
-                if (status) {
-                    status.textContent = err.message && err.message.includes('fetch')
-                        ? '⚠️ Network error — check your connection'
-                        : `❌ ${err.message}`;
-                    status.className = 'pg-key-status err';
-                }
+            } catch (netErr) {
+                showKeyStatus(
+                    netErr.message && netErr.message.toLowerCase().includes('fetch')
+                        ? '⚠️ Network error — check your connection and try again'
+                        : '❌ ' + (netErr.message || 'Unexpected error'),
+                    'err'
+                );
             } finally {
                 cgTestKey.disabled    = false;
                 cgTestKey.textContent = '🔍 Test Connection';
@@ -4045,14 +4119,6 @@ function initCommentGenerator() {
     var FREE_MONTHLY_LIMIT = 50;                     // ← change to 10 on May 1 2026
     var WATERMARK_LINE = '\n// ─────────────────────────────────────────────\n// Generated by Poly-Glot AI · poly-glot.ai\n// Add comments to any codebase in seconds.\n// ─────────────────────────────────────────────';
 
-    function getDemoCount() {
-        return parseInt(localStorage.getItem(DEMO_LS_KEY) || '0', 10);
-    }
-    function incrementDemoCount() {
-        var n = getDemoCount() + 1;
-        localStorage.setItem(DEMO_LS_KEY, n);
-        return n;
-    }
     function isAuthed() {
         // Primary check: auth.v7 inserts #pg-user-chip into the DOM only after
         // verifyStoredToken() succeeds. If the chip exists, the user is genuinely
@@ -4164,52 +4230,6 @@ function initCommentGenerator() {
 
     // Render on init
     renderUsageCounter();
-
-    function showDemoGate() {
-        // Blur the output
-        cgOutput.style.filter = 'blur(6px)';
-        cgOutput.style.userSelect = 'none';
-        cgOutputFooter.style.filter = 'blur(6px)';
-
-        // Insert gate overlay if not already present
-        if (document.getElementById('pg2DemoGate')) return;
-        var gate = document.createElement('div');
-        gate.id = 'pg2DemoGate';
-        gate.style.cssText = [
-            'position:absolute',
-            'inset:0',
-            'z-index:10',
-            'display:flex',
-            'align-items:center',
-            'justify-content:center',
-            'background:rgba(10,10,18,0.82)',
-            'backdrop-filter:blur(4px)',
-            '-webkit-backdrop-filter:blur(4px)',
-            'border-radius:inherit',
-        ].join(';');
-        gate.innerHTML = [
-            '<div style="text-align:center;padding:32px 24px;background:#18181f;border:1px solid rgba(124,58,237,0.35);border-radius:16px;max-width:320px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">',
-            '  <div style="font-size:32px;margin-bottom:10px;">🔒</div>',
-            '  <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f4f4f6;font-family:inherit;">You\'ve used your 3 free generations</h3>',
-            '  <p style="margin:0 0 20px;font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;">Sign up free &mdash; 50 files/month, no credit card required.</p>',
-            '  <a href="#" onclick="if(window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'demo-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.45);font-family:inherit;">🚀 Sign Up Free</a>',
-            '  <p style="margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.35);">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'demo-gate-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></p>',
-            '</div>'
-        ].join('');
-        // Position over output area
-        var outputArea = document.getElementById('cgOutputArea');
-        outputArea.style.position = 'relative';
-        outputArea.appendChild(gate);
-
-        if (typeof gtag !== 'undefined') gtag('event', 'demo_gate_shown', { count: getDemoCount() });
-    }
-    function hideDemoGate() {
-        var gate = document.getElementById('pg2DemoGate');
-        if (gate) gate.remove();
-        cgOutput.style.filter = '';
-        cgOutput.style.userSelect = '';
-        if (cgOutputFooter) cgOutputFooter.style.filter = '';
-    }
 
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
