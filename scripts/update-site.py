@@ -209,13 +209,13 @@ html = re.sub(
     html
 )
 
-# 2i. Inject live-data.v10.js if not already present (versioned to bypass CDN cache)
-if 'src="live-data.v10.js"' not in html:
+# 2i. Ensure live-data.v11.js is referenced (upgrades any older version reference)
+if 'src="live-data.v11.js"' not in html:
     import re as _re
     html = _re.sub(r'<script[^>]+src="live-data[^"]*\.js"[^>]*></script>\n?', '', html)
     html = html.replace(
         '</body>',
-        '<script defer src="live-data.v10.js"></script>\n</body>',
+        '<script defer src="live-data.v11.js"></script>\n</body>',
         1
     )
 
