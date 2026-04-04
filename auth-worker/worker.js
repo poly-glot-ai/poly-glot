@@ -465,6 +465,37 @@ function monthKey() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   POST /api/auth/vsc-proxy
+   Server-side proxy for VS Code Marketplace extension query API.
+   Needed because marketplace.visualstudio.com blocks browser CORS requests.
+   No auth required — public data only.
+───────────────────────────────────────────────────────────────────────────── */
+async function handleVscProxy(request) {
+  try {
+    const body = await request.text();
+    const res  = await fetch(
+      'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',
+      {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':       'application/json;api-version=3.0-preview.1',
+          'User-Agent':   'poly-glot-dashboard/1.0',
+        },
+        body: body || JSON.stringify({
+          filters: [{ criteria: [{ filterType: 7, value: 'poly-glot-ai.poly-glot' }] }],
+          flags: 914
+        }),
+      }
+    );
+    const data = await res.json();
+    return json(data, res.status);
+  } catch(e) {
+    return json({ error: 'VSC proxy error: ' + e.message }, 502);
+  }
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -494,6 +525,7 @@ export default {
     if (pathname === '/api/auth/refresh')      return handleRefresh(request, env);
     if (pathname === '/api/auth/validate-key') return handleValidateKey(request);
     if (pathname === '/api/auth/track-usage')  return handleTrackUsage(request, env);
+    if (pathname === '/api/auth/vsc-proxy')    return handleVscProxy(request);
 
     return json({ error: 'Not found' }, 404);
   },
