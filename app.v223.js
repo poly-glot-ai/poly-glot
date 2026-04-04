@@ -3502,6 +3502,19 @@ function initCommentGenerator() {
     cgSaveKey.addEventListener('click', async () => {
         // Always grab fresh reference in case DOM was re-rendered
         const cgKeyStatus = document.getElementById('cgKeyStatus');
+
+        // ── Auth gate — must have account before saving a key ────────────────
+        if (!isAuthed()) {
+            if (cgKeyStatus) {
+                cgKeyStatus.className = 'pg-key-status err';
+                cgKeyStatus.innerHTML = '🔐 <strong>Free account required</strong> — ' +
+                    '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                    'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
+                    ' &nbsp;·&nbsp; takes 30 seconds, no credit card';
+            }
+            return;
+        }
+
         const key      = (document.getElementById('cgApiKey') || cgApiKey).value.trim();
         const provider = (document.getElementById('cgProvider') || cgProvider).value || '';
 
@@ -3642,6 +3655,17 @@ function initCommentGenerator() {
             const key      = (document.getElementById('cgApiKey') || {}).value?.trim();
             const provider = (document.getElementById('cgProvider') || {}).value || 'openai';
             const status   = document.getElementById('cgKeyStatus');
+
+            // ── Auth gate ──
+            if (!isAuthed()) {
+                if (status) {
+                    status.className = 'pg-key-status err';
+                    status.innerHTML = '🔐 <strong>Free account required</strong> — ' +
+                        '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'test-conn\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                        'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>';
+                }
+                return;
+            }
 
             if (!key) {
                 if (status) { status.textContent = '❌ Enter an API key first'; status.className = 'pg-key-status err'; }
@@ -4048,18 +4072,29 @@ function initCommentGenerator() {
 
     function renderUsageCounter() {
         var existing = document.getElementById('pg2UsageCounter');
+        // Anchor: always append inside #inputPanel so it's visible and styled correctly.
+        // Using inputPanel directly (guaranteed to exist — we already have cgInput from it).
+        var inputPanel = document.getElementById('inputPanel');
+
         if (!isAuthed()) {
-            // Not signed in — show sign-up nudge instead of usage counter
+            // Not signed in — show sign-up nudge
             var nudge = [
-                '<div id="pg2UsageCounter" style="margin-top:10px;padding:8px 12px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:8px;font-size:12px;color:#94a3b8;text-align:center;">',
-                '  <span>🔐 <strong style="color:#a78bfa;">Free account required</strong> — ',
-                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'counter-nudge\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;font-weight:600;text-decoration:none;">Sign up free ↗</a>',
-                '  &nbsp;·&nbsp; ' + FREE_MONTHLY_LIMIT + ' files/month, no credit card</span>',
+                '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:10px 14px;',
+                'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);',
+                'border-radius:8px;font-size:12px;color:#94a3b8;text-align:center;">',
+                '🔐 <strong style="color:#a78bfa;">Free account required</strong>',
+                ' &nbsp;·&nbsp; ',
+                '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\')',
+                '{window.PolyGlotAuth.openLoginModal(\'counter-nudge\');}',
+                'else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();}',
+                ' return false;" style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>',
+                ' &nbsp;·&nbsp; ' + FREE_MONTHLY_LIMIT + ' files/month, no credit card',
                 '</div>'
             ].join('');
-            if (existing) { existing.outerHTML = nudge; } else {
-                var footerN = document.querySelector('#inputPanel .panel-footer');
-                if (footerN) footerN.insertAdjacentHTML('afterend', nudge);
+            if (existing) {
+                existing.outerHTML = nudge;
+            } else if (inputPanel) {
+                inputPanel.insertAdjacentHTML('beforeend', nudge);
             }
             return;
         }
@@ -4072,21 +4107,28 @@ function initCommentGenerator() {
                       : remaining <= 10 ? '#f59e0b'
                       : '#22c55e';
         var html = [
-            '<div id="pg2UsageCounter" style="margin-top:10px;padding:8px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;font-size:12px;color:#94a3b8;">',
-            '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">',
+            '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:10px 14px;',
+            'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);',
+            'border-radius:8px;font-size:12px;color:#94a3b8;">',
+            '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">',
             '    <span>🗂 Free plan usage</span>',
             '    <span style="color:' + color + ';font-weight:600;">' + used + ' / ' + FREE_MONTHLY_LIMIT + ' files this month</span>',
             '  </div>',
             '  <div style="background:rgba(255,255,255,.08);border-radius:4px;height:4px;overflow:hidden;">',
             '    <div style="height:4px;border-radius:4px;background:' + color + ';width:' + pct + '%;transition:width .4s;"></div>',
             '  </div>',
-            remaining <= 10 && remaining > 0 ? '  <div style="margin-top:5px;color:' + color + ';">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' remaining this month — <a href="#pg-pricing-section" style="color:#a78bfa;">upgrade for unlimited ↑</a></div>' : '',
-            remaining <= 0 ? '  <div style="margin-top:5px;color:#ef4444;">🔒 Limit reached — <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" style="color:#a78bfa;">Upgrade to Pro $9/mo ↗</a></div>' : '',
+            remaining <= 10 && remaining > 0
+                ? '  <div style="margin-top:6px;color:' + color + ';">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' remaining this month — <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">upgrade for unlimited ↑</a></div>'
+                : '',
+            remaining <= 0
+                ? '  <div style="margin-top:6px;color:#ef4444;">🔒 Monthly limit reached — <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro $9/mo ↗</a></div>'
+                : '',
             '</div>'
         ].join('');
-        if (existing) { existing.outerHTML = html; } else {
-            var footer = document.querySelector('#inputPanel .panel-footer');
-            if (footer) footer.insertAdjacentHTML('afterend', html);
+        if (existing) {
+            existing.outerHTML = html;
+        } else if (inputPanel) {
+            inputPanel.insertAdjacentHTML('beforeend', html);
         }
     }
 
@@ -4142,14 +4184,8 @@ function initCommentGenerator() {
     cgGenerateBtn.addEventListener('click', async () => {
         const code = cgInput.value.trim();
 
-        // Validate before hitting the API
-        const validationError = validateCodeInput(code);
-        if (validationError) { showInputError(validationError); return; }
-        clearInputError();
-
-        // ── Auth gate — sign-up required before anything else ────────────────
-        // Check auth FIRST so unauthenticated users see the sign-up CTA,
-        // not the API key error (they can't set a key until they have an account).
+        // ── Auth gate FIRST — before validation or key checks ────────────────
+        // Unauthenticated users see sign-up CTA regardless of textarea state.
         if (!isAuthed()) {
             showCgInlineError(
                 '<div style="padding:28px 24px;text-align:center;">' +
@@ -4172,6 +4208,11 @@ function initCommentGenerator() {
             if (typeof gtag !== 'undefined') gtag('event', 'cg_auth_gate_shown');
             return;
         }
+
+        // ── Code validation (signed-in users only) ────────────────────────────
+        const validationError = validateCodeInput(code);
+        if (validationError) { showInputError(validationError); return; }
+        clearInputError();
 
         // ── API key check (signed-in users only — auth gate passed) ──────────
         const key = localStorage.getItem(LS.key) || '';
@@ -4279,32 +4320,35 @@ function initCommentGenerator() {
             lastOutputText = result.code;
             renderUsageCounter();
 
-            // Remove any stale warning
+            // Remove any stale warnings
             ['pg2MonthlyLimitWarn','pg2SoftWarn'].forEach(function(id) {
                 var el = document.getElementById(id); if (el) el.remove();
             });
 
+            // Anchor warnings inside #outputPanel — always exists, always visible
+            var outputPanel = document.getElementById('outputPanel');
+
             if (newMonthlyUsed >= FREE_MONTHLY_LIMIT) {
-                // Just hit the limit — warn below output
+                // Hit the limit
                 var limitWarn = document.createElement('div');
                 limitWarn.id = 'pg2MonthlyLimitWarn';
-                limitWarn.style.cssText = 'text-align:center;font-size:12px;color:#ef4444;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.08);border-radius:6px;border:1px solid rgba(239,68,68,.2);';
+                limitWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#ef4444;padding:10px 14px;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2);';
                 limitWarn.innerHTML = '🔒 Monthly limit reached (' + FREE_MONTHLY_LIMIT + ' files). <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro — $9/mo with EARLYBIRD3 ↗</a>';
-                cgOutputFooter.parentNode.insertBefore(limitWarn, cgOutputFooter.nextSibling);
+                if (outputPanel) outputPanel.appendChild(limitWarn);
             } else if (newMonthlyUsed >= FREE_MONTHLY_LIMIT - 5) {
-                // ≤5 remaining — urgent red warning
+                // ≤5 remaining — urgent red
                 var urgentWarn = document.createElement('div');
                 urgentWarn.id = 'pg2SoftWarn';
-                urgentWarn.style.cssText = 'text-align:center;font-size:12px;color:#ef4444;margin-top:8px;padding:6px 12px;background:rgba(239,68,68,.06);border-radius:6px;border:1px solid rgba(239,68,68,.15);';
+                urgentWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#ef4444;padding:8px 14px;background:rgba(239,68,68,.06);border-radius:8px;border:1px solid rgba(239,68,68,.15);';
                 urgentWarn.innerHTML = '🚨 <strong>' + (FREE_MONTHLY_LIMIT - newMonthlyUsed) + ' file' + (FREE_MONTHLY_LIMIT - newMonthlyUsed === 1 ? '' : 's') + ' remaining</strong> this month. <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro ↗</a>';
-                cgOutputFooter.parentNode.insertBefore(urgentWarn, cgOutputFooter.nextSibling);
+                if (outputPanel) outputPanel.appendChild(urgentWarn);
             } else if (newMonthlyUsed >= FREE_MONTHLY_LIMIT - 10) {
-                // ≤10 remaining — soft yellow warning
+                // ≤10 remaining — soft yellow
                 var softWarn = document.createElement('div');
                 softWarn.id = 'pg2SoftWarn';
-                softWarn.style.cssText = 'text-align:center;font-size:12px;color:rgba(167,139,250,.9);margin-top:8px;padding:6px 12px;background:rgba(167,139,250,.08);border-radius:6px;border:1px solid rgba(167,139,250,.2);';
-                softWarn.innerHTML = '⚠️ ' + (FREE_MONTHLY_LIMIT - newMonthlyUsed) + ' files remaining this month. <a href="#pg-pricing-section" style="color:#a78bfa;">Upgrade for unlimited ↑</a>';
-                cgOutputFooter.parentNode.insertBefore(softWarn, cgOutputFooter.nextSibling);
+                softWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#f59e0b;padding:8px 14px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.2);';
+                softWarn.innerHTML = '⚠️ ' + (FREE_MONTHLY_LIMIT - newMonthlyUsed) + ' files remaining this month. <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">Upgrade for unlimited ↑</a>';
+                if (outputPanel) outputPanel.appendChild(softWarn);
             }
 
             cgCopyBtn.disabled     = false;
