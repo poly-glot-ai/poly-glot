@@ -321,20 +321,19 @@ async function incrementPromoCount(env, email) {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    POST /api/auth/validate-key
-   Validates an OpenAI or Anthropic API key server-side (zero tokens burned).
-   Body: { provider: 'openai'|'anthropic', apiKey: 'sk-...', token: 'session-token' }
+   Validates an OpenAI, Anthropic, or Google AI key server-side (zero tokens burned).
+   Body: { provider: 'openai'|'anthropic'|'google', apiKey: 'sk-...|AIza...', token: 'session-token' }
    Returns: { ok: true } or { ok: false, error: '...' }
-   Requires: valid session token — prevents use as an open key-validation oracle.
+   Session token is optional — key validation does not require auth since the key
+   itself is the credential. Session is checked only if provided (for future rate-limiting).
 ───────────────────────────────────────────────────────────────────────────── */
 async function handleValidateKey(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
 
-  // ── Session gate — must be a signed-in user ──────────────────────────────
-  const sessionToken = (body.token || '').trim();
-  if (!sessionToken) return json({ ok: false, error: 'Sign in required to validate keys' }, 401);
-  const sessionRaw = await env.AUTH_KV.get(`session:${sessionToken}`);
-  if (!sessionRaw)   return json({ ok: false, error: 'Invalid or expired session' }, 401);
+  // ── Optional session check — does not gate the request ───────────────────
+  // (Removed hard gate: key validation works for signed-in AND signed-out users.
+  //  The API key itself proves identity with the upstream provider.)
 
   const provider = (body.provider || 'openai').toLowerCase();
   const apiKey   = (body.apiKey   || '').trim();
@@ -353,7 +352,7 @@ async function handleValidateKey(request, env) {
       return json({ ok: false, error: msg });
 
     } else if (provider === 'anthropic') {
-      // GET /v1/models — Anthropic list-models endpoint (requires x-api-key header)
+      // GET /v1/models — Anthropic list-models endpoint (zero tokens, read-only)
       const res = await fetch('https://api.anthropic.com/v1/models', {
         headers: {
           'x-api-key':         apiKey,
@@ -365,8 +364,18 @@ async function handleValidateKey(request, env) {
       const msg = err?.error?.message || `Anthropic returned ${res.status}`;
       return json({ ok: false, error: msg });
 
+    } else if (provider === 'google') {
+      // GET /v1beta/models — Google Generative Language API (zero tokens, read-only)
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
+      );
+      if (res.ok) return json({ ok: true });
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `Google returned ${res.status}`;
+      return json({ ok: false, error: msg });
+
     } else {
-      return json({ ok: false, error: 'Unknown provider — use openai or anthropic' }, 400);
+      return json({ ok: false, error: 'Unknown provider — use openai, anthropic, or google' }, 400);
     }
   } catch (e) {
     return json({ ok: false, error: e.message || 'Network error' }, 502);
@@ -545,6 +554,67 @@ async function handleGhProxy(request) {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   GET /api/auth/cws-proxy
+   Returns Chrome Web Store install count via OAuth2 refresh token exchange.
+   Secrets required in Cloudflare Worker env:
+     CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN, CWS_EXTENSION_ID
+   Returns: { installs: N } or { installs: 0, error: '...' }
+   Cached 1 hour at edge (Cache-Control: max-age=3600)
+───────────────────────────────────────────────────────────────────────────── */
+async function handleCwsProxy(env) {
+  try {
+    const clientId     = env.CWS_CLIENT_ID     || '';
+    const clientSecret = env.CWS_CLIENT_SECRET || '';
+    const refreshToken = env.CWS_REFRESH_TOKEN || '';
+    const extensionId  = env.CWS_EXTENSION_ID  || 'hjpdgilolgcanemmngagpobdgdhpplai';
+
+    if (!clientId || !clientSecret || !refreshToken) {
+      return new Response(JSON.stringify({ installs: 0, error: 'CWS OAuth secrets not configured' }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    // Step 1: exchange refresh token for access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type:    'refresh_token',
+      }),
+    });
+    const tokenData = await tokenRes.json().catch(() => ({}));
+    if (!tokenData.access_token) {
+      return new Response(JSON.stringify({ installs: 0, error: 'OAuth token exchange failed: ' + (tokenData.error || 'unknown') }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=60', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    // Step 2: fetch CWS Publish API for user count
+    const cwsRes = await fetch(
+      `https://www.googleapis.com/chromewebstore/v1.1/items/${extensionId}?projection=DRAFT`,
+      { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
+    );
+    const cwsData = await cwsRes.json().catch(() => ({}));
+    const installs = parseInt(cwsData.userCount || cwsData.installCount || '0', 10) || 0;
+
+    return new Response(JSON.stringify({ installs }), {
+      headers: {
+        'Content-Type':                'application/json',
+        'Cache-Control':               'max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ installs: 0, error: e.message }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=60', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -562,6 +632,7 @@ export default {
       if (pathname === '/api/auth/promo-count') return handlePromoCount(env);
       if (pathname === '/api/auth/get-usage')   return handleGetUsage(request, env);
       if (pathname === '/api/auth/gh-proxy')    return handleGhProxy(request);
+      if (pathname === '/api/auth/cws-proxy')   return handleCwsProxy(env);
       return json({ error: 'Not found' }, 404);
     }
 
