@@ -496,6 +496,36 @@ async function handleVscProxy(request) {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   GET /api/auth/gh-proxy?endpoint=health|stats
+   Server-side proxy for GitHub App server (Render).
+   Needed because Render's CORS headers are not yet deployed.
+   No auth required — public data only.
+───────────────────────────────────────────────────────────────────────────── */
+async function handleGhProxy(request) {
+  const url      = new URL(request.url);
+  const endpoint = url.searchParams.get('endpoint') || 'health';
+
+  // Whitelist: only allow /health and /stats
+  const allowed = { health: '/health', stats: '/stats' };
+  const path    = allowed[endpoint];
+  if (!path) return json({ error: 'Invalid endpoint' }, 400);
+
+  try {
+    const res  = await fetch(
+      `https://poly-glot-github-app.onrender.com${path}`,
+      {
+        headers: { 'User-Agent': 'poly-glot-dashboard/1.0' },
+        signal:  AbortSignal.timeout(25000),   // 25s — covers Render cold start
+      }
+    );
+    const data = await res.json();
+    return json(data, res.status);
+  } catch(e) {
+    return json({ error: 'GH App proxy error: ' + e.message }, 502);
+  }
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -512,6 +542,7 @@ export default {
     if (request.method === 'GET') {
       if (pathname === '/api/auth/promo-count') return handlePromoCount(env);
       if (pathname === '/api/auth/get-usage')   return handleGetUsage(request, env);
+      if (pathname === '/api/auth/gh-proxy')    return handleGhProxy(request);
       return json({ error: 'Not found' }, 404);
     }
 

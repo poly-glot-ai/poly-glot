@@ -272,8 +272,8 @@ const VSC_BODY = JSON.stringify({
 
 const ENDPOINTS = [
   { method:'GET',  key:'site',      url:'https://poly-glot.ai',                                                    label:'poly-glot.ai',         desc:'Main site · GitHub Pages + Cloudflare' },
-  { method:'GET',  key:'ghHealth',  url:'https://poly-glot-github-app.onrender.com/health',                        label:'GitHub App /health',   desc:'Render service heartbeat' },
-  { method:'GET',  key:'ghStats',   url:'https://poly-glot-github-app.onrender.com/stats',                         label:'GitHub App /stats',    desc:'Live installation count via GitHub API' },
+  { method:'GET',  key:'ghHealth',  url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=health',                 label:'GitHub App /health',   desc:'Render service heartbeat (via proxy)' },
+  { method:'GET',  key:'ghStats',   url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats',                  label:'GitHub App /stats',    desc:'Live installation count via GitHub API (via proxy)' },
   { method:'GET',  key:'telHealth', url:'https://telemetry.poly-glot.ai/health',                                   label:'Telemetry /health',    desc:'Cloudflare Worker heartbeat' },
   { method:'GET',  key:'telStats',  url:`https://telemetry.poly-glot.ai/stats?secret=${TEL_SECRET}`,               label:'Telemetry /stats',     desc:'CLI command count + milestones' },
   { method:'GET',  key:'promo',     url:'https://poly-glot.ai/api/auth/promo-count',                               label:'Auth /promo-count',    desc:'Cloudflare KV · promo signup count' },
