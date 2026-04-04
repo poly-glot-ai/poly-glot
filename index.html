@@ -105,8 +105,6 @@
   <link rel="preconnect" href="https://api.openai.com">
   <link rel="preconnect" href="https://api.anthropic.com">
   <link rel="preconnect" href="https://generativelanguage.googleapis.com">
-  <link rel="preconnect" href="https://generativelanguage.googleapis.com">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://www.googletagmanager.com">
 
   <!-- Sitemap -->
@@ -254,6 +252,33 @@
     .pg2-nav__mobile-link--chrome:hover {
       background: rgba(66,133,244,.08);
       color: #93c5fd;
+    }
+    /* Coming Soon badge — inline pill */
+    .pg2-coming-soon {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      background: linear-gradient(135deg, rgba(66,133,244,.22), rgba(96,165,250,.12));
+      color: #93c5fd;
+      font-size: 8px;
+      font-weight: 700;
+      border-radius: 6px;
+      border: 1px solid rgba(96,165,250,.35);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.4;
+      vertical-align: middle;
+      white-space: nowrap;
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+    /* Slightly larger in body contexts (non-nav) */
+    .pg2-coming-soon--md {
+      font-size: 9px;
+      padding: 1px 6px;
+    }
+    @media (max-width: 600px) {
+      .pg2-coming-soon { font-size: 7px; padding: 1px 4px; margin-left: 3px; }
     }
     .pg2-nav__link--github {
       color: #a5b4fc;
@@ -1664,7 +1689,7 @@
       <a href="#pg-vscode-section" class="pg2-nav__link">VS Code</a>
       <a href="#pg-cli-section" class="pg2-nav__link">CLI</a>
       <a href="#pg-copilot-section" class="pg2-nav__link">Copilot</a>
-      <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__link pg2-nav__link--chrome">🌐 Chrome</a>
+      <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__link pg2-nav__link--chrome">🌐 Chrome<span class="pg2-coming-soon">Soon</span></a>
       <a href="#pg-github-app-section" class="pg2-nav__link pg2-nav__link--github">🐙 GitHub App</a>
     </div>
 
@@ -1690,7 +1715,7 @@
   <a href="#pg-vscode-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💻 VS Code</a>
   <a href="#pg-cli-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">⌨️ CLI</a>
   <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
-  <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension</a>
+  <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension<span class="pg2-coming-soon">Soon</span></a>
   <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
 </div>
 <script>
@@ -1779,7 +1804,7 @@
   </div>
   <div class="pg2-install-counter__inner">
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="102">102</span>
+      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="104">104</span>
       <span class="pg2-install-counter__label">VS Code</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
@@ -1790,7 +1815,7 @@
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
       <span class="pg2-install-counter__number" id="pg2CounterChrome" data-target="0">0</span>
-      <span class="pg2-install-counter__label">Chrome</span>
+      <span class="pg2-install-counter__label">Chrome <span class="pg2-coming-soon pg2-coming-soon--md">Soon</span></span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
@@ -3027,7 +3052,7 @@ function pg2OpenAssistant(text) {
   <div class="pg2-footer__links">
     <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="pg2-footer__link">💻 VS Code Extension</a>
     <a href="https://open-vsx.org/extension/poly-glot-ai/poly-glot" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(124,58,237,.3);color:#a78bfa;">⬛ Open VSX · Cursor ↗</a>
-    <a href="https://chromewebstore.google.com/detail/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(66,133,244,.3);color:#60a5fa;">🌐 Chrome Web Store ↗</a>
+    <a href="https://chromewebstore.google.com/detail/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(66,133,244,.3);color:#60a5fa;">🌐 Chrome Web Store<span class="pg2-coming-soon pg2-coming-soon--md" style="margin-left:5px;">Soon</span> ↗</a>
     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="pg2-footer__link pg2-footer__link--cli">⌨️ CLI on npm ↗</a>
     <a href="#pg-copilot-section" class="pg2-footer__link pg2-footer__link--copilot">🤖 Copilot Chat ↗</a>
     <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(99,102,241,.3);color:#818cf8;">🐙 GitHub App ↗</a>

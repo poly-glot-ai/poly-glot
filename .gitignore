@@ -23,6 +23,9 @@ node_modules/
 dist/
 build/
 
+# VS Code extension build artifacts — distribute via Desktop, not git
+*.vsix
+
 # Demo video frames + outputs
 demo-video/
 get-variant-ids.js

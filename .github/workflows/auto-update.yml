@@ -44,6 +44,8 @@ jobs:
 
       # ── 3. Run the Python updater ────────────────────────────────────────────
       - name: Fetch live data & patch files
+        env:
+          VSCODE_PAT: ${{ secrets.VSCODE_PAT }}
         run: python3 scripts/update-site.py
 
       # ── 4. Commit & push only if something changed ───────────────────────────
@@ -51,7 +53,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html sitemap.xml README.md cli/README.md live-data.v10.js
+          git add index.html sitemap.xml README.md cli/README.md \
+                  live-data.v11.js dashboard/index.html scripts/update-site.py
           if git diff --staged --quiet; then
             echo "✅ Nothing changed — site is already up to date."
           else

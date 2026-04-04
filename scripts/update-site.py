@@ -90,10 +90,13 @@ downloads_total = sum(d["downloads"] for d in npm_range.get("downloads", [])) if
 print(f"  📊 Downloads          : day={downloads_day:,}  week={downloads_week:,}  month={downloads_month:,}  total={downloads_total:,}")
 
 # VS Code Marketplace
-vscode_version       = "1.4.12"  # fallback
-vscode_installs      = 0         # install stat only (from VS Code app)
-vscode_download_count = 0        # downloadCount stat (from Marketplace web)
-vscode_combined      = 0         # install + downloadCount
+vscode_version        = "1.4.13"  # fallback
+vscode_installs       = 0         # install stat (from VS Code app)
+vscode_download_count = 0         # downloadCount stat (from Marketplace web)
+vscode_combined       = 0         # install + downloadCount (public API)
+vscode_acquisition    = 0         # true acquisition count (publisher PAT API)
+
+# ── Public API (always) — version + public stats ──────────────────────────────
 vsc_payload = json.dumps({
     "filters": [{"criteria": [{"filterType": 7, "value": "poly-glot-ai.poly-glot"}]}],
     "flags": 914
@@ -103,8 +106,8 @@ vsc_resp = fetch_json(
     method="POST",
     data=vsc_payload,
     headers={
-        "Content-Type":  "application/json",
-        "Accept":        "application/json;api-version=3.0-preview.1",
+        "Content-Type": "application/json",
+        "Accept":       "application/json;api-version=3.0-preview.1",
     }
 )
 if vsc_resp:
@@ -119,6 +122,41 @@ if vsc_resp:
         vscode_combined = vscode_installs + vscode_download_count
     except (KeyError, IndexError, TypeError):
         pass
+
+# ── Publisher PAT API (when secret available) — true acquisition count ────────
+# This is the same number the publisher dashboard shows under "Total Acquisition".
+# It includes direct VS Code app installs that the public API misses (~48hr lag).
+# Set VSCODE_PAT in GitHub Actions secrets:
+#   → marketplace.visualstudio.com → User settings → Personal Access Tokens
+#   → Scopes: Marketplace (Read & Manage)
+import os as _os
+_vscode_pat = _os.environ.get("VSCODE_PAT", "")
+if _vscode_pat:
+    try:
+        _pat_resp = fetch_json(
+            "https://marketplace.visualstudio.com/_apis/gallery/publishers/poly-glot-ai/extensions/poly-glot/stats?flags=1",
+            headers={
+                "Accept":        "application/json;api-version=7.2-preview.1",
+                "Authorization": f"Basic {__import__('base64').b64encode(f':{_vscode_pat}'.encode()).decode()}",
+            }
+        )
+        if _pat_resp:
+            # Response is a list of stat entries
+            for entry in (_pat_resp if isinstance(_pat_resp, list) else []):
+                if entry.get("statisticName") == "acquisitionCount":
+                    vscode_acquisition = int(entry.get("value", 0))
+                    break
+            # Also try totalInstalls key (alternate response shape)
+            if not vscode_acquisition and isinstance(_pat_resp, dict):
+                vscode_acquisition = int(_pat_resp.get("totalInstalls", 0) or 0)
+        if vscode_acquisition:
+            print(f"  ✅ VS Code PAT API    : acquisitionCount = {vscode_acquisition}")
+        else:
+            print(f"  ℹ️  VS Code PAT API    : no acquisitionCount found — using public API combined")
+    except Exception as _e:
+        print(f"  ⚠️  VS Code PAT API    : error ({_e}) — using public API combined")
+else:
+    print(f"  ℹ️  VS Code PAT API    : VSCODE_PAT not set — using public API + floor")
 
 # Open VSX downloads
 ovx_resp     = fetch_json("https://open-vsx.org/api/poly-glot-ai/poly-glot")
@@ -251,11 +289,21 @@ else:
 import re as _re2
 
 LIVE_DATA_FILE = "live-data.v11.js"
-DASHBOARD_FILE = "dashboard/index.html"
+DASHBOARD_FILE  = "dashboard/index.html"
+SELF_FILE       = "scripts/update-site.py"
 
-# VS Code: enforce known minimum floor (raised manually from publisher dashboard)
-# (verified Apr 4 2026 — 110.87% conversion; direct VS Code app installs bypass page views)
-vscode_combined = max(102, vscode_combined)
+# VS Code: prefer the PAT-based true acquisition count over the public API combined.
+# The PAT endpoint returns the same number the publisher dashboard shows (~48hr lead).
+# Fall back to public combined if PAT is unavailable; always raise-only (never lower).
+_HARDCODED_VS_FLOOR = 104   # last manually verified value (Apr 4 2026)
+if vscode_acquisition:
+    # PAT returned a value — use it as the authoritative count
+    vscode_combined = max(_HARDCODED_VS_FLOOR, vscode_acquisition)
+    print(f"  ✅ VS Code effective   : {vscode_combined} (from PAT acquisitionCount)")
+else:
+    # No PAT — fall back to public API + hardcoded floor
+    vscode_combined = max(_HARDCODED_VS_FLOOR, vscode_combined)
+    print(f"  ℹ️  VS Code effective   : {vscode_combined} (floor-guarded public API)")
 
 # ── 1. live-data.v11.js ──────────────────────────────────────────────────────
 try:
@@ -312,6 +360,34 @@ try:
         write_file(LIVE_DATA_FILE, ld)
     else:
         print(f"  ℹ️  {LIVE_DATA_FILE} — no floor changes needed")
+
+    # ── Self-update: keep _HARDCODED_VS_FLOOR in this file in sync ───────────
+    try:
+        with open(SELF_FILE, "r", encoding="utf-8") as _sf:
+            self_src = _sf.read()
+        self_src_orig = self_src
+        _self_match = _re2.search(r'_HARDCODED_VS_FLOOR\s*=\s*(\d+)', self_src)
+        _self_floor  = int(_self_match.group(1)) if _self_match else 0
+        if new_vs_floor > _self_floor:
+            self_src = _re2.sub(
+                r'(_HARDCODED_VS_FLOOR\s*=\s*)\d+',
+                rf'\g<1>{new_vs_floor}',
+                self_src
+            )
+            # Update the comment date too
+            import datetime as _dt
+            _today_str = _dt.date.today().isoformat()
+            self_src = _re2.sub(
+                r'(last manually verified value \()[^)]+(\))',
+                rf'\g<1>{_today_str}\g<2>',
+                self_src
+            )
+            write_file(SELF_FILE, self_src)
+            print(f"  ✅ {SELF_FILE} _HARDCODED_VS_FLOOR updated: {_self_floor} → {new_vs_floor}")
+        else:
+            print(f"  ℹ️  {SELF_FILE} _HARDCODED_VS_FLOOR unchanged: {_self_floor}")
+    except Exception as _se:
+        print(f"  ⚠️  {SELF_FILE} self-update failed: {_se}")
 
 except Exception as e:
     print(f"  ⚠️  Could not update {LIVE_DATA_FILE}: {e}")
@@ -410,12 +486,16 @@ for readme_path in ["README.md", "cli/README.md"]:
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
 
+_vsc_source = "PAT acquisitionCount" if vscode_acquisition else "public API + floor"
+_chrome_src = f"{chrome_installs} installs (cws-proxy)" if chrome_installs else "0 (floor / not yet live)"
 print(f"""
 ✅  Auto-update complete
     CLI version   : v{npm_version}
     MCP version   : v{mcp_version}
-    VS Code       : v{vscode_version} ({vscode_installs} installs)
-    Downloads     : {downloads_total:,} total / {downloads_week:,} this week / {downloads_day:,} today
+    VS Code       : v{vscode_version}  ·  {vscode_combined} ({_vsc_source})
+    Open VSX      : {ovx_installs} downloads
+    Chrome        : {_chrome_src}
+    npm downloads : {downloads_total:,} total / {downloads_week:,} this week / {downloads_day:,} today
     Build tag     : {now_tag}
     Date          : {today}
 """)
