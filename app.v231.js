@@ -2506,7 +2506,7 @@ function initializeAISettings() {
     // Generate AI comments button
     generateBtn.addEventListener('click', async () => {
         if (!window.aiGenerator.isConfigured()) {
-            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI, Anthropic, or Google AI key.');
             aiSettingsBtn.click();
             return;
         }
@@ -2577,7 +2577,7 @@ function initializeAISettings() {
     // ── Explain Code button ──────────────────────────────────────────
     explainBtn.addEventListener('click', async () => {
         if (!window.aiGenerator.isConfigured()) {
-            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI, Anthropic, or Google AI key.');
             aiSettingsBtn.click();
             return;
         }
@@ -2633,10 +2633,35 @@ function initializeAISettings() {
     // ── Why Comments button ──────────────────────────────────────────
     whyBtn.addEventListener('click', async () => {
         if (!window.aiGenerator.isConfigured()) {
-            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI, Anthropic, or Google AI key.');
             aiSettingsBtn.click();
             return;
         }
+
+        // ── Pro gate ──────────────────────────────────────────────────────────
+        const _whyPlan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+            ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+            : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        if (!['pro', 'team', 'enterprise'].includes(_whyPlan)) {
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">⭐</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Pro plan required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
+                '    <strong style="color:#a78bfa;">Why Comments</strong> explain the intent & reasoning behind your code — available on Pro.' +
+                '  </div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
+                '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
+                '    Upgrade to Pro — $9/mo ↗' +
+                '  </a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Use <strong>Doc Comments</strong> above for free unlimited generation.</div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_pro_gate_shown', { locked: 'why_comments' });
+            return;
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || { value: '' };
         const code = codeEditor.value.trim();
@@ -3653,7 +3678,7 @@ function initCommentGenerator() {
                     '🔐 <strong>Free account required</strong> — ' +
                     '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'save-key\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
                     'style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>' +
-                    ' &nbsp;·&nbsp; 30 seconds, no credit card',
+                    ' · 30 seconds, no credit card',
                     'err'
                 );
                 return;
@@ -4280,12 +4305,12 @@ function initCommentGenerator() {
                 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);',
                 'border-radius:8px;font-size:12px;color:#94a3b8;text-align:center;">',
                 '🔐 <strong style="color:#a78bfa;">Free account required</strong>',
-                ' &nbsp;·&nbsp; ',
+                ' · ',
                 '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\')',
                 '{window.PolyGlotAuth.openLoginModal(\'counter-nudge\');}',
                 'else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();}',
                 ' return false;" style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>',
-                ' &nbsp;·&nbsp; ' + FREE_MONTHLY_LIMIT + ' files/month, no credit card',
+                ' · ' + FREE_MONTHLY_LIMIT + ' files/month, no credit card',
                 '</div>'
             ].join('');
             if (existing) {
@@ -4394,8 +4419,10 @@ function initCommentGenerator() {
                 '<span style="font-size:12px;color:#9ca3af;">' +
                 'Your key is stored locally and sent directly to the AI provider — never to Poly-Glot.<br>' +
                 '→ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an OpenAI key ↗</a>' +
-                '&nbsp;&nbsp;·&nbsp;&nbsp;' +
+                ' · ' +
                 '<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#7c3aed;">Get an Anthropic key ↗</a>' +
+                ' · ' +
+                '<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#7c3aed;">Get a Google AI key ↗</a>' +
                 '</span>' +
                 '</div>'
             );
@@ -4967,10 +4994,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     bothBtn.addEventListener('click', async function() {
         if (!window.aiGenerator || !window.aiGenerator.isConfigured()) {
-            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI or Anthropic API key.');
+            alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI, Anthropic, or Google AI key.');
             if (aiSettingsBtn) aiSettingsBtn.click();
             return;
         }
+
+        // ── Pro gate ──────────────────────────────────────────────────────────
+        const _bothPlan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+            ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+            : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        if (!['pro', 'team', 'enterprise'].includes(_bothPlan)) {
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">⭐</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Pro plan required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
+                '    <strong style="color:#a78bfa;">Doc + Why Comments</strong> runs a two-pass generation — doc-comments and intent comments together — available on Pro.' +
+                '  </div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
+                '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
+                '    Upgrade to Pro — $9/mo ↗' +
+                '  </a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Use <strong>Doc Comments</strong> above for free unlimited generation.</div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_pro_gate_shown', { locked: 'both_comments' });
+            return;
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const codeEditor = document.getElementById('cgInput') || document.getElementById('codeEditor') || { value: '' };
         const code = codeEditor.value.trim();

@@ -63,6 +63,8 @@ poly-glot login
 poly-glot config --provider openai --key sk-...
 # or
 poly-glot config --provider anthropic --key sk-ant-...
+# or
+poly-glot config --provider google --key AIza...
 
 # 4. Comment a file
 poly-glot comment src/auth.js
@@ -199,10 +201,12 @@ poly-glot config --key sk-...
 # Set provider
 poly-glot config --provider openai
 poly-glot config --provider anthropic
+poly-glot config --provider google
 
 # Set model
 poly-glot config --model gpt-4.1-mini
 poly-glot config --model claude-sonnet-4-5
+poly-glot config --model gemini-2.5-flash
 
 # Set default mode
 poly-glot config --mode comment
@@ -266,14 +270,14 @@ poly-glot demo --live                 # use your own API key for a live run
 
 | Flag | Commands | Description |
 |------|----------|-------------|
-| `--provider <name>` | all generation commands, `config` | Override provider: `openai` \| `anthropic` |
-| `--model <name>` | all generation commands, `config` | Override model, e.g. `gpt-4.1-mini`, `claude-sonnet-4-5` |
+| `--provider <name>` | all generation commands, `config` | Override provider: `openai` \| `anthropic` \| `google` |
+| `--model <name>` | all generation commands, `config` | Override model, e.g. `gpt-4.1-mini`, `claude-sonnet-4-5`, `gemini-2.5-flash` |
 
 ### Config flags
 
 | Flag | Command | Description |
 |------|---------|-------------|
-| `--key <key>` | `config` | Set OpenAI or Anthropic API key |
+| `--key <key>` | `config` | Set OpenAI, Anthropic, or Google AI API key |
 | `--token <token>` | `config` | Set Pro/Team license token (unlocks all 12 languages + Pro commands) |
 | `--mode <m>` | `config` | Set default mode saved to config |
 | `--telemetry` | `config` | Enable anonymous usage stats |
@@ -316,7 +320,7 @@ poly-glot demo --live                 # use your own API key for a live run
 
 ## Supported models
 
-Works with **any model ID** from OpenAI or Anthropic.
+Works with **any model ID** from OpenAI, Anthropic, or Google.
 
 ### OpenAI
 
@@ -336,13 +340,23 @@ Works with **any model ID** from OpenAI or Anthropic.
 | `claude-opus-4-5` | Most powerful Claude |
 | `claude-haiku-4-5` | Fastest & cheapest |
 
+### Google
+
+| Model | Notes |
+|-------|-------|
+| `gemini-2.5-flash` ⭐ | **Recommended** — fast, accurate, low cost |
+| `gemini-2.5-pro` | Most powerful Gemini |
+| `gemini-2.5-flash-lite` | Cheapest Gemini |
+| `gemini-2.0-flash-001` | Stable, widely available |
+
 ```bash
 # Set default model
 poly-glot config --provider openai --model gpt-4.1-mini
 poly-glot config --provider anthropic --model claude-sonnet-4-5
+poly-glot config --provider google --model gemini-2.5-flash
 
 # Override per-run
-poly-glot comment src/auth.js --provider openai --model gpt-4.1-nano
+poly-glot comment src/auth.js --provider google --model gemini-2.5-pro
 ```
 
 ---
@@ -351,8 +365,8 @@ poly-glot comment src/auth.js --provider openai --model gpt-4.1-nano
 
 | Variable | Description |
 |----------|-------------|
-| `POLYGLOT_API_KEY` | OpenAI or Anthropic API key |
-| `POLYGLOT_PROVIDER` | `openai` or `anthropic` |
+| `POLYGLOT_API_KEY` | OpenAI, Anthropic, or Google AI API key |
+| `POLYGLOT_PROVIDER` | `openai` \| `anthropic` \| `google` |
 | `POLYGLOT_MODEL` | Model ID override |
 | `POLYGLOT_MODE` | `comment`, `why`, or `both` |
 | `POLYGLOT_LICENSE_TOKEN` | Pro/Team license token — skips login gate in CI |

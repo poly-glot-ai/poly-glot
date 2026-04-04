@@ -20,7 +20,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 
 - **12 programming languages** — JS, TS, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin
 - **Three comment modes** — doc-comments (JSDoc/PyDoc/Javadoc…), why-comments (reasoning & intent), or both in one pass
-- **Bring your own API key** — OpenAI and Anthropic supported; your key never leaves your machine
+- **Bring your own API key** — OpenAI, Anthropic, and Google Gemini supported; your key never leaves your machine
 - **Available everywhere** — Web · VS Code · CLI · MCP · GitHub Copilot Chat · GitHub App
 
 ---
@@ -70,7 +70,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 ### Web App
 Visit **[poly-glot.ai](https://poly-glot.ai)** — no installation required.
 
-1. Click **⚙️ AI Settings** → paste your OpenAI or Anthropic API key
+1. Click **⚙️ AI Settings** → paste your OpenAI, Anthropic, or Google AI key
 2. Paste your code into the editor
 3. Click **Generate Comments**
 
@@ -214,7 +214,9 @@ Works with: Goose · Claude Desktop · Cursor · Windsurf · any MCP client
 ```bash
 poly-glot login                                     # Sign in / create free account
 poly-glot config                                    # Interactive setup
-poly-glot config --key sk-... --provider openai     # Non-interactive setup
+poly-glot config --key sk-... --provider openai        # OpenAI
+poly-glot config --key sk-ant-... --provider anthropic # Anthropic
+poly-glot config --key AIza... --provider google       # Google Gemini
 poly-glot config --token <license-token>            # Activate Pro
 
 poly-glot comment src/auth.js                       # Doc-comment a file
@@ -261,7 +263,7 @@ POLYGLOT_LICENSE_TOKEN=...        # Pro license token
 
 ## 🔒 Privacy & Security
 
-- **Your code never touches Poly-Glot servers** — all AI calls go directly from your machine to OpenAI/Anthropic
+- **Your code never touches Poly-Glot servers** — all AI calls go directly from your machine to OpenAI, Anthropic, or Google
 - **API keys stored locally** — in browser localStorage (web) or `~/.config/polyglot/config.json` (CLI), never sent to us
 - **GitHub App** — reads only changed PR files, never stores code, requests minimal permissions (`pull_requests:write`, `checks:write`, `contents:read`)
 - **Zero telemetry by default** — opt in with `poly-glot config --telemetry`
