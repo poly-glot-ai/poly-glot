@@ -3967,32 +3967,11 @@ function initCommentGenerator() {
         const t     = text.trim();
         const lines = t.split('\n').filter(l => l.trim().length > 0);
 
-        if (t.length < 30)   return 'Code is too short — paste a complete function or class.';
-        if (lines.length < 2) return 'Paste a complete function or block — single lines are not supported.';
+        // Only hard-block truly empty / too-short input
+        if (t.length < 20)    return 'Code is too short — paste a complete function or class.';
+        if (lines.length < 2) return 'Paste at least two lines of code.';
 
-        // Signal scoring — needs at least 3 of 7 code-like signals
-        const sig = [
-            /[{}]/.test(t),
-            /\(.*\)/.test(t),
-            /[;:]/.test(t),
-            /[=><+\-*\/!&|]/.test(t),
-            /\b(function|def|class|const|let|var|if|else|for|while|return|import|export|public|private|void|int|string|fn|func|package|select|from|where|div|span)\b/i.test(t),
-            lines.some(l => /^[\t ]{2,}\S/.test(l)),
-            lines.length >= 3,
-        ].filter(Boolean).length;
-        if (sig < 3) return "This doesn't look like code — paste a complete function, class, or block.";
-
-        // Must contain at least one complete block / structure
-        const complete =
-            /\{[^}]{5,}\}/.test(t) ||
-            /^(def|class|if|for|while|async def)\s+.+:\s*\n[\t ]+\S/m.test(t) ||
-            /\bfunc\s+\w+[^{]*\{[\s\S]{5,}\}/.test(t) ||
-            /\bSELECT\b[\s\S]+\bFROM\b/i.test(t) ||
-            /<(\w+)[^>]*>[\s\S]+<\/\1>/i.test(t) ||
-            (lines.length >= 3 && lines.some(l => /^[\t ]{2,}\S/.test(l)));
-        if (!complete) return 'Code looks incomplete — paste a full function or block including its body.';
-
-        return null; // valid
+        return null; // valid — let the AI decide the rest
     }
 
     // ── Show / clear inline validation error on the input panel ──────────
@@ -4030,10 +4009,15 @@ function initCommentGenerator() {
         return n;
     }
     function isAuthed() {
-        // Check if user has a valid session (set by auth.js)
+        // auth.v7 stores the session token under 'pg_session_token'.
+        // Also check the public PolyGlotAuth API if it has already loaded.
         try {
-            var cfg = JSON.parse(localStorage.getItem('polyglot_auth') || '{}');
-            return !!(cfg.sessionToken || cfg.token);
+            if (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function') {
+                return !!window.PolyGlotAuth.getToken();
+            }
+        } catch(e) {}
+        try {
+            return !!localStorage.getItem('pg_session_token');
         } catch(e) { return false; }
     }
 
@@ -4218,29 +4202,38 @@ function initCommentGenerator() {
         window.aiGenerator.provider = cgProvider.value;
         window.aiGenerator.model    = resolveCgModel();
 
-        // Show output area immediately for streaming
+        // Show loading state and clear output area
         hideCgInlineError();
-        cgLoading.style.display      = 'none';
+        cgLoading.style.display      = 'flex';
         cgPlaceholder.style.display  = 'none';
-        cgOutput.style.display       = 'block';
+        cgOutput.style.display       = 'none';
         cgOutput.textContent         = '';
         cgOutputFooter.style.display = 'none';
         cgGenerateBtn.disabled       = true;
         cgGenerateBtn.textContent    = '⏳ Generating…';
 
         try {
-            lastInputText  = code;
+            lastInputText = code;
+            let firstChunk = true;
 
             // Stream tokens directly into the output <pre> as they arrive
             const result = await window.aiGenerator.generateComments(
                 code, cgLanguage.value, cgStyle.value,
                 (chunk) => {
+                    if (firstChunk) {
+                        // First token — swap loader for visible output
+                        cgLoading.style.display = 'none';
+                        cgOutput.style.display  = 'block';
+                        firstChunk = false;
+                    }
                     cgOutput.textContent += chunk;
                 }
             );
             lastOutputText = result.code;
 
-            // Final render (replaces streamed content with clean stripped version)
+            // Final render — hide loader (non-streaming path) and show clean output
+            cgLoading.style.display      = 'none';
+            cgOutput.style.display       = 'block';
             cgOutput.textContent         = result.code;
             cgOutputFooter.style.display = 'flex';
 
