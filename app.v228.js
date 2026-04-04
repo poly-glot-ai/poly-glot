@@ -3538,25 +3538,32 @@ function initCommentGenerator() {
             }
         }
 
-        // Apply styles atomically — no class-only approach that CSS can neutralise
-        el.style.cssText = [
-            'display:inline-flex !important',
-            'visibility:visible !important',
-            'opacity:1 !important',
-            'align-items:center',
-            'font-size:12px',
-            'font-weight:600',
-            'padding:4px 10px',
-            'border-radius:5px',
-            'margin-top:4px',
-            'line-height:1.5',
-            'color:' + p.color,
-            'background:' + p.bg,
-            'border:1px solid ' + p.border,
-            'transition:none'
-        ].join(';');
-        el.className = 'pg-key-status' + (type ? ' ' + type : '');
+        // Set content first so the element is non-empty before styles apply
         el.innerHTML = msg;
+        el.className = 'pg-key-status' + (type ? ' ' + type : '');
+
+        // Apply styles via setProperty — the only reliable cross-browser way
+        // to force !important from JavaScript. cssText with !important is
+        // silently dropped in Safari and inconsistent in Chrome/Firefox.
+        var styles = {
+            'display':          ['inline-flex', 'important'],
+            'visibility':       ['visible',     'important'],
+            'opacity':          ['1',            'important'],
+            'align-items':      ['center',       ''],
+            'font-size':        ['12px',         ''],
+            'font-weight':      ['600',          ''],
+            'padding':          ['4px 10px',     ''],
+            'border-radius':    ['5px',          ''],
+            'margin-top':       ['4px',          ''],
+            'line-height':      ['1.5',          ''],
+            'color':            [p.color,        ''],
+            'background':       [p.bg,           ''],
+            'border':           ['1px solid ' + p.border, ''],
+            'transition':       ['none',         '']
+        };
+        Object.keys(styles).forEach(function(prop) {
+            el.style.setProperty(prop, styles[prop][0], styles[prop][1]);
+        });
 
         // Optional auto-clear
         if (_keyStatusTimer) clearTimeout(_keyStatusTimer);
@@ -3573,7 +3580,11 @@ function initCommentGenerator() {
     function clearKeyStatus() {
         if (_keyStatusTimer) { clearTimeout(_keyStatusTimer); _keyStatusTimer = null; }
         var el = document.getElementById('cgKeyStatus');
-        if (el) { el.innerHTML = ''; el.style.cssText = ''; }
+        if (el) {
+            el.innerHTML = '';
+            el.style.cssText = '';
+            el.className = 'pg-key-status';
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -3692,21 +3703,16 @@ function initCommentGenerator() {
     });
 
     // ══════════════════════════════════════════════════════════════════════
-    // CLEAR STATUS listeners — only clear when key field is edited AND
-    // the value differs from what is saved.  Never clear on blur/focus.
-    // Provider/model changes always clear (stale status no longer applies).
+    // CLEAR STATUS listeners
+    // Status clears ONLY on provider/model dropdown change (stale status).
+    // The key input field NEVER clears status — any input event (including
+    // password-manager autofill, focus shifts, browser synthetic events)
+    // racing with the async save would wipe the just-shown message.
     // ══════════════════════════════════════════════════════════════════════
     ['cgProvider', 'cgModel'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('change', clearKeyStatus);
     });
-    if (cgApiKey) {
-        cgApiKey.addEventListener('input', function() {
-            var saved = localStorage.getItem(LS.key) || '';
-            // Only clear if user has changed the key from the saved value
-            if (cgApiKey.value.trim() !== saved) clearKeyStatus();
-        });
-    }
 
     // ── Wire modal Save Key button to same handler ──────────────────────────
     var pgKeySaveBtn = document.getElementById('pgKeySaveBtn');
