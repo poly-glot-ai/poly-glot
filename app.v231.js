@@ -2582,6 +2582,44 @@ function initializeAISettings() {
             return;
         }
 
+        // ── Auth gate ────────────────────────────────────────────────────────
+        if (!isAuthed()) {
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">🔐</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Free account required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:20px;">Sign up free — takes 30 seconds, no credit card needed.</div>' +
+                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'explain-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                '     style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">🚀 Create Free Account</a>' +
+                '  <div style="margin-top:14px;font-size:12px;color:#64748b;">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'explain-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_auth_gate_shown', { trigger: 'explain' });
+            return;
+        }
+
+        // ── Pro gate — Explain is a Pro feature ──────────────────────────────
+        const _explainPlan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+            ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+            : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        if (!['pro', 'team', 'enterprise'].includes(_explainPlan)) {
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">⭐</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Pro plan required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
+                '    <strong style="color:#a78bfa;">Explain Code</strong> gives you deep analysis — complexity, bugs, doc quality score — available on Pro.' +
+                '  </div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
+                '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">Upgrade to Pro — $9/mo ↗</a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Use <strong>Doc Comments</strong> above for free unlimited generation.</div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_pro_gate_shown', { locked: 'explain' });
+            return;
+        }
+
         const code = (document.getElementById('cgInput') || document.getElementById('codeEditor') || {value:''}).value.trim();
         if (!code) {
             alert('📝 Please paste some code into the editor first.');
@@ -3747,64 +3785,123 @@ function initCommentGenerator() {
             var validateMsg = '';
 
             try {
-                // Google keys: validate directly against the Gemini API (no server hop needed)
+                // ── Shared error classifier — maps raw API error → user-friendly message ──
+                function classifyError(raw, status, prov) {
+                    var r = (raw || '').toLowerCase();
+                    var keyUrl = prov === 'anthropic' ? 'https://console.anthropic.com/settings/keys'
+                               : prov === 'google'    ? 'https://aistudio.google.com/app/apikey'
+                               :                        'https://platform.openai.com/api-keys';
+                    var keyLabel = prov === 'anthropic' ? 'Anthropic Console'
+                                 : prov === 'google'    ? 'AI Studio'
+                                 :                        'OpenAI Platform';
+
+                    // Wrong key format / wrong provider
+                    if (r.includes('api key not valid') || r.includes('invalid api key') ||
+                        r.includes('incorrect api key') || r.includes('no such api key') ||
+                        r.includes('invalid x-api-key') || r.includes('invalid_api_key') ||
+                        status === 401) {
+                        return { ok: false, msg:
+                            '❌ Invalid ' + provLabel + ' key — double-check for typos, leading/trailing spaces, or copy it fresh from ' +
+                            '<a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    // Key looks like wrong provider
+                    if (r.includes('anthropic') && prov === 'openai') {
+                        return { ok: false, msg: '❌ That looks like an Anthropic key — switch the Provider dropdown to Anthropic' };
+                    }
+                    if ((r.includes('openai') || r.includes('sk-')) && prov === 'anthropic') {
+                        return { ok: false, msg: '❌ That looks like an OpenAI key — switch the Provider dropdown to OpenAI' };
+                    }
+                    // Revoked / deactivated
+                    if (r.includes('deactivated') || r.includes('revoked') || r.includes('disabled') || r.includes('expired')) {
+                        return { ok: false, msg:
+                            '❌ Key is deactivated or expired — generate a new one at ' +
+                            '<a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    // Billing / quota
+                    if (r.includes('insufficient_quota') || r.includes('exceeded your current quota') ||
+                        r.includes('billing') || r.includes('credit') || r.includes('payment') ||
+                        r.includes('quota') || r.includes('out of credit') || status === 402) {
+                        return { ok: false, msg:
+                            '❌ ' + provLabel + ' account has no credits — add a payment method at ' +
+                            '<a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    // Rate limited — key IS valid
+                    if (r.includes('rate limit') || r.includes('rate_limit') || r.includes('too many requests') || status === 429) {
+                        return { ok: true, msg: '⚠️ Rate limited right now — key is valid and ready to use' };
+                    }
+                    // Permission / org restriction
+                    if (r.includes('permission') || r.includes('forbidden') || r.includes('access denied') ||
+                        r.includes('not allowed') || r.includes('organization') || status === 403) {
+                        return { ok: false, msg:
+                            '❌ Key lacks permissions — check org/project restrictions at ' +
+                            '<a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    // API not enabled (Google)
+                    if (r.includes('api not enabled') || r.includes('has not been used') || r.includes('enable it')) {
+                        return { ok: false, msg:
+                            '❌ Generative Language API not enabled — go to ' +
+                            '<a href="https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com" target="_blank" rel="noopener" style="color:#7dd3fc">Google Cloud Console ↗</a>' +
+                            ' and enable it for your project' };
+                    }
+                    // Overloaded / server error — treat as valid
+                    if (r.includes('overloaded') || r.includes('service unavailable') || status === 529 || status === 503) {
+                        return { ok: true, msg: '⚠️ ' + provLabel + ' is overloaded right now — key is valid, try generating in a moment' };
+                    }
+                    // Generic server error
+                    if (status >= 500) {
+                        return { ok: true, msg: '⚠️ ' + provLabel + ' returned a server error (' + status + ') — key saved, try generating shortly' };
+                    }
+                    // Unknown
+                    return { ok: false, msg: '❌ ' + provLabel + ' key validation failed — ' + (raw || 'unknown error') +
+                        ' · <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">Check your key ↗</a>' };
+                }
+
                 if (provider === 'google') {
+                    // Google: validate directly (no CORS issues — uses query param, not header)
                     var gRes = await fetch(
                         'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key)
                     );
                     if (gRes.ok) {
                         validateOk = true;
                     } else {
-                        var gD = await gRes.json().catch(function() { return {}; });
-                        var gErr = (gD && gD.error && gD.error.message) ? gD.error.message : ('HTTP ' + gRes.status);
-                        var gStatus = gRes.status;
-                        if (gStatus === 400 || gStatus === 403 || gErr.toLowerCase().includes('api key not valid') || gErr.toLowerCase().includes('invalid')) {
-                            validateMsg = '❌ Invalid Google AI key — check it at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#7dd3fc">aistudio.google.com ↗</a>';
-                        } else if (gStatus === 429) {
-                            validateOk  = true;
-                            validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
-                        } else if (gErr.toLowerCase().includes('billing') || gErr.toLowerCase().includes('quota')) {
-                            validateMsg = '❌ Quota exceeded — check your Google AI Studio usage limits';
-                        } else {
-                            validateMsg = '❌ Google key validation failed — ' + gErr;
-                        }
+                        var gD      = await gRes.json().catch(function() { return {}; });
+                        var gErrMsg = (gD && gD.error && gD.error.message) ? gD.error.message : ('HTTP ' + gRes.status);
+                        var gResult = classifyError(gErrMsg, gRes.status, 'google');
+                        validateOk  = gResult.ok;
+                        validateMsg = gResult.msg;
                     }
+
                 } else {
-                    // OpenAI / Anthropic — validate via Poly-Glot server proxy
-                    var res  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
+                    // OpenAI / Anthropic — validate via Poly-Glot worker (avoids CORS + proxies cleanly)
+                    var vRes  = await fetch('https://poly-glot.ai/api/auth/validate-key', {
                         method:  'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body:    JSON.stringify({
                             provider: provider,
                             apiKey:   key,
-                            token:    PolyGlotAuth.getToken() || ''
+                            token:    (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function')
+                                        ? (window.PolyGlotAuth.getToken() || '') : ''
                         })
                     });
-                    var data = await res.json().catch(function() { return {}; });
+                    var vData = await vRes.json().catch(function() { return {}; });
 
-                    if (res.ok && data.ok === true) {
+                    if (vRes.ok && vData.ok === true) {
                         validateOk = true;
+                    } else if (!vRes.ok && (vRes.status === 0 || vRes.status >= 500)) {
+                        // Worker itself is down — don't punish the user, save offline
+                        validateOk  = true;
+                        validateMsg = '✅ ' + provLabel + ' key saved (validation server unreachable — key will be verified on first generate)';
                     } else {
-                        var raw = (data && data.error ? data.error : '').toLowerCase();
-                        if (raw.includes('incorrect') || raw.includes('invalid') || raw.includes('no such')) {
-                            validateMsg = '❌ Invalid API key — check for typos or regenerate at your provider';
-                        } else if (raw.includes('expired') || raw.includes('deactivated') || raw.includes('revoked')) {
-                            validateMsg = '❌ Key expired or revoked — generate a new key at your provider';
-                        } else if (raw.includes('quota') || raw.includes('billing') || raw.includes('credit') || raw.includes('insufficient')) {
-                            validateMsg = '❌ Billing issue — check your account balance at ' + provLabel;
-                        } else if (raw.includes('rate limit') || raw.includes('rate_limit')) {
-                            validateOk  = true;
-                            validateMsg = '⚠️ Rate limited — key is valid, ready to generate';
-                        } else if (raw.includes('permission') || raw.includes('unauthorized') || raw.includes('forbidden')) {
-                            validateMsg = '❌ Key lacks permissions — ensure API access is enabled';
-                        } else {
-                            validateMsg = '❌ Validation failed — ' + (data && data.error ? data.error : 'check your key and provider');
-                        }
+                        var vRaw    = (vData && vData.error) ? vData.error : '';
+                        var vResult = classifyError(vRaw, vRes.status, provider);
+                        validateOk  = vResult.ok;
+                        validateMsg = vResult.msg;
                     }
                 }
             } catch (_fetchErr) {
+                // Network offline / CORS / DNS failure — save key, verify on first generate
                 validateOk  = true;
-                validateMsg = '✅ ' + provLabel + ' key saved (offline — verified on first generate)';
+                validateMsg = '✅ ' + provLabel + ' key saved — no internet connection to verify, will be checked on first generate';
             }
 
             if (validateOk) {
@@ -3887,6 +3984,45 @@ function initCommentGenerator() {
                 var testOk  = false;
                 var testMsg = '';
 
+                // ── Shared classifier (mirrors Save Key logic) ────────────────
+                function testClassify(rawMsg, status, prov) {
+                    var r = (rawMsg || '').toLowerCase();
+                    var keyUrl   = prov === 'anthropic' ? 'https://console.anthropic.com/settings/keys'
+                                 : prov === 'google'    ? 'https://aistudio.google.com/app/apikey'
+                                 :                        'https://platform.openai.com/api-keys';
+                    var keyLabel = prov === 'anthropic' ? 'Anthropic Console'
+                                 : prov === 'google'    ? 'AI Studio'
+                                 :                        'OpenAI Platform';
+                    var pLabel   = prov === 'anthropic' ? 'Anthropic' : prov === 'google' ? 'Google' : 'OpenAI';
+                    if (r.includes('api key not valid') || r.includes('invalid api key') || r.includes('incorrect api key') ||
+                        r.includes('no such api key') || r.includes('invalid x-api-key') || status === 401) {
+                        return { ok: false, msg: '❌ Invalid ' + pLabel + ' key — copy it fresh from <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    if (r.includes('deactivated') || r.includes('revoked') || r.includes('disabled') || r.includes('expired')) {
+                        return { ok: false, msg: '❌ Key deactivated or expired — generate a new one at <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    if (r.includes('insufficient_quota') || r.includes('exceeded your current quota') || r.includes('billing') ||
+                        r.includes('credit') || r.includes('payment') || r.includes('quota') || status === 402) {
+                        return { ok: false, msg: '❌ ' + pLabel + ' account has no credits — add a payment method at <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    if (r.includes('rate limit') || r.includes('rate_limit') || r.includes('too many requests') || status === 429) {
+                        return { ok: true, msg: '⚠️ Rate limited right now — key is valid and ready to use' };
+                    }
+                    if (r.includes('permission') || r.includes('forbidden') || r.includes('access denied') || r.includes('organization') || status === 403) {
+                        return { ok: false, msg: '❌ Key lacks permissions — check org/project settings at <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + keyLabel + ' ↗</a>' };
+                    }
+                    if (r.includes('api not enabled') || r.includes('has not been used') || r.includes('enable it')) {
+                        return { ok: false, msg: '❌ Generative Language API not enabled — <a href="https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com" target="_blank" rel="noopener" style="color:#7dd3fc">enable it in Google Cloud Console ↗</a>' };
+                    }
+                    if (r.includes('overloaded') || r.includes('service unavailable') || status === 529 || status === 503) {
+                        return { ok: true, msg: '⚠️ ' + pLabel + ' is overloaded right now — key is valid, try generating in a moment' };
+                    }
+                    if (status >= 500) {
+                        return { ok: true, msg: '⚠️ ' + pLabel + ' returned a server error (' + status + ') — key is likely valid, try again shortly' };
+                    }
+                    return { ok: false, msg: '❌ ' + pLabel + ' key test failed — ' + (rawMsg || 'unknown error') + ' · <a href="' + keyUrl + '" target="_blank" rel="noopener" style="color:#7dd3fc">Check your key ↗</a>' };
+                }
+
                 if (provider === 'openai') {
                     var oRes = await fetch('https://api.openai.com/v1/models', {
                         headers: { 'Authorization': 'Bearer ' + key }
@@ -3894,50 +4030,40 @@ function initCommentGenerator() {
                     if (oRes.ok) {
                         testOk = true;
                     } else {
-                        var oD = await oRes.json().catch(function() { return {}; });
-                        testMsg = (oD && oD.error && oD.error.message) ? oD.error.message : ('HTTP ' + oRes.status);
-                        if (oRes.status === 401) testMsg = 'Invalid API key — check it at platform.openai.com';
-                        if (oRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
+                        var oD  = await oRes.json().catch(function() { return {}; });
+                        var oRaw = (oD && oD.error && oD.error.message) ? oD.error.message : ('HTTP ' + oRes.status);
+                        var oR  = testClassify(oRaw, oRes.status, 'openai');
+                        testOk  = oR.ok; testMsg = oR.msg;
                     }
                 } else if (provider === 'anthropic') {
-                    // Minimal 1-token call to verify key
-                    var aRes = await fetch('https://api.anthropic.com/v1/messages', {
-                        method: 'POST',
+                    var aRes = await fetch('https://api.anthropic.com/v1/models', {
                         headers: {
-                            'x-api-key': key,
+                            'x-api-key':         key,
                             'anthropic-version': '2023-06-01',
-                            'content-type': 'application/json',
                             'anthropic-dangerous-direct-browser-access': 'true'
-                        },
-                        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] })
+                        }
                     });
-                    if (aRes.ok || aRes.status === 529) {
-                        testOk = true; // 529 = overloaded but key is valid
+                    if (aRes.ok) {
+                        testOk = true;
+                    } else if (aRes.status === 529) {
+                        testOk = true; testMsg = '⚠️ Anthropic overloaded — key is valid, try generating in a moment';
                     } else {
-                        var aD = await aRes.json().catch(function() { return {}; });
-                        testMsg = (aD && aD.error && aD.error.message) ? aD.error.message : ('HTTP ' + aRes.status);
-                        if (aRes.status === 401) testMsg = 'Invalid API key — check it at console.anthropic.com';
-                        if (aRes.status === 429) { testOk = true; testMsg = 'Rate limited — key is valid, ready to use'; }
+                        var aD  = await aRes.json().catch(function() { return {}; });
+                        var aRaw = (aD && aD.error && aD.error.message) ? aD.error.message : ('HTTP ' + aRes.status);
+                        var aR  = testClassify(aRaw, aRes.status, 'anthropic');
+                        testOk  = aR.ok; testMsg = aR.msg;
                     }
                 } else if (provider === 'google') {
-                    // List models endpoint — zero quota used, instant auth check
-                    var gRes = await fetch(
+                    var gTRes = await fetch(
                         'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key)
                     );
-                    if (gRes.ok) {
+                    if (gTRes.ok) {
                         testOk = true;
                     } else {
-                        var gD = await gRes.json().catch(function() { return {}; });
-                        var gErr = (gD && gD.error && gD.error.message) ? gD.error.message : ('HTTP ' + gRes.status);
-                        if (gRes.status === 400 || gRes.status === 403 || gErr.toLowerCase().includes('api key not valid') || gErr.toLowerCase().includes('invalid')) {
-                            testMsg = 'Invalid key — check it at aistudio.google.com/app/apikey';
-                        } else if (gRes.status === 429) {
-                            testOk = true; testMsg = 'Rate limited — key is valid, ready to use';
-                        } else if (gErr.toLowerCase().includes('billing') || gErr.toLowerCase().includes('quota')) {
-                            testMsg = 'Quota exceeded — check your Google AI Studio usage limits';
-                        } else {
-                            testMsg = gErr || ('HTTP ' + gRes.status);
-                        }
+                        var gTD  = await gTRes.json().catch(function() { return {}; });
+                        var gTRaw = (gTD && gTD.error && gTD.error.message) ? gTD.error.message : ('HTTP ' + gTRes.status);
+                        var gTR  = testClassify(gTRaw, gTRes.status, 'google');
+                        testOk   = gTR.ok; testMsg = gTR.msg;
                     }
                 }
 
@@ -3945,14 +4071,13 @@ function initCommentGenerator() {
                     showKeyStatus('✅ ' + provLabel + ' key valid — ready to generate', 'ok');
                     if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_success', { provider: provider });
                 } else {
-                    showKeyStatus('❌ ' + testMsg, 'err');
+                    showKeyStatus(testMsg || ('❌ ' + provLabel + ' key test failed'), 'err');
                     if (typeof gtag !== 'undefined') gtag('event', 'cg_api_test_failed', { provider: provider, error: testMsg });
                 }
             } catch (netErr) {
                 showKeyStatus(
-                    netErr.message && netErr.message.toLowerCase().includes('fetch')
-                        ? '⚠️ Network error — check your connection and try again'
-                        : '❌ ' + (netErr.message || 'Unexpected error'),
+                    '⚠️ Network error — check your connection and try again' +
+                    (netErr.message ? ' (' + netErr.message + ')' : ''),
                     'err'
                 );
             } finally {
@@ -4789,6 +4914,42 @@ function initCommentGenerator() {
 
     cgCopyBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
+
+        // ── Auth gate ────────────────────────────────────────────────────────
+        if (!isAuthed()) {
+            showCgInlineError(
+                '<div style="padding:24px;text-align:center;">' +
+                '  <div style="font-size:32px;margin-bottom:10px;">🔐</div>' +
+                '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Free account required to copy</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:16px;">Create a free account — takes 30 seconds, no credit card needed.</div>' +
+                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'copy-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">🚀 Sign up free</a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'copy-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_copy_auth_gate');
+            return;
+        }
+
+        // ── Pro gate — copy is a Pro feature ────────────────────────────────
+        const _copyPlan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
+            ? (window.PolyGlotAuth.getPlan() || 'free').toLowerCase()
+            : (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        if (!['pro', 'team', 'enterprise'].includes(_copyPlan)) {
+            showCgInlineError(
+                '<div style="padding:24px;text-align:center;">' +
+                '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
+                '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Copy is a Pro feature</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to copy documented files to your clipboard.</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
+                '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_copy_pro_gate');
+            return;
+        }
+
         navigator.clipboard.writeText(lastOutputText).then(() => {
             const orig = cgCopyBtn.innerHTML;
             cgCopyBtn.innerHTML = '✅ Copied!';
@@ -4882,6 +5043,23 @@ function initCommentGenerator() {
     // ── Score Output (before → after) — identical to markdown scoreOutputBtn ──
     cgScoreBtn.addEventListener('click', () => {
         if (!lastOutputText) return;
+
+        // ── Auth gate — score requires sign-in ───────────────────────────────
+        if (!isAuthed()) {
+            showCgInlineError(
+                '<div style="padding:24px;text-align:center;">' +
+                '  <div style="font-size:32px;margin-bottom:10px;">🔐</div>' +
+                '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Free account required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:16px;">Sign up free to score your documentation coverage — takes 30 seconds.</div>' +
+                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'score-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">🚀 Sign up free</a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'score-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_auth_gate_shown', { trigger: 'score' });
+            return;
+        }
+
         // Collapse input score panel if open
         if (cgScoreInputBtn.classList.contains('active')) {
             cgScoreInputBtn.classList.remove('active');
