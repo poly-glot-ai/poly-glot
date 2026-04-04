@@ -3497,93 +3497,110 @@ function initCommentGenerator() {
     // (handled below with fresh DOM refs – see "Toggle API key visibility (inline bar)")
 
     // ══════════════════════════════════════════════════════════════════════
-    // KEY STATUS MESSAGING — rebuilt from scratch
-    // showKeyStatus() is the ONLY way to show messages in the key row.
-    // It bypasses all CSS rules and is immune to race conditions.
+    // KEY STATUS MESSAGING
+    // Two-channel approach:
+    //   1. Inline: updates #cgKeyStatus span below the key field
+    //   2. Toast:  fixed-position div appended to document.body — completely
+    //              outside the CSS cascade, impossible to hide
+    // Both channels fire on every showKeyStatus() call.
     // ══════════════════════════════════════════════════════════════════════
-
-    // Auto-clear timer for status messages
     var _keyStatusTimer = null;
+    var _toastTimer     = null;
 
-    /**
-     * Show a styled status message next to the API key field.
-     * Forces visibility via inline styles — immune to CSS :empty rules,
-     * stylesheet overrides, and async race conditions.
-     *
-     * @param {string} msg  - HTML content to display
-     * @param {string} type - 'ok' (green) | 'err' (red) | 'info' (grey)
-     * @param {number} [autoClearMs] - if set, auto-clear after this many ms
-     */
-    function showKeyStatus(msg, type, autoClearMs) {
+    function showKeyStatus(msg, type) {
         var palette = {
-            ok:   { color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.3)'  },
-            err:  { color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.3)' },
-            info: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' }
+            ok:   { color: '#10b981', bg: '#0d2b22', border: '#10b981' },
+            err:  { color: '#f87171', bg: '#2b0d0d', border: '#f87171' },
+            info: { color: '#94a3b8', bg: '#1a1f2e', border: '#334155' }
         };
         var p = palette[type] || palette.info;
+        var plain = msg.replace(/<[^>]+>/g, ''); // strip HTML for toast text
 
-        // Always look up by ID — never rely on closure-captured reference
-        var el = document.getElementById('cgKeyStatus');
-        if (!el) {
-            el = document.createElement('span');
-            el.id = 'cgKeyStatus';
-            // Insert after the Save Key button row
-            var saveBtn = document.getElementById('cgSaveKey');
-            if (saveBtn && saveBtn.parentNode) {
-                saveBtn.parentNode.insertAdjacentElement('afterend', el);
+        // ── Channel 1: inline span ────────────────────────────────────────
+        // Replace the span entirely so no CSS transition state carries over
+        var oldEl = document.getElementById('cgKeyStatus');
+        var parent = oldEl ? oldEl.parentNode : null;
+        if (!parent) {
+            // Fallback: find the row that contains the save button
+            var sb = document.getElementById('cgSaveKey');
+            parent = sb ? sb.closest('div') : null;
+        }
+        if (parent) {
+            var newEl = document.createElement('span');
+            newEl.id        = 'cgKeyStatus';
+            newEl.className = 'pg-key-status ' + (type || '');
+            newEl.innerHTML = msg;
+            // Nuclear inline style — no class, no cascade, no transition
+            newEl.setAttribute('style', [
+                'display:inline-flex',
+                'visibility:visible',
+                'opacity:1',
+                'align-items:center',
+                'font-size:12px',
+                'font-weight:600',
+                'padding:4px 10px',
+                'border-radius:6px',
+                'margin-top:4px',
+                'line-height:1.5',
+                'transition:none',
+                'color:' + p.color,
+                'background:' + p.bg,
+                'border:1px solid ' + p.border
+            ].join(';'));
+            if (oldEl && parent.contains(oldEl)) {
+                parent.replaceChild(newEl, oldEl);
             } else {
-                // Last resort: append to the API key section container
-                var keySection = document.querySelector('.cg-api-key-row') || document.querySelector('.cg-key-bar');
-                if (keySection) keySection.appendChild(el);
+                parent.appendChild(newEl);
             }
         }
 
-        // Set content first so the element is non-empty before styles apply
-        el.innerHTML = msg;
-        el.className = 'pg-key-status' + (type ? ' ' + type : '');
+        // ── Channel 2: body-level toast ───────────────────────────────────
+        // Remove any existing toast first
+        var oldToast = document.getElementById('pgKeyToast');
+        if (oldToast) oldToast.remove();
+        if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
 
-        // Apply styles via setProperty — the only reliable cross-browser way
-        // to force !important from JavaScript. cssText with !important is
-        // silently dropped in Safari and inconsistent in Chrome/Firefox.
-        var styles = {
-            'display':          ['inline-flex', 'important'],
-            'visibility':       ['visible',     'important'],
-            'opacity':          ['1',            'important'],
-            'align-items':      ['center',       ''],
-            'font-size':        ['12px',         ''],
-            'font-weight':      ['600',          ''],
-            'padding':          ['4px 10px',     ''],
-            'border-radius':    ['5px',          ''],
-            'margin-top':       ['4px',          ''],
-            'line-height':      ['1.5',          ''],
-            'color':            [p.color,        ''],
-            'background':       [p.bg,           ''],
-            'border':           ['1px solid ' + p.border, ''],
-            'transition':       ['none',         '']
-        };
-        Object.keys(styles).forEach(function(prop) {
-            el.style.setProperty(prop, styles[prop][0], styles[prop][1]);
-        });
+        var toast = document.createElement('div');
+        toast.id = 'pgKeyToast';
+        toast.textContent = plain;
+        toast.setAttribute('style', [
+            'position:fixed',
+            'bottom:28px',
+            'left:50%',
+            'transform:translateX(-50%)',
+            'z-index:999999',
+            'padding:12px 24px',
+            'border-radius:10px',
+            'font-size:13px',
+            'font-weight:600',
+            'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+            'line-height:1.4',
+            'pointer-events:none',
+            'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+            'color:' + p.color,
+            'background:' + p.bg,
+            'border:1px solid ' + p.border
+        ].join(';'));
+        document.body.appendChild(toast);
 
-        // Optional auto-clear
-        if (_keyStatusTimer) clearTimeout(_keyStatusTimer);
-        if (autoClearMs) {
-            _keyStatusTimer = setTimeout(function() {
-                var e2 = document.getElementById('cgKeyStatus');
-                if (e2) { e2.innerHTML = ''; e2.style.cssText = ''; }
-                _keyStatusTimer = null;
-            }, autoClearMs);
-        }
+        // Auto-dismiss toast after 5 seconds
+        _toastTimer = setTimeout(function() {
+            var t = document.getElementById('pgKeyToast');
+            if (t) t.remove();
+            _toastTimer = null;
+        }, 5000);
     }
 
-    /** Clears the key status element silently (no animation). */
     function clearKeyStatus() {
         if (_keyStatusTimer) { clearTimeout(_keyStatusTimer); _keyStatusTimer = null; }
+        if (_toastTimer)     { clearTimeout(_toastTimer);     _toastTimer = null; }
+        var t = document.getElementById('pgKeyToast');
+        if (t) t.remove();
         var el = document.getElementById('cgKeyStatus');
         if (el) {
-            el.innerHTML = '';
-            el.style.cssText = '';
-            el.className = 'pg-key-status';
+            el.innerHTML  = '';
+            el.className  = 'pg-key-status';
+            el.removeAttribute('style');
         }
     }
 
