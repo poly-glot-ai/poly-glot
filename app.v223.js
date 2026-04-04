@@ -4107,13 +4107,25 @@ function initCommentGenerator() {
         if (document.getElementById('pg2DemoGate')) return;
         var gate = document.createElement('div');
         gate.id = 'pg2DemoGate';
+        gate.style.cssText = [
+            'position:absolute',
+            'inset:0',
+            'z-index:10',
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'background:rgba(10,10,18,0.82)',
+            'backdrop-filter:blur(4px)',
+            '-webkit-backdrop-filter:blur(4px)',
+            'border-radius:inherit',
+        ].join(';');
         gate.innerHTML = [
-            '<div id="pg2DemoGateInner">',
-            '  <div style="font-size:28px;margin-bottom:8px;">🔒</div>',
-            '  <h3 style="margin:0 0 8px;font-size:18px;color:#fff;">You\u2019ve used your 3 free generations</h3>',
-            '  <p style="margin:0 0 20px;font-size:14px;color:rgba(255,255,255,.7);">Sign up free \u2014 50 files/month, no credit card required.</p>',
-            '  <a href="#" onclick="document.getElementById(\u0027signInBtn\u0027) && document.getElementById(\u0027signInBtn\u0027).click(); return false;" class="pg2-gate-btn pg2-gate-btn--primary">\uD83D\uDE80 Sign Up Free</a>',
-            '  <p style="margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.4);">Already have an account? <a href="#" onclick="document.getElementById(\u0027signInBtn\u0027) && document.getElementById(\u0027signInBtn\u0027).click(); return false;" style="color:var(--accent);text-decoration:none;">Sign in \u2192</a></p>',
+            '<div style="text-align:center;padding:32px 24px;background:#18181f;border:1px solid rgba(124,58,237,0.35);border-radius:16px;max-width:320px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">',
+            '  <div style="font-size:32px;margin-bottom:10px;">🔒</div>',
+            '  <h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f4f4f6;font-family:inherit;">You\'ve used your 3 free generations</h3>',
+            '  <p style="margin:0 0 20px;font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;">Sign up free &mdash; 50 files/month, no credit card required.</p>',
+            '  <a href="#" onclick="document.getElementById(\'signInBtn\') && document.getElementById(\'signInBtn\').click(); return false;" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.45);font-family:inherit;">🚀 Sign Up Free</a>',
+            '  <p style="margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.35);">Already have an account? <a href="#" onclick="document.getElementById(\'signInBtn\') && document.getElementById(\'signInBtn\').click(); return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></p>',
             '</div>'
         ].join('');
         // Position over output area
