@@ -614,6 +614,7 @@
         <button class="pg-modal-close" id="pgAuthModalClose" aria-label="Close">&times;</button>
         <h2 class="pg-modal-title" id="pgAuthModalTitle">Sign in to Poly-Glot</h2>
         <p class="pg-modal-subtitle">Enter your email — we'll send you a magic link</p>
+        <p id="pgAuthModalEmailHint" style="display:none;font-size:12px;color:#f59e0b;margin:-4px 0 10px;font-weight:600;"></p>
         <form id="pgAuthModalForm" novalidate>
           <input
             class="pg-modal-input"
@@ -661,10 +662,10 @@
                 <li>✅ All comment styles</li>
                 <li>✅ Why Comments + Both modes</li>
                 <li>✅ CLI + VS Code + Chrome</li>
-                <li style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> — locks $9/mo forever <em>(expires May 1, 2026)</em></li>
+                <li id="pgModalEarlybird" style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> — locks $9/mo forever <em>(expires May 1, 2026)</em></li>
               </ul>
               <a class="pg-modal-plan__cta pg-modal-plan__cta--pro" id="pgAuthModalUpgradePro"
-                 href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=website"
+                 href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_reference_id=website"
                  target="_blank" rel="noopener">
                 Upgrade to Pro ↗
               </a>
@@ -702,28 +703,53 @@
       buildModal();
       modal = document.getElementById(MODAL_ID);
     }
+
     // Reset state
-    var form    = document.getElementById('pgAuthModalForm');
-    var success = document.getElementById('pgAuthModalSuccess');
-    var btn     = document.getElementById('pgAuthModalSubmit');
-    var input   = document.getElementById('pgAuthModalEmail');
+    var form     = document.getElementById('pgAuthModalForm');
+    var success  = document.getElementById('pgAuthModalSuccess');
+    var btn      = document.getElementById('pgAuthModalSubmit');
+    var input    = document.getElementById('pgAuthModalEmail');
+    var hint     = document.getElementById('pgAuthModalEmailHint');
+    var title    = document.getElementById('pgAuthModalTitle');
+    var subtitle = document.querySelector('#' + MODAL_ID + ' .pg-modal-subtitle');
     if (form)    form.style.display    = '';
     if (success) success.style.display = 'none';
     if (btn)     btn.disabled          = false;
-    if (input)   input.value           = '';
+    if (hint)    hint.style.display    = 'none';
+
+    // Welcome-back state — pre-fill email and update copy for returning users
+    try {
+      var storedEmail = localStorage.getItem('pg_email') || '';
+      var storedPlan  = (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+      if (storedEmail && input) {
+        input.value = storedEmail;
+        if (title)    title.textContent = 'Welcome back 👋';
+        if (subtitle) subtitle.textContent = 'Hit send — we\'ll magic-link you straight in.';
+        if (btn)      btn.textContent = 'Send Magic Link';
+      } else {
+        if (input)   input.value = '';
+        if (title)    title.textContent = 'Sign in to Poly-Glot';
+        if (subtitle) subtitle.textContent = 'Enter your email — we\'ll send you a magic link';
+        if (btn)      btn.textContent = 'Send Magic Link';
+      }
+    } catch(e) {
+      if (input) input.value = '';
+    }
 
     modal.classList.add('pg-open');
     if (input) setTimeout(function () { input.focus(); }, 60);
 
-    // Patch upgrade link with prefilled_email if user is signed in
+    // Patch upgrade link with prefilled_email + respect EARLYBIRD_ACTIVE
     var upgradeLink = document.getElementById('pgAuthModalUpgradePro');
     if (upgradeLink) {
       try {
-        var em = localStorage.getItem('pg_email') || '';
-        if (em) {
-          var base = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
-          upgradeLink.href = base + '?prefilled_promo_code=EARLYBIRD3&client_reference_id=website&prefilled_email=' + encodeURIComponent(em);
-        }
+        var em   = localStorage.getItem('pg_email') || '';
+        var base = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
+        var earlybird = (new Date() < new Date('2026-05-01T00:00:00Z'));
+        var params = earlybird ? 'prefilled_promo_code=EARLYBIRD3&' : '';
+        params += 'client_reference_id=website';
+        if (em) params += '&prefilled_email=' + encodeURIComponent(em);
+        upgradeLink.href = base + '?' + params;
       } catch(e) {}
     }
   }
@@ -927,10 +953,18 @@
         // Show "activation" panel on the page
         showCheckoutSuccessBanner(checkoutEmail);
       } else {
-        // No email in URL — open login modal so they can sign in
+        // No email in URL — open login modal with clear activation instructions
         cleanUrl();
-        showToast('🎉 Payment successful! Sign in to activate your Pro plan.', 6000);
-        setTimeout(function () { openModal(); }, 800);
+        showToast('🎉 Payment successful! Enter the email you used at checkout to activate your Pro plan.', 8000);
+        setTimeout(function () {
+          openModal();
+          // Pre-fill helper text in modal
+          var hint = document.getElementById('pgAuthModalEmailHint');
+          if (hint) {
+            hint.textContent = 'Enter the email you used at checkout ↓';
+            hint.style.display = 'block';
+          }
+        }, 800);
         if (typeof gtag === 'function') gtag('event', 'checkout_success_no_email');
       }
       return;
@@ -1700,6 +1734,12 @@
   function init() {
     injectStyles();
     buildModal();
+
+    // Hide EARLYBIRD3 promo after May 1, 2026
+    if (new Date() >= new Date('2026-05-01T00:00:00Z')) {
+      var ebEl = document.getElementById('pgModalEarlybird');
+      if (ebEl) ebEl.style.display = 'none';
+    }
 
     // Auto-detect device — create/retrieve stable device ID
     var deviceId = getOrCreateDeviceId();

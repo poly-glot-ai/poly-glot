@@ -2610,7 +2610,7 @@ function initializeAISettings() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Explain Code</strong> gives you deep analysis — complexity, bugs, doc quality score — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">Upgrade to Pro — $9/mo ↗</a>' +
                 '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Use <strong>Doc Comments</strong> above for free unlimited generation.</div>' +
@@ -2688,7 +2688,7 @@ function initializeAISettings() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Why Comments</strong> explain the intent & reasoning behind your code — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +
@@ -4366,8 +4366,16 @@ function initCommentGenerator() {
 
     // ── Generate Comments ──
     // ── Free plan limits ────────────────────────────────────────────────────
-    // NOTE: Change FREE_MONTHLY_LIMIT to 10 on May 1, 2026
-    var FREE_MONTHLY_LIMIT = 50;                     // ← change to 10 on May 1, 2026
+    // Auto-switches to 10 on May 1, 2026 — no manual change needed
+    var FREE_MONTHLY_LIMIT = (new Date() >= new Date('2026-05-01T00:00:00Z')) ? 10 : 50;
+    // EARLYBIRD3 promo — auto-expires May 1, 2026
+    var EARLYBIRD_ACTIVE   = (new Date() < new Date('2026-05-01T00:00:00Z'));
+    var PROMO_HTML         = EARLYBIRD_ACTIVE
+      ? '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>'
+      : '';
+    var PROMO_HTML_SM      = EARLYBIRD_ACTIVE
+      ? '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>'
+      : '';
     var PG_USAGE_API = 'https://poly-glot.ai/api/auth/track-usage';
 
     // ── Stripe checkout URL builder ──────────────────────────────────────────
@@ -4375,14 +4383,14 @@ function initCommentGenerator() {
     // existing customer record instead of creating a duplicate.
     var STRIPE_PRO_MONTHLY_BASE = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
     function stripeProUrl(extraParams) {
-        var params = 'prefilled_promo_code=EARLYBIRD3';
+        var params = EARLYBIRD_ACTIVE ? 'prefilled_promo_code=EARLYBIRD3' : '';
         try {
             var email = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getEmail === 'function')
                 ? window.PolyGlotAuth.getEmail()
                 : (localStorage.getItem('pg_email') || '');
-            if (email) params += '&prefilled_email=' + encodeURIComponent(email);
+            if (email) params += (params ? '&' : '') + 'prefilled_email=' + encodeURIComponent(email);
         } catch(e) {}
-        params += '&client_reference_id=website';
+        params += (params ? '&' : '') + 'client_reference_id=website';
         if (extraParams) params += '&' + extraParams;
         return STRIPE_PRO_MONTHLY_BASE + '?' + params;
     }
@@ -4550,18 +4558,21 @@ function initCommentGenerator() {
         var inputPanel = document.getElementById('inputPanel');
 
         if (!isAuthed()) {
-            // Not signed in — show sign-up nudge
+            // Not signed in — show prominent sign-up CTA
             var nudge = [
-                '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:10px 14px;',
+                '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:12px 14px;',
                 'background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);',
                 'border-radius:8px;font-size:12px;color:#94a3b8;text-align:center;">',
-                '🔐 <strong style="color:#a78bfa;">Free account required</strong>',
-                ' · ',
-                '<a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\')',
+                '<div style="margin-bottom:8px;">🔐 <strong style="color:#e2e8f0;">Create a free account</strong> to generate comments</div>',
+                '<div style="margin-bottom:8px;color:#94a3b8;">' + FREE_MONTHLY_LIMIT + ' files/month free · no credit card · takes 30 seconds</div>',
+                '<button onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\')',
                 '{window.PolyGlotAuth.openLoginModal(\'counter-nudge\');}',
                 'else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();}',
-                ' return false;" style="color:#a78bfa;font-weight:700;text-decoration:none;">Sign up free ↗</a>',
-                ' · ' + FREE_MONTHLY_LIMIT + ' files/month, no credit card',
+                '" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);',
+                'color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">',
+                '🚀 Sign Up Free — ' + FREE_MONTHLY_LIMIT + ' files/month',
+                '</button>',
+                (EARLYBIRD_ACTIVE ? '<div style="margin-top:8px;font-size:11px;color:#f59e0b;">🏷 EARLYBIRD3 — 3 months free Pro if you upgrade now (expires May 1, 2026)</div>' : ''),
                 '</div>'
             ].join('');
             if (existing) {
@@ -4690,7 +4701,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:36px;margin-bottom:12px;">🔒</div>' +
                 '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + FREE_MONTHLY_LIMIT + ' files used</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets ' + usageResetDateStr() + '</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +
@@ -4724,7 +4735,7 @@ function initCommentGenerator() {
                     '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                     '    <strong style="color:#a78bfa;">' + lockedName.charAt(0).toUpperCase() + lockedName.slice(1) + '</strong> is available on the Pro plan.' +
                     '  </div>' +
-                    '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                    PROMO_HTML +
                     '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                     '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                     '    Upgrade to Pro — $9/mo ↗' +
@@ -4810,7 +4821,7 @@ function initCommentGenerator() {
                 var limitWarn = document.createElement('div');
                 limitWarn.id = 'pg2MonthlyLimitWarn';
                 limitWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#ef4444;padding:10px 14px;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2);';
-                limitWarn.innerHTML = '🔒 Monthly limit reached (' + FREE_MONTHLY_LIMIT + ' files). Resets ' + usageResetDateStr() + '. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro — $9/mo with EARLYBIRD3 ↗</a>';
+                limitWarn.innerHTML = '🔒 Monthly limit reached (' + FREE_MONTHLY_LIMIT + ' files). Resets ' + usageResetDateStr() + '. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro — $9/mo' + (EARLYBIRD_ACTIVE ? ' with EARLYBIRD3' : '') + ' ↗</a>';
                 if (outputPanel) outputPanel.appendChild(limitWarn);
             } else if (newMonthlyUsed >= FREE_MONTHLY_LIMIT - 5) {
                 // ≤5 remaining — urgent red
@@ -5069,7 +5080,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
                 '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Copy is a Pro feature</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to copy documented files to your clipboard.</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML_SM +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
                 '</div>'
@@ -5117,7 +5128,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
                 '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Download is a Pro feature</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to download documented files.</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML_SM +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
                 '</div>'
@@ -5317,7 +5328,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Doc + Why Comments</strong> runs a two-pass generation — doc-comments and intent comments together — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
+                PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +
