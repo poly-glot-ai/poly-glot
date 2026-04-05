@@ -1,3 +1,8 @@
+## [2.1.32] — 2026-04-05
+- ✨ feat: email-first VS Code onboarding + CLI postinstall CTA overhaul (v2.1.31 / vscode 1.4.41)
+
+---
+
 ## [2.1.21] — 2026-04-05
 - pricing: purge all stale EARLYBIRD3/trial messaging — Pro locked $9/mo forever, expires May 1 2026
 
