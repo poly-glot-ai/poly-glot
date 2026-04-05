@@ -1651,6 +1651,30 @@
   .pg2-social__btn--facebook { background: #1877f2; color: #fff; }
   .pg2-social__btn--reddit   { background: #ff4500; color: #fff; }
   .pg2-social__btn--hn       { background: #ff6600; color: #fff; }
+
+  /* ── TikTok badge ── */
+  .pg2-footer__tiktok {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: #010101;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 20px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+    white-space: nowrap;
+    opacity: 0.9;
+  }
+  .pg2-footer__tiktok:hover {
+    transform: translateY(-2px);
+    opacity: 1;
+    box-shadow: 0 4px 18px rgba(105,201,208,0.3);
+  }
   .pg2-social__label {
     font-size: 11px;
     color: var(--text-secondary, #94a3b8);
@@ -3090,6 +3114,13 @@ function pg2OpenAssistant(text) {
         <rect x="188" y="17" width="46" height="20" rx="10" fill="#ff6154" fill-opacity="0.15" stroke="#ff6154" stroke-opacity="0.5" stroke-width="1"/>
         <text x="211" y="31" font-family="'Inter',Arial,sans-serif" font-size="10" font-weight="700" fill="#ff6154" text-anchor="middle">HOT 🔥</text>
       </svg>
+    </a>
+    <!-- TikTok badge -->
+    <a href="https://www.tiktok.com/@nxgntools/video/7624199624210877717" target="_blank" rel="noopener noreferrer" class="pg2-footer__tiktok" aria-label="Watch Poly-Glot AI on TikTok" onclick="if(typeof gtag==='function') gtag('event','footer_tiktok_click');">
+      <svg class="pg2-footer__tiktok-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.28 6.28 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/>
+      </svg>
+      <span>Watch on TikTok</span>
     </a>
   </div>
   <div class="pg2-social">
