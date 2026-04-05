@@ -158,6 +158,8 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     html { scroll-padding-top: 70px; }
+    /* Prevent browser scroll-anchor compensation when DOM inserts happen above viewport */
+    body { overflow-anchor: none; }
 
     body {
       margin: 0;
@@ -2164,6 +2166,8 @@ for (const user of users) {
             <span id="cgInputStats" class="stats-text"></span>
             <button id="cgGenerateBtn" class="format-btn">🤖 Generate Comments</button>
           </div>
+          <!-- Pre-rendered usage counter placeholder — swapped in-place by renderUsageCounter(), prevents layout-shift scroll compensation -->
+          <div id="pg2UsageCounter" style="min-height:0;"></div>
         </div>
 
         <!-- Divider -->
