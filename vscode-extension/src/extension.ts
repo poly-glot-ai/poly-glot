@@ -114,7 +114,22 @@ async function checkAndIncrementUsage(): Promise<boolean> {
             await showUsageNudge(used, remaining);
             return true;
         } catch {
-            // Server unreachable — fall through to local
+            // Server unreachable AND has session token — hard block
+            // Prevents offline circumvention by users with accounts
+            const choice = await vscode.window.showErrorMessage(
+                `🚫 Poly-Glot cannot reach the server to verify your account. Please check your internet connection.`,
+                'Retry',
+                'Open poly-glot.ai',
+            );
+            if (choice === 'Retry') {
+                // Reset cache and retry once
+                _cachedPlan = undefined;
+                return checkAndIncrementUsage();
+            }
+            if (choice === 'Open poly-glot.ai') {
+                vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai'));
+            }
+            return false;
         }
     }
 
@@ -294,16 +309,27 @@ async function getVerifiedPlan(): Promise<string | null> {
         const data = await res.json() as { valid: boolean; plan?: string; email?: string };
         if (data.valid && data.plan) {
             _cachedPlan = data.plan;
-            // Keep session email fresh
+            // Persist plan + email so Pro users can work offline
+            await extContext.globalState.update('pg.lastKnownPlan', data.plan);
             if (data.email) {
                 await extContext.globalState.update('pg.sessionEmail', data.email);
+                await extContext.globalState.update('pg.lastKnownEmail', data.email);
             }
         } else {
             _cachedPlan = null;
+            // Clear cached plan so a downgraded user can't stay Pro offline
+            await extContext.globalState.update('pg.lastKnownPlan', '');
         }
     } catch {
-        // Network error — fail open so offline paying users aren't blocked
-        _cachedPlan = null;
+        // Network error — check if we have a cached plan from a previous successful check
+        // Pro users: fail open (they paid, don't block them for connectivity issues)
+        // Free/unknown users: fail closed (null = no pro access)
+        const lastKnownPlan = extContext?.globalState.get<string>('pg.lastKnownPlan', '');
+        if (lastKnownPlan && PRO_PLANS.includes(lastKnownPlan)) {
+            _cachedPlan = lastKnownPlan; // Pro user offline — allow through
+        } else {
+            _cachedPlan = null; // Free/unknown offline — block Pro features, hit usage gate
+        }
     }
     return _cachedPlan;
 }
