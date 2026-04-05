@@ -239,6 +239,25 @@ async function handleLogin(request, env) {
     return json({ error: 'A link was already sent. Please wait 60 seconds and try again.' }, 429);
   }
 
+  // Fingerprint-based rate limit: max 3 unique emails per device fingerprint per day
+  // Prevents multiple-email abuse from the same machine
+  const fingerprint = (body.fingerprint || '').trim();
+  if (fingerprint) {
+    const fpEmailsKey = `fp-emails:${fingerprint}`;
+    const fpEmailsRaw = await env.AUTH_KV.get(fpEmailsKey);
+    const fpEmails    = fpEmailsRaw ? JSON.parse(fpEmailsRaw) : [];
+    if (!fpEmails.includes(email)) {
+      if (fpEmails.length >= 3) {
+        return json({
+          error: 'Too many accounts created from this device. Please use an existing account or contact support@poly-glot.ai.',
+        }, 429);
+      }
+      fpEmails.push(email);
+      // TTL: 24 hours — resets daily
+      await env.AUTH_KV.put(fpEmailsKey, JSON.stringify(fpEmails), { expirationTtl: 86400 });
+    }
+  }
+
   const token = await randomToken();
   const existingPlan = await env.AUTH_KV.get(`plan:${email}`) || 'free';
 
@@ -608,6 +627,136 @@ async function handleSetPlan(request, env) {
   return json({ ok: true, email, plan });
 }
 
+/* ── Anonymous device tracking ───────────────────────────────────────────── */
+const ANON_LIFETIME_LIMIT = 5; // anonymous devices — lifetime, not monthly
+
+/* ── REGISTER-DEVICE ─────────────────────────────────────────────────────── */
+async function handleRegisterDevice(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const fingerprint = (body.fingerprint || '').trim();
+  let deviceId = (body.deviceId || '').trim();
+
+  // Check if this machine fingerprint already has a device registered
+  // Prevents VM resets and multiple registrations per machine
+  if (fingerprint) {
+    const fpKey = `fingerprint:${fingerprint}`;
+    const existingId = await env.AUTH_KV.get(fpKey);
+    if (existingId) {
+      const existing = await env.AUTH_KV.get(`device:${existingId}`);
+      if (existing) {
+        const d = JSON.parse(existing);
+        return json({ ok: true, deviceId: existingId, used: d.used || 0, limit: ANON_LIFETIME_LIMIT });
+      }
+    }
+  }
+
+  // If deviceId provided, verify it exists
+  if (deviceId) {
+    const existing = await env.AUTH_KV.get(`device:${deviceId}`);
+    if (existing) {
+      const d = JSON.parse(existing);
+      // Verify fingerprint matches — prevent deviceId sharing across machines
+      if (fingerprint && d.fingerprint && d.fingerprint !== fingerprint) {
+        // Fingerprint mismatch — this deviceId belongs to a different machine
+        // Register a new device for this machine
+        deviceId = '';
+      } else {
+        return json({ ok: true, deviceId, used: d.used || 0, limit: ANON_LIFETIME_LIMIT });
+      }
+    }
+  }
+
+  // Create new device record
+  deviceId = await randomToken();
+  const record = {
+    used:        0,
+    createdAt:   Date.now(),
+    source:      body.source || 'vscode',
+    fingerprint: fingerprint || '',
+  };
+  await env.AUTH_KV.put(`device:${deviceId}`, JSON.stringify(record));
+
+  // Index fingerprint → deviceId (1 device per machine, ever)
+  if (fingerprint) {
+    await env.AUTH_KV.put(`fingerprint:${fingerprint}`, deviceId);
+  }
+
+  // Increment global device counter
+  const countRaw = await env.AUTH_KV.get('devices:count');
+  await env.AUTH_KV.put('devices:count', String((countRaw ? parseInt(countRaw, 10) : 0) + 1));
+
+  return json({ ok: true, deviceId, used: 0, limit: ANON_LIFETIME_LIMIT });
+}
+
+/* ── DEVICE-USAGE ─────────────────────────────────────────────────────────── */
+async function handleDeviceUsage(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const deviceId    = (body.deviceId    || '').trim();
+  const fingerprint = (body.fingerprint || '').trim();
+  if (!deviceId) return json({ ok: false, error: 'deviceId required' }, 400);
+
+  const key = `device:${deviceId}`;
+  const raw = await env.AUTH_KV.get(key);
+  if (!raw) return json({ ok: false, error: 'Unknown device — please re-register' }, 404);
+
+  const record = JSON.parse(raw);
+
+  // Fingerprint verification — detect VM resets or deviceId sharing
+  if (fingerprint && record.fingerprint && record.fingerprint !== fingerprint) {
+    // Fingerprint changed — this is a VM reset or copied device state
+    // Check if the new fingerprint has its own registered device
+    const fpKey = `fingerprint:${fingerprint}`;
+    const altId = await env.AUTH_KV.get(fpKey);
+    if (altId && altId !== deviceId) {
+      // Different machine — redirect to its own device record
+      const altRaw = await env.AUTH_KV.get(`device:${altId}`);
+      if (altRaw) {
+        const altRecord = JSON.parse(altRaw);
+        const used = altRecord.used || 0;
+        if (used >= ANON_LIFETIME_LIMIT) {
+          return json({ ok: false, limitReached: true, used, limit: ANON_LIFETIME_LIMIT, remaining: 0 }, 403);
+        }
+        altRecord.used = used + 1;
+        altRecord.lastAt = Date.now();
+        await env.AUTH_KV.put(`device:${altId}`, JSON.stringify(altRecord));
+        return json({ ok: true, used: altRecord.used, limit: ANON_LIFETIME_LIMIT, remaining: ANON_LIFETIME_LIMIT - altRecord.used, limitReached: altRecord.used >= ANON_LIFETIME_LIMIT });
+      }
+    }
+    // New fingerprint with no device — register it and count from 0
+    // But first check global rate limit: max 3 devices per day per IP
+    const newDeviceId = await randomToken();
+    const newRecord   = { used: 1, createdAt: Date.now(), source: 'vscode', fingerprint };
+    await env.AUTH_KV.put(`device:${newDeviceId}`, JSON.stringify(newRecord));
+    await env.AUTH_KV.put(fpKey, newDeviceId);
+    return json({ ok: true, used: 1, limit: ANON_LIFETIME_LIMIT, remaining: ANON_LIFETIME_LIMIT - 1, limitReached: false });
+  }
+
+  const used = record.used || 0;
+
+  // Already over limit
+  if (used >= ANON_LIFETIME_LIMIT) {
+    return json({ ok: false, limitReached: true, used, limit: ANON_LIFETIME_LIMIT, remaining: 0 }, 403);
+  }
+
+  const newUsed    = used + 1;
+  record.used      = newUsed;
+  record.lastAt    = Date.now();
+  if (fingerprint) record.fingerprint = fingerprint; // update fingerprint if changed
+  await env.AUTH_KV.put(key, JSON.stringify(record));
+
+  return json({
+    ok:           true,
+    used:         newUsed,
+    limit:        ANON_LIFETIME_LIMIT,
+    remaining:    ANON_LIFETIME_LIMIT - newUsed,
+    limitReached: newUsed >= ANON_LIFETIME_LIMIT,
+  });
+}
+
 /* ── Usage tracking ──────────────────────────────────────────────────────── */
 const FREE_MONTHLY_LIMIT = 50;
 
@@ -818,14 +967,16 @@ export default {
     }
 
     // POST endpoints
-    if (pathname === '/api/auth/login')        return handleLogin(request, env);
-    if (pathname === '/api/auth/verify')       return handleVerify(request, env);
-    if (pathname === '/api/auth/refresh')      return handleRefresh(request, env);
-    if (pathname === '/api/auth/check-plan')   return handleCheckPlan(request, env);
-    if (pathname === '/api/auth/set-plan')     return handleSetPlan(request, env);
-    if (pathname === '/api/auth/validate-key') return handleValidateKey(request, env);
-    if (pathname === '/api/auth/track-usage')  return handleTrackUsage(request, env);
-    if (pathname === '/api/auth/vsc-proxy')    return handleVscProxy(request);
+    if (pathname === '/api/auth/login')            return handleLogin(request, env);
+    if (pathname === '/api/auth/verify')           return handleVerify(request, env);
+    if (pathname === '/api/auth/refresh')          return handleRefresh(request, env);
+    if (pathname === '/api/auth/check-plan')       return handleCheckPlan(request, env);
+    if (pathname === '/api/auth/set-plan')         return handleSetPlan(request, env);
+    if (pathname === '/api/auth/validate-key')     return handleValidateKey(request, env);
+    if (pathname === '/api/auth/track-usage')      return handleTrackUsage(request, env);
+    if (pathname === '/api/auth/register-device')  return handleRegisterDevice(request, env);
+    if (pathname === '/api/auth/device-usage')     return handleDeviceUsage(request, env);
+    if (pathname === '/api/auth/vsc-proxy')        return handleVscProxy(request);
 
     return json({ error: 'Not found' }, 404);
   },
