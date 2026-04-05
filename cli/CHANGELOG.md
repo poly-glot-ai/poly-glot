@@ -1,3 +1,8 @@
+## [2.1.15] — 2026-04-05
+- 🐛 fix(cli/index): verifyLicense → /check-plan; hasPro checks sessionToken; CI only skips prompt
+
+---
+
 ## [2.1.14] — 2026-04-05
 - 🐛 fix(cli/usage): UTM tags on Stripe URLs; CI env no longer bypasses usage tracking
 - 🐛 fix: close conversion funnel holes + UI polish [deploy]
