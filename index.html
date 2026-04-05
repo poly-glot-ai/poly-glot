@@ -2209,17 +2209,31 @@ for (const user of users) {
   </div>
 </div>
 
-<!-- CLI callout pill — links to CLI section, all devices -->
+<!-- CLI callout pill -->
 <div style="text-align:center;padding:18px 16px 4px;margin-top:-8px;">
-  <a href="javascript:void(0)"
-     onclick="var el=document.getElementById('pg-cli-section');if(el){var nav=document.querySelector('.pg2-nav');var off=nav?nav.offsetHeight:60;var y=el.getBoundingClientRect().top+window.pageYOffset-off-8;window.scrollTo({top:y,behavior:'instant'});history.replaceState(null,null,'#pg-cli-section');}return false;"
-     style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:999px;text-decoration:none;color:#94a3b8;font-size:13px;font-weight:500;transition:border-color .2s,color .2s;cursor:pointer;"
-     onmouseover="this.style.borderColor='rgba(124,58,237,0.5)';this.style.color='#a78bfa';"
-     onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='#94a3b8';">
+  <button id="pgCliPillBtn" type="button" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:999px;cursor:pointer;color:#94a3b8;font-size:13px;font-weight:500;font-family:inherit;transition:border-color .2s,color .2s;">
     <span>⌨️</span>
     <span>Prefer the terminal? <strong style="color:#c4b5fd;">CLI Tool v2.1.32 on npm</strong> — batch commenting, CI/CD &amp; scripting ↓</span>
-  </a>
+  </button>
 </div>
+<script>
+(function() {
+  function pgScrollToCli() {
+    var el = document.getElementById('pg-cli-section');
+    if (!el) return;
+    var navEl = document.querySelector('.pg2-nav');
+    var navH = navEl ? navEl.getBoundingClientRect().height : 64;
+    var top = el.getBoundingClientRect().top + window.pageYOffset - navH - 8;
+    window.scrollTo(0, top);
+  }
+  var btn = document.getElementById('pgCliPillBtn');
+  if (btn) {
+    btn.addEventListener('click', pgScrollToCli);
+    btn.addEventListener('mouseover', function() { btn.style.borderColor='rgba(124,58,237,0.5)'; btn.style.color='#a78bfa'; });
+    btn.addEventListener('mouseout',  function() { btn.style.borderColor='rgba(255,255,255,0.1)'; btn.style.color='#94a3b8'; });
+  }
+})();
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      SEE HOW IT WORKS — CLI DEMO
