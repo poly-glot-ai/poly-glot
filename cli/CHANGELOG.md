@@ -1,3 +1,8 @@
+## [2.1.20] — 2026-04-05
+- 🐛 fix: close all 3 circumvention gaps — machine fingerprint, offline hard-block, CI bypass removed [deploy]
+
+---
+
 ## [2.1.15] — 2026-04-05
 - 🐛 fix(cli/index): verifyLicense → /check-plan; hasPro checks sessionToken; CI only skips prompt
 
