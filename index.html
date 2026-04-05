@@ -3066,9 +3066,6 @@ function pg2OpenAssistant(text) {
         </select>
       </div>
       <textarea name="message" id="formMessage" placeholder="What are you looking for? (optional)" rows="3" class="form-input form-textarea"></textarea>
-      <div class="form-row">
-        <input type="text" name="promo_code" id="formPromo" placeholder="Promo Code (optional — e.g. EARLYBIRD3)" class="form-input" autocomplete="off" style="text-transform:uppercase;">
-      </div>
       <button type="submit" class="btn-enterprise" id="submitBtn">
         <span id="btnText">Request a Demo →</span>
         <span id="btnLoading" style="display: none;">⏳ Sending...</span>
@@ -3178,16 +3175,6 @@ function pg2OpenAssistant(text) {
   }
 })();
 
-// Auto-uppercase promo code
-var promoInput = document.getElementById('formPromo');
-if (promoInput) {
-  promoInput.addEventListener('input', function() {
-    var pos = promoInput.selectionStart;
-    promoInput.value = promoInput.value.toUpperCase();
-    promoInput.setSelectionRange(pos, pos);
-  });
-}
-
 // Enterprise form submit
 var enterpriseForm = document.getElementById('enterpriseForm');
 if (enterpriseForm) {
@@ -3206,8 +3193,7 @@ if (enterpriseForm) {
     var company = (document.getElementById('formCompany') || {}).value || '';
     var teamSize = (document.getElementById('formTeamSize') || {}).value || '';
     var message = (document.getElementById('formMessage') || {}).value || '';
-    var promoCode = ((document.getElementById('formPromo') || {}).value || '').trim().toUpperCase();
-    var payload = { name, email, company, teamSize, message, promoCode, access_key: '6c8b494a-b8eb-4c6b-ac68-4481e9845530' };
+    var payload = { name, email, company, teamSize, message, access_key: '6c8b494a-b8eb-4c6b-ac68-4481e9845530' };
     fetch('https://api.web3forms.com/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3219,7 +3205,7 @@ if (enterpriseForm) {
       if (data.success) {
         formSuccess.style.display = 'block';
         enterpriseForm.reset();
-        if (typeof gtag === 'function') gtag('event', 'enterprise_form_submit', { email, promoCode });
+        if (typeof gtag === 'function') gtag('event', 'enterprise_form_submit', { email });
       } else {
         formError.textContent = 'Something went wrong — please try again.';
         formError.style.display = 'block';
