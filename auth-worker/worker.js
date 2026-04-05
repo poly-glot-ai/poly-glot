@@ -935,6 +935,37 @@ async function handleCwsProxy(env) {
   }
 }
 
+/**
+ * POST /api/auth/free-signup
+ * "Start for Free" button — website pricing card, VS Code extension (1.4.38+).
+ * Identical to /api/auth/login but:
+ *  - Always sets plan to 'free' for brand-new emails (never downgrades existing paid)
+ *  - source is always 'free_signup' for attribution
+ */
+async function handleFreeSignup(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  const email = (body.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: 'Valid email required' }, 400);
+  }
+
+  // Never downgrade a paying user — only set 'free' for brand-new accounts
+  const existingPlan = await env.AUTH_KV.get(`plan:${email}`);
+  if (!existingPlan) {
+    await env.AUTH_KV.put(`plan:${email}`, 'free');
+  }
+
+  // Delegate to handleLogin with source attribution baked in
+  const enriched = new Request(request.url, {
+    method:  'POST',
+    headers: request.headers,
+    body:    JSON.stringify({ email, source: 'free_signup', fingerprint: body.fingerprint || '' }),
+  });
+  return handleLogin(enriched, env);
+}
+
 /** Main fetch handler */
 export default {
   async fetch(request, env) {
@@ -968,6 +999,7 @@ export default {
 
     // POST endpoints
     if (pathname === '/api/auth/login')            return handleLogin(request, env);
+    if (pathname === '/api/auth/free-signup')      return handleFreeSignup(request, env);
     if (pathname === '/api/auth/verify')           return handleVerify(request, env);
     if (pathname === '/api/auth/refresh')          return handleRefresh(request, env);
     if (pathname === '/api/auth/check-plan')       return handleCheckPlan(request, env);

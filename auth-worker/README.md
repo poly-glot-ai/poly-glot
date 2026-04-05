@@ -6,9 +6,32 @@ Cloudflare Worker that powers magic link authentication for poly-glot.ai.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/auth/login` | Send magic link email |
-| POST | `/api/auth/verify` | Validate token (one-time use) |
-| POST | `/api/auth/refresh` | Validate token (reusable) |
+| `POST` | `/api/auth/login` | Send magic link email |
+| `POST` | `/api/auth/free-signup` | "Start for Free" — register free account + send magic link |
+| `POST` | `/api/auth/verify` | Validate magic-link token (one-time use) → session |
+| `POST` | `/api/auth/refresh` | Validate session token (non-destructive) |
+| `POST` | `/api/auth/check-plan` | Verify session → `{ valid, plan }` |
+| `POST` | `/api/auth/set-plan` | Admin: set plan for email (requires `ADMIN_SECRET`) |
+| `POST` | `/api/auth/validate-key` | Verify OpenAI/Anthropic/Google key (zero tokens) |
+| `GET`  | `/api/auth/get-usage` | Return current usage for a session token (`?token=`) |
+| `POST` | `/api/auth/track-usage` | Increment server-side file counter |
+| `POST` | `/api/auth/register-device` | Register a device fingerprint |
+| `POST` | `/api/auth/device-usage` | Get usage for a device |
+| `POST` | `/api/auth/webhook/stripe` | Stripe subscription lifecycle events |
+| `GET`  | `/api/auth/gh-proxy` | GitHub App installations proxy |
+| `GET`  | `/api/auth/cws-proxy` | Chrome Web Store installs proxy |
+| `POST` | `/api/auth/vsc-proxy` | VS Code Marketplace stats proxy |
+
+### KV Key Schema
+
+| Key | Value | TTL |
+|-----|-------|-----|
+| `ratelimit:{email}` | `"1"` | 60 s |
+| `token:{token}` | `{"email","plan","created"}` | 900 s (15 min) |
+| `session:{token}` | `{"email","plan","created"}` | 30 days |
+| `plan:{email}` | `"free"` / `"pro"` / `"team"` / `"enterprise"` | none |
+| `usage:{email}:{YYYY-MM}` | integer string | 35 days |
+| `stripe_customer:{customerId}` | email string | none |
 
 ## Deploy in 5 steps
 
