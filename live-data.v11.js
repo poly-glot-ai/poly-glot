@@ -46,7 +46,7 @@
   // These are verified "Total Acquisition Till Date" values from publisher dashboards.
   // The public APIs undercount vs dashboard by ~48 hrs; floors ensure we never
   // animate backwards to a stale API value.
-  var VS_FLOOR     = 118;  // VS Code "Total Acquisition" (verified Apr 4 2026 — dashboard shows 104, public API lags ~48hrs)
+  var VS_FLOOR     = 119;  // VS Code "Total Acquisition" (verified Apr 4 2026 — dashboard shows 104, public API lags ~48hrs)
   var OVX_FLOOR    = 592;  // Open VSX downloadCount               (verified Apr 3 2026)
   var CHROME_FLOOR = 0;    // Chrome Web Store — no public API (updated by scripts/update-site.py)
 
