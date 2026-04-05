@@ -493,7 +493,7 @@ async function maybeShowFirstRunOnboarding() {
         return;
     // v1.4.42+: track onboarding per-version so legacy users who dismissed
     // the old (non-email) onboarding get the new email-first prompt once.
-    const ONBOARDING_VERSION = '1.4.42';
+    const ONBOARDING_VERSION = '1.4.43';
     const shownForVersion = extContext.globalState.get('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION)
         return;

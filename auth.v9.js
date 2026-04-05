@@ -845,10 +845,36 @@
         updateHeaderForUser(email, plan);
       })
       .catch(function () {
-        // Token truly invalid — purge only the token, keep pg_plan so
-        // gating stays correct until we can re-verify
+        // Token truly invalid/expired — purge all auth state and restore
+        // the sign-in button so the user can't bypass the auth gate via
+        // a stale pg-user-chip that was rendered from cached localStorage.
         localStorage.removeItem(LS_TOKEN_KEY);
+        localStorage.removeItem(LS_PLAN_KEY);
+        localStorage.removeItem('pg_email');
         _token = null;
+        _plan  = null;
+
+        // Remove the chip if it was already rendered from the cache
+        var chip = document.getElementById('pg-user-chip');
+        if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
+
+        // Restore the Sign In button
+        var signInBtn = document.getElementById('headerSignInBtn');
+        if (!signInBtn) {
+          // Re-create it if it was replaced
+          var nav = document.querySelector('nav') || document.querySelector('header') || document.body;
+          var btn = document.createElement('button');
+          btn.id        = 'headerSignInBtn';
+          btn.className = 'nav-cta';
+          btn.textContent = 'Sign In';
+          btn.addEventListener('click', function () { openModal(); });
+          nav.appendChild(btn);
+        } else {
+          signInBtn.style.display = '';
+        }
+
+        // Re-apply free gating since user is now unauthenticated
+        applyPlanGating('free');
       });
   }
 
