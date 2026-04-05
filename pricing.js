@@ -27,10 +27,16 @@
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // ?prefilled_promo_code= auto-applies the code at checkout
-    // Only works if "Allow promotion codes" is ON for the Payment Link in Stripe dashboard
-    // If not enabled, Stripe silently ignores the param — checkout still works fine
-    return base + `?prefilled_promo_code=${PROMO}`;
+    // Build params:
+    //   prefilled_promo_code — auto-applies EARLYBIRD3 at checkout
+    //   client_reference_id — attribution in Stripe dashboard (which channel converted)
+    //   prefilled_email     — pre-fill email if user is already signed in
+    var params = 'prefilled_promo_code=' + PROMO + '&client_reference_id=website';
+    // Pre-fill email if signed in — reduces friction
+    var storedEmail = '';
+    try { storedEmail = localStorage.getItem('pg_email') || ''; } catch(e) {}
+    if (storedEmail) params += '&prefilled_email=' + encodeURIComponent(storedEmail);
+    return base + '?' + params;
   }
 
   /* ── Pricing Data ──────────────────────────────────────── */
@@ -44,7 +50,7 @@
       desc:      'Perfect for exploring. 50 files/month, always free.',
       cta:       'Start for Free',
       ctaClass:  'pg-cta-free',
-      ctaAction: 'scroll',
+      ctaAction: 'signup',
       popular:   false,
       features: [
         { text: '50 files / month',           check: true  },
@@ -169,9 +175,11 @@
         <button class="pg-card-cta ${plan.ctaClass}" data-action="${plan.ctaAction}" data-plan="${plan.id}">
           ${plan.cta}
         </button>
-        <div class="pg-card-divider"></div>
-        <div class="pg-features-title">What's included</div>
-        <ul class="pg-features-list">${featuresHTML}</ul>
+        <div class="pg-card-features-zone">
+          <div class="pg-card-divider"></div>
+          <div class="pg-features-title">What's included</div>
+          <ul class="pg-features-list">${featuresHTML}</ul>
+        </div>
       </div>
     `;
   }
@@ -343,7 +351,17 @@
         gtag('event', 'pricing_cta_click', { plan, billing: isYearly ? 'yearly' : 'monthly' });
       }
 
-      if (action === 'scroll') {
+      if (action === 'signup') {
+        // Free plan — open sign-up/login modal so new users create an account
+        if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+          window.PolyGlotAuth.openLoginModal('pricing_free_cta');
+        } else {
+          // Fallback: click the header sign-in button
+          var signInBtn = document.getElementById('headerSignInBtn');
+          if (signInBtn) signInBtn.click();
+        }
+        if (typeof gtag === 'function') gtag('event', 'pricing_free_signup_click');
+      } else if (action === 'scroll') {
         document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
         /* ── Stripe checkout ── */
@@ -364,8 +382,16 @@
             window.PolyGlotWaitlist.open('pricing_cta');
           }
         } else {
+          // Record which plan they clicked so we can show the right message on return
+          try { localStorage.setItem('pg_checkout_plan', sizeKey); } catch(e) {}
           // Open Stripe checkout in new tab so user doesn't lose their place
           window.open(url, '_blank', 'noopener,noreferrer');
+          // Show a toast so user knows what to do after paying
+          if (window.PolyGlotAuth && typeof window.PolyGlotAuth.showToast === 'function') {
+            setTimeout(function () {
+              window.PolyGlotAuth.showToast('💳 Complete checkout in the new tab — then check your email for a sign-in link to activate ' + (sizeKey === 'team' ? 'Team' : 'Pro') + '.', 9000);
+            }, 800);
+          }
         }
       }
     });
