@@ -34,7 +34,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '2.1.9';  // all upgrade CTAs → direct Stripe links
+const VERSION = '2.1.15';  // server-side device tracking, May1 gate, check-plan
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -49,10 +49,20 @@ const AUTH_API = 'https://poly-glot.ai/api';
 
 function handleUpgradeRequired(version: string): never {
     console.error(
-        `\n  \x1b[31m✗  poly-glot v${version} is no longer supported\x1b[0m\n` +
-        `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to get the latest version.\x1b[0m\n`
+        `\n  \x1b[31m✗  poly-glot v${version} is no longer supported\x1b[0m\n\n` +
+        `  \x1b[33mUpgrade required:\x1b[0m\n\n` +
+        `  \x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\n\n` +
+        `  Then sign in or pick a plan:\n` +
+        `  \x1b[36mpoly-glot login\x1b[0m\n\n` +
+        `  Free accounts: ${getFreeLimit()} files/month\n` +
+        `  Pro ($9/mo):   unlimited · \x1b[36mhttps://poly-glot.ai\x1b[0m\n`
     );
     process.exit(1);
+}
+
+function getFreeLimit(): number {
+    const MAY1 = new Date('2025-05-01T00:00:00Z').getTime();
+    return Date.now() >= MAY1 ? 10 : 50;
 }
 
 // Free tier: Python, JavaScript, Java — doc-comments only

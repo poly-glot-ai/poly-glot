@@ -16,7 +16,7 @@
  */
 
 /* ── Version gate ─────────────────────────────────────────────────────────── */
-const MINIMUM_CLI_VERSION = '1.9.0';
+const MINIMUM_CLI_VERSION = '2.1.15';
 
 function semverLt(a, b) {
   const pa = a.split('.').map(Number);
@@ -34,7 +34,7 @@ function checkVersion(request) {
   if (semverLt(clientVersion, MINIMUM_CLI_VERSION)) {
     return json({
       error: 'upgrade_required',
-      message: `poly-glot v${clientVersion} is no longer supported. Run: npm install -g poly-glot-ai-cli`,
+      message: `🚫 poly-glot v${clientVersion} is no longer supported.\n\nRun: npm install -g poly-glot-ai-cli\n\nThen: poly-glot login\n\nFree accounts get ${getFreeLimit()} files/month. Pro is $9/mo at poly-glot.ai`,
       minimum_version: MINIMUM_CLI_VERSION,
     }, 426);
   }
