@@ -252,7 +252,7 @@
               <span>Offer expires <strong id="pg-promo-deadline">May 1, 2026</strong> — after that, Pro goes to $12/mo. Use code <strong>EARLYBIRD3</strong> at checkout.</span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever →</button>
+          <span class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever</span>
         </div>
 
         <!-- Cards -->
@@ -430,19 +430,11 @@
       });
     }
 
-    /* Early access CTA — scroll to AI Settings / comment generator */
+    /* Early access CTA — non-interactive display only */
     const eaBtn = section.querySelector('#pg-ea-join-btn');
     if (eaBtn) {
-      eaBtn.addEventListener('click', function () {
-        var target = document.getElementById('commentGenerator') ||
-                     document.getElementById('aiSettingsBtn');
-        if (target) {
-          var rect      = target.getBoundingClientRect();
-          var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          window.scrollTo({ top: rect.top + scrollTop - 24, behavior: 'smooth' });
-        }
-        if (typeof gtag === 'function') gtag('event', 'pricing_get_started_free_click');
-      });
+      eaBtn.style.cursor = 'default';
+      eaBtn.style.pointerEvents = 'none';
     }
   }
 

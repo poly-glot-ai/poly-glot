@@ -251,7 +251,7 @@
               <span>Offer expires <strong id="pg-promo-deadline">May 1, 2026</strong> — after that, Pro goes to $12/mo. Use code <strong>EARLYBIRD3</strong> at checkout.</span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever →</button>
+          <span class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever</span>
         </div>
 
         <!-- Cards -->
@@ -432,22 +432,11 @@
       });
     }
 
-    /* Early access CTA — open Pro Monthly checkout with EARLYBIRD3 pre-applied */
+    /* Early access CTA — non-interactive display only */
     const eaBtn = section.querySelector('#pg-ea-join-btn');
     if (eaBtn) {
-      eaBtn.addEventListener('click', function () {
-        if (typeof gtag === 'function') gtag('event', 'pricing_earlybird_banner_click', { plan: 'pro', billing: 'monthly' });
-        try { localStorage.setItem('pg_checkout_plan', 'pro'); } catch(e) {}
-        var url = checkoutUrl('pro_monthly');
-        if (url && url !== '#') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-          if (window.PolyGlotAuth && typeof window.PolyGlotAuth.showToast === 'function') {
-            setTimeout(function () {
-              window.PolyGlotAuth.showToast('💳 Complete checkout in the new tab — then check your email to activate Pro.', 9000);
-            }, 800);
-          }
-        }
-      });
+      eaBtn.style.cursor = 'default';
+      eaBtn.style.pointerEvents = 'none';
     }
   }
 
