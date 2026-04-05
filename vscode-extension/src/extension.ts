@@ -118,18 +118,94 @@ async function checkAndIncrementUsage(): Promise<boolean> {
         }
     }
 
-    // ── Local fallback (no session or server unreachable) ────────────────
-    const count = await incrementMonthlyCount();
-    updateStatusBarUsage(false);
+    // ── No session token: use server-side anonymous device tracking ──────
+    // machineId is stable across reinstalls — cannot be reset by uninstalling
+    const fingerprint = vscode.env.machineId;
+    let deviceId = extContext.globalState.get<string>('pg.deviceId', '');
 
-    if (count > FREE_LIMIT) {
-        await showLimitReached(count, FREE_LIMIT);
-        return false;
+    // Register device if not yet registered
+    if (!deviceId) {
+        try {
+            const regRes = await fetch(`${AUTH_API}/register-device`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ source: 'vscode', fingerprint }),
+                signal:  AbortSignal.timeout(5000),
+            });
+            if (regRes.ok) {
+                const regData = await regRes.json() as { ok: boolean; deviceId: string };
+                if (regData.ok && regData.deviceId) {
+                    deviceId = regData.deviceId;
+                    await extContext.globalState.update('pg.deviceId', deviceId);
+                }
+            }
+        } catch {}
     }
 
-    const remaining = FREE_LIMIT - count;
-    await showUsageNudge(count, remaining);
-    return true;
+    if (deviceId) {
+        try {
+            const devRes = await fetch(`${AUTH_API}/device-usage`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ deviceId, fingerprint }),
+                signal:  AbortSignal.timeout(5000),
+            });
+            const devData = await devRes.json() as {
+                ok: boolean; used: number; limit: number; remaining: number; limitReached?: boolean;
+            };
+
+            if (devRes.status === 403 || devData.limitReached) {
+                updateStatusBarUsage(false);
+                // Anonymous users must sign up — no local fallback
+                const choice = await vscode.window.showErrorMessage(
+                    `🚫 You've used all ${devData.limit} free files. Create a free account to get ${FREE_LIMIT} files/month.`,
+                    'Create Free Account',
+                    'I Have an Account',
+                );
+                if (choice === 'Create Free Account') {
+                    await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-gate&utm_source=vscode&utm_medium=extension&utm_campaign=gate'));
+                    await new Promise(r => setTimeout(r, 4000));
+                    await cmdConfigureLicenseToken();
+                } else if (choice === 'I Have an Account') {
+                    await cmdConfigureLicenseToken();
+                }
+                return false;
+            }
+
+            if (devRes.ok && devData.ok) {
+                updateStatusBarUsage(false);
+                // Nudge at file 3
+                if (devData.used === 3) {
+                    const choice = await vscode.window.showWarningMessage(
+                        `⚡ ${devData.remaining} free file${devData.remaining === 1 ? '' : 's'} left before sign-up required. Create a free account for ${FREE_LIMIT} files/month.`,
+                        'Create Free Account',
+                        'Dismiss',
+                    );
+                    if (choice === 'Create Free Account') {
+                        await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-nudge&utm_source=vscode&utm_medium=extension&utm_campaign=nudge'));
+                        await new Promise(r => setTimeout(r, 4000));
+                        await cmdConfigureLicenseToken();
+                    }
+                }
+                return true;
+            }
+        } catch {}
+    }
+
+    // ── Server unreachable AND no session — hard block (no local fallback) ──
+    // This prevents offline circumvention.
+    const offlineChoice = await vscode.window.showErrorMessage(
+        `🚫 Poly-Glot requires an internet connection to verify your account. Please check your connection.`,
+        'Create Account',
+        'Sign In',
+        'Retry',
+    );
+    if (offlineChoice === 'Create Account') {
+        await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-offline'));
+    } else if (offlineChoice === 'Sign In') {
+        await cmdConfigureLicenseToken();
+    }
+    return false;
 }
 
 /** Show the hard-stop message and upgrade buttons */

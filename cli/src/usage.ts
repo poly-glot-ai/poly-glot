@@ -201,6 +201,20 @@ export async function incrementUsage(count = 1): Promise<void> {
  * Server-first (authoritative), falls back to local if offline or no session.
  */
 export async function assertQuota(filesNeeded = 1): Promise<void> {
+    const cfg = loadConfig();
+
+    // ── No session token = hard block, no fallback ───────────────────────────
+    if (!cfg.sessionToken) {
+        console.error(
+            `\n  \x1b[31m✗  Account required\x1b[0m\n\n` +
+            `  A free account is required to use Poly-Glot CLI.\n\n` +
+            `  \x1b[36mpoly-glot login\x1b[0m\n\n` +
+            `  Free accounts: ${getFreeMonthlyLimit()} files/month\n` +
+            `  Pro ($9/mo):   unlimited · https://poly-glot.ai\n`
+        );
+        process.exit(1);
+    }
+
     const server = await getServerUsage();
 
     if (server) {
@@ -223,20 +237,21 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
         return;
     }
 
-    // ── Fallback: local (no session or server unreachable) ───────────────────
-    const used      = getMonthlyUsage();
-    const remaining = FREE_MONTHLY_LIMIT - used;
+    // ── Server unreachable — hard block, no local fallback ───────────────────
+    // We do NOT fall back to local usage.json — that is circumventable.
+    // If our server is down, we fail closed to prevent quota abuse.
+    console.error(
+        `\n  \x1b[31m✗  Could not verify quota\x1b[0m\n\n` +
+        `  Unable to reach poly-glot.ai to verify your usage quota.\n` +
+        `  Please check your internet connection and try again.\n\n` +
+        `  \x1b[2mIf this persists, contact support@poly-glot.ai\x1b[0m\n`
+    );
+    process.exit(1);
+}
 
-    if (remaining <= 0) {
-        printHardStop(used, FREE_MONTHLY_LIMIT);
-        process.exit(1);
-    }
-    if (filesNeeded > remaining) {
-        printBatchExceeds(filesNeeded, remaining, used, FREE_MONTHLY_LIMIT);
-        process.exit(1);
-    }
-    if (remaining <= 5)       { printSoftWarning(remaining, true);  }
-    else if (remaining <= 10) { printSoftWarning(remaining, false); }
+function getFreeMonthlyLimit(): number {
+    const MAY1 = new Date('2025-05-01T00:00:00Z').getTime();
+    return Date.now() >= MAY1 ? 10 : 50;
 }
 
 // ─── Upgrade messages ────────────────────────────────────────────────────────

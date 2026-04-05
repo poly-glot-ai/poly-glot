@@ -405,13 +405,18 @@ async function main(): Promise<void> {
     if (cmd === 'config')   { await runConfig(args.slice(1)); return; }
 
     // ── Login gate — require account before any real command ─────────────
-    // isCI skips the INTERACTIVE login prompt only — usage tracking still
-    // runs server-side whenever cfg.sessionToken is present.
-    const isCI         = !!process.env.CI || !!process.env.POLYGLOT_LICENSE_TOKEN;
+    // POLYGLOT_LICENSE_TOKEN is supported for CI/CD — but ONLY if it is a
+    // valid session token verified against the server. Setting CI=true alone
+    // does NOT bypass the gate. No token = no access, period.
+    const envToken     = (process.env.POLYGLOT_LICENSE_TOKEN || '').trim();
+    if (envToken && !cfg.sessionToken) {
+        // Treat env token as session token for this invocation
+        cfg.sessionToken = envToken;
+    }
     const hasSession   = !!cfg.sessionToken;
     const gatedCmds    = ['comment', 'why', 'both', 'bugs', 'refactor', 'test', 'explain'];
 
-    if (!hasSession && !isCI && gatedCmds.includes(cmd)) {
+    if (!hasSession && gatedCmds.includes(cmd)) {
         console.log(`
 ${COLORS.bold}${COLORS.cyan}Welcome to Poly-Glot CLI v${VERSION}${COLORS.reset} — AI code documentation for 12 languages.
 
