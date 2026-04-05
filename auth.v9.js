@@ -664,7 +664,7 @@
                 <li style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> — locks $9/mo forever <em>(expires May 1, 2026)</em></li>
               </ul>
               <a class="pg-modal-plan__cta pg-modal-plan__cta--pro" id="pgAuthModalUpgradePro"
-                 href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3"
+                 href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=website"
                  target="_blank" rel="noopener">
                 Upgrade to Pro ↗
               </a>
@@ -714,6 +714,18 @@
 
     modal.classList.add('pg-open');
     if (input) setTimeout(function () { input.focus(); }, 60);
+
+    // Patch upgrade link with prefilled_email if user is signed in
+    var upgradeLink = document.getElementById('pgAuthModalUpgradePro');
+    if (upgradeLink) {
+      try {
+        var em = localStorage.getItem('pg_email') || '';
+        if (em) {
+          var base = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
+          upgradeLink.href = base + '?prefilled_promo_code=EARLYBIRD3&client_reference_id=website&prefilled_email=' + encodeURIComponent(em);
+        }
+      } catch(e) {}
+    }
   }
 
   function closeModal() {
