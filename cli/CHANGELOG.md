@@ -1,3 +1,8 @@
+## [2.1.21] — 2026-04-05
+- pricing: purge all stale EARLYBIRD3/trial messaging — Pro locked $9/mo forever, expires May 1 2026
+
+---
+
 ## [2.1.20] — 2026-04-05
 - 🐛 fix: close all 3 circumvention gaps — machine fingerprint, offline hard-block, CI bypass removed [deploy]
 
