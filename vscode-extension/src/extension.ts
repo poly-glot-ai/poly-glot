@@ -4,22 +4,54 @@ import { TemplatesSidebarProvider } from './sidebar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const AUTH_API        = 'https://poly-glot.ai/api/auth';
-const FREE_LANGUAGES  = ['javascript', 'typescript', 'python', 'java'];
-const PRO_PLANS       = ['pro', 'team', 'enterprise'];
-// UTM-tagged Stripe links so conversions are attributed to the extension
+const AUTH_API         = 'https://poly-glot.ai/api/auth';
+const FREE_LANGUAGES   = ['javascript', 'typescript', 'python', 'java'];
+const PRO_PLANS        = ['pro', 'team', 'enterprise'];
 const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode';
 const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode-team';
-const PARTICIPANT_ID  = 'poly-glot.chat';
-const FREE_LIMIT      = 50;
-// Nudge at 20% used (file 10), warning at 80% (file 40), hard stop at 50
-const FIRST_NUDGE_AT  = 10;
+const PARTICIPANT_ID   = 'poly-glot.chat';
+const FREE_LIMIT       = 50;
+const FIRST_NUDGE_AT   = 10;
+// Minimum extension version — older installs are blocked from generating
+const MINIMUM_VERSION  = '1.4.30';
+const MAY1_2025        = new Date('2025-05-01T00:00:00Z').getTime();
+function getCurrentFreeLimit(): number { return Date.now() >= MAY1_2025 ? 10 : 50; }
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
 let statusBarItem: vscode.StatusBarItem;
 let aiGenerator: AIGenerator;
 let extContext: vscode.ExtensionContext;
+
+// ─── Version gate ─────────────────────────────────────────────────────────────
+
+function semverLt(a: string, b: string): boolean {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+        if ((pa[i] || 0) < (pb[i] || 0)) return true;
+        if ((pa[i] || 0) > (pb[i] || 0)) return false;
+    }
+    return false;
+}
+
+async function checkVersionGate(context: vscode.ExtensionContext): Promise<boolean> {
+    const currentVersion = context.extension.packageJSON.version as string;
+    if (!semverLt(currentVersion, MINIMUM_VERSION)) return true; // version is fine
+
+    const choice = await vscode.window.showErrorMessage(
+        `🚫 Poly-Glot v${currentVersion} is no longer supported. Please update to v${MINIMUM_VERSION}+ to continue.`,
+        'Update Now',
+        'Dismiss',
+    );
+    if (choice === 'Update Now') {
+        await vscode.commands.executeCommand(
+            'workbench.extensions.action.showExtensionsWithIds',
+            ['poly-glot-ai.poly-glot'],
+        );
+    }
+    return false;
+}
 
 // ─── Usage Tracking ───────────────────────────────────────────────────────────
 
