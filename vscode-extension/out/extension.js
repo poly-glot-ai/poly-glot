@@ -207,27 +207,80 @@ async function checkAndIncrementUsage() {
             const devData = await devRes.json();
             if (devRes.status === 403 || devData.limitReached) {
                 updateStatusBarUsage(false);
-                // Anonymous users must sign up — no local fallback
-                const choice = await vscode.window.showErrorMessage(`🚫 You've used all ${devData.limit} free files. Create a free account to get ${FREE_LIMIT} files/month.`, 'Create Free Account', 'I Have an Account');
-                if (choice === 'Create Free Account') {
-                    await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-gate&utm_source=vscode&utm_medium=extension&utm_campaign=gate'));
-                    await new Promise(r => setTimeout(r, 4000));
-                    await cmdConfigureLicenseToken();
+                // ── Email-first signup — no browser redirect needed ──────────
+                const email = await vscode.window.showInputBox({
+                    title: `🦜 Poly-Glot — ${devData.limit} file trial complete`,
+                    prompt: `Enter your email to get ${FREE_LIMIT} files/month free — magic link, no password`,
+                    placeHolder: 'you@example.com',
+                    ignoreFocusOut: true,
+                    validateInput: (v) => (!v || !v.includes('@') || !v.includes('.')) ? 'Enter a valid email' : null,
+                });
+                if (email) {
+                    try {
+                        const r = await fetch(`${AUTH_API}/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'vscode-gate' }),
+                            signal: AbortSignal.timeout(8000),
+                        });
+                        if (r.ok) {
+                            vscode.window.showInformationMessage(`🦜 Magic link sent to ${email}! Click it, then come back and enter your token.`, 'Enter Token Now', 'Later').then(async (c) => { if (c === 'Enter Token Now')
+                                await cmdConfigureLicenseToken(); });
+                        }
+                        else {
+                            // Already registered — go straight to token entry
+                            await cmdConfigureLicenseToken();
+                        }
+                    }
+                    catch {
+                        await cmdConfigureLicenseToken();
+                    }
                 }
-                else if (choice === 'I Have an Account') {
-                    await cmdConfigureLicenseToken();
+                else {
+                    // Dismissed — softer fallback
+                    vscode.window.showWarningMessage(`🦜 Poly-Glot: Sign up free at poly-glot.ai to keep going — 50 files/month.`, 'Sign Up', 'Later').then(c => {
+                        if (c === 'Sign Up')
+                            vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-gate'));
+                    });
                 }
                 return false;
             }
             if (devRes.ok && devData.ok) {
                 updateStatusBarUsage(false);
-                // Nudge at file 3
+                // Nudge at file 3 — email-first, no browser redirect
                 if (devData.used === 3) {
-                    const choice = await vscode.window.showWarningMessage(`⚡ ${devData.remaining} free file${devData.remaining === 1 ? '' : 's'} left before sign-up required. Create a free account for ${FREE_LIMIT} files/month.`, 'Create Free Account', 'Dismiss');
-                    if (choice === 'Create Free Account') {
-                        await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-nudge&utm_source=vscode&utm_medium=extension&utm_campaign=nudge'));
-                        await new Promise(r => setTimeout(r, 4000));
-                        await cmdConfigureLicenseToken();
+                    const nudgeEmail = await vscode.window.showInputBox({
+                        title: `⚡ Poly-Glot — ${devData.remaining} trial file${devData.remaining === 1 ? '' : 's'} left`,
+                        prompt: `Sign up free now to get ${FREE_LIMIT} files/month — enter your email for a magic link`,
+                        placeHolder: 'you@example.com (or press Escape to skip)',
+                        ignoreFocusOut: false,
+                        validateInput: (v) => {
+                            if (!v)
+                                return null;
+                            if (!v.includes('@') || !v.includes('.'))
+                                return 'Enter a valid email';
+                            return null;
+                        },
+                    });
+                    if (nudgeEmail && nudgeEmail.includes('@')) {
+                        try {
+                            const nr = await fetch(`${AUTH_API}/login`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: nudgeEmail.trim().toLowerCase(), source: 'vscode-nudge' }),
+                                signal: AbortSignal.timeout(8000),
+                            });
+                            if (nr.ok) {
+                                vscode.window.showInformationMessage(`🦜 Magic link sent to ${nudgeEmail}! Click it, then enter your token to unlock ${FREE_LIMIT} files/month.`, 'Enter Token Now', 'Later').then(async (c) => { if (c === 'Enter Token Now')
+                                    await cmdConfigureLicenseToken(); });
+                            }
+                            else {
+                                await cmdConfigureLicenseToken();
+                            }
+                        }
+                        catch {
+                            vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-nudge'));
+                        }
                     }
                 }
                 return true;
