@@ -7,10 +7,13 @@ import { TemplatesSidebarProvider } from './sidebar';
 const AUTH_API        = 'https://poly-glot.ai/api/auth';
 const FREE_LANGUAGES  = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS       = ['pro', 'team', 'enterprise'];
-const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3'; // Pro $9/mo
-const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3'; // Team $249/yr
+// UTM-tagged Stripe links so conversions are attributed to the extension
+const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode';
+const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode-team';
 const PARTICIPANT_ID  = 'poly-glot.chat';
 const FREE_LIMIT      = 50;
+// Nudge at 20% used (file 10), warning at 80% (file 40), hard stop at 50
+const FIRST_NUDGE_AT  = 10;
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
@@ -26,17 +29,22 @@ function monthKey(): string {
     return `polyglot.usage.${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Gets how many files have been processed this month */
+/** Gets how many files have been processed this month (local cache) */
 function getMonthlyCount(): number {
     return extContext.globalState.get<number>(monthKey(), 0);
 }
 
-/** Increments the monthly counter and returns the new value */
+/** Increments the local monthly counter and returns the new value */
 async function incrementMonthlyCount(): Promise<number> {
     const key   = monthKey();
     const count = extContext.globalState.get<number>(key, 0) + 1;
     await extContext.globalState.update(key, count);
     return count;
+}
+
+/** Sync local counter DOWN to a server-authoritative value */
+async function syncLocalCount(serverCount: number): Promise<void> {
+    await extContext.globalState.update(monthKey(), serverCount);
 }
 
 /** Updates the status bar to show usage e.g. "$(comment) Poly-Glot (12/50)" */
@@ -59,9 +67,10 @@ function updateStatusBarUsage(isPro: boolean): void {
 }
 
 /**
- * Call this after each successful generation.
- * Shows upgrade nudge at 80% usage, hard stop at 100%.
- * Returns false if the free limit is exceeded and user is not Pro.
+ * Server-aware usage increment.
+ * If the user has a session token we track server-side (authoritative).
+ * Falls back to local-only for users without a session.
+ * Returns false if the limit is exceeded.
  */
 async function checkAndIncrementUsage(): Promise<boolean> {
     if (await hasPro()) {
@@ -69,57 +78,243 @@ async function checkAndIncrementUsage(): Promise<boolean> {
         return true;
     }
 
+    const sessionToken = extContext.globalState.get<string>('pg.sessionToken', '');
+
+    // ── Server-side tracking (authoritative) ─────────────────────────────
+    if (sessionToken) {
+        try {
+            const res = await fetch(`${AUTH_API}/track-usage`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ token: sessionToken, count: 1 }),
+                signal:  AbortSignal.timeout(5000),
+            });
+            const data = await res.json() as {
+                ok: boolean; used: number; limit: number | null;
+                remaining: number | null; plan?: string; error?: string;
+            };
+
+            // Sync local to server count
+            if (typeof data.used === 'number') {
+                await syncLocalCount(data.used);
+            }
+
+            // Limit reached (403 from server)
+            if (!data.ok && data.remaining !== null && data.remaining <= 0) {
+                updateStatusBarUsage(false);
+                await showLimitReached(data.used, data.limit ?? FREE_LIMIT);
+                return false;
+            }
+
+            updateStatusBarUsage(false);
+
+            // Nudge messages
+            const used      = data.used ?? getMonthlyCount();
+            const remaining = data.remaining ?? Math.max(0, FREE_LIMIT - used);
+            await showUsageNudge(used, remaining);
+            return true;
+        } catch {
+            // Server unreachable — fall through to local
+        }
+    }
+
+    // ── Local fallback (no session or server unreachable) ────────────────
     const count = await incrementMonthlyCount();
     updateStatusBarUsage(false);
 
-    // Hard limit reached
     if (count > FREE_LIMIT) {
-        const choice = await vscode.window.showErrorMessage(
-            `🚫 You've used all ${FREE_LIMIT} free files this month.`,
-            'Upgrade for $9/mo — EARLYBIRD3 50% off',
-            'Enter License Token',
-        );
-        if (choice === 'Upgrade for $9/mo — EARLYBIRD3 50% off') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        } else if (choice === 'Enter License Token') {
-            await cmdConfigureLicenseToken();
-        }
+        await showLimitReached(count, FREE_LIMIT);
         return false;
     }
 
-    // 80% warning nudge (at file 40)
-    if (count === Math.floor(FREE_LIMIT * 0.8)) {
-        const choice = await vscode.window.showWarningMessage(
-            `⚡ You've used ${count}/${FREE_LIMIT} free files this month — ${FREE_LIMIT - count} remaining.`,
-            'Upgrade — 50% off with EARLYBIRD3',
-            'Dismiss',
-        );
-        if (choice === 'Upgrade — 50% off with EARLYBIRD3') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        }
-    }
-
-    // Last file warning (at file 50)
-    if (count === FREE_LIMIT) {
-        const choice = await vscode.window.showWarningMessage(
-            `🔴 That was your last free file for this month. Upgrade to keep going.`,
-            'Upgrade for $9/mo — EARLYBIRD3',
-            'Enter License Token',
-        );
-        if (choice === 'Upgrade for $9/mo — EARLYBIRD3') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        } else if (choice === 'Enter License Token') {
-            await cmdConfigureLicenseToken();
-        }
-    }
-
+    const remaining = FREE_LIMIT - count;
+    await showUsageNudge(count, remaining);
     return true;
 }
 
-/** Per-session plan cache — verified once, reused for the session lifetime. */
+/** Show the hard-stop message and upgrade buttons */
+async function showLimitReached(used: number, limit: number): Promise<void> {
+    const choice = await vscode.window.showErrorMessage(
+        `🚫 Free plan limit reached — ${used}/${limit} files this month.`,
+        'Upgrade for $9/mo',
+        'Enter Session Token',
+    );
+    if (choice === 'Upgrade for $9/mo') {
+        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+    } else if (choice === 'Enter Session Token') {
+        await cmdConfigureLicenseToken();
+    }
+}
+
+/** Show nudges at the right thresholds */
+async function showUsageNudge(used: number, remaining: number): Promise<void> {
+    // First nudge — at file 10 (early, gentle)
+    if (used === FIRST_NUDGE_AT) {
+        const choice = await vscode.window.showInformationMessage(
+            `💡 Poly-Glot: ${remaining} free files left this month. Upgrade for unlimited.`,
+            'See Pro Plans',
+            'Dismiss',
+        );
+        if (choice === 'See Pro Plans') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        }
+    }
+    // 80% warning
+    else if (used === Math.floor(FREE_LIMIT * 0.8)) {
+        const choice = await vscode.window.showWarningMessage(
+            `⚡ ${remaining} free files remaining this month — use code EARLYBIRD3 for 50% off.`,
+            'Upgrade Now',
+            'Dismiss',
+        );
+        if (choice === 'Upgrade Now') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        }
+    }
+    // Last file warning
+    else if (used === FREE_LIMIT) {
+        const choice = await vscode.window.showWarningMessage(
+            `🔴 That was your last free file this month. Upgrade to keep going.`,
+            'Upgrade for $9/mo',
+            'Enter Session Token',
+        );
+        if (choice === 'Upgrade for $9/mo') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        } else if (choice === 'Enter Session Token') {
+            await cmdConfigureLicenseToken();
+        }
+    }
+}
+
+// ─── Plan / License helpers ───────────────────────────────────────────────────
+
+/** Per-session plan cache — verified once, reused for VS Code session lifetime. */
 let _cachedPlan: string | null | undefined = undefined;
 
-// ─── Activation ───────────────────────────────────────────────────────────────
+/**
+ * Verify the stored session/license token against /api/auth/check-plan.
+ * Uses the new dedicated endpoint that:
+ *   - Never destroys the token (unlike /verify)
+ *   - Always reads the live plan from KV (catches post-payment upgrades)
+ *   - Returns { valid: bool, plan: string, email: string }
+ */
+async function getVerifiedPlan(): Promise<string | null> {
+    if (_cachedPlan !== undefined) return _cachedPlan;
+
+    // Prefer session token (from login flow), fall back to licenseToken setting
+    const sessionToken  = extContext.globalState.get<string>('pg.sessionToken', '');
+    const licenseToken  = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
+    const token = sessionToken || licenseToken;
+
+    if (!token) { _cachedPlan = null; return null; }
+
+    try {
+        const res = await fetch(`${AUTH_API}/check-plan`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ token }),
+            signal:  AbortSignal.timeout(4000),
+        });
+        if (!res.ok) { _cachedPlan = null; return null; }
+        const data = await res.json() as { valid: boolean; plan?: string; email?: string };
+        if (data.valid && data.plan) {
+            _cachedPlan = data.plan;
+            // Keep session email fresh
+            if (data.email) {
+                await extContext.globalState.update('pg.sessionEmail', data.email);
+            }
+        } else {
+            _cachedPlan = null;
+        }
+    } catch {
+        // Network error — fail open so offline paying users aren't blocked
+        _cachedPlan = null;
+    }
+    return _cachedPlan;
+}
+
+async function hasPro(): Promise<boolean> {
+    const plan = await getVerifiedPlan();
+    return plan !== null && PRO_PLANS.includes(plan);
+}
+
+async function isLanguageAllowed(languageId: string): Promise<boolean> {
+    if (FREE_LANGUAGES.includes(languageId)) return true;
+    return hasPro();
+}
+
+async function showProGate(feature: string): Promise<boolean> {
+    const hasToken = !!(extContext.globalState.get<string>('pg.sessionToken', '') ||
+        vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim());
+
+    const message = `Poly-Glot: ${feature} requires a Pro plan.`;
+    const actions = hasToken
+        ? ['Already subscribed? Re-enter token', 'Get Pro']
+        : ['Get Pro — 3 months free', 'Enter Session Token'];
+
+    const choice = await vscode.window.showErrorMessage(message, ...actions);
+
+    if (choice === 'Get Pro' || choice === 'Get Pro — 3 months free') {
+        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        return true;
+    }
+    if (choice === 'Enter Session Token' || choice === 'Already subscribed? Re-enter token') {
+        await cmdConfigureLicenseToken();
+        return true;
+    }
+    return false;
+}
+
+// ─── First-run onboarding ─────────────────────────────────────────────────────
+
+/**
+ * Called once on activate. If the user has no session token, show a
+ * single non-intrusive notification prompting them to create a free account.
+ * This captures legacy users who installed before auth existed.
+ *
+ * Uses a globalState flag so it only fires ONCE per installation.
+ */
+async function maybeShowFirstRunOnboarding(): Promise<void> {
+    const alreadyShown    = extContext.globalState.get<boolean>('pg.onboardingShown', false);
+    const hasSession      = !!extContext.globalState.get<string>('pg.sessionToken', '');
+    const hasLicenseToken = !!vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
+
+    if (alreadyShown || hasSession || hasLicenseToken) return;
+
+    // Mark shown before the async prompt so it doesn't fire again if VS Code restarts mid-prompt
+    await extContext.globalState.update('pg.onboardingShown', true);
+
+    // Small delay so VS Code UI is fully loaded
+    await new Promise(r => setTimeout(r, 2500));
+
+    const choice = await vscode.window.showInformationMessage(
+        '🦜 Poly-Glot: Create a free account to track your 50 files/month across all your devices.',
+        'Create Free Account',
+        'I Already Have One',
+        'Later',
+    );
+
+    if (choice === 'Create Free Account') {
+        // Open the site with source attribution
+        await vscode.env.openExternal(
+            vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding')
+        );
+        // After they come back, prompt to enter their token
+        await new Promise(r => setTimeout(r, 3000));
+        const tokenChoice = await vscode.window.showInformationMessage(
+            '🦜 Poly-Glot: After signing in, copy your session token and paste it here.',
+            'Enter Token Now',
+            'Later',
+        );
+        if (tokenChoice === 'Enter Token Now') {
+            await cmdConfigureLicenseToken();
+        }
+    } else if (choice === 'I Already Have One') {
+        await cmdConfigureLicenseToken();
+    }
+    // 'Later' or dismissed — they'll see nudge when they hit file 10
+}
+
+// ─── Activate ────────────────────────────────────────────────────────────────
 
 export function activate(context: vscode.ExtensionContext): void {
     extContext   = context;
@@ -133,7 +328,7 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
 
-    // Show usage count in status bar on activation
+    // Show usage count in status bar — resolves plan from server
     hasPro().then(isPro => updateStatusBarUsage(isPro));
 
     // Sidebar
@@ -183,6 +378,9 @@ export function activate(context: vscode.ExtensionContext): void {
         };
         context.subscriptions.push(participant);
     }
+
+    // First-run onboarding — fires once, non-blocking, captures legacy users
+    maybeShowFirstRunOnboarding().catch(() => {});
 }
 
 export function deactivate(): void {
@@ -200,7 +398,6 @@ async function handleChatRequest(
     const cmd      = request.command as string | undefined;
     const userText = (request.prompt as string || '').trim().toLowerCase();
 
-    // ── /upgrade or asking about pricing ─────────────────────────────────
     if (cmd === 'upgrade' || userText.includes('price') || userText.includes('pro') || userText.includes('plan')) {
         stream.markdown([
             '## 💎 Poly-Glot Pro',
@@ -220,12 +417,11 @@ async function handleChatRequest(
             '',
             `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
             '',
-            'After subscribing, run **Poly-Glot: Configure License Token** in the Command Palette to unlock Pro instantly.',
+            'After subscribing, sign in at poly-glot.ai, then run **Poly-Glot: Configure License Token** in the Command Palette.',
         ].join('\n'));
         return { metadata: { command: 'upgrade' } };
     }
 
-    // ── Resolve active editor / selection ────────────────────────────────
     const editor    = vscode.window.activeTextEditor;
     const selection = editor?.selection;
     const code      = editor
@@ -240,7 +436,6 @@ async function handleChatRequest(
         return { metadata: { command: cmd } };
     }
 
-    // ── Check API key ─────────────────────────────────────────────────────
     const cfg      = vscode.workspace.getConfiguration('polyglot');
     const apiKey   = await (aiGenerator as any).context?.secrets?.get(`polyglot.apiKey.${cfg.get('provider', 'openai')}`);
     const hasKey   = !!cfg.get('openaiApiKey') || !!cfg.get('anthropicApiKey') || !!apiKey;
@@ -265,7 +460,6 @@ async function handleChatRequest(
         return { metadata: { command: 'setup' } };
     }
 
-    // ── Usage gate (free tier: 50 files/month) ────────────────────────────
     if (cmd === 'comment' || cmd === 'why' || cmd === 'both' || cmd === 'explain' || !cmd) {
         const pro = await hasPro();
         if (!pro) {
@@ -276,127 +470,42 @@ async function handleChatRequest(
                     '',
                     `You've used **${count}/${FREE_LIMIT}** free files this month.`,
                     '',
-                    '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
+                    '🏷 Use code **`EARLYBIRD3`** for **3 months free** on any plan',
                     '',
-                    `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
+                    `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
                     '',
-                    'Already subscribed? Run **Poly-Glot: Configure License Token** to unlock.',
+                    'Already subscribed? Run **Poly-Glot: Configure License Token** in the Command Palette.',
                 ].join('\n'));
-                stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
                 return { metadata: { command: cmd } };
             }
-            // Increment usage for chat commands
-            await incrementMonthlyCount();
-            updateStatusBarUsage(false);
-            // Soft warning at 80%
-            if (count + 1 === Math.floor(FREE_LIMIT * 0.8)) {
-                stream.markdown(`> ⚡ **${FREE_LIMIT - count - 1} free files remaining** this month — [upgrade for unlimited →](${UPGRADE_URL})\n\n`);
-            }
         }
     }
 
-    // ── Check Pro gate for /why and /both ────────────────────────────────
-    if (cmd === 'why' || cmd === 'both') {
-        const isPro = await hasPro();
-        if (!isPro) {
-            stream.markdown([
-                `## 🔒 \`/${cmd}\` requires a Pro plan`,
-                '',
-                `Why-comments${cmd === 'both' ? ' and Both mode' : ''} are Pro features.`,
-                '',
-                '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
-                '',
-                `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
-                '',
-                'Already have Pro? Run **Poly-Glot: Configure License Token** to unlock.',
-            ].join('\n'));
-            stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
-            return { metadata: { command: cmd } };
-        }
+    if ((cmd === 'why' || cmd === 'both') && !await hasPro()) {
+        stream.markdown([
+            `## 🔒 Pro Plan Required`,
+            '',
+            `**Why-comments** and **Both mode** require a Pro plan.`,
+            '',
+            `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
+            '',
+            '🎁 Use code **`EARLYBIRD3`** for 3 months free.',
+        ].join('\n'));
+        return { metadata: { command: cmd } };
     }
 
-    // ── Check language gate ───────────────────────────────────────────────
-    if (!FREE_LANGUAGES.includes(langId)) {
-        const isPro = await hasPro();
-        if (!isPro) {
-            stream.markdown([
-                `## 🔒 ${langId} requires a Pro plan`,
-                '',
-                `Free tier supports JavaScript, TypeScript, Python, and Java.`,
-                `**${langId}** is a Pro language.`,
-                '',
-                '🏷 Use code **`EARLYBIRD3`** for **50% off your first 3 months**',
-                '',
-                `**[→ Upgrade to Pro — $9/mo](${UPGRADE_URL})**`,
-            ].join('\n'));
-            stream.button({ command: 'polyglot.configureLicenseToken', title: '$(key) Enter License Token' });
-            return { metadata: { command: cmd } };
-        }
-    }
-
-    // ── /explain ─────────────────────────────────────────────────────────
-    if (cmd === 'explain' || (!cmd && (userText.includes('explain') || userText.includes('analys')))) {
-        stream.progress('Analysing your code…');
-        try {
-            const result: ExplainResult = await aiGenerator.explainCode(code, langId);
-            if (token.isCancellationRequested) { return; }
-
-            const cx = (s: number) => s <= 3 ? '🟢' : s <= 6 ? '🟡' : '🔴';
-            const dq = (s: number) => s >= 80 ? '🟢' : s >= 50 ? '🟡' : '🔴';
-
-            stream.markdown([
-                `## 🔍 Code Analysis — ${langId}`,
-                '',
-                `| | |`,
-                `|---|---|`,
-                `| Complexity | ${cx(result.complexityScore)} **${result.complexity}** (${result.complexityScore}/10) |`,
-                `| Doc Quality | ${dq(result.docQuality.score)} **${result.docQuality.label}** (${result.docQuality.score}/100) |`,
-                `| Functions | **${result.functions.length}** |`,
-                `| Potential Bugs | **${result.potentialBugs.length}** |`,
-                `| Cost | $${result.cost.toFixed(5)} |`,
-                '',
-                '### 📖 Summary',
-                result.summary,
-                '',
-                result.potentialBugs.length
-                    ? `### 🐛 Potential Bugs\n${result.potentialBugs.map(b => `- ${b}`).join('\n')}`
-                    : '### 🐛 Potential Bugs\n_No obvious bugs detected._',
-                '',
-                result.suggestions.length
-                    ? `### 💡 Suggestions\n${result.suggestions.map(s => `- ${s}`).join('\n')}`
-                    : '',
-            ].join('\n'));
-
-            if (result.functions.length) {
-                stream.markdown([
-                    '### ⚙️ Functions',
-                    '| Name | Purpose |',
-                    '|------|---------|',
-                    ...result.functions.map(fn => `| \`${fn.name}\` | ${fn.purpose} |`),
-                ].join('\n'));
-            }
-            return { metadata: { command: 'explain' } };
-        } catch (err: any) {
-            stream.markdown(`> ❌ **Error:** ${err.message}`);
-            return { metadata: { command: 'explain' } };
-        }
-    }
-
-    // ── /comment (default) ───────────────────────────────────────────────
     if (cmd === 'comment' || cmd === 'both' || !cmd) {
         stream.progress('Generating doc-comments…');
         try {
             const result = await aiGenerator.generateComments(code, langId);
             if (token.isCancellationRequested) { return; }
             stream.markdown([
-                `## 💬 Doc-Comments — ${langId}`,
+                `## 📝 Doc-Comments — ${langId}`,
                 `_Cost: $${result.cost.toFixed(5)}_`,
                 '',
                 '```' + langId,
                 result.commentedCode,
                 '```',
-                '',
-                '_Use the **Apply to Editor** button below to insert directly, or copy from above._',
             ].join('\n'));
             stream.button({
                 command:   'polyglot.generateComments',
@@ -412,7 +521,6 @@ async function handleChatRequest(
         }
     }
 
-    // ── /why or second pass of /both ─────────────────────────────────────
     if (cmd === 'why' || cmd === 'both') {
         stream.progress('Generating why-comments…');
         try {
@@ -438,7 +546,6 @@ async function handleChatRequest(
         }
     }
 
-    // ── Fallback: help ────────────────────────────────────────────────────
     stream.markdown([
         '## 🦜 Poly-Glot AI — Copilot Chat',
         '',
@@ -457,84 +564,7 @@ async function handleChatRequest(
     return { metadata: { command: 'help' } };
 }
 
-// ─── Plan / License helpers ───────────────────────────────────────────────────
-
-async function getVerifiedPlan(): Promise<string | null> {
-    if (_cachedPlan !== undefined) return _cachedPlan;
-
-    const token = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
-    if (!token) { _cachedPlan = null; return null; }
-
-    try {
-        const res = await fetch(`${AUTH_API}/verify`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ token }),
-            signal:  AbortSignal.timeout(3000),
-        });
-        if (!res.ok) { _cachedPlan = null; return null; }
-        const data = await res.json() as { valid: boolean; plan?: string };
-        _cachedPlan = (data.valid && data.plan) ? data.plan : null;
-    } catch {
-        // Network error — fail open so paying users aren't blocked offline
-        _cachedPlan = null;
-    }
-    return _cachedPlan;
-}
-
-async function hasPro(): Promise<boolean> {
-    const plan = await getVerifiedPlan();
-    return plan !== null && PRO_PLANS.includes(plan);
-}
-
-/**
- * Check if the current file's language is allowed on the free tier.
- * Returns true if allowed, false if Pro is required.
- */
-async function isLanguageAllowed(languageId: string): Promise<boolean> {
-    if (FREE_LANGUAGES.includes(languageId)) return true;
-    return hasPro();
-}
-
-/**
- * Show a Pro upgrade prompt when a user hits a gated feature.
- * Returns true if user clicked "Upgrade", false otherwise.
- */
-async function showProGate(feature: string): Promise<boolean> {
-    const token = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
-    const hasToken = !!token;
-
-    const message = `Poly-Glot: ${feature} requires a Pro plan.`;
-    const actions = hasToken
-        ? ['Already subscribed? Re-enter token', 'Get Pro']
-        : ['Get Pro — 3 months free', 'Enter License Token'];
-
-    const choice = await vscode.window.showErrorMessage(message, ...actions);
-
-    if (choice === 'Get Pro' || choice === 'Get Pro — 3 months free') {
-        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        return true;
-    }
-    if (choice === 'Enter License Token' || choice === 'Already subscribed? Re-enter token') {
-        await cmdConfigureLicenseToken();
-        return true;
-    }
-    return false;
-}
-
-// ─── Shared: guard API key configured ─────────────────────────────────────────
-
-async function requireApiKey(): Promise<boolean> {
-    if (await aiGenerator.isConfigured()) return true;
-    const action = await vscode.window.showErrorMessage(
-        'Poly-Glot: API key not configured.',
-        'Configure Now',
-    );
-    if (action === 'Configure Now') await cmdConfigureApiKey();
-    return false;
-}
-
-// ─── Command: Doc-Comments (selection or whole file) ─────────────────────────
+// ─── Commands ─────────────────────────────────────────────────────────────────
 
 async function cmdGenerateComments(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
@@ -542,99 +572,88 @@ async function cmdGenerateComments(): Promise<void> {
     if (!await requireApiKey()) return;
     if (!await checkAndIncrementUsage()) return;
 
+    const selection  = editor.selection;
+    const code       = editor.document.getText(selection.isEmpty ? undefined : selection);
     const languageId = editor.document.languageId;
+
     if (!await isLanguageAllowed(languageId)) {
         await showProGate(`${languageId} language`);
         return;
     }
-
-    const selection = editor.selection;
-    const code = editor.document.getText(selection.isEmpty ? undefined : selection);
-    if (!code.trim()) { vscode.window.showWarningMessage('Poly-Glot: File is empty.'); return; }
 
     await runWithProgress(`Generating doc-comments (${aiGenerator.getModel()})…`, async () => {
         const result = await aiGenerator.generateComments(code, languageId);
-        await applyResult(editor, selection, result.commentedCode, result.cost, 'commented');
+        if (selection.isEmpty) {
+            await editor.edit(eb => {
+                eb.replace(
+                    new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(editor.document.getText().length)),
+                    result.commentedCode,
+                );
+            });
+        } else {
+            await editor.edit(eb => eb.replace(selection, result.commentedCode));
+        }
+        flashStatusBar(`$(check) $${result.cost.toFixed(4)} — commented`);
+        vscode.window.showInformationMessage(`✅ Poly-Glot: Doc-comments added ($${result.cost.toFixed(4)})`);
     });
 }
-
-// ─── Command: Why-Comments ────────────────────────────────────────────────────
 
 async function cmdWhyComments(): Promise<void> {
+    if (!await hasPro()) { await showProGate('Why-comments'); return; }
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;
-    if (!await checkAndIncrementUsage()) return;
 
-    if (!await hasPro()) {
-        await showProGate('Why-comments');
-        return;
-    }
-
+    const selection  = editor.selection;
+    const code       = editor.document.getText(selection.isEmpty ? undefined : selection);
     const languageId = editor.document.languageId;
-    if (!await isLanguageAllowed(languageId)) {
-        await showProGate(`${languageId} language`);
-        return;
-    }
 
-    const selection = editor.selection;
-    const code = editor.document.getText(selection.isEmpty ? undefined : selection);
-    if (!code.trim()) { vscode.window.showWarningMessage('Poly-Glot: File is empty.'); return; }
-
-    await runWithProgress(`Adding why-comments (${aiGenerator.getModel()})…`, async () => {
+    await runWithProgress(`Generating why-comments (${aiGenerator.getModel()})…`, async () => {
         const result = await aiGenerator.generateWhyComments(code, languageId);
-        await applyResult(editor, selection, result.commentedCode, result.cost, 'why-commented');
+        if (selection.isEmpty) {
+            await editor.edit(eb => {
+                eb.replace(
+                    new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(editor.document.getText().length)),
+                    result.commentedCode,
+                );
+            });
+        } else {
+            await editor.edit(eb => eb.replace(selection, result.commentedCode));
+        }
+        flashStatusBar(`$(check) $${result.cost.toFixed(4)} — why-commented`);
+        vscode.window.showInformationMessage(`✅ Poly-Glot: Why-comments added ($${result.cost.toFixed(4)})`);
     });
 }
 
-// ─── Command: Both (Doc + Why) ────────────────────────────────────────────────
-
 async function cmdBothComments(): Promise<void> {
+    if (!await hasPro()) { await showProGate('Both mode'); return; }
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;
-    if (!await checkAndIncrementUsage()) return;
 
-    if (!await hasPro()) {
-        await showProGate('Both mode (doc + why comments)');
-        return;
-    }
-
+    const code       = editor.document.getText();
     const languageId = editor.document.languageId;
-    if (!await isLanguageAllowed(languageId)) {
-        await showProGate(`${languageId} language`);
-        return;
-    }
 
-    const selection = editor.selection;
-    const code = editor.document.getText(selection.isEmpty ? undefined : selection);
-    if (!code.trim()) { vscode.window.showWarningMessage('Poly-Glot: File is empty.'); return; }
-
-    await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Poly-Glot: Pass 1/2 — doc-comments…', cancellable: false },
-        async (progress) => {
-            try {
-                const docResult = await aiGenerator.generateComments(code, languageId);
-                progress.report({ message: 'Pass 2/2 — why-comments…' });
-                const whyResult = await aiGenerator.generateWhyComments(docResult.commentedCode, languageId);
-                const totalCost = docResult.cost + whyResult.cost;
-                await applyResult(editor, selection, whyResult.commentedCode, totalCost, 'fully commented (doc + why)');
-            } catch (err: unknown) {
-                vscode.window.showErrorMessage(`Poly-Glot: ${err instanceof Error ? err.message : String(err)}`);
-            }
-        },
-    );
+    await runWithProgress(`Generating doc + why-comments (${aiGenerator.getModel()})…`, async () => {
+        const doc = await aiGenerator.generateComments(code, languageId);
+        const why = await aiGenerator.generateWhyComments(doc.commentedCode, languageId);
+        await editor.edit(eb => {
+            eb.replace(
+                new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(editor.document.getText().length)),
+                why.commentedCode,
+            );
+        });
+        const totalCost = doc.cost + why.cost;
+        flashStatusBar(`$(check) $${totalCost.toFixed(4)} — doc + why`);
+        vscode.window.showInformationMessage(`✅ Poly-Glot: Both modes applied ($${totalCost.toFixed(4)})`);
+    });
 }
-
-// ─── Command: Comment Entire Active File ──────────────────────────────────────
 
 async function cmdCommentFile(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     await _commentDocument(editor.document, 'comment');
 }
-
-// ─── Command: Comment File from Explorer ──────────────────────────────────────
 
 async function cmdCommentFileFromExplorer(uri: vscode.Uri): Promise<void> {
     if (!uri) { vscode.window.showErrorMessage('Poly-Glot: No file selected.'); return; }
@@ -646,16 +665,9 @@ async function cmdCommentFileFromExplorer(uri: vscode.Uri): Promise<void> {
     }
 }
 
-// ─── Command: Why-Comments File from Explorer ─────────────────────────────────
-
 async function cmdWhyFileFromExplorer(uri: vscode.Uri): Promise<void> {
     if (!uri) { vscode.window.showErrorMessage('Poly-Glot: No file selected.'); return; }
-
-    if (!await hasPro()) {
-        await showProGate('Why-comments');
-        return;
-    }
-
+    if (!await hasPro()) { await showProGate('Why-comments'); return; }
     try {
         const doc = await vscode.workspace.openTextDocument(uri);
         await _commentDocument(doc, 'why');
@@ -663,8 +675,6 @@ async function cmdWhyFileFromExplorer(uri: vscode.Uri): Promise<void> {
         vscode.window.showErrorMessage(`Poly-Glot: Could not open file — ${err instanceof Error ? err.message : String(err)}`);
     }
 }
-
-// ─── Shared: Comment a TextDocument ───────────────────────────────────────────
 
 async function _commentDocument(doc: vscode.TextDocument, mode: 'comment' | 'why'): Promise<void> {
     const code = doc.getText();
@@ -679,14 +689,12 @@ async function _commentDocument(doc: vscode.TextDocument, mode: 'comment' | 'why
         await showProGate(`${languageId} language`);
         return;
     }
-
     if (mode === 'why' && !await hasPro()) {
         await showProGate('Why-comments');
         return;
     }
 
     const label = mode === 'why' ? 'Adding why-comments' : 'Commenting';
-
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: `Poly-Glot: ${label} ${fileName} (${aiGenerator.getModel()})…`, cancellable: false },
         async () => {
@@ -717,8 +725,6 @@ async function _commentDocument(doc: vscode.TextDocument, mode: 'comment' | 'why
     );
 }
 
-// ─── Command: Explain Code ────────────────────────────────────────────────────
-
 async function cmdExplainCode(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
@@ -736,13 +742,11 @@ async function cmdExplainCode(): Promise<void> {
     });
 }
 
-// ─── Command: Configure API Key ───────────────────────────────────────────────
-
 async function cmdConfigureApiKey(): Promise<void> {
     const provider = await vscode.window.showQuickPick(
         [
-            { label: '$(cloud) OpenAI',    description: 'GPT-4.1, GPT-4.1 Mini, GPT-4o, o3…',          value: 'openai'    },
-            { label: '$(cloud) Anthropic', description: 'Claude Sonnet 4, Claude Opus 4, Haiku 4…',     value: 'anthropic' },
+            { label: '$(cloud) OpenAI',    description: 'GPT-4.1, GPT-4.1 Mini, GPT-4o, o3…',           value: 'openai'    },
+            { label: '$(cloud) Anthropic', description: 'Claude Sonnet 4, Claude Opus 4, Haiku 4…',      value: 'anthropic' },
             { label: '$(cloud) Google',    description: 'Gemini 2.5 Flash, Gemini 2.5 Pro, Flash Lite…', value: 'google'   },
         ],
         { title: 'Poly-Glot: Select AI Provider', placeHolder: 'Choose your provider' },
@@ -787,34 +791,37 @@ async function cmdConfigureApiKey(): Promise<void> {
     vscode.window.showInformationMessage(`✅ Poly-Glot: ${provName} configured!`);
 }
 
-// ─── Command: Configure License Token ────────────────────────────────────────
-
 async function cmdConfigureLicenseToken(): Promise<void> {
-    const current = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '');
+    const currentToken  = extContext.globalState.get<string>('pg.sessionToken', '');
+    const currentLicense = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '');
+    const current = currentToken || currentLicense;
 
     const token = await vscode.window.showInputBox({
-        title:          'Poly-Glot: Enter Pro License Token',
-        prompt:         'Find your token at poly-glot.ai → Sign In → your account',
-        placeHolder:    'Paste your license token here…',
+        title:          'Poly-Glot: Enter Session / License Token',
+        prompt:         'Sign in at poly-glot.ai → copy your session token. Or use your Pro license token.',
+        placeHolder:    'Paste your token here…',
         value:          current,
         password:       true,
         ignoreFocusOut: true,
         validateInput:  val => val && val.trim().length > 10 ? null : 'Token must be at least 10 characters',
     });
-    if (token === undefined) return; // dismissed
+    if (token === undefined) return;
 
     const trimmed = token.trim();
+
+    // Store in both places for compatibility: globalState (preferred) + settings (legacy)
+    await extContext.globalState.update('pg.sessionToken', trimmed || '');
     await vscode.workspace.getConfiguration('polyglot').update('licenseToken', trimmed, vscode.ConfigurationTarget.Global);
 
-    // Reset cached plan so it's re-verified on next use
+    // Reset plan cache so it re-verifies
     _cachedPlan = undefined;
 
     if (!trimmed) {
-        vscode.window.showInformationMessage('Poly-Glot: License token cleared. Using Free plan.');
+        vscode.window.showInformationMessage('Poly-Glot: Token cleared. Using Free plan.');
+        updateStatusBarUsage(false);
         return;
     }
 
-    // Verify immediately and show result
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Poly-Glot: Verifying token…', cancellable: false },
         async () => {
@@ -823,67 +830,49 @@ async function cmdConfigureLicenseToken(): Promise<void> {
                 const label = plan.charAt(0).toUpperCase() + plan.slice(1);
                 vscode.window.showInformationMessage(`✅ Poly-Glot: ${label} plan activated! All features unlocked.`);
                 flashStatusBar(`$(star) Poly-Glot ${label}`, 6000);
+                updateStatusBarUsage(true);
             } else {
                 vscode.window.showWarningMessage(
-                    'Poly-Glot: Token could not be verified. Check your token at poly-glot.ai.',
-                    'Open poly-glot.ai',
+                    'Poly-Glot: Token saved (Free plan). Upgrade to Pro at poly-glot.ai.',
+                    'See Pro Plans',
                 ).then(action => {
-                    if (action === 'Open poly-glot.ai') vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai'));
+                    if (action === 'See Pro Plans') vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
                 });
+                updateStatusBarUsage(false);
             }
         },
     );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+async function requireApiKey(): Promise<boolean> {
+    if (await aiGenerator.isConfigured()) return true;
+    const action = await vscode.window.showErrorMessage(
+        'Poly-Glot: API key not configured.',
+        'Configure Now',
+    );
+    if (action === 'Configure Now') await cmdConfigureApiKey();
+    return false;
+}
 
 async function runWithProgress(title: string, fn: () => Promise<void>): Promise<void> {
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: `Poly-Glot: ${title}`, cancellable: false },
         async () => {
-            try {
-                await fn();
-            } catch (err: unknown) {
+            try { await fn(); }
+            catch (err: unknown) {
                 vscode.window.showErrorMessage(`Poly-Glot: ${err instanceof Error ? err.message : String(err)}`);
             }
         },
     );
 }
 
-async function applyResult(
-    editor: vscode.TextEditor,
-    selection: vscode.Selection,
-    commentedCode: string,
-    cost: number,
-    modeLabel: string,
-): Promise<void> {
-    const insertInline = vscode.workspace.getConfiguration('polyglot').get<boolean>('insertInline', true);
-    const languageId   = editor.document.languageId;
-
-    if (insertInline) {
-        await editor.edit(eb => {
-            if (selection.isEmpty) {
-                eb.replace(
-                    new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(editor.document.getText().length)),
-                    commentedCode,
-                );
-            } else {
-                eb.replace(selection, commentedCode);
-            }
-        });
-        flashStatusBar(`$(check) $${cost.toFixed(4)} — ${modeLabel}`);
-        vscode.window.showInformationMessage(`✅ Poly-Glot: ${modeLabel} ($${cost.toFixed(4)})`);
-    } else {
-        showResultPanel(commentedCode, languageId, cost);
-    }
-}
-
 function flashStatusBar(message: string, durationMs = 8000): void {
     statusBarItem.text            = message;
     statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     setTimeout(() => {
-        statusBarItem.text            = '$(comment) Poly-Glot';
-        statusBarItem.backgroundColor = undefined;
+        hasPro().then(isPro => updateStatusBarUsage(isPro));
     }, durationMs);
 }
 
