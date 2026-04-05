@@ -1703,7 +1703,7 @@
       <!-- See Plans (hidden on small mobile) -->
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ See Plans</a>
       <!-- Sign In — always visible -->
-      <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
+      <button class="pg2-nav__signin" id="headerSignInBtn" onclick="pgSignIn('header');">Sign In</button>
     </div>
   </div>
 </nav>
@@ -1717,6 +1717,7 @@
   <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
   <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension<span class="pg2-coming-soon">Soon</span></a>
   <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
+  <a href="#" class="pg2-nav__mobile-link" id="mobileSignInBtn" onclick="closeMobileMenu(); pgSignIn('mobile-menu'); return false;" style="border-top:1px solid rgba(125,211,252,.12);margin-top:6px;padding-top:14px;color:var(--accent);">🔑 Sign In</a>
 </div>
 <script>
   (function() {
@@ -1749,6 +1750,27 @@
     var btn = document.getElementById('pg2NavHamburger');
     if (menu) menu.classList.remove('open');
     if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+  }
+
+  /* ── Robust Sign In handler — works even if auth script hasn't finished
+        loading yet. Queues the open and retries every 50ms for up to 3s. ── */
+  function pgSignIn(source) {
+    if (typeof gtag === 'function') gtag('event', 'header_signin_click');
+    if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+      window.PolyGlotAuth.openLoginModal(source || 'header');
+      return;
+    }
+    // Auth not ready yet — poll until it is
+    var waited = 0;
+    var poll = setInterval(function() {
+      waited += 50;
+      if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+        clearInterval(poll);
+        window.PolyGlotAuth.openLoginModal(source || 'header');
+      } else if (waited >= 3000) {
+        clearInterval(poll);
+      }
+    }, 50);
   }
 </script>
 
@@ -1929,7 +1951,7 @@ for (const user of users) {
     </a>
     <div style="font-size:12px;color:#64748b;margin-top:8px;">
       Already have an account?
-      <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('signin-banner');}else{var b=document.getElementById('headerSignInBtn');if(b)b.click();} return false;"
+      <a href="#" onclick="pgSignIn('signin-banner'); return false;"
          style="color:#a78bfa;text-decoration:none;font-weight:600;">Sign in →</a>
     </div>
   </div>
