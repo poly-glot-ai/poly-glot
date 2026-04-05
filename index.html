@@ -2218,19 +2218,52 @@ for (const user of users) {
 </div>
 <script>
 (function() {
+  // Debug overlay — shows scroll position and tap events on real device
+  var dbg = document.createElement('div');
+  dbg.id = 'pgScrollDebug';
+  dbg.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;background:rgba(0,0,0,0.85);color:#7dd3fc;font-size:12px;font-family:monospace;padding:10px 12px;border-radius:10px;z-index:99999;pointer-events:none;display:none;';
+  document.body.appendChild(dbg);
+
+  function showDbg(msg) {
+    dbg.style.display = 'block';
+    dbg.textContent = msg;
+    clearTimeout(dbg._t);
+    dbg._t = setTimeout(function() { dbg.style.display = 'none'; }, 5000);
+  }
+
+  window.addEventListener('scroll', function() {
+    dbg.style.display = 'block';
+    dbg.textContent = 'scrollY: ' + Math.round(window.scrollY);
+    clearTimeout(dbg._t);
+    dbg._t = setTimeout(function() { dbg.style.display = 'none'; }, 3000);
+  }, { passive: true });
+
   function pgScrollToCli() {
     var el = document.getElementById('pg-cli-section');
-    if (!el) return;
+    if (!el) { showDbg('ERROR: #pg-cli-section not found'); return; }
     var navEl = document.querySelector('.pg2-nav');
     var navH = navEl ? navEl.getBoundingClientRect().height : 64;
-    var top = el.getBoundingClientRect().top + window.pageYOffset - navH - 8;
+    var top = Math.round(el.getBoundingClientRect().top + window.pageYOffset - navH - 8);
+    showDbg('TAP → scrolling to ' + top + ' (navH=' + navH + ')');
+    history.replaceState(null, '', window.location.pathname + window.location.search);
     window.scrollTo(0, top);
+    // Double-check after 300ms in case iOS overrides
+    setTimeout(function() {
+      showDbg('300ms check: scrollY=' + Math.round(window.scrollY) + ' (target=' + top + ')');
+      if (Math.abs(window.scrollY - top) > 100) {
+        showDbg('SNAP-BACK DETECTED! scrollY=' + Math.round(window.scrollY) + ' target=' + top + ' — forcing again');
+        window.scrollTo(0, top);
+      }
+    }, 300);
   }
+
   var btn = document.getElementById('pgCliPillBtn');
   if (btn) {
     btn.addEventListener('click', pgScrollToCli);
     btn.addEventListener('mouseover', function() { btn.style.borderColor='rgba(124,58,237,0.5)'; btn.style.color='#a78bfa'; });
     btn.addEventListener('mouseout',  function() { btn.style.borderColor='rgba(255,255,255,0.1)'; btn.style.color='#94a3b8'; });
+  } else {
+    showDbg('ERROR: #pgCliPillBtn not found on page');
   }
 })();
 </script>
