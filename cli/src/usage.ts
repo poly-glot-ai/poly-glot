@@ -1,15 +1,14 @@
 /**
- * usage.ts — Monthly file-usage tracking with server-side quota enforcement.
- *
- * Local storage:  ~/.config/polyglot/usage.json  { "YYYY-MM": number }
+ * CLI usage tracking — Poly-Glot
+ * ─────────────────────────────────
  * Server storage: Cloudflare KV  usage:{email}:{YYYY-MM}  (authoritative)
+ * Local storage:  ~/.config/polyglot/usage.json           (fast fallback)
  *
- * Rules:
  *  - Free plan: 50 files per calendar month (UTC).
- *  - Pro/Team/Enterprise: unlimited (caller skips this module entirely).
+ *  - Pro/Team/Enterprise: unlimited (limit === null from server).
  *  - Server is authoritative — local is a fast fallback for offline use.
- *  - assertQuota() checks server first (4s timeout), falls back to local.
- *  - incrementUsage() updates local immediately, syncs server in background.
+ *  - CI bypass: login gate is skipped in CI but usage is still tracked
+ *    server-side when a sessionToken is present.
  */
 
 import * as fs   from 'fs';
@@ -17,28 +16,25 @@ import * as path from 'path';
 import * as os   from 'os';
 import { loadConfig } from './config';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 export const FREE_MONTHLY_LIMIT = 50;
 
 const AUTH_API   = 'https://poly-glot.ai/api';
 const USAGE_DIR  = path.join(os.homedir(), '.config', 'polyglot');
 const USAGE_FILE = path.join(USAGE_DIR, 'usage.json');
 
-const UPGRADE_PRO_URL  = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3';
-const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3';
+// UTM-tagged links so CLI conversions are attributed correctly in Stripe
+const UPGRADE_PRO_URL  = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=cli';
+const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3&client_reference_id=cli-team';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type UsageStore = Record<string, number>; // { "2026-04": 12 }
 
 interface ServerUsageResponse {
-    ok?:       boolean;        // present on track-usage responses
+    ok?:       boolean;
     used:      number;
     limit:     number | null;  // null = unlimited (Pro/Team)
     remaining: number | null;
-    allowed?:  boolean;
-    month?:    string;
     plan?:     string;
     error?:    string;
 }
@@ -126,7 +122,6 @@ async function incrementServerUsage(count = 1): Promise<ServerUsageResponse | nu
             body:    JSON.stringify({ token: cfg.sessionToken, count }),
         });
         if (res.status === 403 || res.status === 429) {
-            // Server says limit reached — sync local and surface to caller
             try {
                 const data = await res.json() as ServerUsageResponse;
                 syncLocalToServer(data.used);
@@ -151,8 +146,11 @@ function syncLocalToServer(serverCount: number): void {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Increment the usage counter — updates local immediately, syncs server in background.
- * Call this AFTER a file is successfully written.
+ * Increment the usage counter.
+ * Always updates local immediately; syncs to server when a session exists.
+ * NOTE: In CI environments with POLYGLOT_LICENSE_TOKEN, we still track
+ * server-side if a sessionToken is present — the login gate bypass does
+ * NOT bypass usage tracking.
  */
 export async function incrementUsage(count = 1): Promise<void> {
     // Update local immediately for responsiveness
@@ -181,18 +179,15 @@ export async function incrementUsage(count = 1): Promise<void> {
 
         const remaining = Math.max(0, (result.limit ?? FREE_MONTHLY_LIMIT) - result.used);
 
-        // Hard stop — server rejected the increment (403)
         if (!result.ok && remaining <= 0) {
             printHardStop(result.used, result.limit ?? FREE_MONTHLY_LIMIT);
             process.exit(1);
         }
-
-        // Soft warnings — shown after successful generation
         if (remaining <= 0) {
             printHardStop(result.used, result.limit ?? FREE_MONTHLY_LIMIT);
             process.exit(1);
         } else if (remaining <= 5) {
-            printSoftWarning(remaining, true); // urgent
+            printSoftWarning(remaining, true);
         } else if (remaining <= 10) {
             printSoftWarning(remaining, false);
         }
@@ -203,16 +198,13 @@ export async function incrementUsage(count = 1): Promise<void> {
 
 /**
  * Assert that the user still has quota remaining before processing files.
- * Server-first (authoritative), falls back to local if offline.
- * Prints upgrade CTAs with direct Stripe links and exits(1) if over limit.
+ * Server-first (authoritative), falls back to local if offline or no session.
  */
 export async function assertQuota(filesNeeded = 1): Promise<void> {
-    // ── Try server first ─────────────────────────────────────────────────────
     const server = await getServerUsage();
 
     if (server) {
-        // Pro/Team/Enterprise: unlimited
-        if (server.limit === null) return;
+        if (server.limit === null) return; // Pro/Team — unlimited
 
         const used      = server.used;
         const limit     = server.limit;
@@ -222,18 +214,16 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
             printHardStop(used, limit);
             process.exit(1);
         }
-
         if (filesNeeded > remaining) {
             printBatchExceeds(filesNeeded, remaining, used, limit);
             process.exit(1);
         }
-
-        if (remaining <= 5)  { printSoftWarning(remaining, true);  }
+        if (remaining <= 5)       { printSoftWarning(remaining, true);  }
         else if (remaining <= 10) { printSoftWarning(remaining, false); }
         return;
     }
 
-    // ── Fallback: local (offline) ────────────────────────────────────────────
+    // ── Fallback: local (no session or server unreachable) ───────────────────
     const used      = getMonthlyUsage();
     const remaining = FREE_MONTHLY_LIMIT - used;
 
@@ -241,13 +231,11 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
         printHardStop(used, FREE_MONTHLY_LIMIT);
         process.exit(1);
     }
-
     if (filesNeeded > remaining) {
         printBatchExceeds(filesNeeded, remaining, used, FREE_MONTHLY_LIMIT);
         process.exit(1);
     }
-
-    if (remaining <= 5)  { printSoftWarning(remaining, true);  }
+    if (remaining <= 5)       { printSoftWarning(remaining, true);  }
     else if (remaining <= 10) { printSoftWarning(remaining, false); }
 }
 
@@ -278,8 +266,8 @@ function printBatchExceeds(filesNeeded: number, remaining: number, used: number,
 }
 
 function printSoftWarning(remaining: number, urgent = false): void {
-    const color  = urgent ? '\x1b[31m' : '\x1b[33m'; // red if ≤5, yellow if ≤10
-    const icon   = urgent ? '🚨' : '⚠️ ';
+    const color = urgent ? '\x1b[31m' : '\x1b[33m';
+    const icon  = urgent ? '🚨' : '⚠️ ';
     console.warn(
         `\n  ${color}${icon}  Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m${color} this month\x1b[0m` +
         `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
