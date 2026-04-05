@@ -43,7 +43,7 @@
   var POLL_INTERVAL_MS = 60 * 1000;           // 60 seconds
 
   // ── Known floors (module scope — applied to BOTH cached and fresh data) ──────
-  // These are verified "Total Acquisition Till Date" values from publisher dashboards.
+  // These are verified "Total Installs Till Date" values from publisher dashboards.
   // The public APIs undercount vs dashboard by ~48 hrs; floors ensure we never
   // animate backwards to a stale API value.
   var VS_FLOOR     = 160;  // VS Code "Total Acquisition" (verified Apr 4 2026 — dashboard shows 104, public API lags ~48hrs)
