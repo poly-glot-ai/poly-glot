@@ -323,6 +323,51 @@ async function showProGate(feature) {
     }
     return false;
 }
+// ─── Version check ───────────────────────────────────────────────────────────
+async function checkForNewerVersion(context) {
+    try {
+        const currentVersion = context.extension.packageJSON.version;
+        const lastChecked = extContext.globalState.get('pg.versionCheckedAt', 0);
+        const now = Date.now();
+        // Only check once every 24 hours
+        if (now - lastChecked < 24 * 60 * 60 * 1000)
+            return;
+        await extContext.globalState.update('pg.versionCheckedAt', now);
+        // Fetch latest version from VS Code Marketplace via our proxy
+        const res = await fetch(`${AUTH_API}/vsc-proxy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'User-Agent': 'poly-glot-extension/1.0' },
+            body: JSON.stringify({
+                filters: [{ criteria: [{ filterType: 7, value: 'poly-glot-ai.poly-glot' }] }],
+                flags: 914,
+            }),
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok)
+            return;
+        const data = await res.json();
+        const latestVersion = data?.results?.[0]?.extensions?.[0]?.versions?.[0]?.version || '';
+        if (!latestVersion || latestVersion === currentVersion)
+            return;
+        // Compare versions — if current < latest, show update prompt
+        const [cMaj, cMin, cPatch] = currentVersion.split('.').map(Number);
+        const [lMaj, lMin, lPatch] = latestVersion.split('.').map(Number);
+        const isOutdated = lMaj > cMaj ||
+            (lMaj === cMaj && lMin > cMin) ||
+            (lMaj === cMaj && lMin === cMin && lPatch > cPatch);
+        if (!isOutdated)
+            return;
+        // Show non-blocking notification
+        const choice = await vscode.window.showWarningMessage(`🦜 Poly-Glot v${latestVersion} is available (you have v${currentVersion}). Update now to get the latest features and security fixes.`, 'Update Now', 'Later');
+        if (choice === 'Update Now') {
+            // Open the Extensions view filtered to poly-glot
+            await vscode.commands.executeCommand('workbench.extensions.action.showExtensionsWithIds', ['poly-glot-ai.poly-glot']);
+        }
+    }
+    catch {
+        // Non-fatal — version check is best-effort
+    }
+}
 // ─── First-run onboarding ─────────────────────────────────────────────────────
 /**
  * Called once on activate. If the user has no session token, show a
@@ -392,6 +437,8 @@ function activate(context) {
     }
     // First-run onboarding — fires once, non-blocking, captures legacy users
     maybeShowFirstRunOnboarding().catch(() => { });
+    // Version check — warn if a newer version is available on the marketplace
+    checkForNewerVersion(context).catch(() => { });
 }
 function deactivate() {
     statusBarItem?.dispose();
