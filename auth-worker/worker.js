@@ -795,7 +795,8 @@ export default {
     const pathname = url.pathname.replace(/\/$/, '');
 
     // Stripe webhook — skip version check (not a CLI client)
-    if (pathname === '/api/auth/webhook/stripe') {
+    // Handle both the canonical path AND the legacy path already configured in Stripe
+    if (pathname === '/api/auth/webhook/stripe' || pathname === '/api/auth/stripe-webhook') {
       return handleStripeWebhook(request, env);
     }
 
