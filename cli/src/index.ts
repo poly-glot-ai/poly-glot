@@ -81,7 +81,9 @@ let _cachedPlan: string | null | undefined = undefined;
 async function verifyLicense(token: string): Promise<string | null> {
     if (_cachedPlan !== undefined) return _cachedPlan;
     try {
-        const res = await fetch(`${AUTH_API}/verify`, {
+        // Use /check-plan — non-destructive, never consumes the token,
+        // always reads the live plan:email from KV (picks up post-payment upgrades).
+        const res = await fetch(`${AUTH_API}/check-plan`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
             body:    JSON.stringify({ token }),
@@ -105,7 +107,10 @@ async function verifyLicense(token: string): Promise<string | null> {
  * Checks POLYGLOT_LICENSE_TOKEN env var first (for CI/CD), then cfg.licenseToken.
  */
 async function hasPro(cfg: Config): Promise<boolean> {
-    const token = cfg.licenseToken || '';
+    // Prefer sessionToken (from `poly-glot login`) — it is the authoritative
+    // long-lived token stored under session: in KV.
+    // Fall back to licenseToken (legacy / manual entry).
+    const token = cfg.sessionToken || cfg.licenseToken || '';
     if (!token) return false;
     const plan = await verifyLicense(token);
     return plan !== null && PRO_PLANS.includes(plan);
@@ -390,7 +395,8 @@ async function main(): Promise<void> {
     if (cmd === 'config')   { await runConfig(args.slice(1)); return; }
 
     // ── Login gate — require account before any real command ─────────────
-    // Exceptions: CI/CD (POLYGLOT_LICENSE_TOKEN or CI env), demo command
+    // isCI skips the INTERACTIVE login prompt only — usage tracking still
+    // runs server-side whenever cfg.sessionToken is present.
     const isCI         = !!process.env.CI || !!process.env.POLYGLOT_LICENSE_TOKEN;
     const hasSession   = !!cfg.sessionToken;
     const gatedCmds    = ['comment', 'why', 'both', 'bugs', 'refactor', 'test', 'explain'];
