@@ -14,7 +14,7 @@ const RED    = '\x1b[31m';
 const LINE   = '─'.repeat(56);
 
 // Read version from package.json in the same directory
-let VERSION = '2.1.23';
+let VERSION = '2.1.31';
 try {
   const pkg = require('./package.json');
   VERSION = pkg.version || VERSION;
