@@ -4482,14 +4482,7 @@ function initCommentGenerator() {
                 ? window.PolyGlotAuth.getToken()
                 : (localStorage.getItem('pg_session_token') || localStorage.getItem('pg_token') || '');
             if (!tok) return;
-            fetch(PG_USAGE_API, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                // count:0 trick — track-usage requires count≥1, use get-usage alias instead
-                // Actually use track-usage with count:0 won't work; call /api/auth/get-usage
-                body:    JSON.stringify({ token: tok, count: 0 }),
-            }).catch(function(){});
-            // Use the correct read-only endpoint
+            // Read-only: pull authoritative count without incrementing
             fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok))
                 .then(function(res){ return res.ok ? res.json() : null; })
                 .then(function(d){
