@@ -2209,6 +2209,17 @@ for (const user of users) {
   </div>
 </div>
 
+<!-- CLI callout — shown below the generator on all devices -->
+<div style="text-align:center;padding:18px 16px 4px;margin-top:-8px;">
+  <a href="#pg-cli-section"
+     style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:999px;text-decoration:none;color:#94a3b8;font-size:13px;font-weight:500;transition:border-color .2s,color .2s;"
+     onmouseover="this.style.borderColor='rgba(124,58,237,0.5)';this.style.color='#a78bfa';"
+     onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='#94a3b8';">
+    <span>⌨️</span>
+    <span>Prefer the terminal? <strong style="color:#c4b5fd;">CLI Tool v2.1.32 on npm</strong> — batch commenting, CI/CD &amp; scripting ↓</span>
+  </a>
+</div>
+
 <!-- ════════════════════════════════════════════════════════════
      SEE HOW IT WORKS — CLI DEMO
      ════════════════════════════════════════════════════════════ -->
@@ -2217,10 +2228,8 @@ for (const user of users) {
   <!-- Existing CLI demo section — preserved from live site -->
   <div class="overview-section overview-section-cli" id="pg-cli-section">
     <h2 class="overview-heading" id="cli-demo-heading">
-      <a href="#commentGenerator" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center;gap:0.35em;cursor:pointer;">
-        <span class="cli-icon">⌨️</span>
-        CLI Tool
-      </a>
+      <span class="cli-icon">⌨️</span>
+      CLI Tool
       <span class="live-badge">v<span data-live="npm-version">2.1.32</span> on npm</span>
     </h2>
     <p class="overview-text">Comment code from your terminal. <strong>poly-glot-ai-cli</strong> is a zero-dependency command-line tool for batch commenting, CI/CD pipelines, and scripting — powered by the same AI engine as the web app.</p>
