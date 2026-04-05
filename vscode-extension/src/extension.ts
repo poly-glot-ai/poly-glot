@@ -282,6 +282,17 @@ async function showUsageNudge(used: number, remaining: number): Promise<void> {
             vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
         }
     }
+    // Midpoint nudge — at file 25 (post-generation, user just saw value)
+    else if (used === Math.floor(FREE_LIMIT * 0.5)) {
+        const choice = await vscode.window.showInformationMessage(
+            `✅ Done — ${used} files used, ${remaining} remaining this month. Upgrade for unlimited.`,
+            'Upgrade for $9/mo',
+            'Dismiss',
+        );
+        if (choice === 'Upgrade for $9/mo') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        }
+    }
     // 80% warning
     else if (used === Math.floor(FREE_LIMIT * 0.8)) {
         const choice = await vscode.window.showWarningMessage(
