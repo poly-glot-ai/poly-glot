@@ -4536,6 +4536,13 @@ function initCommentGenerator() {
         }
     });
 
+    // Returns a human-readable reset date string, e.g. "May 1, 2026"
+    function usageResetDateStr() {
+        var now = new Date();
+        var resetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+        return resetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    }
+
     function renderUsageCounter() {
         var existing = document.getElementById('pg2UsageCounter');
         // Anchor: always append inside #inputPanel so it's visible and styled correctly.
@@ -4572,6 +4579,7 @@ function initCommentGenerator() {
         var color     = remaining <= 5  ? '#ef4444'
                       : remaining <= 10 ? '#f59e0b'
                       : '#22c55e';
+        var resetStr  = usageResetDateStr();
         var html = [
             '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:10px 14px;',
             'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);',
@@ -4583,11 +4591,12 @@ function initCommentGenerator() {
             '  <div style="background:rgba(255,255,255,.08);border-radius:4px;height:4px;overflow:hidden;">',
             '    <div style="height:4px;border-radius:4px;background:' + color + ';width:' + pct + '%;transition:width .4s;"></div>',
             '  </div>',
+            '  <div style="margin-top:5px;font-size:11px;color:#475569;">Resets ' + resetStr + '</div>',
             remaining <= 10 && remaining > 0
-                ? '  <div style="margin-top:6px;color:' + color + ';">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' remaining this month — <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">upgrade for unlimited ↑</a></div>'
+                ? '  <div style="margin-top:4px;color:' + color + ';">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' remaining — <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">upgrade for unlimited ↑</a></div>'
                 : '',
             remaining <= 0
-                ? '  <div style="margin-top:6px;color:#ef4444;">🔒 Monthly limit reached — <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro $9/mo ↗</a></div>'
+                ? '  <div style="margin-top:4px;color:#ef4444;">🔒 Monthly limit reached — <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro $9/mo ↗</a></div>'
                 : '',
             '</div>'
         ].join('');
@@ -4680,7 +4689,7 @@ function initCommentGenerator() {
                 '<div style="padding:28px 24px;text-align:center;">' +
                 '  <div style="font-size:36px;margin-bottom:12px;">🔒</div>' +
                 '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + FREE_MONTHLY_LIMIT + ' files used</div>' +
-                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets on the 1st of next month.</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets ' + usageResetDateStr() + '</div>' +
                 '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
@@ -4801,14 +4810,14 @@ function initCommentGenerator() {
                 var limitWarn = document.createElement('div');
                 limitWarn.id = 'pg2MonthlyLimitWarn';
                 limitWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#ef4444;padding:10px 14px;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2);';
-                limitWarn.innerHTML = '🔒 Monthly limit reached (' + FREE_MONTHLY_LIMIT + ' files). <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro — $9/mo with EARLYBIRD3 ↗</a>';
+                limitWarn.innerHTML = '🔒 Monthly limit reached (' + FREE_MONTHLY_LIMIT + ' files). Resets ' + usageResetDateStr() + '. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro — $9/mo with EARLYBIRD3 ↗</a>';
                 if (outputPanel) outputPanel.appendChild(limitWarn);
             } else if (newMonthlyUsed >= FREE_MONTHLY_LIMIT - 5) {
                 // ≤5 remaining — urgent red
                 var urgentWarn = document.createElement('div');
                 urgentWarn.id = 'pg2SoftWarn';
                 urgentWarn.style.cssText = 'margin:8px 12px 10px;text-align:center;font-size:12px;color:#ef4444;padding:8px 14px;background:rgba(239,68,68,.06);border-radius:8px;border:1px solid rgba(239,68,68,.15);';
-                urgentWarn.innerHTML = '🚨 <strong>' + (FREE_MONTHLY_LIMIT - newMonthlyUsed) + ' file' + (FREE_MONTHLY_LIMIT - newMonthlyUsed === 1 ? '' : 's') + ' remaining</strong> this month. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro ↗</a>';
+                urgentWarn.innerHTML = '🚨 <strong>' + (FREE_MONTHLY_LIMIT - newMonthlyUsed) + ' file' + (FREE_MONTHLY_LIMIT - newMonthlyUsed === 1 ? '' : 's') + ' remaining</strong> — resets ' + usageResetDateStr() + '. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro ↗</a>';
                 if (outputPanel) outputPanel.appendChild(urgentWarn);
             } else if (newMonthlyUsed >= FREE_MONTHLY_LIMIT - 10) {
                 // ≤10 remaining — soft yellow
