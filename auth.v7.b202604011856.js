@@ -625,10 +625,13 @@
     btn.disabled    = true;
     btn.textContent = 'Sending…';
 
+    var loginSource = '';
+    try { loginSource = sessionStorage.getItem('pg_source') || ''; } catch(e) {}
+
     fetch(AUTH_API + '/login', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email: email })
+      body:    JSON.stringify({ email: email, source: loginSource || 'website' })
     })
       .then(function (res) { return res.json().then(function(d){ return { httpOk: res.ok, status: res.status, data: d }; }); })
       .then(function (result) {
@@ -742,6 +745,46 @@
   function handleUrlParams() {
     var params = new URLSearchParams(window.location.search);
 
+    // ── ?checkout=success — user just paid via Stripe ─────────────────────
+    // Stripe success URL: https://poly-glot.ai/?checkout=success&email={CUSTOMER_EMAIL}
+    // We auto-trigger the magic-link login so they land signed in immediately.
+    if (params.get('checkout') === 'success') {
+      var checkoutEmail = decodeURIComponent(params.get('email') || '');
+      cleanUrl();
+
+      if (checkoutEmail) {
+        showToast('🎉 Payment received! Sending your sign-in link to ' + checkoutEmail + '…', 6000);
+        // Auto-send magic link so user lands signed in with their new plan
+        fetch(AUTH_API + '/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success' }),
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.ok) {
+              showToast('✅ Magic link sent to ' + checkoutEmail + ' — check your inbox to activate Pro!', 8000);
+              if (typeof gtag === 'function') gtag('event', 'checkout_success_magic_link_sent', { email: checkoutEmail });
+            } else {
+              // Couldn't auto-send — prompt them to log in manually
+              openModal();
+              showToast('🎉 Payment received! Sign in below to activate your Pro plan.', 6000);
+            }
+          })
+          .catch(function () { openModal(); });
+
+        // Show "activation" panel on the page
+        showCheckoutSuccessBanner(checkoutEmail);
+      } else {
+        // No email in URL — open login modal so they can sign in
+        cleanUrl();
+        showToast('🎉 Payment successful! Sign in to activate your Pro plan.', 6000);
+        setTimeout(function () { openModal(); }, 800);
+        if (typeof gtag === 'function') gtag('event', 'checkout_success_no_email');
+      }
+      return;
+    }
+
     // ── ?auth=expired ─────────────────────────────────────────────────────
     if (params.get('auth') === 'expired') {
       cleanUrl();
@@ -794,6 +837,9 @@
           } else {
             showToast('👋 Signed in! Python, JS & Java available free. Upgrade anytime for all 12 languages.', 6000);
           }
+
+          // Show session token panel so VS Code / CLI users can copy it
+          showSessionTokenPanel(magicToken, email, plan);
 
           if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan });
         })
@@ -1361,6 +1407,55 @@
   }
 
   /* ─────────────────────────────────────────────
+     Session token panel — shown after sign-in so
+     VS Code / CLI users can copy their token.
+  ───────────────────────────────────────────── */
+  function showSessionTokenPanel(token, email, plan) {
+    // Remove any existing panel
+    var existing = document.getElementById('pg-token-panel');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+    var isPaid = PAID_PLANS.indexOf(plan) !== -1;
+    var planLabel = isPaid ? (plan.charAt(0).toUpperCase() + plan.slice(1)) : 'Free';
+    var panelBg   = isPaid ? 'linear-gradient(135deg,#052e16 0%,#0f2027 100%)' : 'linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%)';
+    var accentColor = isPaid ? '#34d399' : '#7dd3fc';
+
+    var panel = document.createElement('div');
+    panel.id = 'pg-token-panel';
+    panel.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9998;background:' + panelBg + ';border:1px solid ' + accentColor + '33;border-radius:14px;padding:20px 22px;max-width:380px;width:calc(100vw - 48px);box-shadow:0 12px 40px rgba(0,0,0,0.55);font-family:Inter,sans-serif;animation:pg-slide-in .28s ease;';
+    panel.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+      + '<div style="font-size:15px;font-weight:700;color:#f1f5f9;">✅ Signed in' + (isPaid ? ' — ' + planLabel + ' active 🎉' : '') + '</div>'
+      + '<button onclick="this.closest('#pg-token-panel').remove()" style="background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:0 0 0 12px;line-height:1;">×</button>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">' + email + '</div>'
+      + (isPaid
+        ? '<div style="font-size:12px;color:' + accentColor + ';margin-bottom:12px;font-weight:600;">Copy your session token to activate Pro in VS Code or the CLI:</div>'
+        : '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy your session token to sync usage across devices (VS Code / CLI):</div>')
+      + '<div style="display:flex;gap:8px;align-items:center;">'
+      + '<input id="pg-token-input" type="password" readonly value="' + token + '" style="flex:1;background:#0d1117;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#e2e8f0;font-family:monospace;font-size:11px;outline:none;" />'
+      + '<button id="pg-token-show" onclick="var i=document.getElementById('pg-token-input');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':' 🙈'" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#94a3b8;cursor:pointer;font-size:13px;">👁</button>'
+      + '<button id="pg-token-copy" onclick="navigator.clipboard.writeText('' + token + '').then(function(){var b=document.getElementById('pg-token-copy');b.textContent='✓';b.style.background='#16a34a';setTimeout(function(){b.textContent='Copy';b.style.background='#1e293b';},2000);})" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 12px;color:#7dd3fc;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Copy</button>'
+      + '</div>'
+      + '<div style="margin-top:12px;font-size:11px;color:#475569;line-height:1.6;">'
+      + '<strong style="color:#94a3b8;">VS Code:</strong> Command Palette → <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#7dd3fc;">Poly-Glot: Configure License Token</code><br>'
+      + '<strong style="color:#94a3b8;">CLI:</strong> <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#7dd3fc;">poly-glot config --token &lt;token&gt;</code>'
+      + '</div>';
+    document.body.appendChild(panel);
+  }
+
+  function showCheckoutSuccessBanner(email) {
+    var existing = document.getElementById('pg-checkout-banner');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+    var banner = document.createElement('div');
+    banner.id = 'pg-checkout-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#052e16 0%,#0f2027 50%,#052e16 100%);border-bottom:1px solid rgba(52,211,153,.3);padding:14px 20px;text-align:center;font-family:Inter,sans-serif;animation:pg-nudge-slide-up .4s ease;';
+    banner.innerHTML = '<span style="font-size:14px;font-weight:600;color:#f1f5f9;">🎉 Payment successful! Check <strong style="color:#34d399;">' + email + '</strong> for your sign-in link to activate Pro.</span>'
+      + ' <button onclick="this.closest('#pg-checkout-banner').remove()" style="margin-left:16px;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;vertical-align:middle;">×</button>';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+
+  /* ─────────────────────────────────────────────
      Public API — window.PolyGlotAuth
   ───────────────────────────────────────────── */
   var PolyGlotAuth = {
@@ -1428,8 +1523,17 @@
     applyPlanGating(cachedPlan);
     if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
 
+    // Parse URL params once — used by handleUrlParams and source tracking
+    var params = new URLSearchParams(window.location.search);
+
     // 2. Check URL params first — magic link click takes highest priority
     handleUrlParams();
+
+    // 2b. Capture ?source= / ?utm_source= for attribution on magic-link sends
+    var urlSource = params.get('source') || params.get('utm_source') || '';
+    if (urlSource) {
+      try { sessionStorage.setItem('pg_source', urlSource); } catch(e) {}
+    }
 
     // 3. If no magic link in URL, silently re-validate the stored token via
     //    /refresh (non-destructive) to confirm it's still live and get
