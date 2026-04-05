@@ -524,14 +524,21 @@ async function checkForNewerVersion(context: vscode.ExtensionContext): Promise<v
  * Uses a globalState flag so it only fires ONCE per installation.
  */
 async function maybeShowFirstRunOnboarding(): Promise<void> {
-    const alreadyShown    = extContext.globalState.get<boolean>('pg.onboardingShown', false);
     const hasSession      = !!extContext.globalState.get<string>('pg.sessionToken', '');
     const hasLicenseToken = !!vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
 
-    if (alreadyShown || hasSession || hasLicenseToken) return;
+    // Never show to already signed-in users
+    if (hasSession || hasLicenseToken) return;
 
-    // Mark shown before the async prompt so it doesn't fire again if VS Code restarts mid-prompt
-    await extContext.globalState.update('pg.onboardingShown', true);
+    // v1.4.42+: track onboarding per-version so legacy users who dismissed
+    // the old (non-email) onboarding get the new email-first prompt once.
+    const ONBOARDING_VERSION = '1.4.42';
+    const shownForVersion = extContext.globalState.get<string>('pg.onboardingShownVersion', '');
+    if (shownForVersion >= ONBOARDING_VERSION) return;
+
+    // Mark shown for this version before the async prompt
+    await extContext.globalState.update('pg.onboardingShownVersion', ONBOARDING_VERSION);
+    await extContext.globalState.update('pg.onboardingShown', true); // keep legacy flag in sync
 
     // Small delay so VS Code UI is fully loaded
     await new Promise(r => setTimeout(r, 2000));
