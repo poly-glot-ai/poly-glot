@@ -1,3 +1,10 @@
+## [2.1.14] — 2026-04-05
+- 🐛 fix(cli/usage): UTM tags on Stripe URLs; CI env no longer bypasses usage tracking
+- 🐛 fix: close conversion funnel holes + UI polish [deploy]
+- 🐛 fix: require sign-up for try-it-free, fix all buttons + messages, fix VS Code counter
+
+---
+
 ## [2.1.13] — 2026-04-04
 - 🐛 fix: global server-side quota enforcement — all CLI usage tracked + CTA warnings
 - 🐛 fix: wire CLI usage enforcement to correct server endpoints
