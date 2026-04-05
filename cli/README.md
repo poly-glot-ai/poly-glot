@@ -25,7 +25,7 @@ poly-glot comment src/auth.js
 | **Team** | $29/mo | Unlimited | All 12 | All commands + shared team token |
 | **Enterprise** | Custom | Unlimited | All 12 | Everything + SLA + private deploy |
 
-> 🎁 Use code **`EARLYBIRD3`** for **50% off your first 3 months** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)
+> 🎁 Early bird: use code **`EARLYBIRD3`** at checkout to lock Pro at **$9/mo forever** (expires May 1, 2026) → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)
 
 ---
 

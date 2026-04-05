@@ -395,7 +395,7 @@ Yes — Poly-Glot uses whichever OpenAI, Anthropic, or Google key you configured
 The participant only registers if the extension is active and VS Code v1.95+ is installed. Try: Command Palette → `Developer: Reload Window`.
 
 **Can I use `/why` and `/both` without Pro?**
-No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — start a **14-day free trial**, use code **`EARLYBIRD3`** for 50% off your first 3 months.
+No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — use code **`EARLYBIRD3`** at checkout to lock Pro at **$9/mo forever** (expires May 1, 2026).
 
 **Does it work with VS Code Insiders?**
 Yes — any VS Code build ≥ 1.95 with Copilot Chat enabled works.
@@ -415,13 +415,13 @@ Your code and API keys are **100% private**:
 
 ---
 
-## 💎 Unlock Pro — 14-Day Free Trial + `EARLYBIRD3`
+## 💎 Unlock Pro — Lock in $9/mo Forever with `EARLYBIRD3`
 
 If you've tried the Pro features and want to unlock them permanently:
 
 1. Visit **[poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
-2. Choose a plan and enter code **`EARLYBIRD3`** at checkout
-3. Get **14 days completely free** — no charge until day 15
+2. Choose **Pro Monthly** and enter code **`EARLYBIRD3`** at checkout
+3. Lock Pro at **$9/mo forever** — even after Pro goes to $12/mo on May 1, 2026
 4. Copy your license token from your account dashboard
 5. In VS Code: Command Palette → `Poly-Glot: Configure License Token` → paste token → Pro activates instantly
 

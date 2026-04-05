@@ -304,7 +304,7 @@ ${'─'.repeat(54)}
   🔑  Shared API key pool — no OpenAI/Anthropic key needed
   💻  VS Code extension included
 
-  ${COLORS.bold}${COLORS.yellow}🎁 Early bird offer:${COLORS.reset} Use code ${COLORS.bold}EARLYBIRD3${COLORS.reset} for ${COLORS.bold}3 months free${COLORS.reset}
+  ${COLORS.bold}${COLORS.yellow}🎁 Early bird offer:${COLORS.reset} Use code ${COLORS.bold}EARLYBIRD3${COLORS.reset} to lock Pro at ${COLORS.bold}$9/mo forever${COLORS.reset} (expires May 1, 2026)
   Limited to the first 50 subscribers — grab it while it lasts.
 
   ${COLORS.cyan}→ Sign up at https://poly-glot.ai${COLORS.reset}
@@ -346,7 +346,7 @@ async function checkForUpdate(): Promise<void> {
             console.error(
                 `\n  \x1b[31m✗  poly-glot v${VERSION} is no longer supported\x1b[0m\n` +
                 `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to get the latest version (v${latest}).\x1b[0m` +
-                `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m for 50% off your first 3 months\x1b[0m\n` +
+                `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
                 `\n  \x1b[1m  Pro $9/mo   → \x1b[36mhttps://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3\x1b[0m` +
                 `\n  \x1b[1m  Team $29/mo → \x1b[36mhttps://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3\x1b[0m\n`
             );
@@ -427,7 +427,7 @@ ${COLORS.dim}It takes 30 seconds — just your email, no password needed.${COLOR
   • Pro (\$9/mo): All 12 languages · why-comments · both mode · unlimited files
   • Team (\$29/mo): 5 seats · team analytics
 
-${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} for 3 months free on any paid plan.${COLORS.reset}
+${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} to lock Pro at $9/mo forever (expires May 1, 2026).${COLORS.reset}
 `);
         const rl  = readline.createInterface({ input: process.stdin, output: process.stdout });
         const ans = await new Promise<string>(res => rl.question(`  Create your free account now? (Y/n) `, res));
@@ -659,7 +659,7 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
             console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
             if (!PRO_PLANS.includes(plan)) {
                 console.log(`  ${COLORS.dim}Free plan: 50 files/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
-                console.log(`  ${COLORS.yellow}🏷  Use code ${COLORS.reset}${COLORS.bold}EARLYBIRD3${COLORS.reset}${COLORS.yellow} for 50% off your first 3 months${COLORS.reset}`);
+                console.log(`  ${COLORS.yellow}🏷  Use code ${COLORS.reset}${COLORS.bold}EARLYBIRD3${COLORS.reset}${COLORS.yellow} to lock Pro at $9/mo forever (expires May 1, 2026)${COLORS.reset}`);
                 console.log(`  ${COLORS.bold}  Pro $9/mo   → ${COLORS.cyan}https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3${COLORS.reset}`);
                 console.log(`  ${COLORS.bold}  Team $29/mo → ${COLORS.cyan}https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3${COLORS.reset}\n`);
             }

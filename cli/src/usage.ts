@@ -261,7 +261,7 @@ function printHardStop(used: number, limit: number): void {
         `\n  \x1b[31m✗  Free plan limit reached — ${limit} files this month\x1b[0m\n` +
         `\n  \x1b[2mYou've used \x1b[0m\x1b[1m${used}/${limit}\x1b[0m\x1b[2m files on the Free plan for ${currentMonthLabel()}.\x1b[0m` +
         `\n  \x1b[2mResets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\x1b[2m · Upgrade for unlimited files.\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m for 50% off your first 3 months\x1b[0m\n` +
+        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n` +
         `\n  \x1b[2mAlready subscribed? Run: \x1b[0m\x1b[36mpoly-glot login\x1b[0m\n`
@@ -273,7 +273,7 @@ function printBatchExceeds(filesNeeded: number, remaining: number, used: number,
         `\n  \x1b[31m✗  Not enough quota for this batch\x1b[0m\n` +
         `\n  \x1b[2mThis batch needs \x1b[0m\x1b[1m${filesNeeded} files\x1b[0m\x1b[2m but you only have \x1b[0m\x1b[1m${remaining} remaining\x1b[0m\x1b[2m this month.\x1b[0m` +
         `\n  \x1b[2mUsed: \x1b[0m\x1b[1m${used}/${limit}\x1b[0m\x1b[2m · Resets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m for 50% off your first 3 months\x1b[0m\n` +
+        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n` +
         `\n  \x1b[2mAlready subscribed? Run: \x1b[0m\x1b[36mpoly-glot login\x1b[0m\n`
@@ -286,7 +286,7 @@ function printSoftWarning(remaining: number, urgent = false): void {
     console.warn(
         `\n  ${color}${icon}  Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m${color} this month\x1b[0m` +
         `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m for 50% off your first 3 months\x1b[0m\n` +
+        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n`
     );

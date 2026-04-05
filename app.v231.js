@@ -2610,7 +2610,7 @@ function initializeAISettings() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Explain Code</strong> gives you deep analysis — complexity, bugs, doc quality score — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">Upgrade to Pro — $9/mo ↗</a>' +
                 '  <div style="margin-top:12px;font-size:12px;color:#64748b;">Use <strong>Doc Comments</strong> above for free unlimited generation.</div>' +
@@ -2688,7 +2688,7 @@ function initializeAISettings() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Why Comments</strong> explain the intent & reasoning behind your code — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +
@@ -4562,7 +4562,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:36px;margin-bottom:12px;">🔒</div>' +
                 '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + FREE_MONTHLY_LIMIT + ' files used</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets on the 1st of next month.</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +
@@ -4596,7 +4596,7 @@ function initCommentGenerator() {
                     '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                     '    <strong style="color:#a78bfa;">' + lockedName.charAt(0).toUpperCase() + lockedName.slice(1) + '</strong> is available on the Pro plan.' +
                     '  </div>' +
-                    '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                    '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                     '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                     '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                     '    Upgrade to Pro — $9/mo ↗' +
@@ -4941,7 +4941,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
                 '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Copy is a Pro feature</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to copy documented files to your clipboard.</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
                 '</div>'
@@ -4989,7 +4989,7 @@ function initCommentGenerator() {
                 '  <div style="font-size:32px;margin-bottom:10px;">⭐</div>' +
                 '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Download is a Pro feature</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Upgrade to Pro to download documented files.</div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> for 3 months free</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:14px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>' +
                 '</div>'
@@ -5189,7 +5189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
                 '    <strong style="color:#a78bfa;">Doc + Why Comments</strong> runs a two-pass generation — doc-comments and intent comments together — available on Pro.' +
                 '  </div>' +
-                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> for 50% off your first 3 months</div>' +
+                '  <div style="font-size:12px;color:#f59e0b;margin-bottom:16px;">🏷 Use code <strong>EARLYBIRD3</strong> to lock Pro at <strong>$9/mo forever</strong> (expires May 1, 2026)</div>' +
                 '  <a href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3" target="_blank" ' +
                 '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
                 '    Upgrade to Pro — $9/mo ↗' +

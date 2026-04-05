@@ -9,7 +9,7 @@
 
 > Thanks for being one of our **1,200+ early CLI users**. The full platform is now open for subscriptions.
 >
-> 🎁 **Early bird offer** — use code **EARLYBIRD3** at checkout for **3 months completely free** on any paid plan.
+> 🎁 **Early bird offer** — use code **EARLYBIRD3** at Pro Monthly checkout to lock Pro at **$9/mo forever** (expires May 1, 2026 — after that Pro goes to $12/mo).
 > ⚡ Limited to the first 50 subscribers — [grab it now →](https://poly-glot.ai/#pg-pricing-section)
 
 ---
@@ -61,7 +61,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 | **Price** | **$0/mo** | **$9/mo** | **$29/mo** | **Contact us** |
 | | [Get started →](https://poly-glot.ai) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [hwmoses2@icloud.com](mailto:hwmoses2@icloud.com) |
 
-> 🎁 Use code **EARLYBIRD3** at checkout — 3 months free on Pro or Team. [See plans →](https://poly-glot.ai/#pg-pricing-section)
+> 🎁 Use code **EARLYBIRD3** at Pro Monthly checkout to lock Pro at **$9/mo forever** (expires May 1, 2026). [See plans →](https://poly-glot.ai/#pg-pricing-section)
 
 ---
 

@@ -34,7 +34,7 @@ ${LINE}
   ${BOLD}${CYAN}Pro ($9/mo): ${RESET}  All 12 languages · why + both modes · unlimited · no API key needed
 
   ${YELLOW}${BOLD}🎁 Early bird offer:${RESET} Use code ${BOLD}EARLYBIRD3${RESET} at checkout
-  ${YELLOW}   → 3 months completely free · limited to first 50 subscribers${RESET}
+  ${YELLOW}   → lock Pro at $9/mo forever (expires May 1, 2026)${RESET}
 
   ${CYAN}→ Sign up at https://poly-glot.ai${RESET}
 

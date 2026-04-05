@@ -51,7 +51,7 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
 == PRICING ==
 - Free tier: doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month
 - Pro: $9/month — WHY-comments, Both mode, all 12 languages, unlimited files
-- Promo code EARLYBIRD3 = 3 months free
+- Promo code EARLYBIRD3 = Pro locked at $9/mo forever (expires May 1, 2026, Pro goes to $12/mo after)
 - Get Pro at poly-glot.ai/#pg-pricing-section
 
 == VS CODE EXTENSION ==
@@ -109,11 +109,11 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
     },
     {
       patterns: [/why.?comment|reasoning|intent|decision|trade.?off/i],
-      answer: `**WHY-comments** explain *why* code was written a certain way — not what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample: \`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** Get 3 months free with code **EARLYBIRD3** at [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section).`,
+      answer: `**WHY-comments** explain *why* code was written a certain way — not what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample: \`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** Get locked at $9/mo forever with code **EARLYBIRD3** (expires May 1, 2026) at [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section).`,
     },
     {
       patterns: [/price|pricing|cost|plan|pro|free|paid|subscription|earlybird/i],
-      answer: `**Pricing:**\n\n🆓 **Free** — doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month\n💎 **Pro** — $9/month — WHY-comments, Both mode, all 12 languages, unlimited\n\n🎉 Use code **EARLYBIRD3** for **3 months free**!\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**Pricing:**\n\n🆓 **Free** — doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month\n💎 **Pro** — $9/month — WHY-comments, Both mode, all 12 languages, unlimited\n\n🎁 Early bird: use code **EARLYBIRD3** at Pro Monthly checkout to lock Pro at **$9/mo forever** (expires May 1, 2026).\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       patterns: [/language|support|java(?!script|doc)|python|typescript|cpp|c\+\+|csharp|c#|go|rust|ruby|php|swift|kotlin/i],
