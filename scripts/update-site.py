@@ -260,13 +260,13 @@ html = re.sub(
     html
 )
 
-# 2i. Ensure live-data.v11.js is referenced (upgrades any older version reference)
-if 'src="live-data.v11.js"' not in html:
+# 2i. Ensure live-data.v12.js is referenced (upgrades any older version reference)
+if 'src="live-data.v12.js"' not in html:
     import re as _re
     html = _re.sub(r'<script[^>]+src="live-data[^"]*\.js"[^>]*></script>\n?', '', html)
     html = html.replace(
         '</body>',
-        '<script defer src="live-data.v11.js"></script>\n</body>',
+        '<script defer src="live-data.v12.js"></script>\n</body>',
         1
     )
 
@@ -277,7 +277,7 @@ else:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2j. Auto-update VS_FLOOR and OVX_FLOOR across ALL three floor files:
-#       1. live-data.v11.js     — browser counter (single source of truth)
+#       1. live-data.v12.js     — browser counter (single source of truth)
 #       2. dashboard/index.html — health dashboard Math.max() floor
 #       3. scripts/update-site.py (self) — minimum floor constant here
 #
@@ -288,7 +288,7 @@ else:
 # ─────────────────────────────────────────────────────────────────────────────
 import re as _re2
 
-LIVE_DATA_FILE = "live-data.v11.js"
+LIVE_DATA_FILE = "live-data.v12.js"
 DASHBOARD_FILE  = "dashboard/index.html"
 SELF_FILE       = "scripts/update-site.py"
 
@@ -305,7 +305,7 @@ else:
     vscode_combined = max(_HARDCODED_VS_FLOOR, vscode_combined)
     print(f"  ℹ️  VS Code effective   : {vscode_combined} (floor-guarded public API)")
 
-# ── 1. live-data.v11.js ──────────────────────────────────────────────────────
+# ── 1. live-data.v12.js ──────────────────────────────────────────────────────
 try:
     with open(LIVE_DATA_FILE, "r", encoding="utf-8") as f:
         ld = f.read()
@@ -395,7 +395,7 @@ except Exception as e:
     new_ovx_floor = ovx_installs
 
 # ── 2. dashboard/index.html ──────────────────────────────────────────────────
-# Dashboard has its own Math.max(N, ...) floor — keep it in sync with live-data.v11.js
+# Dashboard has its own Math.max(N, ...) floor — keep it in sync with live-data.v12.js
 try:
     with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
         db = f.read()
