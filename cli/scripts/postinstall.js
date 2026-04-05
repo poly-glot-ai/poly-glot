@@ -10,33 +10,58 @@ const CYAN   = '\x1b[36m';
 const GREEN  = '\x1b[32m';
 const YELLOW = '\x1b[33m';
 const DIM    = '\x1b[2m';
-const LINE   = '─'.repeat(54);
+const RED    = '\x1b[31m';
+const LINE   = '─'.repeat(56);
+
+// Read version from package.json in the same directory
+let VERSION = '2.1.23';
+try {
+  const pkg = require('./package.json');
+  VERSION = pkg.version || VERSION;
+} catch(e) {
+  try {
+    const pkg = require('../package.json');
+    VERSION = pkg.version || VERSION;
+  } catch(e2) {}
+}
 
 console.log(`
-${GREEN}${BOLD}🦜 Thanks for installing Poly-Glot AI CLI v1.6.1!${RESET}
+${GREEN}${BOLD}🦜 Poly-Glot AI CLI v${VERSION} installed!${RESET}
 ${LINE}
 
-  ${BOLD}Get started in 30 seconds:${RESET}
+  ${BOLD}Step 1 — Create your free account (30 seconds):${RESET}
 
-  ${DIM}# Set your API key (OpenAI or Anthropic)${RESET}
-  ${CYAN}poly-glot config${RESET}
+  ${CYAN}${BOLD}poly-glot login${RESET}
 
-  ${DIM}# Add doc-comments to any file${RESET}
-  ${CYAN}poly-glot comment src/app.py${RESET}
+  ${DIM}Enter your email → get a magic link → you're in.${RESET}
+  ${DIM}No password. No credit card. 50 files/month free.${RESET}
 
-  ${DIM}# Add why-comments explaining intent & trade-offs (Pro)${RESET}
-  ${CYAN}poly-glot comment src/app.py --why${RESET}
+${LINE}
 
-  ${DIM}# Do both in one pass (Pro)${RESET}
-  ${CYAN}poly-glot comment src/app.py --both${RESET}
+  ${BOLD}Step 2 — Add doc-comments to any file:${RESET}
 
-  ${BOLD}${CYAN}Free forever:${RESET}  Python · JavaScript · Java · 50 files/mo · doc-comments
-  ${BOLD}${CYAN}Pro ($9/mo): ${RESET}  All 12 languages · why + both modes · unlimited · no API key needed
+  ${CYAN}poly-glot comment src/app.py${RESET}         ${DIM}# Python${RESET}
+  ${CYAN}poly-glot comment src/index.ts${RESET}       ${DIM}# TypeScript${RESET}
+  ${CYAN}poly-glot comment src/Main.java${RESET}      ${DIM}# Java${RESET}
 
-  ${YELLOW}${BOLD}🎁 Early bird offer:${RESET} Use code ${BOLD}EARLYBIRD3${RESET} at checkout
-  ${YELLOW}   → lock Pro at $9/mo forever (expires May 1, 2026)${RESET}
+${LINE}
 
-  ${CYAN}→ Sign up at https://poly-glot.ai${RESET}
+  ${BOLD}Free plan (no signup needed for first 5 files):${RESET}
+    ✅ Python · JavaScript · Java
+    ✅ 50 files/month
+    ✅ Doc-comments (JSDoc, PyDoc, JavaDoc)
+
+  ${BOLD}${CYAN}Pro — $9/mo:${RESET}
+    ✅ All 12 languages · unlimited files
+    ✅ Why-comments · Both mode
+    ✅ CLI + VS Code + Chrome extension
+
+  ${YELLOW}${BOLD}🎁 EARLYBIRD3${RESET}${YELLOW} — locks Pro at $9/mo forever (expires May 1, 2026)${RESET}
+  ${CYAN}   → https://poly-glot.ai/#pg-pricing-section${RESET}
+
+${LINE}
+
+  ${RED}${BOLD}→ Run this now:${RESET} ${CYAN}${BOLD}poly-glot login${RESET}
 
 ${LINE}
 `);
