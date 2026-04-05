@@ -1,100 +1,60 @@
 name: Fix SPF Record for Resend
 
-# ─────────────────────────────────────────────────────────────────────────────
-# One-time run: updates the SPF TXT record on poly-glot.ai to include
-# Resend's sending servers (amazonses.com) so magic-link emails pass SPF
-# checks at iCloud, Gmail, Outlook, and all major providers.
-#
-# Before:  v=spf1 include:_spf.mx.cloudflare.net ~all
-# After:   v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all
-#
-# Requires secrets: CF_ZONE_ID, CF_API_TOKEN (already configured)
-# ─────────────────────────────────────────────────────────────────────────────
-
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/fix-spf.yml'
+    inputs:
+      cf_api_token:
+        description: 'Cloudflare API Token (Zone:DNS:Edit scope) — get from dash.cloudflare.com/profile/api-tokens'
+        required: true
+        type: string
 
 jobs:
   fix-spf:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Find existing SPF record ID
-        id: find_spf
+      - name: Find + update SPF record
         run: |
-          echo "🔍 Looking up existing SPF TXT record..."
-          RESPONSE=$(curl -s -X GET \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records?type=TXT&name=poly-glot.ai&per_page=50" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-            -H "Content-Type: application/json")
-          echo "Response: $RESPONSE"
+          ZONE_ID="c64151011b4628121001461ab291a0db"
+          CF_TOKEN="${{ github.event.inputs.cf_api_token }}"
+          NEW_SPF="v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all"
 
-          # Extract the ID of the record whose content starts with v=spf1
+          echo "🔍 Listing TXT records for poly-glot.ai..."
+          RESPONSE=$(curl -s \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=TXT&name=poly-glot.ai&per_page=50" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/json")
+
+          echo "List response success: $(echo $RESPONSE | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["success"])')"
+
           SPF_ID=$(echo "$RESPONSE" | python3 -c "
           import sys, json
           d = json.load(sys.stdin)
-          for r in d.get('result', []):
-              if r.get('content', '').startswith('v=spf1'):
+          for r in d.get('result', []) or []:
+              if r.get('content','').startswith('v=spf1'):
                   print(r['id'])
                   break
           ")
-          echo "SPF Record ID: $SPF_ID"
-          echo "spf_id=$SPF_ID" >> $GITHUB_OUTPUT
 
-      - name: Update SPF to include Resend (amazonses.com)
-        if: steps.find_spf.outputs.spf_id != ''
-        run: |
-          echo "✏️  Updating SPF record ${{ steps.find_spf.outputs.spf_id }}..."
-          RESPONSE=$(curl -s -X PATCH \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records/${{ steps.find_spf.outputs.spf_id }}" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data '{
-              "type": "TXT",
-              "name": "poly-glot.ai",
-              "content": "v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all",
-              "ttl": 1
-            }')
-          echo "Response: $RESPONSE"
-          SUCCESS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('success', False))")
-          if [ "$SUCCESS" = "True" ]; then
-            echo "✅ SPF record updated successfully"
-            echo "   Before: v=spf1 include:_spf.mx.cloudflare.net ~all"
-            echo "   After:  v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all"
+          if [ -n "$SPF_ID" ]; then
+            echo "✏️  Patching existing SPF record: $SPF_ID"
+            PATCH=$(curl -s -X PATCH \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${SPF_ID}" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"type\":\"TXT\",\"name\":\"poly-glot.ai\",\"content\":\"${NEW_SPF}\",\"ttl\":1}")
+            echo "Patch result: $(echo $PATCH | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["success"])')"
           else
-            echo "❌ SPF update failed"
-            exit 1
+            echo "➕ No SPF record found — creating new record"
+            POST=$(curl -s -X POST \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+              -H "Authorization: Bearer ${CF_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"type\":\"TXT\",\"name\":\"poly-glot.ai\",\"content\":\"${NEW_SPF}\",\"ttl\":1}")
+            echo "Create result: $(echo $POST | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["success"])')"
           fi
 
-      - name: Create SPF record if none found
-        if: steps.find_spf.outputs.spf_id == ''
+      - name: Verify SPF propagation
         run: |
-          echo "➕ No existing SPF found — creating new record..."
-          RESPONSE=$(curl -s -X POST \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/dns_records" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data '{
-              "type": "TXT",
-              "name": "poly-glot.ai",
-              "content": "v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all",
-              "ttl": 1
-            }')
-          echo "Response: $RESPONSE"
-          SUCCESS=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('success', False))")
-          if [ "$SUCCESS" = "True" ]; then
-            echo "✅ SPF record created"
-          else
-            echo "❌ SPF creation failed"
-            exit 1
-          fi
-
-      - name: Verify SPF record
-        run: |
-          echo "🔎 Verifying SPF record propagation..."
-          sleep 3
-          dig TXT poly-glot.ai +short | grep spf || echo "DNS not yet propagated (normal — up to 60s)"
+          sleep 5
+          echo "=== Current SPF record ==="
+          dig TXT poly-glot.ai +short | grep spf || echo "Propagating..."
