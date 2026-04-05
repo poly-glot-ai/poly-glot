@@ -441,22 +441,64 @@ async function maybeShowFirstRunOnboarding() {
     // Mark shown before the async prompt so it doesn't fire again if VS Code restarts mid-prompt
     await extContext.globalState.update('pg.onboardingShown', true);
     // Small delay so VS Code UI is fully loaded
-    await new Promise(r => setTimeout(r, 2500));
-    const choice = await vscode.window.showInformationMessage('🦜 Poly-Glot: Create a free account to track your 50 files/month across all your devices.', 'Create Free Account', 'I Already Have One', 'Later');
-    if (choice === 'Create Free Account') {
-        // Open the site with source attribution
-        await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
-        // After they come back, prompt to enter their token
-        await new Promise(r => setTimeout(r, 3000));
-        const tokenChoice = await vscode.window.showInformationMessage('🦜 Poly-Glot: After signing in, copy your session token and paste it here.', 'Enter Token Now', 'Later');
-        if (tokenChoice === 'Enter Token Now') {
+    await new Promise(r => setTimeout(r, 2000));
+    // ── Step 1: Ask for email directly in VS Code ──────────────────────────
+    const email = await vscode.window.showInputBox({
+        title: '🦜 Poly-Glot — Create your free account',
+        prompt: 'Enter your email to get a magic sign-in link (no password needed)',
+        placeHolder: 'you@example.com',
+        ignoreFocusOut: true,
+        validateInput: (v) => {
+            if (!v || !v.includes('@') || !v.includes('.'))
+                return 'Please enter a valid email address';
+            return null;
+        },
+    });
+    if (!email) {
+        // Dismissed — show a softer follow-up nudge
+        const later = await vscode.window.showInformationMessage('🦜 Poly-Glot: Sign up free to get 50 files/month + track usage across devices.', 'Sign Up Now', 'Later');
+        if (later === 'Sign Up Now') {
+            await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
+        }
+        return;
+    }
+    // ── Step 2: Send magic link directly via API ───────────────────────────
+    try {
+        const res = await fetch(`${AUTH_API}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'vscode-install' }),
+            signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) {
+            // ── Step 3: Tell them to check their email, then paste token ──
+            vscode.window.showInformationMessage(`🦜 Poly-Glot: Magic link sent to ${email}! Check your inbox, click the link, then come back here.`, 'I clicked the link — enter token', 'Later').then(async (choice) => {
+                if (choice === 'I clicked the link — enter token') {
+                    await cmdConfigureLicenseToken();
+                }
+            });
+        }
+        else {
+            // Already has account or rate limited — go straight to token entry
+            const choice = await vscode.window.showInformationMessage(`🦜 Poly-Glot: Already have an account? Enter your session token to activate.`, 'Enter Token', 'Sign Up at poly-glot.ai', 'Later');
+            if (choice === 'Enter Token') {
+                await cmdConfigureLicenseToken();
+            }
+            else if (choice === 'Sign Up at poly-glot.ai') {
+                await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
+            }
+        }
+    }
+    catch {
+        // Network error — fall back to website
+        const choice = await vscode.window.showInformationMessage('🦜 Poly-Glot: Get 50 files/month free. Sign up in 30 seconds — no password needed.', 'Create Free Account', 'I Already Have One', 'Later');
+        if (choice === 'Create Free Account') {
+            await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
+        }
+        else if (choice === 'I Already Have One') {
             await cmdConfigureLicenseToken();
         }
     }
-    else if (choice === 'I Already Have One') {
-        await cmdConfigureLicenseToken();
-    }
-    // 'Later' or dismissed — they'll see nudge when they hit file 10
 }
 // ─── Activate ────────────────────────────────────────────────────────────────
 function activate(context) {
