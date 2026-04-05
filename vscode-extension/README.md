@@ -13,6 +13,8 @@
 
 ---
 
+![Poly-Glot AI — AI Code Comments & Documentation Generator](images/banner.png)
+
 ## 🎬 See It In Action
 
 [![Poly-Glot AI — Demo Video](https://img.youtube.com/vi/uIi7pbe5H6c/maxresdefault.jpg)](https://youtu.be/uIi7pbe5H6c)
