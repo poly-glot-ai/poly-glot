@@ -661,7 +661,7 @@
                 <li>✅ All comment styles</li>
                 <li>✅ Why Comments + Both modes</li>
                 <li>✅ CLI + VS Code + Chrome</li>
-                <li style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> locks $9 forever</li>
+                <li style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> — locks $9/mo forever <em>(expires May 1, 2026)</em></li>
               </ul>
               <a class="pg-modal-plan__cta pg-modal-plan__cta--pro" id="pgAuthModalUpgradePro"
                  href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3"

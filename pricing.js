@@ -27,7 +27,7 @@
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1 2026)
+    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1, 2026)
     // Pro Yearly / Team Monthly / Team Yearly go direct — no promo code
     var params = 'client_reference_id=website';
     if (key === 'pro_monthly') {
@@ -479,7 +479,7 @@
 
   /* ── Deadline countdown ─────────────────────────────────── */
   /* Replaces the old spot-counter with real deadline urgency.  */
-  /* Deadline: May 1 2026 00:00:00 UTC                         */
+  /* Deadline: May 1, 2026 00:00:00 UTC                         */
   var DEADLINE = new Date('2026-05-01T00:00:00Z');
 
   function updateDeadlineCountdown() {

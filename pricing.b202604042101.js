@@ -31,7 +31,7 @@
     //   prefilled_promo_code — auto-applies EARLYBIRD3 at checkout
     //   client_reference_id — attribution in Stripe dashboard (which channel converted)
     //   prefilled_email     — pre-fill email if user is already signed in
-    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1 2026)
+    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1, 2026)
     // Pro Yearly / Team Monthly / Team Yearly go direct — no promo code
     var params = (key === 'pro_monthly' ? 'prefilled_promo_code=' + PROMO + '&' : '') + 'client_reference_id=website';
     // Pre-fill email if signed in — reduces friction
@@ -477,7 +477,7 @@
 
   /* ── Deadline countdown ─────────────────────────────────── */
   /* Replaces the old spot-counter with real deadline urgency.  */
-  /* Deadline: May 1 2026 00:00:00 UTC                         */
+  /* Deadline: May 1, 2026 00:00:00 UTC                         */
   var DEADLINE = new Date('2026-05-01T00:00:00Z');
 
   function updateDeadlineCountdown() {
