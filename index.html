@@ -157,7 +157,7 @@
 
     *, *::before, *::after { box-sizing: border-box; }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 70px; }
 
     body {
       margin: 0;
@@ -2212,7 +2212,6 @@ for (const user of users) {
 <!-- CLI callout — shown below the generator on all devices -->
 <div style="text-align:center;padding:18px 16px 4px;margin-top:-8px;">
   <a href="#pg-cli-section"
-     onclick="event.preventDefault();var el=document.getElementById('pg-cli-section');if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-70;window.scrollTo({top:y,behavior:'smooth'});}"
      style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:999px;text-decoration:none;color:#94a3b8;font-size:13px;font-weight:500;transition:border-color .2s,color .2s;cursor:pointer;"
      onmouseover="this.style.borderColor='rgba(124,58,237,0.5)';this.style.color='#a78bfa';"
      onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='#94a3b8';">
