@@ -1425,7 +1425,7 @@
     panel.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9998;background:' + panelBg + ';border:1px solid ' + accentColor + '33;border-radius:14px;padding:20px 22px;max-width:380px;width:calc(100vw - 48px);box-shadow:0 12px 40px rgba(0,0,0,0.55);font-family:Inter,sans-serif;animation:pg-slide-in .28s ease;';
     panel.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
       + '<div style="font-size:15px;font-weight:700;color:#f1f5f9;">✅ Signed in' + (isPaid ? ' — ' + planLabel + ' active 🎉' : '') + '</div>'
-      + '<button onclick="this.closest('#pg-token-panel').remove()" style="background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:0 0 0 12px;line-height:1;">×</button>'
+      + '<button onclick="document.getElementById(\'pg-token-panel\').remove()" style="background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:0 0 0 12px;line-height:1;">×</button>'
       + '</div>'
       + '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">' + email + '</div>'
       + (isPaid
@@ -1433,8 +1433,8 @@
         : '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy your session token to sync usage across devices (VS Code / CLI):</div>')
       + '<div style="display:flex;gap:8px;align-items:center;">'
       + '<input id="pg-token-input" type="password" readonly value="' + token + '" style="flex:1;background:#0d1117;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#e2e8f0;font-family:monospace;font-size:11px;outline:none;" />'
-      + '<button id="pg-token-show" onclick="var i=document.getElementById('pg-token-input');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':' 🙈'" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#94a3b8;cursor:pointer;font-size:13px;">👁</button>'
-      + '<button id="pg-token-copy" onclick="navigator.clipboard.writeText('' + token + '').then(function(){var b=document.getElementById('pg-token-copy');b.textContent='✓';b.style.background='#16a34a';setTimeout(function(){b.textContent='Copy';b.style.background='#1e293b';},2000);})" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 12px;color:#7dd3fc;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Copy</button>'
+      + '<button id="pg-token-show" onclick="var i=document.getElementById(\'pg-token-input\');i.type=i.type===\'password\'?\'text\':\'password\';this.textContent=i.type===\'password\'?\'👁\':\' 🙈\'" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#94a3b8;cursor:pointer;font-size:13px;">👁</button>'
+      + '<button id="pg-token-copy" onclick="navigator.clipboard.writeText(\''+token+'\').then(function(){var b=document.getElementById(\'pg-token-copy\');b.textContent=\'✓\';b.style.background=\'#16a34a\';setTimeout(function(){b.textContent=\'Copy\';b.style.background=\'#1e293b\';},2000);})" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 12px;color:#7dd3fc;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Copy</button>'
       + '</div>'
       + '<div style="margin-top:12px;font-size:11px;color:#475569;line-height:1.6;">'
       + '<strong style="color:#94a3b8;">VS Code:</strong> Command Palette → <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#7dd3fc;">Poly-Glot: Configure License Token</code><br>'
@@ -1451,7 +1451,7 @@
     banner.id = 'pg-checkout-banner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#052e16 0%,#0f2027 50%,#052e16 100%);border-bottom:1px solid rgba(52,211,153,.3);padding:14px 20px;text-align:center;font-family:Inter,sans-serif;animation:pg-nudge-slide-up .4s ease;';
     banner.innerHTML = '<span style="font-size:14px;font-weight:600;color:#f1f5f9;">🎉 Payment successful! Check <strong style="color:#34d399;">' + email + '</strong> for your sign-in link to activate Pro.</span>'
-      + ' <button onclick="this.closest('#pg-checkout-banner').remove()" style="margin-left:16px;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;vertical-align:middle;">×</button>';
+      + ' <button onclick="document.getElementById(\'pg-checkout-banner\').remove()" style="margin-left:16px;background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;vertical-align:middle;">×</button>';
     document.body.insertBefore(banner, document.body.firstChild);
   }
 
