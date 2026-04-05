@@ -27,10 +27,16 @@
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // ?prefilled_promo_code= auto-applies the code at checkout
-    // Only works if "Allow promotion codes" is ON for the Payment Link in Stripe dashboard
-    // If not enabled, Stripe silently ignores the param — checkout still works fine
-    return base + `?prefilled_promo_code=${PROMO}`;
+    // Build params:
+    //   prefilled_promo_code — auto-applies EARLYBIRD3 at checkout
+    //   client_reference_id — attribution in Stripe dashboard (which channel converted)
+    //   prefilled_email     — pre-fill email if user is already signed in
+    var params = 'prefilled_promo_code=' + PROMO + '&client_reference_id=website';
+    // Pre-fill email if signed in — reduces friction
+    var storedEmail = '';
+    try { storedEmail = localStorage.getItem('pg_email') || ''; } catch(e) {}
+    if (storedEmail) params += '&prefilled_email=' + encodeURIComponent(storedEmail);
+    return base + '?' + params;
   }
 
   /* ── Pricing Data ──────────────────────────────────────── */
@@ -376,8 +382,16 @@
             window.PolyGlotWaitlist.open('pricing_cta');
           }
         } else {
+          // Record which plan they clicked so we can show the right message on return
+          try { localStorage.setItem('pg_checkout_plan', sizeKey); } catch(e) {}
           // Open Stripe checkout in new tab so user doesn't lose their place
           window.open(url, '_blank', 'noopener,noreferrer');
+          // Show a toast so user knows what to do after paying
+          if (window.PolyGlotAuth && typeof window.PolyGlotAuth.showToast === 'function') {
+            setTimeout(function () {
+              window.PolyGlotAuth.showToast('💳 Complete checkout in the new tab — then check your email for a sign-in link to activate ' + (sizeKey === 'team' ? 'Team' : 'Pro') + '.', 9000);
+            }, 800);
+          }
         }
       }
     });
