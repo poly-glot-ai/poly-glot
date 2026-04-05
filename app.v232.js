@@ -2107,7 +2107,7 @@ function initializeDemo() {
     // ── try it now ───────────────────────────────────────────────────────────
     if (tryItBtn) {
         tryItBtn.addEventListener('click', () => {
-            const apiSettings = document.getElementById('commentGenerator');
+            const apiSettings = document.getElementById('pg-generator-section') || document.getElementById('commentGenerator');
             if (apiSettings) {
                 apiSettings.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 try {

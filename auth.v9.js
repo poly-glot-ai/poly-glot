@@ -1330,7 +1330,7 @@
      Scroll to tool helper
   ───────────────────────────────────────────── */
   function scrollToTool() {
-    var el = document.getElementById('commentGenerator');
+    var el = document.getElementById('pg-generator-section') || document.getElementById('commentGenerator');
     if (!el) return;
     var rect      = el.getBoundingClientRect();
     var scrollTop = window.pageYOffset || document.documentElement.scrollTop;

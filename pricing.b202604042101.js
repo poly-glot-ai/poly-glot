@@ -386,7 +386,7 @@
           }
         }
       } else if (action === 'scroll') {
-        document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
+        (document.getElementById('pg-generator-section') || document.getElementById('commentGenerator'))?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
         /* ── Stripe checkout ── */
         const billing  = isYearly ? 'yearly' : 'monthly';

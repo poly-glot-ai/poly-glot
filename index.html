@@ -1708,7 +1708,7 @@
 
     <!-- Nav links (desktop only) -->
     <div class="pg2-nav__links">
-      <a href="#commentGenerator" class="pg2-nav__link">Demo</a>
+      <a href="#pg-generator-section" class="pg2-nav__link">Demo</a>
       <a href="#pg-pricing-section" class="pg2-nav__link">Pricing</a>
       <a href="#pg-vscode-section" class="pg2-nav__link">VS Code</a>
       <a href="#pg-cli-section" class="pg2-nav__link">CLI</a>
@@ -1734,7 +1734,7 @@
 
 <!-- Mobile nav drawer -->
 <div class="pg2-nav__mobile-menu" id="pg2MobileMenu" role="dialog" aria-label="Navigation menu">
-  <a href="#commentGenerator" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🎬 Demo</a>
+  <a href="#pg-generator-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🎬 Demo</a>
   <a href="#pg-pricing-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💎 Pricing</a>
   <a href="#pg-vscode-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">💻 VS Code</a>
   <a href="#pg-cli-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">⌨️ CLI</a>
@@ -1829,7 +1829,7 @@
     </p>
     <div class="pg2-hero__ctas" style="justify-content:center;">
       <button class="pg2-hero__cta-primary"
-        onclick="if(typeof gtag==='function') gtag('event','hero_generate_click'); document.getElementById('commentGenerator')?.scrollIntoView({behavior:'smooth'});">
+        onclick="if(typeof gtag==='function') gtag('event','hero_generate_click'); document.getElementById('pg-generator-section')?.scrollIntoView({behavior:'smooth'});">
         🤖 Generate Comments →
       </button>
     </div>
@@ -1954,7 +1954,9 @@ for (const user of users) {
      ════════════════════════════════════════════════════════════ -->
 <div class="pg2-divider"></div>
 <div class="pg2-generator-wrap">
-  <span class="pg2-generator-anchor" id="commentGenerator" aria-hidden="true"></span>
+  <span class="pg2-generator-anchor" id="pg-generator-section" aria-hidden="true"></span>
+  <!-- Legacy alias so old bookmarks/links to #commentGenerator still work -->
+  <span id="commentGenerator" aria-hidden="true" style="position:absolute;"></span>
   <div class="pg2-gen-heading">
     <div class="pg2-eyebrow" style="justify-content:center;">🧑‍💻 Paste Code. Get Documentation.</div>
     <h2>Try it free — sign up takes 30 seconds</h2>
@@ -2702,7 +2704,7 @@ for (const user of users) {
         </div>
 
       </div>
-      <p style="font-size:12px;color:var(--text-dim);margin-top:16px;line-height:1.6;">💡 Want to <strong style="color:var(--text);">generate doc-comments</strong> for your code? That's the core product — use the <a href="#commentGenerator" style="color:var(--accent);">generator above ↑</a> or the <a href="#pg-cli-section" style="color:var(--accent);">CLI</a>. The assistant handles Q&amp;A, debugging, refactors, and tests.</p>
+      <p style="font-size:12px;color:var(--text-dim);margin-top:16px;line-height:1.6;">💡 Want to <strong style="color:var(--text);">generate doc-comments</strong> for your code? That's the core product — use the <a href="#pg-generator-section" style="color:var(--accent);">generator above ↑</a> or the <a href="#pg-cli-section" style="color:var(--accent);">CLI</a>. The assistant handles Q&amp;A, debugging, refactors, and tests.</p>
 
       <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" class="pg2-assistant-vscode-link">
         💻 Also available in VS Code Extension — View on Marketplace ↗
@@ -3298,7 +3300,7 @@ if (enterpriseForm) {
         }
 
         // Scroll to the generator
-        var gen = document.getElementById('commentGenerator');
+        var gen = document.getElementById('pg-generator-section');
         if (gen) {
           setTimeout(function() {
             gen.scrollIntoView({ behavior: 'smooth', block: 'start' });
