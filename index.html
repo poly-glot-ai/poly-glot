@@ -164,6 +164,9 @@
     h2:hover .pg-heading-anchor,
     h2:focus-within .pg-heading-anchor { opacity: 1 !important; }
     .pg-heading-anchor:hover { opacity: 1 !important; color: #a78bfa !important; }
+    /* Linkable eyebrow label */
+    .pg2-eyebrow--link { text-decoration: none; cursor: pointer; }
+    .pg2-eyebrow--link:hover { color: #a78bfa; text-decoration: underline; text-underline-offset: 3px; }
 
     body {
       margin: 0;
@@ -2237,8 +2240,8 @@ for (const user of users) {
 <div class="pg2-section" id="pg-cli-section" style="scroll-margin-top:70px;" aria-labelledby="cli-demo-heading">
   <!-- Existing CLI demo section — preserved from live site -->
   <div class="overview-section overview-section-cli">
-    <h2 class="overview-heading" id="cli-demo-heading" style="position:relative;">
-      <a href="#pg-cli-section" aria-label="Link to CLI Tool section" style="position:absolute;left:-1.4em;top:50%;transform:translateY(-50%);opacity:0;font-size:0.75em;color:#7dd3fc;text-decoration:none;transition:opacity .15s;padding:0 0.3em;" class="pg-heading-anchor">#</a>
+    <a href="#pg-cli-section" class="pg2-eyebrow pg2-eyebrow--link" aria-label="Link to CLI Tool section">⌨️ CLI Tool</a>
+    <h2 class="overview-heading" id="cli-demo-heading">
       <span class="cli-icon">⌨️</span>
       CLI Tool
       <span class="live-badge">v<span data-live="npm-version">2.1.32</span> on npm</span>
