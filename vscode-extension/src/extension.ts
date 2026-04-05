@@ -7,8 +7,10 @@ import { TemplatesSidebarProvider } from './sidebar';
 const AUTH_API         = 'https://poly-glot.ai/api/auth';
 const FREE_LANGUAGES   = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS        = ['pro', 'team', 'enterprise'];
+// EARLYBIRD3 locks Pro at $9/mo forever — applies to Pro Monthly only (expires May 1, 2026)
 const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode';
-const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode-team';
+const UPGRADE_TEAM_URL = 'https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408?client_reference_id=vscode-team';
+const FREE_SIGNUP_URL  = 'https://poly-glot.ai/api/auth/free-signup';
 const PARTICIPANT_ID   = 'poly-glot.chat';
 const FREE_LIMIT       = 50;
 const FIRST_NUDGE_AT   = 10;
@@ -296,7 +298,7 @@ async function showUsageNudge(used: number, remaining: number): Promise<void> {
     // 80% warning
     else if (used === Math.floor(FREE_LIMIT * 0.8)) {
         const choice = await vscode.window.showWarningMessage(
-            `⚡ ${remaining} free files remaining this month — use code EARLYBIRD3 for 50% off.`,
+            `⚡ ${remaining} free files remaining this month — use code EARLYBIRD3 to lock Pro at $9/mo forever (expires May 1, 2026).`,
             'Upgrade Now',
             'Dismiss',
         );
@@ -394,11 +396,11 @@ async function showProGate(feature: string): Promise<boolean> {
     const message = `Poly-Glot: ${feature} requires a Pro plan.`;
     const actions = hasToken
         ? ['Already subscribed? Re-enter token', 'Get Pro']
-        : ['Get Pro — 3 months free', 'Enter Session Token'];
+        : ['Get Pro — $9/mo Forever', 'Enter Session Token'];
 
     const choice = await vscode.window.showErrorMessage(message, ...actions);
 
-    if (choice === 'Get Pro' || choice === 'Get Pro — 3 months free') {
+    if (choice === 'Get Pro' || choice === 'Get Pro — $9/mo Forever') {
         vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
         return true;
     }
@@ -554,6 +556,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('polyglot.explainCode',             () => cmdExplainCode()),
         vscode.commands.registerCommand('polyglot.configureApiKey',         () => cmdConfigureApiKey()),
         vscode.commands.registerCommand('polyglot.configureLicenseToken',   () => cmdConfigureLicenseToken()),
+        vscode.commands.registerCommand('polyglot.startForFree',            () => cmdStartForFree()),
         vscode.commands.registerCommand('polyglot.openTemplates',           () =>
             vscode.commands.executeCommand('polyglot.templatesView.focus'),
         ),
@@ -619,8 +622,7 @@ async function handleChatRequest(
             '| Both mode (`/both`) | 🔒 | ✅ |',
             '| Files per month | 50 | Unlimited |',
             '',
-            '**Pro starts at $9/month.**',
-            '🎁 Use code **`EARLYBIRD3`** at checkout for **3 months completely free.**',
+            '**Pro — $9/mo locked forever with code `EARLYBIRD3`** *(expires May 1, 2026 — after that Pro goes to $12/mo)*',
             '',
             `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
             '',
@@ -677,7 +679,7 @@ async function handleChatRequest(
                     '',
                     `You've used **${count}/${FREE_LIMIT}** free files this month.`,
                     '',
-                    '🏷 Use code **`EARLYBIRD3`** for **3 months free** on any plan',
+                    '🏷 Use code **`EARLYBIRD3`** to lock Pro at **$9/mo forever** *(expires May 1, 2026)*',
                     '',
                     `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
                     '',
@@ -696,7 +698,7 @@ async function handleChatRequest(
             '',
             `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
             '',
-            '🎁 Use code **`EARLYBIRD3`** for 3 months free.',
+            '🏷 Use code **`EARLYBIRD3`** to lock Pro at **$9/mo forever** *(expires May 1, 2026)*',
         ].join('\n'));
         return { metadata: { command: cmd } };
     }
@@ -764,7 +766,7 @@ async function handleChatRequest(
         '| `@poly-glot /why` | Add why-comments explaining intent & trade-offs _(Pro)_ |',
         '| `@poly-glot /both` | Doc-comments + why-comments in one pass _(Pro)_ |',
         '| `@poly-glot /explain` | Deep analysis: complexity, bugs, doc quality |',
-        '| `@poly-glot /upgrade` | See Pro plan + get 3 months free |',
+        '| `@poly-glot /upgrade` | See Pro plan — lock in $9/mo forever with EARLYBIRD3 |',
         '',
         '_Select some code first for best results._',
     ].join('\n'));
@@ -1046,6 +1048,68 @@ async function cmdConfigureLicenseToken(): Promise<void> {
                     if (action === 'See Pro Plans') vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
                 });
                 updateStatusBarUsage(false);
+            }
+        },
+    );
+}
+
+// ─── Command: Start for Free ──────────────────────────────────────────────────
+// Triggered by "Start for Free" pricing card and any unauthenticated sign-up prompt.
+// Posts to /api/auth/free-signup → worker sends a magic-link email → user clicks it
+// → session token stored → usage tracking active (1.4.38 build).
+async function cmdStartForFree(): Promise<void> {
+    // If already signed in with a session token, nothing to do
+    const existing = extContext.globalState.get<string>('pg.sessionToken', '').trim();
+    if (existing) {
+        vscode.window.showInformationMessage(
+            'Poly-Glot: You already have a free account. Run "Poly-Glot: Configure License Token" to upgrade.',
+            'See Pro Plans',
+        ).then(a => { if (a === 'See Pro Plans') vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL)); });
+        return;
+    }
+
+    const email = await vscode.window.showInputBox({
+        title:          'Poly-Glot: Create Free Account',
+        prompt:         'Enter your email — we\'ll send a magic link. No password needed.',
+        placeHolder:    'you@example.com',
+        ignoreFocusOut: true,
+        validateInput:  val =>
+            val && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val.trim())
+                ? null
+                : 'Please enter a valid email address',
+    });
+    if (!email) return;
+
+    await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Poly-Glot: Sending magic link…', cancellable: false },
+        async () => {
+            try {
+                const res = await fetch(FREE_SIGNUP_URL, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ email: email.trim().toLowerCase() }),
+                    signal:  AbortSignal.timeout(8000),
+                });
+                const data: any = await res.json().catch(() => ({}));
+                if (res.ok && data.ok) {
+                    // Prompt user to paste the token from the magic-link URL
+                    const action = await vscode.window.showInformationMessage(
+                        `✅ Magic link sent to ${email.trim()}! Check your inbox, click the link, then paste your token below.`,
+                        'Enter Token',
+                        'Later',
+                    );
+                    if (action === 'Enter Token') {
+                        await cmdConfigureLicenseToken();
+                    }
+                } else {
+                    vscode.window.showErrorMessage(
+                        `Poly-Glot: ${data.error || 'Failed to send magic link. Please try again.'}`,
+                    );
+                }
+            } catch {
+                vscode.window.showErrorMessage(
+                    'Poly-Glot: Network error — check your connection and try again.',
+                );
             }
         },
     );

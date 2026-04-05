@@ -1701,7 +1701,7 @@
         <span>Poly-Glot AI is Live!</span>
       </a>
       <!-- See Plans (hidden on small mobile) -->
-      <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ Start 14-Day Free Trial</a>
+      <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ See Plans</a>
       <!-- Sign In — always visible -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="if(window.PolyGlotAuth) window.PolyGlotAuth.openLoginModal('header'); if(typeof gtag==='function') gtag('event','header_signin_click');">Sign In</button>
     </div>
@@ -1781,15 +1781,11 @@
     <p class="pg2-hero__trust-line">
       Or <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="pg2-hero__trust-link">install the CLI</a> and document your entire codebase from your terminal.
     </p>
-    <div class="pg2-hero__ctas">
+    <div class="pg2-hero__ctas" style="justify-content:center;">
       <button class="pg2-hero__cta-primary"
         onclick="if(typeof gtag==='function') gtag('event','hero_generate_click'); document.getElementById('commentGenerator')?.scrollIntoView({behavior:'smooth'});">
         🤖 Generate Comments →
       </button>
-      <a href="#pg-pricing-section" class="pg2-hero__cta-secondary"
-        onclick="if(typeof gtag==='function') gtag('event','hero_3months_click');">
-        🎁 Start 14-Day Free Trial
-      </a>
     </div>
   </div>
 </section>
@@ -2829,7 +2825,7 @@ function pg2OpenAssistant(text) {
       </div>
       <div class="pg2-copilot-card">
         <div class="pg2-copilot-card__cmd">@poly-glot /upgrade</div>
-        <div class="pg2-copilot-card__desc">Shows Free vs Pro feature table + 14-day free trial with code <code style="font-family:'Fira Code',monospace;color:var(--accent);font-size:11px;">EARLYBIRD3</code></div>
+        <div class="pg2-copilot-card__desc">Shows Free vs Pro feature table. Use code <code style="font-family:'Fira Code',monospace;color:var(--accent);font-size:11px;">EARLYBIRD3</code> to lock Pro at $9/mo forever (expires May 1, 2026).</div>
       </div>
       <div class="pg2-copilot-card">
         <div class="pg2-copilot-card__cmd">@poly-glot</div>
@@ -2838,7 +2834,7 @@ function pg2OpenAssistant(text) {
     </div>
     <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;">
       <a href="https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot" target="_blank" rel="noopener" data-vscode-deep="vscode:extension/poly-glot-ai.poly-glot" class="pg2-hero__cta-primary" style="font-size:13px;height:40px;padding:0 20px;">🤖 Install &amp; Use in Copilot</a>
-      <a href="#pg-pricing-section" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;">💎 Get Pro — EARLYBIRD3</a>
+      <a href="#pg-pricing-section" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;">💎 Get Pro — $9/mo Forever</a>
     </div>
   </div>
 </div>

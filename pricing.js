@@ -27,11 +27,12 @@
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // Build params:
-    //   prefilled_promo_code — auto-applies EARLYBIRD3 at checkout
-    //   client_reference_id — attribution in Stripe dashboard (which channel converted)
-    //   prefilled_email     — pre-fill email if user is already signed in
-    var params = 'prefilled_promo_code=' + PROMO + '&client_reference_id=website';
+    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1 2026)
+    // Pro Yearly / Team Monthly / Team Yearly go direct — no promo code
+    var params = 'client_reference_id=website';
+    if (key === 'pro_monthly') {
+      params = 'prefilled_promo_code=' + PROMO + '&' + params;
+    }
     // Pre-fill email if signed in — reduces friction
     var storedEmail = '';
     try { storedEmail = localStorage.getItem('pg_email') || ''; } catch(e) {}
@@ -69,8 +70,8 @@
       name:      'Pro',
       monthly:   9,
       yearly:    79,
-      desc:      'For individual developers who ship fast. 14-day free trial — cancel anytime.',
-      cta:       'Start Free Trial →',
+      desc:      'For individual developers who ship fast. Cancel anytime.',
+      cta:       'Get Pro →',
       ctaClass:  'pg-cta-pro',
       ctaAction: 'checkout_pro',
       popular:   true,
@@ -91,8 +92,8 @@
       name:      'Team',
       monthly:   29,
       yearly:    249,
-      desc:      'For engineering teams. Up to 5 seats. 14-day free trial included.',
-      cta:       'Start Free Trial →',
+      desc:      'For engineering teams. Up to 5 seats.',
+      cta:       'Get Team →',
       ctaClass:  'pg-cta-team',
       ctaAction: 'checkout_team',
       popular:   false,
@@ -250,7 +251,7 @@
               <span>Offer expires <strong id="pg-promo-deadline">May 1, 2026</strong> — after that, Pro goes to $12/mo. Use code <strong>EARLYBIRD3</strong> at checkout.</span>
             </div>
           </div>
-          <button class="pg-ea-cta" id="pg-ea-join-btn">Start 14-Day Free Trial →</button>
+          <button class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever →</button>
         </div>
 
         <!-- Cards -->
@@ -273,8 +274,8 @@
               <div class="pg-faq-a">Free plan is BYOK (bring your own key). <strong>Pro and above</strong> uses Poly-Glot's API key pool — no setup needed.</div>
             </div>
             <div class="pg-faq-item">
-              <div class="pg-faq-q">What happens after the 14-day free trial?</div>
-              <div class="pg-faq-a">Your subscription auto-bills at <strong>$9/mo</strong> (early bird rate — locked for life). You'll get an email reminder 3 days before. <strong>Cancel anytime before the trial ends and you won't be charged.</strong></div>
+              <div class="pg-faq-q">What is the EARLYBIRD3 offer?</div>
+              <div class="pg-faq-a">Use code <strong>EARLYBIRD3</strong> at checkout to lock Pro at <strong>$9/mo forever</strong> — even after Pro goes to $12/mo on May 1, 2026. Applies to Pro Monthly only. Cancel anytime.</div>
             </div>
             <div class="pg-faq-item">
               <div class="pg-faq-q">Can I switch plans?</div>
@@ -352,15 +353,40 @@
       }
 
       if (action === 'signup') {
-        // Free plan — open sign-up/login modal so new users create an account
+        // Free plan — prompt sign-up via magic-link email (1.4.38 build)
+        // Track this click immediately for analytics
+        if (typeof gtag === 'function') gtag('event', 'pricing_free_signup_click', { plan: 'free' });
+
+        // Try the full auth modal first (inline sign-up flow)
         if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
           window.PolyGlotAuth.openLoginModal('pricing_free_cta');
         } else {
-          // Fallback: click the header sign-in button
-          var signInBtn = document.getElementById('headerSignInBtn');
-          if (signInBtn) signInBtn.click();
+          // Fallback: show inline email-capture prompt then POST to /api/auth/free-signup
+          var email = window.prompt('Enter your email to create your free account — we\'ll send you a magic link (no password needed):');
+          if (email && email.trim() && email.includes('@')) {
+            email = email.trim().toLowerCase();
+            fetch('https://poly-glot.ai/api/auth/free-signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.ok) {
+                try { localStorage.setItem('pg_email', email); } catch(e) {}
+                alert('✅ Magic link sent to ' + email + '!\n\nCheck your inbox and click the link to sign in.\n\nFree plan: 50 files/month, no credit card required.');
+                if (typeof gtag === 'function') gtag('event', 'free_signup_success', { method: 'pricing_card' });
+              } else {
+                alert('Something went wrong: ' + (data.error || 'Please try again.'));
+              }
+            })
+            .catch(function() {
+              // Last-resort fallback — open header sign-in button
+              var signInBtn = document.getElementById('headerSignInBtn');
+              if (signInBtn) signInBtn.click();
+            });
+          }
         }
-        if (typeof gtag === 'function') gtag('event', 'pricing_free_signup_click');
       } else if (action === 'scroll') {
         document.getElementById('commentGenerator')?.scrollIntoView({ behavior: 'smooth' });
       } else if (action === 'checkout_pro' || action === 'checkout_team') {
@@ -406,18 +432,21 @@
       });
     }
 
-    /* Early access CTA — scroll to AI Settings / comment generator */
+    /* Early access CTA — open Pro Monthly checkout with EARLYBIRD3 pre-applied */
     const eaBtn = section.querySelector('#pg-ea-join-btn');
     if (eaBtn) {
       eaBtn.addEventListener('click', function () {
-        var target = document.getElementById('commentGenerator') ||
-                     document.getElementById('aiSettingsBtn');
-        if (target) {
-          var rect      = target.getBoundingClientRect();
-          var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          window.scrollTo({ top: rect.top + scrollTop - 24, behavior: 'smooth' });
+        if (typeof gtag === 'function') gtag('event', 'pricing_earlybird_banner_click', { plan: 'pro', billing: 'monthly' });
+        try { localStorage.setItem('pg_checkout_plan', 'pro'); } catch(e) {}
+        var url = checkoutUrl('pro_monthly');
+        if (url && url !== '#') {
+          window.open(url, '_blank', 'noopener,noreferrer');
+          if (window.PolyGlotAuth && typeof window.PolyGlotAuth.showToast === 'function') {
+            setTimeout(function () {
+              window.PolyGlotAuth.showToast('💳 Complete checkout in the new tab — then check your email to activate Pro.', 9000);
+            }, 800);
+          }
         }
-        if (typeof gtag === 'function') gtag('event', 'pricing_get_started_free_click');
       });
     }
   }

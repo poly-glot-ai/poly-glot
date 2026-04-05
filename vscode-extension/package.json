@@ -146,6 +146,11 @@
         "icon": "$(star)"
       },
       {
+        "command": "polyglot.startForFree",
+        "title": "Poly-Glot: Start for Free",
+        "icon": "$(person-add)"
+      },
+      {
         "command": "polyglot.openTemplates",
         "title": "Poly-Glot: Open Templates Sidebar",
         "icon": "$(book)"
