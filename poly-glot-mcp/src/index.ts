@@ -49,7 +49,7 @@ import {
 
 // ─── Auth constants ───────────────────────────────────────────────────────────
 
-const POLYGLOT_AUTH_BASE = 'https://auth.poly-glot.ai';
+const POLYGLOT_AUTH_BASE = 'https://poly-glot.ai';
 const PLAN_LABELS: Record<string, string> = {
   pro:        'Pro (200 calls/mo)',
   team:       'Team (1,000 calls/mo)',
