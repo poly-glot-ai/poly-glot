@@ -1317,12 +1317,16 @@
 
     /** Returns the current session token (from localStorage). */
     getToken: function () {
-      return _token || localStorage.getItem(LS_TOKEN_KEY) || null;
+      // Only return the in-memory token — never read from localStorage directly.
+      // localStorage is written by auth.v8 after server verification only,
+      // but _token is the single source of truth during a live session.
+      return _token || null;
     },
 
-    /** Returns the current plan string, or 'free'. */
+    /** Returns the current plan string — ONLY from server-verified in-memory state.
+     *  Never reads localStorage directly — that can be spoofed via DevTools. */
     getPlan: function () {
-      return _plan || localStorage.getItem(LS_PLAN_KEY) || 'free';
+      return _plan || null;
     },
 
     /** Clear auth state and reload. */

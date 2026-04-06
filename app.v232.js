@@ -4394,13 +4394,16 @@ function initCommentGenerator() {
 
     // ── Trusted plan getter — NEVER reads localStorage directly ─────────────
     // localStorage.pg_plan can be spoofed by anyone in DevTools.
-    // Always use window.PolyGlotAuth.getPlan() which is set only after the
-    // server verifies the token. Falls back to 'free' — never to localStorage.
+    // getPlan() now returns the in-memory _plan only (set after server verifies).
+    // Returns 'free' ONLY if the user is confirmed signed-in but on free plan.
+    // Returns 'free' for unauthenticated users too — but those users are blocked
+    // by isAuthed() and checkUsageFromServer() before reaching plan checks.
     function getTrustedPlan() {
         if (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function') {
-            return (window.PolyGlotAuth.getPlan() || 'free').toLowerCase();
+            const p = window.PolyGlotAuth.getPlan();
+            // getPlan() returns null if not server-verified — treat as free
+            return (p || 'free').toLowerCase();
         }
-        // Auth module not yet loaded — default to free (safe)
         return 'free';
     }
 
@@ -4413,16 +4416,9 @@ function initCommentGenerator() {
         if (document.getElementById('pg-user-chip')) return true;
         if (document.getElementById('headerSignInBtn')) return false;
 
-        // Fallback if neither element exists yet (auth.v8 still initialising):
-        // trust getToken() only if it returns a non-empty value AND the plan
-        // is set (both are cleared on logout by auth.v8).
-        try {
-            if (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function') {
-                const tok  = window.PolyGlotAuth.getToken();
-                const plan = window.PolyGlotAuth.getPlan ? window.PolyGlotAuth.getPlan() : null;
-                return !!(tok && plan);
-            }
-        } catch(e) {}
+        // No fallback to localStorage — if neither DOM element exists yet,
+        // treat as NOT authenticated. This closes the race-condition loophole
+        // where spoofed localStorage values could bypass the gate during init.
         return false;
     }
 
@@ -4460,9 +4456,9 @@ function initCommentGenerator() {
     // Returns { ok: true, used, limit, remaining } or throws on network error.
     // This is the REAL gate — localStorage is just a display cache.
     async function checkUsageFromServer() {
+        // Only use in-memory token from auth.v8 — never localStorage (spoofable)
         var tok = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function')
-            ? window.PolyGlotAuth.getToken()
-            : (localStorage.getItem('pg_session_token') || localStorage.getItem('pg_token') || '');
+            ? window.PolyGlotAuth.getToken() : null;
         if (!tok) return { ok: false, reason: 'no_token' };
         try {
             var res = await fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok));
@@ -4481,8 +4477,9 @@ function initCommentGenerator() {
                 limitHit:  d.limit !== null && d.used >= d.limit,
             };
         } catch(e) {
-            // Network failure — fall back to localStorage cache rather than hard-block
-            return { ok: false, reason: 'network_error', fallback: getMonthlyCount() };
+            // Network failure — fail CLOSED. Do not fall back to cached count.
+            // If we can't reach the server we cannot verify the user — block generation.
+            return { ok: false, reason: 'network_error' };
         }
     }
 
@@ -4499,8 +4496,7 @@ function initCommentGenerator() {
         // the upgrade wall on the NEXT generate click — no silent bypass.
         try {
             var tok = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function')
-                ? window.PolyGlotAuth.getToken()
-                : (localStorage.getItem('pg_session_token') || localStorage.getItem('pg_token') || '');
+                ? window.PolyGlotAuth.getToken() : '';
             if (tok) {
                 fetch(PG_USAGE_API, {
                     method:  'POST',
@@ -4541,9 +4537,9 @@ function initCommentGenerator() {
     // authoritative count so incognito / cleared-storage tricks are detected.
     function syncUsageFromServer() {
         try {
+            // Only use in-memory token — never localStorage (spoofable)
             var tok = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function')
-                ? window.PolyGlotAuth.getToken()
-                : (localStorage.getItem('pg_session_token') || localStorage.getItem('pg_token') || '');
+                ? window.PolyGlotAuth.getToken() : null;
             if (!tok) return;
             // Read-only: pull authoritative count without incrementing
             fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok))
@@ -4757,14 +4753,36 @@ function initCommentGenerator() {
             return;
         }
 
-        // Network error fallback — check cached value before allowing through
-        if (!usageCheck.ok && usageCheck.reason !== 'network_error' && usageCheck.reason !== 'no_token') {
-            // Server responded but something is wrong — block to be safe
-            showCgInlineError(
-                '<div style="padding:20px;text-align:center;">' +
-                '  <div style="font-size:13px;color:#f87171;">⚠️ Could not verify usage. Please sign out and back in, then try again.</div>' +
-                '</div>'
-            );
+        // Block ALL non-ok server responses — no_token, network_error, everything.
+        // No fallthrough allowed. If we can't verify, we don't generate.
+        if (!usageCheck.ok) {
+            if (usageCheck.reason === 'no_token') {
+                // Not signed in — force modal
+                if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+                    window.PolyGlotAuth.openLoginModal('generate-no-token');
+                }
+                showCgInlineError(
+                    '<div style="padding:28px 24px;text-align:center;">' +
+                    '  <div style="font-size:36px;margin-bottom:12px;">🔐</div>' +
+                    '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Sign in required</div>' +
+                    '  <div style="font-size:13px;color:#94a3b8;">A free account is required to generate comments.</div>' +
+                    '</div>'
+                );
+            } else if (usageCheck.reason === 'network_error') {
+                // Network down — fail closed, do not generate
+                showCgInlineError(
+                    '<div style="padding:20px;text-align:center;">' +
+                    '  <div style="font-size:13px;color:#f87171;">⚠️ Network error — could not verify your account. Please check your connection and try again.</div>' +
+                    '</div>'
+                );
+            } else {
+                // Any other server error — block to be safe
+                showCgInlineError(
+                    '<div style="padding:20px;text-align:center;">' +
+                    '  <div style="font-size:13px;color:#f87171;">⚠️ Could not verify your account. Please sign out and back in, then try again.</div>' +
+                    '</div>'
+                );
+            }
             return;
         }
 
