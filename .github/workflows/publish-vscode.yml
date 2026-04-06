@@ -192,25 +192,16 @@ jobs:
             echo "changelog_written=false" >> $GITHUB_OUTPUT
           else
             if [ -f vscode-extension/CHANGELOG.md ]; then
-              # Preserve the # Changelog header if present, insert new entry after it
               if grep -q "^# Changelog" vscode-extension/CHANGELOG.md; then
-                # Split at first ## version entry, insert new entry before it
-                python3 - << PYEOF
-import re
-with open("vscode-extension/CHANGELOG.md", "r") as fh:
-    text = fh.read()
-entry = """${ENTRY}
-
----
-
-"""
-# Insert after the header block (before the first ## [...] version line)
-text = re.sub(r'(^# Changelog.*?^---\s*\n)', r'\1\n' + re.escape(entry), text, count=1, flags=re.MULTILINE|re.DOTALL)
-# Collapse duplicate ---
-text = re.sub(r'(---\s*\n)(\s*---\s*\n)+', '---\n\n', text)
-with open("vscode-extension/CHANGELOG.md", "w") as fh:
-    fh.write(text)
-PYEOF
+                # Write python script to temp file — avoids heredoc YAML conflicts
+                printf 'import re, os\n' > /tmp/cl_insert.py
+                printf 'entry_text = os.environ["CL_ENTRY"]\n' >> /tmp/cl_insert.py
+                printf 'with open("vscode-extension/CHANGELOG.md","r") as fh: text = fh.read()\n' >> /tmp/cl_insert.py
+                printf 'block = entry_text + "\\n---\\n\\n"\n' >> /tmp/cl_insert.py
+                printf 'text = re.sub(r"(^# Changelog.*?^---[ \\t]*\\n)", r"\\1\\n" + re.escape(block), text, count=1, flags=re.MULTILINE|re.DOTALL)\n' >> /tmp/cl_insert.py
+                printf 'text = re.sub(r"(---[ \\t]*\\n)([ \\t]*---[ \\t]*\\n)+", "---\\n\\n", text)\n' >> /tmp/cl_insert.py
+                printf 'with open("vscode-extension/CHANGELOG.md","w") as fh: fh.write(text)\n' >> /tmp/cl_insert.py
+                CL_ENTRY="$ENTRY" python3 /tmp/cl_insert.py
               else
                 EXISTING=$(cat vscode-extension/CHANGELOG.md || true)
                 printf '%s\n---\n\n%s\n' "$ENTRY" "$EXISTING" > vscode-extension/CHANGELOG.md
