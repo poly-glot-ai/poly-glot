@@ -641,12 +641,24 @@ function renderExternal(m) {
 
 function renderSignups(m) {
   const period = m.signupPeriod || new Date().toISOString().slice(0,7);
+
+  // Revenue estimate: Pro=$9, Team=$29
+  const mrr = ((m.planPro || 0) * 9) + ((m.planTeam || 0) * 29);
+  const mrrStr = mrr > 0 ? '$' + mrr.toLocaleString() + '/mo' : '$0/mo';
+
+  // Conversion rate: paid / total signups
+  const paidTotal = (m.planPro || 0) + (m.planTeam || 0);
+  const convRate  = m.totalSignups > 0
+    ? ((paidTotal / m.totalSignups) * 100).toFixed(1) + '%'
+    : '0%';
+
   document.getElementById('signupsGrid').innerHTML = [
-    card('👤', 'Total Signups',       m.totalSignups   != null ? m.totalSignups   : '—', `all time · ${period}`),
-    card('🆓', 'Free Plan Users',     m.planFree       != null ? m.planFree       : '—', 'active free accounts'),
-    card('💎', 'Pro Plan Users',      m.planPro        != null ? m.planPro        : '—', '$9/mo · paying customers'),
-    card('👥', 'Team Plan Users',     m.planTeam       != null ? m.planTeam       : '—', 'team accounts'),
-    card('🔐', 'Active Sessions',     m.activeSessions != null ? m.activeSessions : '—', 'valid session tokens in KV'),
+    card('👤', 'Total Signups',       m.totalSignups   != null ? m.totalSignups   : '—', `all time · ${period} · GA: sign_up event`),
+    card('🆓', 'Free Users',          m.planFree       != null ? m.planFree       : '—', 'signed up · on free plan'),
+    card('💎', 'Pro Users',           m.planPro        != null ? m.planPro        : '—', '$9/mo · paying customers'),
+    card('👥', 'Team Users',          m.planTeam       != null ? m.planTeam       : '—', '$29/mo · team accounts'),
+    card('💰', 'Est. MRR',            mrrStr,                                            `${paidTotal} paying · ${convRate} conversion`),
+    card('🔐', 'Active Sessions',     m.activeSessions != null ? m.activeSessions : '—', 'valid 30-day session tokens in KV'),
   ].join('');
 }
 
