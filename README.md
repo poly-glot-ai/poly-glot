@@ -41,13 +41,16 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 | Web UI generator | ✅ | ✅ | ✅ | ✅ |
 | JS, TS, Python, Java | ✅ | ✅ | ✅ | ✅ |
 | All 12 languages | 🔒 | ✅ | ✅ | ✅ |
-| Why-Comments & Both mode | 🔒 | ✅ | ✅ | ✅ |
+| WHY-Comments & Both mode | 🔒 | ✅ | ✅ | ✅ |
 | CLI tool | ✅ 50 files/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
-| VS Code Extension | ✅ 50 files/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
+| VS Code Extension (full) | 🔒 | ✅ | ✅ | ✅ |
 | **MCP Server** | 🔒 | ✅ 200 calls/mo | ✅ 1,000 calls/mo | ✅ Unlimited |
-| GitHub App | ✅ | ✅ | ✅ | ✅ |
+| **GitHub App PR reviews** | ✅ 25/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
 | Seats | 1 | 1 | 5 | Custom |
-| Support | Community | Email | Priority | Dedicated |
+| Shared API key pool | ❌ | ❌ | ✅ | ✅ |
+| Team dashboard | ❌ | ❌ | ✅ | ✅ |
+| SSO / private deployment | ❌ | ❌ | ❌ | ✅ |
+| Support | Community | Email | Priority | Dedicated SLA |
 
 > 🎁 Use code **`EARLYBIRD3`** at Pro checkout to lock $9/mo forever (expires May 1, 2026).
 

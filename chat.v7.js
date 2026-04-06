@@ -117,9 +117,11 @@ Google: Gemini 2.5 Flash is very fast and affordable. Free tier available. Keys 
 All three providers: your key goes directly from your browser to the provider — Poly-Glot never sees it.
 
 == PRICING ==
-- Free tier: doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month
-- Pro: $9/month — WHY-comments, Both mode, all 12 languages, unlimited files
-- Promo code EARLYBIRD3 = 3 months free
+- Free: doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month, 25 GitHub App PR reviews/month, no MCP
+- Pro: $9/month (or $79/yr) — WHY-comments, Both mode, all 12 languages, unlimited files, unlimited GitHub App PRs, 200 MCP calls/month, full VS Code extension
+- Team: $29/month (or $249/yr) — everything Pro + 5 seats, 1,000 MCP calls/month, shared API key pool, team dashboard, priority support
+- Enterprise: custom — unlimited seats, unlimited MCP, SSO, private deployment, dedicated SLA
+- Promo code EARLYBIRD3 = 50% off first 3 months on Pro
 - Get Pro at poly-glot.ai/#pg-pricing-section
 
 == VS CODE EXTENSION ==
@@ -305,8 +307,8 @@ When a user pastes code or asks a code question:
     },
     {
       // Pricing — scoped to pricing/cost/pro/plan words, not "model" or "language"
-      patterns: [/\bpric(e|ing)\b|\bcost\b|\bpro\b.{0,20}(plan|feature|tier|month|\$)|\bfree.?tier\b|\bsubscri|\bearlybird\b|\bupgrade\b|\b\$9\b|how much/i],
-      answer: `**Pricing:**\n\n🆓 **Free** — doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month\n💎 **Pro** — $9/month — WHY-comments, Both mode, all 12 languages, unlimited\n\n🎉 Use code **EARLYBIRD3** for **3 months free!**\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
+      patterns: [/\bpric(e|ing)\b|\bcost\b|\bpro\b.{0,20}(plan|feature|tier|month|\$)|\bfree.?tier\b|\bsubscri|\bearlybird\b|\bupgrade\b|\b\$9\b|\b\$29\b|how much|team.*plan|enterprise.*plan|mcp.*pric/i],
+      answer: `**Pricing:**\n\n🆓 **Free** — $0/mo · 50 files/mo · 4 languages · 25 GitHub App PR reviews/mo · no MCP\n💎 **Pro** — $9/mo (or $79/yr) · unlimited files · all 12 languages · unlimited GitHub App PRs · 200 MCP calls/mo · full VS Code\n👥 **Team** — $29/mo (or $249/yr) · everything Pro + 5 seats · 1,000 MCP calls/mo · shared key pool · team dashboard\n🏢 **Enterprise** — custom · unlimited MCP · SSO · private deployment · dedicated SLA\n\n🎉 Use code **EARLYBIRD3** for **50% off your first 3 months** on Pro!\n\n[See all plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // Supported languages — only when asking about languages/programming languages
