@@ -90,6 +90,61 @@ function isValidEmail(email) {
   );
 }
 
+// ── Disposable / throwaway email domain blocklist ─────────────────────────────
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
+  'guerrillamail.biz','guerrillamail.de','guerrillamail.info',
+  'tempmail.com','temp-mail.org','temp-mail.io','throwam.com',
+  'sharklasers.com','guerrillamailblock.com','grr.la','guerrillamail.de',
+  'spam4.me','yopmail.com','yopmail.fr','cool.fr.nf','jetable.fr.nf',
+  'nospam.ze.tc','nomail.xl.cx','mega.zik.dj','speed.1s.fr',
+  'courriel.fr.nf','moncourrier.fr.nf','monemail.fr.nf',
+  'dispostable.com','mailnull.com','spamgourmet.com','trashmail.at',
+  'trashmail.me','trashmail.io','trashmail.net','trashmail.org',
+  'trashmail.com','discard.email','maildrop.cc','throwaway.email',
+  'getnada.com','mohmal.com','fakeinbox.com','mailnesia.com',
+  'mailnull.com','spamevader.com','spamfree24.org','spamgap.com',
+  'spamgourmet.org','spamherelots.com','spamthisplease.com',
+  'spamtrail.com','speed.1s.fr','super-auswahl.de','trbvm.com',
+  'trickmail.net','trillianpro.com','tryalert.com','tugnutt.co.uk',
+  'twinmail.de','tyldd.com','uggsrock.com','umail.net',
+  'uroid.com','us.af','venompen.com','veryrealemail.com',
+  'vidchart.com','viditag.com','viewcastmedia.com','vomoto.com',
+  'vpn.st','vsimcard.com','vubby.com','wasteland.rr.nu',
+  'webemail.me','weg-werf-email.de','wegwerf-email.at',
+  'wegwerf-emails.de','wegwerfadresse.de','wegwerfemail.com',
+  'wegwerfemail.de','wegwerfemails.de','wegwerfmail.de',
+  'wegwerfmail.info','wegwerfmail.net','wegwerfmail.org',
+  'wetrainbayarea.com','wetrainbayarea.org','wh4f.org','whopy.com',
+  'wilemail.com','willhackforfood.biz','willselfdestruct.com',
+  'wMailer.com','wolfsmail.tk','writeme.us','wronghead.com',
+  'wuzup.net','wuzupmail.net','www.e4ward.com','www.mailinator.com',
+  'xagloo.com','xemaps.com','xents.com','xmaily.com',
+  'xoxy.net','xyzfree.net','yapped.net','yeah.net',
+  'yesey.net','yodx.ro','yogamaven.com','yopmail.pp.ua',
+  'yopmail.usa.cc','youmailr.com','ypmail.webarnak.fr.eu.org',
+  'yuurok.com','z1p.biz','za.com','zehnminuten.de',
+  'zehnminutenmail.de','zetmail.com','zippymail.info','zoaxe.com',
+  'zoemail.net','zoemail.org','zomg.info','zxcv.com',
+  'zxcvbnm.com','zzz.com','test.com','example.com',
+  'sample.com','fake.com','invalid.com','noreply.com',
+]);
+
+function isDisposableEmail(email) {
+  const domain = email.split('@')[1]?.toLowerCase() ?? '';
+  return DISPOSABLE_DOMAINS.has(domain);
+}
+
+// ── Test/fake address heuristic ───────────────────────────────────────────────
+function isTestEmail(email) {
+  const local = email.split('@')[0]?.toLowerCase() ?? '';
+  return (
+    /^(test|smoke|demo|fake|dummy|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)\b/.test(local) ||
+    /-(test|smoke|demo|fake|audit)\d*$/.test(local) ||
+    /\.(test|smoke|demo|fake|audit)\d*$/.test(local)
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // Magic-link email HTML (dark theme, purple gradient branding)
 // ─────────────────────────────────────────────────────────────
@@ -300,6 +355,11 @@ async function handleLogin(request, env) {
 
   const email = rawEmail.trim().toLowerCase();
 
+  // ── Disposable / test email block ──────────────────────────
+  if (isDisposableEmail(email) || isTestEmail(email)) {
+    return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
+  }
+
   // ── Rate limiting ───────────────────────────────────────────
   const rateLimitKey = `ratelimit:${email}`;
   const rateLimitHit = await env.AUTH_KV.get(rateLimitKey);
@@ -397,33 +457,42 @@ async function handleAdminUsers(request, env) {
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
 
-  // ── Parse plan: keys → user list ─────────────────────────
+  // ── Parse plan: keys → user list — real users only ───────
   const planKeys    = allKeys.filter(k => k.name.startsWith('plan:'));
   const sessionKeys = allKeys.filter(k => k.name.startsWith('session:'));
-  const usageKeys   = allKeys.filter(k => k.name.startsWith('usage:'));
 
-  const YYYY_MM = new Date().toISOString().slice(0, 7); // e.g. "2026-04"
+  const YYYY_MM = new Date().toISOString().slice(0, 7);
 
-  const users = await Promise.all(planKeys.map(async k => {
+  // Build full user list first, then filter to real unique users
+  const allUsers = await Promise.all(planKeys.map(async k => {
     const email = k.name.slice('plan:'.length);
     const plan  = await env.AUTH_KV.get(k.name) ?? 'free';
-    // usage this month
     const usageVal = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`);
     const usage    = usageVal ? parseInt(usageVal, 10) : 0;
     return { email, plan, usage_this_month: usage };
   }));
 
-  // ── Plan breakdown ────────────────────────────────────────
+  // Deduplicate by email (Set), filter out disposable/test addresses
+  const seen  = new Set();
+  const users = allUsers.filter(u => {
+    if (seen.has(u.email)) return false;
+    seen.add(u.email);
+    if (isDisposableEmail(u.email)) return false;
+    if (isTestEmail(u.email))       return false;
+    return true;
+  });
+
+  // ── Plan breakdown (real users only) ─────────────────────
   const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
   users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
 
   return jsonResponse({
-    ok:             true,
-    total_signups:  users.length,
+    ok:              true,
+    unique_users:    users.length,
     active_sessions: sessionKeys.length,
-    plan_breakdown: breakdown,
-    period:         YYYY_MM,
-    users:          users.sort((a, b) => b.usage_this_month - a.usage_this_month),
+    plan_breakdown:  breakdown,
+    period:          YYYY_MM,
+    users:           users.sort((a, b) => b.usage_this_month - a.usage_this_month),
   });
 }
 
@@ -993,6 +1062,11 @@ async function handleFreeSignup(request, env) {
 
   if (!email || !isValidEmail(email)) {
     return jsonResponse({ error: 'A valid email address is required' }, 400);
+  }
+
+  // ── Disposable / test email block ──────────────────────────
+  if (isDisposableEmail(email) || isTestEmail(email)) {
+    return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
   }
 
   // Rate-limit (shared with /api/auth/login — same 60 s window)

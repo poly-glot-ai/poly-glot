@@ -4431,7 +4431,7 @@ function initCommentGenerator() {
         return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
     }
 
-    // Returns the locally-cached count (fast, synchronous).
+    // Returns the locally-cached count — only used for UI display, NEVER as gate.
     function getMonthlyCount() {
         var savedMonth = localStorage.getItem(MONTHLY_MONTH_KEY);
         if (savedMonth !== currentMonthStr()) {
@@ -4442,10 +4442,40 @@ function initCommentGenerator() {
         return parseInt(localStorage.getItem(MONTHLY_COUNT_KEY) || '0', 10);
     }
 
-    // Write authoritative count from server into localStorage cache.
+    // Write authoritative count from server into localStorage (display cache only).
     function setMonthlyCountFromServer(n) {
         localStorage.setItem(MONTHLY_COUNT_KEY, String(n));
         localStorage.setItem(MONTHLY_MONTH_KEY, currentMonthStr());
+    }
+
+    // ── Server-authoritative usage check — called before every generate ──────
+    // Returns { ok: true, used, limit, remaining } or throws on network error.
+    // This is the REAL gate — localStorage is just a display cache.
+    async function checkUsageFromServer() {
+        var tok = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getToken === 'function')
+            ? window.PolyGlotAuth.getToken()
+            : (localStorage.getItem('pg_session_token') || localStorage.getItem('pg_token') || '');
+        if (!tok) return { ok: false, reason: 'no_token' };
+        try {
+            var res = await fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok));
+            if (!res.ok) return { ok: false, reason: 'server_error', status: res.status };
+            var d = await res.json();
+            if (!d || typeof d.used !== 'number') return { ok: false, reason: 'bad_response' };
+            // Always sync display cache with server truth
+            setMonthlyCountFromServer(d.used);
+            renderUsageCounter();
+            return {
+                ok:        true,
+                used:      d.used,
+                limit:     d.limit,
+                remaining: d.remaining,
+                plan:      d.plan,
+                limitHit:  d.limit !== null && d.used >= d.limit,
+            };
+        } catch(e) {
+            // Network failure — fall back to localStorage cache rather than hard-block
+            return { ok: false, reason: 'network_error', fallback: getMonthlyCount() };
+        }
     }
 
     // Increment locally (immediate UI update) AND on the server (enforcement).
@@ -4693,13 +4723,19 @@ function initCommentGenerator() {
             return;
         }
 
-        // ── Monthly limit gate (signed-in free users) ─────────────────────────
-        const monthlyUsed = getMonthlyCount();
-        if (monthlyUsed >= FREE_MONTHLY_LIMIT) {
+        // ── Monthly limit gate — SERVER AUTHORITATIVE (no localStorage bypass) ─
+        showCgInlineError('<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">⏳ Checking usage…</div>');
+        const usageCheck = await checkUsageFromServer();
+
+        // Network failure fallback — use cached count so UX isn't broken offline
+        const monthlyUsed = usageCheck.ok ? usageCheck.used : (usageCheck.fallback ?? getMonthlyCount());
+        const limitToUse  = usageCheck.ok && usageCheck.limit !== null ? usageCheck.limit : FREE_MONTHLY_LIMIT;
+
+        if (usageCheck.ok && usageCheck.limitHit) {
             showCgInlineError(
                 '<div style="padding:28px 24px;text-align:center;">' +
                 '  <div style="font-size:36px;margin-bottom:12px;">🔒</div>' +
-                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + FREE_MONTHLY_LIMIT + ' files used</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + monthlyUsed + ' / ' + limitToUse + ' files used</div>' +
                 '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets ' + usageResetDateStr() + '</div>' +
                 PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
@@ -4712,6 +4748,20 @@ function initCommentGenerator() {
             if (typeof gtag !== 'undefined') gtag('event', 'cg_monthly_limit_hit');
             return;
         }
+
+        // Network error fallback — check cached value before allowing through
+        if (!usageCheck.ok && usageCheck.reason !== 'network_error' && usageCheck.reason !== 'no_token') {
+            // Server responded but something is wrong — block to be safe
+            showCgInlineError(
+                '<div style="padding:20px;text-align:center;">' +
+                '  <div style="font-size:13px;color:#f87171;">⚠️ Could not verify usage. Please sign out and back in, then try again.</div>' +
+                '</div>'
+            );
+            return;
+        }
+
+        // Clear the "Checking usage…" message — proceed
+        hideCgInlineError();
 
         // ── Pro gate — check if selected language or style is Pro-locked ────────
         const plan = (window.PolyGlotAuth && typeof window.PolyGlotAuth.getPlan === 'function')
