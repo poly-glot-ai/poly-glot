@@ -1271,9 +1271,11 @@ async function handleAdminDeleteUser(request, env) {
     `ratelimit:${email}`,
     `usage:${email}:${YYYY_MM}`,
   ];
-  // Also scan for any session: or token: keys containing this email
-  // (they store email in JSON payload, not in key name — can't enumerate easily)
-  // Delete the deterministic keys via Workers KV API (bypasses edge cache)
+  // Write tombstone FIRST so handleAdminUsers filters this user out immediately,
+  // even before KV edge cache propagates the delete (eventual consistency workaround).
+  await env.AUTH_KV.put(`plan:${email}`, 'DELETED', { expirationTtl: 3600 }); // auto-expires in 1hr
+
+  // Now delete all keys (best-effort — tombstone above is the immediate filter)
   const results = await Promise.allSettled(
     keysToDelete.map(k => env.AUTH_KV.delete(k))
   );
