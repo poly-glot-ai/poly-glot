@@ -1,12 +1,12 @@
-## [1.4.47] — 2026-04-06
-- 🔧 maintenance release
-
----
-
 # Changelog
 
 All notable changes to the Poly-Glot VS Code Extension are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [1.4.47] — 2026-04-06
+- 🔧 maintenance release
 
 ---
 
