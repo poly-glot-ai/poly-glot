@@ -35,7 +35,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '2.1.35';  // 1-click login: local callback server eliminates token copy-paste
+const VERSION = '2.1.36';  // 1-click login: local callback server eliminates token copy-paste
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
