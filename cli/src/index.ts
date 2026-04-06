@@ -429,17 +429,8 @@ ${COLORS.dim}It takes 30 seconds — just your email, no password needed.${COLOR
 
 ${COLORS.dim}Use code ${COLORS.reset}${COLORS.green}EARLYBIRD3${COLORS.reset}${COLORS.dim} to lock Pro at $9/mo forever (expires May 1, 2026).${COLORS.reset}
 `);
-        const rl  = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const ans = await new Promise<string>(res => rl.question(`  Create your free account now? (Y/n) `, res));
-        rl.close();
-
-        if (ans.trim().toLowerCase() === 'n') {
-            console.log(`
-  ${COLORS.dim}Run ${COLORS.reset}${COLORS.cyan}poly-glot login${COLORS.reset}${COLORS.dim} when you're ready.
-${COLORS.reset}`);
-            process.exit(0);
-        }
-
+        // No escape hatch — account is required, no "n" exit path.
+        console.log(`  A free account is required to continue. Starting sign-up now...\n`);
         await runLogin();
 
         // Re-check session after login

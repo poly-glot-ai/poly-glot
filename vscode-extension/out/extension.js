@@ -62,7 +62,7 @@ const FIRST_NUDGE_AT = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION = '1.4.49';
+const MINIMUM_VERSION = '1.4.50';
 const MAY1_2025 = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit() { return Date.now() >= MAY1_2025 ? 10 : 50; }
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -450,7 +450,7 @@ async function maybeShowFirstRunOnboarding() {
     if (hasSession || hasLicenseToken)
         return;
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.49';
+    const ONBOARDING_VERSION = '1.4.50';
     const shownForVersion = extContext.globalState.get('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION)
         return;
@@ -649,23 +649,12 @@ async function handleChatRequest(request, _chatContext, stream, token) {
         return { metadata: { command: 'setup' } };
     }
     if (cmd === 'comment' || cmd === 'why' || cmd === 'both' || cmd === 'explain' || !cmd) {
-        const pro = await hasPro();
-        if (!pro) {
-            const count = getMonthlyCount();
-            if (count >= FREE_LIMIT) {
-                stream.markdown([
-                    `## 🚫 Free plan limit reached — ${FREE_LIMIT} files this month`,
-                    '',
-                    `You've used **${count}/${FREE_LIMIT}** free files this month.`,
-                    '',
-                    '🏷 Use code **`EARLYBIRD3`** to lock Pro at **$9/mo forever** *(expires May 1, 2026)*',
-                    '',
-                    `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
-                    '',
-                    'Already subscribed? Run **Poly-Glot: Configure License Token** in the Command Palette.',
-                ].join('\n'));
-                return { metadata: { command: cmd } };
-            }
+        // ── Hard gate: account required before any generation via Copilot Chat ──
+        // checkAndIncrementUsage() calls requireSignUp() if no token, blocks if over quota.
+        const allowed = await checkAndIncrementUsage();
+        if (!allowed) {
+            // requireSignUp() or showLimitReached() already showed the appropriate prompt
+            return { metadata: { command: cmd } };
         }
     }
     if ((cmd === 'why' || cmd === 'both') && !await hasPro()) {
