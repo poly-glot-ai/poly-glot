@@ -631,7 +631,18 @@
           if (freeCta) {
             freeCta.style.display = 'block';
           }
-          if (typeof gtag === 'function') gtag('event', 'magic_link_sent', { method: 'email' });
+          if (typeof gtag === 'function') {
+            gtag('event', 'magic_link_sent', { method: 'email' });
+            // Fire signup events only for brand-new registrations
+            if (result.data && result.data.new_user === true) {
+              gtag('event', 'sign_up', { method: 'magic_link' }); // GA4 standard — shows in Acquisitions
+              gtag('event', 'new_user_signup', {
+                method: 'magic_link',
+                event_category: 'auth',
+                event_label: 'new_registration'
+              });
+            }
+          }
         } else {
           // Worker returned an error — surface the real message
           var msg = (result.data && result.data.error)
@@ -822,7 +833,10 @@
           // Show session token panel so VS Code / CLI users can copy it
           showSessionTokenPanel(sessionToken, email, plan);
 
-          if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan });
+          if (typeof gtag === 'function') {
+            gtag('event', 'magic_link_verify_success', { plan: plan });
+            gtag('event', 'login', { method: 'magic_link', plan: plan });
+          }
         })
         .catch(function () {
           showToast('⚠️ Sign-in failed — please check your connection and try again.', 5000);
