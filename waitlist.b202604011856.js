@@ -8,7 +8,7 @@
  * • Fires GA4 events for every key interaction
  * • Tracks feature usage patterns (language, modes, file uploads)
  * • Global email deduplication across ALL forms (modal, inline, enterprise)
- * • EARLYBIRD3 promo code tracking — tags users for 3 months free
+ * • EARLYBIRD3 promo code tracking — tags users for 50% off first 3 months
  * • Email notification to hwmoses2@icloud.com on every unique new signup
  * • SignupTracker: secure localStorage log with CSV + email export
  * • "developers already waiting" badge removed from inline section
@@ -122,7 +122,7 @@
         ts:         new Date().toISOString(),
         email:      norm,
         promo_code: PROMO_CODE,
-        promo_perk: '3 months free',
+        promo_perk: '50% off first 3 months',
         source:     source || 'unknown',
         name:       (extra && extra.name)    || '',
         company:    (extra && extra.company) || '',
@@ -156,7 +156,7 @@
         '"' + (u.company  || '').replace(/"/g, '""') + '"',
         u.team_size  || '',
         u.promo_code || PROMO_CODE,
-        '"' + (u.promo_perk || '3 months free') + '"',
+        '"' + (u.promo_perk || '50% off first 3 months') + '"',
         u.source     || ''
       ]);
       const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
@@ -514,7 +514,7 @@
           </svg>
           <span class="pg-banner-dot"></span>
           <span class="pg-banner-msg">
-            <strong>🎉 Pro is live — get 3 months free.</strong>
+            <strong>🎉 Pro is live — get 50% off your first 3 months.</strong>
             <span class="pg-banner-sub"> Use code <strong>EARLYBIRD3</strong> at checkout — <span id="pg-banner-countdown">only first 50 subscribers</span>.</span>
           </span>
         </div>
@@ -588,7 +588,7 @@
             <span class="pg-wm-parrot">🦜</span>
             <div>
               <h2 class="pg-wm-title" id="pg-modal-title">Poly-Glot Pro — Early Access</h2>
-              <p class="pg-wm-subtitle">Join the waitlist — get 3 months free at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
+              <p class="pg-wm-subtitle">Join the waitlist — get 50% off your first 3 months at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
             </div>
           </div>
           <button class="pg-wm-close" id="pg-modal-close" aria-label="Close modal">✕</button>
@@ -776,7 +776,7 @@
         <div class="pg-wm-already-joined">
           <div class="pg-wm-checkmark">✅</div>
           <h3>You're on the list!</h3>
-          <p>We have <strong>${escapeHtml(email)}</strong> saved. You'll be the first to know when Poly-Glot Pro launches — and you'll get <strong>3 months free</strong>.</p>
+          <p>We have <strong>${escapeHtml(email)}</strong> saved. You'll be the first to know when Poly-Glot Pro launches — and you'll get <strong>50% off your first 3 months</strong>.</p>
           <p class="pg-wm-share-nudge">Share with a teammate 👇</p>
           <div class="pg-wm-share-row">
             <button class="pg-wm-share-btn" id="pg-share-x">𝕏 Share on X</button>
@@ -859,7 +859,7 @@
       fd.append('email',      email);
       fd.append('role',       role);
       fd.append('promo_code', promoCode || 'none');
-      fd.append('promo_perk', isPromo ? '3 months free' : 'standard');
+      fd.append('promo_perk', isPromo ? '50% off first 3 months' : 'standard');
       fd.append('gen_count',  genCount);
       fd.append('language',   language);
       fd.append('source',     'modal');
@@ -896,7 +896,7 @@
     if (errorEl) { errorEl.style.display = 'none'; errorEl.innerHTML = ''; }
     if (successEl) {
       var promoLine = isPromo
-        ? ' You\'ll get your first <strong>3 months free</strong> when Pro launches.'
+        ? ' You\'ll get <strong>50% off your first 3 months</strong> when Pro launches.'
         : '';
       successEl.innerHTML =
         '✅ <strong>' + escapeHtml(email) + '</strong> is already on our early-access list! ' +
@@ -942,8 +942,8 @@
     const isPromo = data.promoCode === PROMO_CODE;
     if (successEl) {
       successEl.innerHTML = isPromo
-        ? '🎉 Welcome, early bird! You\'re on the list + your <strong>EARLYBIRD3</strong> promo code is saved — enjoy <strong>3 months free</strong> when Pro launches. Check your inbox! 🚀'
-        : '🎉 You\'re in! We\'ll email <strong>' + escapeHtml(data.email) + '</strong> when Pro launches — and you\'ll get 3 months free.';
+        ? '🎉 Welcome, early bird! You\'re on the list + your <strong>EARLYBIRD3</strong> promo code is saved — enjoy <strong>50% off your first 3 months</strong> when Pro launches. Check your inbox! 🚀'
+        : '🎉 You\'re in! We\'ll email <strong>' + escapeHtml(data.email) + '</strong> when Pro launches — and you\'ll get 50% off your first 3 months.';
       successEl.style.display = 'block';
     }
 
@@ -966,7 +966,7 @@
         <span class="pg-banner-fire">✅</span>
         <span class="pg-banner-msg">
           <strong>You're on the Pro waitlist!</strong>
-          <span class="pg-banner-sub"> You'll get early access + 3 months free at launch. Use code EARLYBIRD3 when you sign up.</span>
+          <span class="pg-banner-sub"> You'll get early access + 50% off your first 3 months at launch. Use code EARLYBIRD3 when you sign up.</span>
         </span>
       </div>
       <div class="pg-banner-right">
@@ -988,8 +988,8 @@
   /* ── Share buttons ─────────────────────────────────────── */
 
   function wireShareButtons() {
-    const shareText = encodeURIComponent('🦜 Just joined the @PolyGlotAI Pro waitlist — AI-powered code docs for 12 languages. Get 3 months free at launch: https://poly-glot.ai #DevTools #AI');
-    const liText    = encodeURIComponent('I just joined the Poly-Glot Pro waitlist — AI-powered code comment generation for 12 languages. Get 3 months free at launch. https://poly-glot.ai');
+    const shareText = encodeURIComponent('🦜 Just joined the @PolyGlotAI Pro waitlist — AI-powered code docs for 12 languages. Get 50% off your first 3 months at launch: https://poly-glot.ai #DevTools #AI');
+    const liText    = encodeURIComponent('I just joined the Poly-Glot Pro waitlist — AI-powered code comment generation for 12 languages. Get 50% off your first 3 months at launch. https://poly-glot.ai');
 
     const xBtn  = document.getElementById('pg-share-x');
     const liBtn = document.getElementById('pg-share-li');
@@ -1033,7 +1033,7 @@
         <div class="pg-wis-left">
           <div class="pg-wis-eyebrow">🚀 Coming Soon</div>
           <h2 class="pg-wis-heading">Poly-Glot Pro</h2>
-          <p class="pg-wis-sub">Unlimited files. Confidence scoring. Team dashboards. Fine-tune export for LLMs.<br>Join the waitlist — get <strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
+          <p class="pg-wis-sub">Unlimited files. Confidence scoring. Team dashboards. Fine-tune export for LLMs.<br>Join the waitlist — get <strong>50% off your first 3 months</strong> at launch. Use code <strong>EARLYBIRD3</strong> when you sign up.</p>
         </div>
         <div class="pg-wis-right">
           <form class="pg-wis-form" id="pg-wis-form" novalidate>
@@ -1265,7 +1265,7 @@
           if (sub) {
             sub.innerHTML =
               '<strong>' + rawLabel + '</strong> unlocks with Pro — join the waitlist and get ' +
-              '<strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
+              '<strong>50% off your first 3 months</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
           }
         }, 50);
       } else if (!isProLanguage(chosen)) {
@@ -1310,7 +1310,7 @@
             var rawLabel = lang.charAt(0).toUpperCase() + lang.slice(1);
             sub.innerHTML =
               '<strong>' + rawLabel + '</strong> unlocks with Pro — join the waitlist and get ' +
-              '<strong>3 months free</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
+              '<strong>50% off your first 3 months</strong> at launch. Use code <strong>EARLYBIRD3</strong>.';
           }
         }, 50);
         return;

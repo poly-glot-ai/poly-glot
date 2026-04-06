@@ -65,7 +65,7 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
 == PRICING ==
 - Free tier: doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month
 - Pro: $9/month — WHY-comments, Both mode, all 12 languages, unlimited files
-- Promo code EARLYBIRD3 = 3 months free
+- Promo code EARLYBIRD3 = 50% off your first 3 months on Pro
 - Get Pro at poly-glot.ai/#pg-pricing-section
 
 == VS CODE EXTENSION ==
@@ -129,7 +129,7 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
       patterns: [/where.{0,30}(pric|plan|pro|upgrade|promo|earlybird|pay|billing)/i,
                  /how.{0,20}(upgrade|get pro|buy pro|subscribe)/i,
                  /where.{0,20}(promo|coupon|discount|code)/i],
-      answer: `**Pricing is at the bottom of the homepage:**\n\n- Scroll down to the **Pricing** section, or\n- Click any **"Upgrade to Pro"** or **"See plans"** link\n\n💎 **Pro is $9/month** — WHY-comments, Both mode, all 12 languages, unlimited files\n\n🎉 Use promo code **EARLYBIRD3** for **3 months free** — enter it on the checkout page.\n\n[Jump to pricing →](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**Pricing is at the bottom of the homepage:**\n\n- Scroll down to the **Pricing** section, or\n- Click any **"Upgrade to Pro"** or **"See plans"** link\n\n💎 **Pro is $9/month** — WHY-comments, Both mode, all 12 languages, unlimited files\n\n🎉 Use promo code **EARLYBIRD3** for **50% off your first 3 months** — enter it on the checkout page.\n\n[Jump to pricing →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // "where is sign in" / "where do I log in" / "where is my account"
@@ -161,7 +161,7 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
       // "where is the download button" / "how do I download the output"
       patterns: [/where.{0,30}download/i,
                  /how.{0,20}(download|save|export).{0,20}(output|code|result|comment)/i],
-      answer: `**The Download button appears after generation:**\n\n1. Generate your comments\n2. In the **output panel** (right side), the **⬇️ Download** button appears\n3. Click it to save the documented file\n\n⚠️ Download is a **Pro feature**. Upgrade at [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section) — use code **EARLYBIRD3** for 3 months free.`,
+      answer: `**The Download button appears after generation:**\n\n1. Generate your comments\n2. In the **output panel** (right side), the **⬇️ Download** button appears\n3. Click it to save the documented file\n\n⚠️ Download is a **Pro feature**. Upgrade at [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section) — use code **EARLYBIRD3** for 50% off your first 3 months.`,
     },
 
     // ── FEATURES & HOW-TO ──────────────────────────────────────────────────────
@@ -190,12 +190,12 @@ JavaScript, TypeScript, Python, Java, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotli
     {
       // WHY-comments — tightly scoped
       patterns: [/\bwhy.?comment|\bwhy.?mode\b|reasoning comment|intent comment|trade.?off comment|what.*why.*comment|why.*vs.*doc/i],
-      answer: `**WHY-comments** explain *why* code was written a certain way — not just what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample:\n\`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** Use code **EARLYBIRD3** for 3 months free → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**WHY-comments** explain *why* code was written a certain way — not just what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample:\n\`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** Use code **EARLYBIRD3** for 50% off your first 3 months → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // Pricing — scoped to pricing/cost/pro/plan words, not "model" or "language"
       patterns: [/\bpric(e|ing)\b|\bcost\b|\bpro\b.{0,20}(plan|feature|tier|month|\$)|\bfree.?tier\b|\bsubscri|\bearlybird\b|\bupgrade\b|\b\$9\b|how much/i],
-      answer: `**Pricing:**\n\n🆓 **Free** — doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month\n💎 **Pro** — $9/month — WHY-comments, Both mode, all 12 languages, unlimited\n\n🎉 Use code **EARLYBIRD3** for **3 months free!**\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**Pricing:**\n\n🆓 **Free** — doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month\n💎 **Pro** — $9/month — WHY-comments, Both mode, all 12 languages, unlimited\n\n🎉 Use code **EARLYBIRD3** for **50% off your first 3 months!**\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // Supported languages — only when asking about languages/programming languages
