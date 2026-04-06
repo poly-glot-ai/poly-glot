@@ -2980,6 +2980,13 @@ function pg2OpenAssistant(text) {
     <div class="pg2-eyebrow" style="justify-content:center;">🔌 MCP Server</div>
     <h2 class="pg2-section__h2" id="mcp-heading">Use Poly-Glot from any MCP client</h2>
     <p class="pg2-section__sub" style="margin-left:auto;margin-right:auto;">Goose, Claude Desktop, Cursor, Windsurf — any MCP client can call Poly-Glot's tools directly. Document, explain, and analyze code without leaving your workflow.</p>
+    <!-- Pro+ gate indicator -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:8px 16px;margin-bottom:20px;font-size:13px;">
+      <span style="color:#a78bfa;font-weight:700;">💎 Pro+ Required</span>
+      <span style="color:var(--text-muted);">·</span>
+      <span style="color:var(--text-muted);">Free: 🔒 blocked &nbsp;·&nbsp; Pro: 200 calls/mo &nbsp;·&nbsp; Team: 1,000 calls/mo &nbsp;·&nbsp; Enterprise: unlimited</span>
+      <a href="#pg-pricing-section" style="color:var(--accent);font-size:12px;white-space:nowrap;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See plans →</a>
+    </div>
     <div class="pg2-mcp-config" style="text-align:left;">
       <div class="pg2-mcp-config__bar">
         <span class="pg2-mcp-config__dot" style="background:#ef4444;"></span>
@@ -2991,11 +2998,15 @@ function pg2OpenAssistant(text) {
   "command": "npx",
   "args": ["-y", "poly-glot-mcp"],
   "env": {
-    "POLYGLOT_PROVIDER": "openai",
-    "POLYGLOT_API_KEY":  "sk-...",
-    "POLYGLOT_MODEL":    "gpt-4.1-mini"
+    "POLYGLOT_SESSION_TOKEN": "pg_...",
+    "POLYGLOT_PROVIDER":      "openai",
+    "POLYGLOT_API_KEY":       "sk-...",
+    "POLYGLOT_MODEL":         "gpt-4.1-mini"
   }
 }</pre>
+    </div>
+    <div style="margin:8px auto 20px;max-width:520px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-muted);text-align:left;">
+      🔑 Get your <code style="color:var(--accent);font-family:'Fira Code',monospace;">POLYGLOT_SESSION_TOKEN</code> from <a href="https://poly-glot.ai/dashboard" style="color:var(--accent);">poly-glot.ai/dashboard</a> → Account → API Token. Requires Pro or above.
     </div>
     <div class="pg2-mcp-tools-grid" style="text-align:left;">
       <div class="pg2-mcp-tool">polyglot_add_doc_comments</div>
@@ -3005,8 +3016,9 @@ function pg2OpenAssistant(text) {
       <div class="pg2-mcp-tool">polyglot_list_languages</div>
       <div class="pg2-mcp-tool">polyglot_list_models</div>
     </div>
-    <div style="margin-top:20px;display:flex;justify-content:center;">
+    <div style="margin-top:20px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
       <a href="https://www.npmjs.com/package/poly-glot-mcp" target="_blank" rel="noopener" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;display:inline-flex;align-items:center;">📦 poly-glot-mcp v<span data-live="mcp-version">1.1.4</span> on npm →</a>
+      <a href="#pg-pricing-section" class="pg2-hero__cta-primary" style="font-size:13px;height:40px;padding:0 16px;display:inline-flex;align-items:center;" onclick="if(typeof gtag==='function') gtag('event','mcp_section_upgrade_click');">💎 Get Pro — Unlock MCP</a>
     </div>
   </div>
 </div>
@@ -3022,6 +3034,12 @@ function pg2OpenAssistant(text) {
         <div class="pg2-eyebrow">🐙 GitHub App</div>
         <h2 class="pg2-section__h2" id="github-app-heading">Auto-document every pull request</h2>
         <p class="pg2-section__sub">Install once — Poly-Glot AI reviews every PR automatically. It scans changed files, detects missing documentation, and posts inline JSDoc, PyDoc, Javadoc, or Doxygen suggestions as review comments.</p>
+        <!-- Plan indicators -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text-muted);">🆓 Free — 25 PR reviews / month</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:5px 10px;font-size:12px;color:#a78bfa;">💎 Pro — Unlimited PR reviews</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:6px;padding:5px 10px;font-size:12px;color:#34d399;">👥 Team — Unlimited + 5 seats</span>
+        </div>
         <div class="pg2-shortcut-list">
           <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">📂 PR opened</span><span class="pg2-shortcut__desc">Automatically scans all changed files</span></div>
           <div class="pg2-shortcut"><span class="pg2-shortcut__kbd">📊 Coverage check</span><span class="pg2-shortcut__desc">GitHub Check Run with per-file doc scores</span></div>
@@ -3030,6 +3048,7 @@ function pg2OpenAssistant(text) {
         </div>
         <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
           <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-hero__cta-primary" style="font-size:13px;height:40px;padding:0 20px;" onclick="if(typeof gtag==='function') gtag('event','github_app_install_click');">🐙 Install on GitHub Free</a>
+          <a href="#pg-pricing-section" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;" onclick="if(typeof gtag==='function') gtag('event','github_app_upgrade_click');">💎 Upgrade for Unlimited PRs</a>
           <a href="https://github.com/hmoses/poly-glot-github-app" target="_blank" rel="noopener" class="pg2-hero__cta-secondary" style="font-size:13px;height:40px;padding:0 16px;">View Source ↗</a>
         </div>
       </div>
