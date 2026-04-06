@@ -74,6 +74,7 @@ async function trackMcpUsage(token: string): Promise<{ allowed: boolean; message
       headers: {
         'Content-Type': 'application/json',
         'User-Agent':   'poly-glot-mcp/tool-call',
+        'X-PG-Service': 'poly-glot-mcp',
       },
       body:   JSON.stringify({ token }),
       signal: AbortSignal.timeout(6_000),
@@ -144,7 +145,10 @@ async function validateSessionToken(token: string): Promise<void> {
     try {
       const res = await fetch(url, {
         method:  'GET',
-        headers: { 'User-Agent': 'poly-glot-mcp/startup-check' },
+        headers: {
+          'User-Agent':   'poly-glot-mcp/startup-check',
+          'X-PG-Service': 'poly-glot-mcp',
+        },
         signal:  AbortSignal.timeout(8_000),
       });
 
