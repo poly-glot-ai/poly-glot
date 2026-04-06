@@ -1676,9 +1676,21 @@
       return _token || localStorage.getItem(LS_TOKEN_KEY) || null;
     },
 
-    /** Returns the current plan string, or 'free'. */
+    /** Returns the current plan string, or 'free'.
+     *  ONLY returns a paid plan if _plan is set from a live server verification.
+     *  Never promotes to pro/team/enterprise from localStorage alone —
+     *  localStorage is a display cache and can be spoofed via DevTools.
+     */
     getPlan: function () {
-      return _plan || localStorage.getItem(LS_PLAN_KEY) || 'free';
+      // _plan is set exclusively by the server verify/refresh response.
+      // If it's null the auth module hasn't finished loading yet — return 'free'.
+      // We intentionally do NOT fall back to localStorage for plan gating.
+      if (_plan) return _plan;
+      // Safe fallback: only return a non-free plan from localStorage if the
+      // pg-user-chip is in the DOM (meaning auth has already verified once).
+      var chip = document.getElementById('pg-user-chip');
+      if (chip) return localStorage.getItem(LS_PLAN_KEY) || 'free';
+      return 'free';
     },
 
     /** Clear auth state and reload. */
