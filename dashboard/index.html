@@ -318,8 +318,12 @@ const ENDPOINTS = [
   { method:'GET',  key:'resend',    url:'https://resend-status.com/api/v2/status.json',                              label:'Resend Status',        desc:'Email delivery · resend-status.com API' },
   { method:'GET',  key:'cfStatus',  url:'https://www.cloudflarestatus.com/api/v2/components.json',                   label:'Cloudflare Status',    desc:'Workers + KV + Pages component status' },
   { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/ping',                                        label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/ping health probe' },
-  { method:'POST', key:'googleSignin', url:'https://poly-glot.ai/api/auth/google-signin',                           label:'Google Sign-In',       desc:'POST /api/auth/google-signin · OAuth id_token verify' },
-  { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',                     label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
+  { method:'POST', key:'googleSignin', url:'https://poly-glot.ai/api/auth/google-signin',
+    probe: JSON.stringify({ id_token: 'probe' }),
+    probeOk: r => r.status === 400,                                                                                  label:'Google Sign-In',       desc:'POST /api/auth/google-signin · 400 on bad token = endpoint live' },
+  { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',
+    probe: JSON.stringify({ installationId: 'dashboard-probe', owner: 'probe', repo: 'probe' }),
+    probeOk: r => r.ok || r.status === 429,                                                                          label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
   { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 ];
@@ -339,7 +343,8 @@ async function fetchOne(ep, timeoutMs) {
       'Content-Type': 'application/json',
       'Accept': 'application/json;api-version=3.0-preview.1'
     };
-    opts.body = VSC_BODY;
+    // Use per-endpoint probe body if defined, otherwise default VSC_BODY
+    opts.body = ep.probe || VSC_BODY;
   }
   try {
     const res  = await fetch(ep.url, opts);
@@ -347,7 +352,9 @@ async function fetchOne(ep, timeoutMs) {
     const ms   = Date.now() - t0;
     let   data = null;
     try { data = await res.json(); } catch {}
-    return { ok: res.ok, status: res.status, ms, data };
+    // Per-endpoint probeOk lets us treat non-200 as "ok" (e.g. 400 = endpoint is live)
+    const isOk = ep.probeOk ? ep.probeOk(res) : res.ok;
+    return { ok: isOk, status: res.status, ms, data };
   } catch(e) {
     clearTimeout(to);
     const ms = Date.now() - t0;
