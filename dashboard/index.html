@@ -254,6 +254,23 @@
 <div class="section">
   <div class="sec-title">👤 Users &amp; Signups</div>
   <div class="grid" id="signupsGrid"></div>
+
+  <!-- User list table -->
+  <div style="margin-top:18px;overflow-x:auto;">
+    <table id="userTable" style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--bg3);border-bottom:1px solid var(--border2);">
+          <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">#</th>
+          <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Email</th>
+          <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Plan</th>
+          <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:600;">Usage this month</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Section 4: Install metrics -->
@@ -301,6 +318,8 @@ const ENDPOINTS = [
   { method:'GET',  key:'resend',    url:'https://resend-status.com/api/v2/status.json',                              label:'Resend Status',        desc:'Email delivery · resend-status.com API' },
   { method:'GET',  key:'cfStatus',  url:'https://www.cloudflarestatus.com/api/v2/components.json',                   label:'Cloudflare Status',    desc:'Workers + KV + Pages component status' },
   { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/ping',                                        label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/ping health probe' },
+  { method:'POST', key:'googleSignin', url:'https://poly-glot.ai/api/auth/google-signin',                           label:'Google Sign-In',       desc:'POST /api/auth/google-signin · OAuth id_token verify' },
+  { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',                     label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
   { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 ];
@@ -424,7 +443,7 @@ async function collectAll() {
     }
   } catch { m.chromeInstalls = null; }
 
-  // Admin user stats — total signups, plan breakdown, active sessions
+  // Admin user stats — total signups, plan breakdown, active sessions, user list
   try {
     const adminRes = await fetch(ADMIN_USERS);
     if (adminRes.ok) {
@@ -436,9 +455,10 @@ async function collectAll() {
         m.planPro         = d.plan_breakdown?.pro        ?? 0;
         m.planTeam        = d.plan_breakdown?.team       ?? 0;
         m.signupPeriod    = d.period;
+        m.userList        = d.users ?? [];
       }
     }
-  } catch { m.totalSignups = null; }
+  } catch { m.totalSignups = null; m.userList = []; }
 
   // Resend status
   try {
@@ -623,6 +643,28 @@ function renderSignups(m) {
   ].join('');
 }
 
+function renderUserTable(users) {
+  const tbody = document.getElementById('userTableBody');
+  if (!tbody) return;
+  if (!users || !users.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No users yet</td></tr>';
+    return;
+  }
+  const PLAN_COLORS = { pro: '#a78bfa', team: '#34d399', enterprise: '#f59e0b', free: '#64748b' };
+  tbody.innerHTML = users.map((u, i) => {
+    const planColor = PLAN_COLORS[u.plan] || '#64748b';
+    const planLabel = (u.plan || 'free').toUpperCase();
+    return `<tr style="border-bottom:1px solid var(--border);${i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)'}">
+      <td style="padding:8px 12px;color:var(--muted);">${i + 1}</td>
+      <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}</td>
+      <td style="padding:8px 12px;">
+        <span style="background:${planColor}22;color:${planColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">${planLabel}</span>
+      </td>
+      <td style="padding:8px 12px;text-align:right;color:var(--text);">${u.usage_this_month != null ? u.usage_this_month.toLocaleString() : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderEpTable(epStatus) {
   document.getElementById('epBody').innerHTML = ENDPOINTS.map(ep => {
     const d   = epStatus[ep.key] || {};
@@ -727,6 +769,7 @@ async function runAll() {
   renderExternal({ resendIndicator: null, cfWorkers: null, cfWorkersKV: null, cfPages: null, cfCDN: null, authWorkerOk: null });
   renderEpTable(loadingEp);
   renderSignups({});
+  renderUserTable([]);
   renderBanner(loadingEp);
 
   try {
@@ -735,6 +778,7 @@ async function runAll() {
     renderExternal(m);
     renderEpTable(epStatus);
     renderSignups(m);
+    renderUserTable(m.userList || []);
     renderMetrics(m);
     renderStats(m);
     renderVersions(m);
