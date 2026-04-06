@@ -61,8 +61,8 @@ const FREE_LIMIT = 50;
 const FIRST_NUDGE_AT = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
-// Current floor = 1.4.40 (first version with device fingerprint + server-only usage gate).
-const MINIMUM_VERSION = '1.4.40';
+// 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
+const MINIMUM_VERSION = '1.4.49';
 const MAY1_2025 = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit() { return Date.now() >= MAY1_2025 ? 10 : 50; }
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -133,9 +133,9 @@ function updateStatusBarUsage(isPro) {
 }
 /**
  * Server-aware usage increment.
- * If the user has a session token we track server-side (authoritative).
- * Falls back to local-only for users without a session.
- * Returns false if the limit is exceeded.
+ * Requires a valid session token — no anonymous fallback.
+ * Users without an account are directed to sign up before any generation.
+ * Returns false if the limit is exceeded or user is not signed in.
  */
 async function checkAndIncrementUsage() {
     if (await hasPro()) {
@@ -143,173 +143,120 @@ async function checkAndIncrementUsage() {
         return true;
     }
     const sessionToken = extContext.globalState.get('pg.sessionToken', '');
+    const licenseToken = vscode.workspace.getConfiguration('polyglot').get('licenseToken', '').trim();
+    const token = sessionToken || licenseToken;
+    // ── No token: hard sign-up gate — no anonymous fallback ──────────────
+    if (!token) {
+        await requireSignUp('generate');
+        return false;
+    }
     // ── Server-side tracking (authoritative) ─────────────────────────────
-    if (sessionToken) {
-        try {
-            const res = await fetch(`${AUTH_API}/track-usage`, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify({ token: sessionToken, count: 1 }),
-                signal: AbortSignal.timeout(5000),
-            });
-            const data = await res.json();
-            // Sync local to server count
-            if (typeof data.used === 'number') {
-                await syncLocalCount(data.used);
-            }
-            // Limit reached (403 from server)
-            if (!data.ok && data.remaining !== null && data.remaining <= 0) {
-                updateStatusBarUsage(false);
-                await showLimitReached(data.used, data.limit ?? FREE_LIMIT);
-                return false;
-            }
-            updateStatusBarUsage(false);
-            // Nudge messages
-            const used = data.used ?? getMonthlyCount();
-            const remaining = data.remaining ?? Math.max(0, FREE_LIMIT - used);
-            await showUsageNudge(used, remaining);
-            return true;
+    try {
+        const res = await fetch(`${AUTH_API}/track-usage`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ token, count: 1 }),
+            signal: AbortSignal.timeout(5000),
+        });
+        const data = await res.json();
+        // Sync local to server count
+        if (typeof data.used === 'number') {
+            await syncLocalCount(data.used);
         }
-        catch {
-            // Server unreachable AND has session token — hard block
-            // Prevents offline circumvention by users with accounts
-            const choice = await vscode.window.showErrorMessage(`🚫 Poly-Glot cannot reach the server to verify your account. Please check your internet connection.`, 'Retry', 'Open poly-glot.ai');
-            if (choice === 'Retry') {
-                // Reset cache and retry once
-                _cachedPlan = undefined;
-                return checkAndIncrementUsage();
-            }
-            if (choice === 'Open poly-glot.ai') {
-                vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai'));
-            }
+        // Limit reached (403 from server)
+        if (!data.ok && data.remaining !== null && data.remaining <= 0) {
+            updateStatusBarUsage(false);
+            await showLimitReached(data.used, data.limit ?? FREE_LIMIT);
             return false;
         }
+        updateStatusBarUsage(false);
+        // Nudge messages
+        const used = data.used ?? getMonthlyCount();
+        const remaining = data.remaining ?? Math.max(0, FREE_LIMIT - used);
+        await showUsageNudge(used, remaining);
+        return true;
     }
-    // ── No session token: use server-side anonymous device tracking ──────
-    // machineId is stable across reinstalls — cannot be reset by uninstalling
-    const fingerprint = vscode.env.machineId;
-    let deviceId = extContext.globalState.get('pg.deviceId', '');
-    // Register device if not yet registered
-    if (!deviceId) {
-        try {
-            const regRes = await fetch(`${AUTH_API}/register-device`, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify({ source: 'vscode', fingerprint }),
-                signal: AbortSignal.timeout(5000),
-            });
-            if (regRes.ok) {
-                const regData = await regRes.json();
-                if (regData.ok && regData.deviceId) {
-                    deviceId = regData.deviceId;
-                    await extContext.globalState.update('pg.deviceId', deviceId);
-                }
-            }
+    catch {
+        // Server unreachable — hard block; cannot verify account offline
+        const choice = await vscode.window.showErrorMessage(`🚫 Poly-Glot cannot reach the server to verify your account. Please check your internet connection.`, 'Retry', 'Open poly-glot.ai');
+        if (choice === 'Retry') {
+            _cachedPlan = undefined;
+            return checkAndIncrementUsage();
         }
-        catch { }
+        if (choice === 'Open poly-glot.ai') {
+            vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai'));
+        }
+        return false;
     }
-    if (deviceId) {
+    // Anonymous device tracking removed in 1.4.49 — account required before use.
+    return false;
+}
+/**
+ * Hard sign-up gate — shown whenever a user without a session token tries to
+ * run any generation command. Offers inline email-entry (sends magic link) or
+ * opens poly-glot.ai. No bypass: returns without generating.
+ * Re-fires every time until the user signs up (no "Later forever" escape hatch).
+ */
+async function requireSignUp(source) {
+    const SIGNUP_URL = `https://poly-glot.ai/?source=vscode-${source}&utm_source=vscode&utm_medium=extension&utm_campaign=gate`;
+    // Inline email-first flow — keep user in VS Code
+    const email = await vscode.window.showInputBox({
+        title: '🦜 Poly-Glot — Free account required',
+        prompt: 'Enter your email to create a free account — we\'ll send a magic link (no password needed)',
+        placeHolder: 'you@example.com',
+        ignoreFocusOut: true,
+        validateInput: (v) => (!v || !v.includes('@') || !v.includes('.')) ? 'Enter a valid email address' : null,
+    });
+    if (email) {
         try {
-            const devRes = await fetch(`${AUTH_API}/device-usage`, {
+            const res = await fetch(`${AUTH_API}/login`, {
                 method: 'POST',
                 headers: authHeaders(),
-                body: JSON.stringify({ deviceId, fingerprint }),
-                signal: AbortSignal.timeout(5000),
+                body: JSON.stringify({ email: email.trim().toLowerCase(), source: `vscode-${source}` }),
+                signal: AbortSignal.timeout(8000),
             });
-            const devData = await devRes.json();
-            if (devRes.status === 403 || devData.limitReached) {
-                updateStatusBarUsage(false);
-                // ── Email-first signup — no browser redirect needed ──────────
-                const email = await vscode.window.showInputBox({
-                    title: `🦜 Poly-Glot — ${devData.limit} file trial complete`,
-                    prompt: `Enter your email to get ${FREE_LIMIT} files/month free — magic link, no password`,
-                    placeHolder: 'you@example.com',
-                    ignoreFocusOut: true,
-                    validateInput: (v) => (!v || !v.includes('@') || !v.includes('.')) ? 'Enter a valid email' : null,
-                });
-                if (email) {
-                    try {
-                        const r = await fetch(`${AUTH_API}/login`, {
-                            method: 'POST',
-                            headers: authHeaders(),
-                            body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'vscode-gate' }),
-                            signal: AbortSignal.timeout(8000),
-                        });
-                        if (r.ok) {
-                            vscode.window.showInformationMessage(`🦜 Magic link sent to ${email}! Click it, then come back and enter your token.`, 'Enter Token Now', 'Later').then(async (c) => { if (c === 'Enter Token Now')
-                                await cmdConfigureLicenseToken(); });
-                        }
-                        else {
-                            // Already registered — go straight to token entry
-                            await cmdConfigureLicenseToken();
-                        }
-                    }
-                    catch {
+            if (res.ok) {
+                vscode.window.showInformationMessage(`🦜 Magic link sent to ${email}! Click the link in your email, then paste your token here.`, 'Enter Token', 'Open Email').then(async (choice) => {
+                    if (choice === 'Enter Token') {
                         await cmdConfigureLicenseToken();
                     }
-                }
-                else {
-                    // Dismissed — softer fallback
-                    vscode.window.showWarningMessage(`🦜 Poly-Glot: Sign up free at poly-glot.ai to keep going — 50 files/month.`, 'Sign Up', 'Later').then(c => {
-                        if (c === 'Sign Up')
-                            vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-gate'));
-                    });
-                }
-                return false;
-            }
-            if (devRes.ok && devData.ok) {
-                updateStatusBarUsage(false);
-                // Nudge at file 3 — email-first, no browser redirect
-                if (devData.used === 3) {
-                    const nudgeEmail = await vscode.window.showInputBox({
-                        title: `⚡ Poly-Glot — ${devData.remaining} trial file${devData.remaining === 1 ? '' : 's'} left`,
-                        prompt: `Sign up free now to get ${FREE_LIMIT} files/month — enter your email for a magic link`,
-                        placeHolder: 'you@example.com (or press Escape to skip)',
-                        ignoreFocusOut: false,
-                        validateInput: (v) => {
-                            if (!v)
-                                return null;
-                            if (!v.includes('@') || !v.includes('.'))
-                                return 'Enter a valid email';
-                            return null;
-                        },
-                    });
-                    if (nudgeEmail && nudgeEmail.includes('@')) {
-                        try {
-                            const nr = await fetch(`${AUTH_API}/login`, {
-                                method: 'POST',
-                                headers: authHeaders(),
-                                body: JSON.stringify({ email: nudgeEmail.trim().toLowerCase(), source: 'vscode-nudge' }),
-                                signal: AbortSignal.timeout(8000),
-                            });
-                            if (nr.ok) {
-                                vscode.window.showInformationMessage(`🦜 Magic link sent to ${nudgeEmail}! Click it, then enter your token to unlock ${FREE_LIMIT} files/month.`, 'Enter Token Now', 'Later').then(async (c) => { if (c === 'Enter Token Now')
-                                    await cmdConfigureLicenseToken(); });
-                            }
-                            else {
-                                await cmdConfigureLicenseToken();
-                            }
-                        }
-                        catch {
-                            vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-nudge'));
-                        }
+                    else if (choice === 'Open Email') {
+                        vscode.env.openExternal(vscode.Uri.parse(`https://mail.google.com`));
                     }
-                }
-                return true;
+                });
+            }
+            else {
+                // Already registered — go straight to token entry
+                vscode.window.showInformationMessage(`🦜 Poly-Glot: Account found for ${email}. Enter your session token to sign in.`, 'Enter Token').then(async (choice) => {
+                    if (choice === 'Enter Token')
+                        await cmdConfigureLicenseToken();
+                });
             }
         }
-        catch { }
+        catch {
+            vscode.window.showErrorMessage('🚫 Poly-Glot: Could not reach the server. Please check your connection.', 'Try Again', 'Sign Up on Web').then(async (choice) => {
+                if (choice === 'Try Again') {
+                    await requireSignUp(source);
+                }
+                else if (choice === 'Sign Up on Web') {
+                    vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+                }
+            });
+        }
     }
-    // ── Server unreachable AND no session — hard block (no local fallback) ──
-    // This prevents offline circumvention.
-    const offlineChoice = await vscode.window.showErrorMessage(`🚫 Poly-Glot requires an internet connection to verify your account. Please check your connection.`, 'Create Account', 'Sign In', 'Retry');
-    if (offlineChoice === 'Create Account') {
-        await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-offline'));
+    else {
+        // User pressed Escape — show persistent non-dismissable prompt
+        // (no "Later" option — they must sign up to use the tool)
+        vscode.window.showWarningMessage('🦜 Poly-Glot requires a free account. Sign up in 30 seconds — no credit card needed.', 'Sign Up Free', 'I Already Have an Account').then(async (choice) => {
+            if (choice === 'Sign Up Free') {
+                vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+            }
+            else if (choice === 'I Already Have an Account') {
+                await cmdConfigureLicenseToken();
+            }
+            // No "Dismiss" or "Later" — message disappears but next generate click re-triggers
+        });
     }
-    else if (offlineChoice === 'Sign In') {
-        await cmdConfigureLicenseToken();
-    }
-    return false;
 }
 /** Show the hard-stop message and upgrade buttons */
 async function showLimitReached(used, limit) {
@@ -491,50 +438,50 @@ async function checkForNewerVersion(context) {
 }
 // ─── First-run onboarding ─────────────────────────────────────────────────────
 /**
- * Called once on activate. If the user has no session token, show a
- * single non-intrusive notification prompting them to create a free account.
- * This captures legacy users who installed before auth existed.
- *
- * Uses a globalState flag so it only fires ONCE per installation.
+ * Called on every activation for unsigned users.
+ * 1.4.49: version bumped to re-fire for ALL legacy users who dismissed before.
+ * No "Later" escape — every user must sign up before the tool works.
+ * Signed-in users skip this immediately.
  */
 async function maybeShowFirstRunOnboarding() {
     const hasSession = !!extContext.globalState.get('pg.sessionToken', '');
     const hasLicenseToken = !!vscode.workspace.getConfiguration('polyglot').get('licenseToken', '').trim();
-    // Never show to already signed-in users
+    // Already signed in — nothing to do
     if (hasSession || hasLicenseToken)
         return;
-    // v1.4.42+: track onboarding per-version so legacy users who dismissed
-    // the old (non-email) onboarding get the new email-first prompt once.
-    const ONBOARDING_VERSION = '1.4.43';
+    // Bump version string to re-engage ALL legacy dismissed users
+    const ONBOARDING_VERSION = '1.4.49';
     const shownForVersion = extContext.globalState.get('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION)
         return;
-    // Mark shown for this version before the async prompt
+    // Mark as shown for this version before the prompt (prevents duplicate prompts on rapid reload)
     await extContext.globalState.update('pg.onboardingShownVersion', ONBOARDING_VERSION);
-    await extContext.globalState.update('pg.onboardingShown', true); // keep legacy flag in sync
-    // Small delay so VS Code UI is fully loaded
-    await new Promise(r => setTimeout(r, 2000));
-    // ── Step 1: Ask for email directly in VS Code ──────────────────────────
+    await extContext.globalState.update('pg.onboardingShown', true);
+    // Short delay so VS Code UI finishes loading before we interrupt
+    await new Promise(r => setTimeout(r, 1500));
+    const SIGNUP_URL = 'https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding';
+    // ── Step 1: ask for email inline ──────────────────────────────────────
     const email = await vscode.window.showInputBox({
-        title: '🦜 Poly-Glot — Create your free account',
-        prompt: 'Enter your email to get a magic sign-in link (no password needed)',
+        title: '🦜 Poly-Glot — Free account required to generate',
+        prompt: '50 files/month free · no credit card · magic link (no password)',
         placeHolder: 'you@example.com',
         ignoreFocusOut: true,
-        validateInput: (v) => {
-            if (!v || !v.includes('@') || !v.includes('.'))
-                return 'Please enter a valid email address';
-            return null;
-        },
+        validateInput: (v) => (!v || !v.includes('@') || !v.includes('.')) ? 'Please enter a valid email address' : null,
     });
     if (!email) {
-        // Dismissed — show a softer follow-up nudge
-        const later = await vscode.window.showInformationMessage('🦜 Poly-Glot: Sign up free to get 50 files/month + track usage across devices.', 'Sign Up Now', 'Later');
-        if (later === 'Sign Up Now') {
-            await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
-        }
+        // Dismissed the input box — show a persistent notification with no "Later"
+        vscode.window.showWarningMessage('🦜 Poly-Glot requires a free account to generate comments. Sign up in 30 seconds.', 'Sign Up Free', 'I Already Have an Account').then(async (choice) => {
+            if (choice === 'Sign Up Free') {
+                await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+            }
+            else if (choice === 'I Already Have an Account') {
+                await cmdConfigureLicenseToken();
+            }
+            // No dismiss / Later — next command run re-triggers requireSignUp()
+        });
         return;
     }
-    // ── Step 2: Send magic link directly via API ───────────────────────────
+    // ── Step 2: send magic link ───────────────────────────────────────────
     try {
         const res = await fetch(`${AUTH_API}/login`, {
             method: 'POST',
@@ -543,33 +490,30 @@ async function maybeShowFirstRunOnboarding() {
             signal: AbortSignal.timeout(8000),
         });
         if (res.ok) {
-            // ── Step 3: Tell them to check their email, then paste token ──
-            vscode.window.showInformationMessage(`🦜 Poly-Glot: Magic link sent to ${email}! Check your inbox, click the link, then come back here.`, 'I clicked the link — enter token', 'Later').then(async (choice) => {
-                if (choice === 'I clicked the link — enter token') {
+            vscode.window.showInformationMessage(`✅ Magic link sent to ${email}! Click the link in your email, then paste your token here to activate.`, 'Enter Token', 'Open poly-glot.ai').then(async (choice) => {
+                if (choice === 'Enter Token') {
                     await cmdConfigureLicenseToken();
+                }
+                else if (choice === 'Open poly-glot.ai') {
+                    await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
                 }
             });
         }
         else {
-            // Already has account or rate limited — go straight to token entry
-            const choice = await vscode.window.showInformationMessage(`🦜 Poly-Glot: Already have an account? Enter your session token to activate.`, 'Enter Token', 'Sign Up at poly-glot.ai', 'Later');
-            if (choice === 'Enter Token') {
-                await cmdConfigureLicenseToken();
-            }
-            else if (choice === 'Sign Up at poly-glot.ai') {
-                await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
-            }
+            // Rate-limited or already registered — go straight to token entry
+            vscode.window.showInformationMessage(`🦜 Account found for ${email}. Enter your session token to sign in.`, 'Enter Token').then(async (choice) => {
+                if (choice === 'Enter Token')
+                    await cmdConfigureLicenseToken();
+            });
         }
     }
     catch {
-        // Network error — fall back to website
-        const choice = await vscode.window.showInformationMessage('🦜 Poly-Glot: Get 50 files/month free. Sign up in 30 seconds — no password needed.', 'Create Free Account', 'I Already Have One', 'Later');
-        if (choice === 'Create Free Account') {
-            await vscode.env.openExternal(vscode.Uri.parse('https://poly-glot.ai/?source=vscode-install&utm_source=vscode&utm_medium=extension&utm_campaign=onboarding'));
-        }
-        else if (choice === 'I Already Have One') {
-            await cmdConfigureLicenseToken();
-        }
+        // Network error
+        vscode.window.showErrorMessage('🚫 Poly-Glot: Could not reach the server. Please check your connection, then try generating to sign up.', 'Sign Up on Web').then(async (choice) => {
+            if (choice === 'Sign Up on Web') {
+                await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+            }
+        });
     }
 }
 // ─── Activate ────────────────────────────────────────────────────────────────

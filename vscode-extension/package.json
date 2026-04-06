@@ -2,7 +2,7 @@
   "name": "poly-glot",
   "displayName": "Poly-Glot AI",
   "description": "AI-powered code comments & documentation for 12 languages. Auto-generate JSDoc, Javadoc, PyDoc, Doxygen, KDoc, why-comments & docstrings. GPT-4.1, Claude 4, Gemini 2.5 & custom models. Free tier included.",
-  "version": "1.4.48",
+  "version": "1.4.49",
   "pricing": "Trial",
   "publisher": "poly-glot-ai",
   "license": "MIT",
@@ -73,12 +73,12 @@
         "id": "poly-glot.chat",
         "fullName": "Poly-Glot AI",
         "name": "poly-glot",
-        "description": "AI code comments — JSDoc, Javadoc, PyDoc, why-comments & more. Type /comment, /why, /both, /explain or just ask.",
+        "description": "AI code comments \u2014 JSDoc, Javadoc, PyDoc, why-comments & more. Type /comment, /why, /both, /explain or just ask.",
         "isSticky": true,
         "commands": [
           {
             "name": "comment",
-            "description": "Add doc-comments to selected code or a file (JSDoc, Javadoc, PyDoc, Doxygen…)"
+            "description": "Add doc-comments to selected code or a file (JSDoc, Javadoc, PyDoc, Doxygen\u2026)"
           },
           {
             "name": "why",
@@ -261,7 +261,7 @@
         "polyglot.model": {
           "type": "string",
           "default": "gpt-4.1-mini",
-          "description": "Any valid model ID from your provider — e.g. gpt-4.1-mini, claude-sonnet-4-5, gemini-2.5-flash. Custom/unlisted model IDs are supported."
+          "description": "Any valid model ID from your provider \u2014 e.g. gpt-4.1-mini, claude-sonnet-4-5, gemini-2.5-flash. Custom/unlisted model IDs are supported."
         },
         "polyglot.commentStyle": {
           "type": "string",

@@ -439,6 +439,35 @@
       border-color: rgba(125,211,252,.5);
     }
 
+    /* Sign Up Free CTA — nav primary action */
+    .pg2-nav__signup-cta {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 14px;
+      background: linear-gradient(135deg,#7c3aed,#4f46e5);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: opacity .15s, box-shadow .15s;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(124,58,237,.35);
+    }
+    .pg2-nav__signup-cta:hover {
+      opacity: .88;
+      box-shadow: 0 4px 16px rgba(124,58,237,.5);
+    }
+    /* Hide signup CTA once logged in (auth.v10 adds .pg-authed to body) */
+    body.pg-authed .pg2-nav__signup-cta { display: none !important; }
+    /* Hide sign-in button once logged in */
+    body.pg-authed #headerSignInBtn { display: none !important; }
+    body.pg-authed #mobileSignUpBtn { display: none !important; }
+    body.pg-authed #mobileSignInBtn { display: none !important; }
+
     /* Sign In */
     .pg2-nav__signin {
       display: inline-flex;
@@ -1581,6 +1610,14 @@
       /* Hide noisy items on small mobile */
       .pg2-live-badge { display: none !important; }
       .pg2-nav__pricing-cta { display: none !important; }
+      /* Sign Up Free: visible on mobile, slightly smaller */
+      .pg2-nav__signup-cta {
+        display: inline-flex !important;
+        padding: 0 10px !important;
+        font-size: 11px !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+      }
       /* Sign In: always visible */
       .pg2-nav__signin {
         display: inline-flex !important;
@@ -1637,6 +1674,7 @@
       .pg2-nav__brand-text { font-size: 11px; }
       .pg2-nav__logo { width: 28px; height: 20px; }
       .pg2-nav__signin { padding: 0 8px !important; font-size: 11px !important; }
+      .pg2-nav__signup-cta { padding: 0 8px !important; font-size: 10px !important; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
@@ -1751,6 +1789,8 @@
       </a>
       <!-- See Plans (hidden on small mobile) -->
       <a href="#pg-pricing-section" class="pg2-nav__pricing-cta" id="headerPricingBtn" onclick="if(typeof gtag==='function') gtag('event','header_pricing_cta_click');">⭐ See Plans</a>
+      <!-- Sign Up Free — shown to logged-out users, hidden by auth.v10 after login -->
+      <button class="pg2-nav__signup-cta" id="headerSignUpBtn" onclick="if(typeof gtag==='function') gtag('event','nav_signup_click'); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('nav_signup');}else{pgSignIn('nav_signup');}">🚀 Sign Up Free</button>
       <!-- Sign In — always visible -->
       <button class="pg2-nav__signin" id="headerSignInBtn" onclick="pgSignIn('header');">Sign In</button>
     </div>
@@ -1766,6 +1806,7 @@
   <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
   <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension<span class="pg2-coming-soon">Soon</span></a>
   <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
+  <a href="#" class="pg2-nav__mobile-link" id="mobileSignUpBtn" onclick="closeMobileMenu(); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'mobile_signup\');}else{pgSignIn(\'mobile_signup\');} return false;" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.18));border:1px solid rgba(124,58,237,.4);border-radius:8px;margin-top:6px;color:#c4b5fd;font-weight:700;">🚀 Sign Up Free</a>
   <a href="#" class="pg2-nav__mobile-link" id="mobileSignInBtn" onclick="closeMobileMenu(); pgSignIn('mobile-menu'); return false;" style="border-top:1px solid rgba(125,211,252,.12);margin-top:6px;padding-top:14px;color:var(--accent);">🔑 Sign In</a>
 </div>
 <script>
@@ -1854,7 +1895,7 @@
     </p>
     <div class="pg2-hero__ctas" style="justify-content:center;">
       <button class="pg2-hero__cta-primary"
-        onclick="if(typeof gtag==='function') gtag('event','hero_generate_click'); document.getElementById('pg-generator-section')?.scrollIntoView({behavior:'smooth'});">
+        onclick="if(typeof gtag==='function') gtag('event','hero_signup_click'); if(document.getElementById('pg-user-chip')){document.getElementById('pg-generator-section')?.scrollIntoView({behavior:'smooth'});}else if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('hero_cta');}else{pgSignIn('hero');}">
         🤖 Generate Comments →
       </button>
     </div>
@@ -1871,12 +1912,12 @@
   </div>
   <div class="pg2-install-counter__inner">
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="104">104</span>
+      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="183">183</span>
       <span class="pg2-install-counter__label">VS Code</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
     <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="236">236</span>
+      <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="1854">1854</span>
       <span class="pg2-install-counter__label">Open VSX</span>
     </div>
     <div class="pg2-install-counter__divider"></div>
@@ -1988,18 +2029,18 @@ for (const user of users) {
     <p>Create a free account, paste your OpenAI, Anthropic, or Google key, and generate documentation instantly. Your key goes directly to the provider — never to us. Get an <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Anthropic</a> or <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">OpenAI</a> or <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">Google AI Studio</a> key ↗ · or <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:none;">install the CLI ↗</a></p>
   </div>
 
-  <!-- Sign-up CTA banner — shown to unauthenticated users, hidden after sign-in -->
-  <div id="pgSignupBanner" style="max-width:720px;margin:0 auto 28px;padding:20px 28px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(79,70,229,0.1));border:1px solid rgba(124,58,237,0.35);border-radius:14px;text-align:center;display:none;">
+  <!-- Sign-up CTA banner — visible by default for unauthenticated users; auth.v10 hides it after login -->
+  <div id="pgSignupBanner" style="max-width:720px;margin:0 auto 28px;padding:20px 28px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(79,70,229,0.1));border:1px solid rgba(124,58,237,0.35);border-radius:14px;text-align:center;display:block;">
     <div style="font-size:28px;margin-bottom:8px;">🚀</div>
     <div style="font-size:17px;font-weight:700;color:#f4f4f6;margin-bottom:6px;">Create your free account to get started</div>
     <div style="font-size:13px;color:#94a3b8;margin-bottom:18px;line-height:1.6;">
       50 files/month free · no credit card · takes 30 seconds<br>
       Your API key goes directly to OpenAI, Anthropic, or Google — never to us.
     </div>
-    <a href="#pg-pricing-section"
-       style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);margin-bottom:10px;">
-      🔑 Sign Up Free
-    </a>
+    <button onclick="if(typeof gtag==='function') gtag('event','signup_banner_click'); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('signup_banner');}else{pgSignIn('signup_banner');}"
+       style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:15px;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 18px rgba(124,58,237,0.4);margin-bottom:10px;">
+      🚀 Create Free Account
+    </button>
     <div style="font-size:12px;color:#64748b;margin-top:8px;">
       Already have an account?
       <a href="#" onclick="pgSignIn('signin-banner'); return false;"
@@ -3225,7 +3266,7 @@ function pg2OpenAssistant(text) {
 <script defer src="rag-scores.b202604011856.js"></script>
 <script defer src="waitlist.b202604011856.js"></script>
 <script defer src="pricing.b202604060438.js"></script>
-<script defer src="auth.v9.js"></script>
+<script defer src="auth.v10.js"></script>
 <script defer src="chat.v7.b202604060438.js"></script>
 
 <!-- VS Code deep-link: desktop only -->
