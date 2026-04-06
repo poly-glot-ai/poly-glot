@@ -16,12 +16,19 @@
  *   polyglot_github_app_info     — Q&A about the Poly-Glot AI GitHub App
  *
  * Configuration (environment variables):
- *   POLYGLOT_PROVIDER   openai | anthropic   (default: openai)
- *   POLYGLOT_API_KEY    your API key          (required)
- *   POLYGLOT_MODEL      model ID              (optional — uses smart default)
+ *   POLYGLOT_SESSION_TOKEN  your poly-glot.ai session token  (required — Pro+ plan)
+ *   POLYGLOT_PROVIDER       openai | anthropic                (default: openai)
+ *   POLYGLOT_API_KEY        your API key                      (required)
+ *   POLYGLOT_MODEL          model ID                          (optional — uses smart default)
+ *
+ * Plans & Quotas (per calendar month):
+ *   Free       — blocked (403)
+ *   Pro        — 200 MCP calls/mo
+ *   Team       — 1,000 MCP calls/mo
+ *   Enterprise — unlimited
  *
  * Usage:
- *   POLYGLOT_PROVIDER=openai POLYGLOT_API_KEY=sk-... npx poly-glot-mcp
+ *   POLYGLOT_SESSION_TOKEN=pg_... POLYGLOT_PROVIDER=openai POLYGLOT_API_KEY=sk-... npx poly-glot-mcp
  */
 
 import { McpServer }          from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -40,7 +47,120 @@ import {
 
 // ─── Config from environment ──────────────────────────────────────────────────
 
+// ─── Auth constants ───────────────────────────────────────────────────────────
+
+const POLYGLOT_AUTH_BASE = 'https://auth.poly-glot.ai';
+const PLAN_LABELS: Record<string, string> = {
+  pro:        'Pro (200 calls/mo)',
+  team:       'Team (1,000 calls/mo)',
+  enterprise: 'Enterprise (unlimited)',
+};
+
+// ─── Session token validation ─────────────────────────────────────────────────
+
+/**
+ * Validates the POLYGLOT_SESSION_TOKEN against the Poly-Glot auth worker.
+ * Calls GET /api/auth/mcp-get-usage?token=<token> (non-destructive quota check).
+ * Exits with error if:
+ *   - No token provided
+ *   - Token invalid / 401
+ *   - Plan is Free (403)
+ *   - Monthly quota already exhausted (429)
+ *   - Network error after 2 retries
+ */
+async function validateSessionToken(token: string): Promise<void> {
+  const url = `${POLYGLOT_AUTH_BASE}/api/auth/mcp-get-usage?token=${encodeURIComponent(token)}`;
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method:  'GET',
+        headers: { 'User-Agent': 'poly-glot-mcp/startup-check' },
+        signal:  AbortSignal.timeout(8_000),
+      });
+
+      if (res.status === 401) {
+        die(
+          'POLYGLOT_SESSION_TOKEN is invalid or expired.\n\n' +
+          'Get your session token at: https://poly-glot.ai/dashboard → Account → API Token\n' +
+          'Then set:  POLYGLOT_SESSION_TOKEN=pg_...'
+        );
+      }
+
+      if (res.status === 403) {
+        let plan = 'free';
+        try { plan = ((await res.json()) as { plan?: string })?.plan ?? 'free'; } catch { /* ignore */ }
+        die(
+          `Your Poly-Glot plan (${plan}) does not include MCP access.\n\n` +
+          'MCP is available on Pro and above.\n' +
+          'Upgrade at: https://poly-glot.ai/#pricing'
+        );
+      }
+
+      if (res.status === 429) {
+        let body: { used?: number; limit?: number; month?: string } = {};
+        try { body = (await res.json()) as typeof body; } catch { /* ignore */ }
+        die(
+          `MCP quota exhausted for ${body.month ?? 'this month'}.\n` +
+          `Used: ${body.used ?? '?'} / ${body.limit ?? '?'} calls.\n\n` +
+          'Quota resets on the 1st of next month.\n' +
+          'Upgrade for a higher quota: https://poly-glot.ai/#pricing'
+        );
+      }
+
+      if (!res.ok) {
+        // Unexpected error — log and exit
+        const text = await res.text().catch(() => '(no body)');
+        die(`Auth server returned ${res.status}: ${text}`);
+      }
+
+      // Success — parse and print quota info for the user
+      let body: { plan?: string; used?: number; limit?: number | null; remaining?: number | null; month?: string } = {};
+      try { body = (await res.json()) as typeof body; } catch { /* ignore */ }
+
+      const planLabel = PLAN_LABELS[body.plan ?? ''] ?? body.plan ?? 'unknown';
+      const remaining = body.remaining == null ? 'unlimited' : String(body.remaining);
+      const limit     = body.limit     == null ? 'unlimited' : String(body.limit);
+
+      process.stderr.write(
+        `[poly-glot-mcp] 🔐 Authenticated · plan: ${planLabel}\n` +
+        `[poly-glot-mcp] 📊 MCP quota: ${body.used ?? 0}/${limit} used this month · ${remaining} remaining\n`
+      );
+      return; // success — exit validation
+
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) {
+        process.stderr.write(`[poly-glot-mcp] ⚠️  Auth check attempt ${attempt} failed, retrying...\n`);
+        await new Promise(r => setTimeout(r, 1_500 * attempt));
+      }
+    }
+  }
+
+  // All 3 attempts failed — warn but don't block (network may be temporarily down)
+  process.stderr.write(
+    `[poly-glot-mcp] ⚠️  WARNING: Could not reach auth server after 3 attempts.\n` +
+    `[poly-glot-mcp] ⚠️  Proceeding, but API calls may fail if token is invalid.\n` +
+    `[poly-glot-mcp] ⚠️  Last error: ${(lastErr as Error)?.message ?? String(lastErr)}\n`
+  );
+}
+
 function loadConfig(): GeneratorConfig {
+  // ── Session token (Pro+ required) ──────────────────────────────────────────
+  const sessionToken = process.env.POLYGLOT_SESSION_TOKEN ?? '';
+  if (!sessionToken) {
+    die(
+      'POLYGLOT_SESSION_TOKEN is required for MCP access.\n\n' +
+      'MCP is a Pro+ feature. Get your session token at:\n' +
+      '  https://poly-glot.ai/dashboard → Account → API Token\n\n' +
+      'Then start the server with:\n' +
+      '  POLYGLOT_SESSION_TOKEN=pg_... POLYGLOT_PROVIDER=openai POLYGLOT_API_KEY=sk-... npx poly-glot-mcp\n\n' +
+      'Upgrade to Pro at: https://poly-glot.ai/#pricing'
+    );
+  }
+
+  // ── Provider + API key ────────────────────────────────────────────────────
   const provider = (process.env.POLYGLOT_PROVIDER ?? 'openai').toLowerCase();
   if (provider !== 'openai' && provider !== 'anthropic') {
     die(`POLYGLOT_PROVIDER must be "openai" or "anthropic", got: "${provider}"`);
@@ -51,7 +171,7 @@ function loadConfig(): GeneratorConfig {
     die(
       'POLYGLOT_API_KEY is required.\n\n' +
       'Set it before starting the server:\n' +
-      '  POLYGLOT_PROVIDER=openai POLYGLOT_API_KEY=sk-... npx poly-glot-mcp\n\n' +
+      '  POLYGLOT_SESSION_TOKEN=pg_... POLYGLOT_PROVIDER=openai POLYGLOT_API_KEY=sk-... npx poly-glot-mcp\n\n' +
       'Get an OpenAI key:    https://platform.openai.com/api-keys\n' +
       'Get an Anthropic key: https://console.anthropic.com/settings/keys'
     );
@@ -60,7 +180,8 @@ function loadConfig(): GeneratorConfig {
   return {
     provider: provider as 'openai' | 'anthropic',
     apiKey,
-    model: process.env.POLYGLOT_MODEL || undefined,
+    model:         process.env.POLYGLOT_MODEL || undefined,
+    sessionToken,  // passed through for per-call tracking
   };
 }
 
@@ -113,6 +234,12 @@ function usageFooter(
 
 async function main() {
   const cfg = loadConfig();
+
+  // ── Validate session token against auth server (Pro+ plan required) ─────────
+  // This is a non-destructive quota check — it does NOT consume a call.
+  // Exits with a clear error if the token is invalid, plan is Free, or quota exhausted.
+  await validateSessionToken(cfg.sessionToken!);
+
   const generator = new PolyGlotGenerator(cfg);
 
   const server = new McpServer({
@@ -638,7 +765,8 @@ OPENAI_API_KEY=sk-...
   const modelInfo = cfg.model ? ` · model: ${cfg.model}` : '';
   process.stderr.write(
     `[poly-glot-mcp] ✅ Server running · provider: ${cfg.provider}${modelInfo}\n` +
-    `[poly-glot-mcp] 🦜 7 tools ready: add_doc_comments, add_why_comments, add_all_comments, explain_code, list_languages, list_models, github_app_info\n`
+    `[poly-glot-mcp] 🦜 7 tools ready: add_doc_comments, add_why_comments, add_all_comments, explain_code, list_languages, list_models, github_app_info\n` +
+    `[poly-glot-mcp] ℹ️  Each tool call tracks against your MCP quota via /api/auth/mcp-track-usage\n`
   );
 }
 

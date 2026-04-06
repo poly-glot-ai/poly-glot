@@ -112,9 +112,10 @@ const ANTHROPIC_PRICING: Record<string, { input: number; output: number }> = {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export interface GeneratorConfig {
-  provider: 'openai' | 'anthropic';
-  apiKey:   string;
-  model?:   string;
+  provider:      'openai' | 'anthropic';
+  apiKey:        string;
+  model?:        string;
+  sessionToken?: string;  // POLYGLOT_SESSION_TOKEN — used for MCP quota tracking
 }
 
 // ─── Result types ─────────────────────────────────────────────────────────────
