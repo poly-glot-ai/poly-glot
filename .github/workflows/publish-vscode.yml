@@ -86,27 +86,24 @@ jobs:
           echo "Marketplace ver : $MKT_VERSION"
           echo "Bump type       : $BUMP"
 
-          # If repo version is already AHEAD of marketplace AND bump=patch on push,
-          # just publish the current version without bumping again
-          python3 - "$REPO_VERSION" "$MKT_VERSION" "$BUMP" << 'PYEOF'
-          import sys
-          from packaging.version import Version
-          repo = sys.argv[1]; mkt = sys.argv[2]; bump = sys.argv[3]
-          repo_v = Version(repo); mkt_v = Version(mkt)
-          if bump == 'none' or repo_v > mkt_v:
-              print(f"SKIP_BUMP=true"); print(f"NEW_VERSION={repo}")
-          else:
-              print(f"SKIP_BUMP=false"); print(f"NEW_VERSION={repo}")
-          PYEOF
-          ) | while IFS= read -r line; do echo "$line" >> $GITHUB_ENV; done
+          # If repo version is already AHEAD of marketplace, skip bump and publish as-is.
+          # Use python3 directly (no subshell heredoc) to avoid bash parse errors.
+          SKIP_BUMP=$(python3 -c "
+from packaging.version import Version
+repo_v = Version('$REPO_VERSION')
+mkt_v  = Version('$MKT_VERSION')
+print('true' if '$BUMP' == 'none' or repo_v > mkt_v else 'false')
+")
+          echo "SKIP_BUMP=$SKIP_BUMP" >> $GITHUB_ENV
+          NEW_VERSION="$REPO_VERSION"
 
           # Actual bump if needed
           if [ "$SKIP_BUMP" != "true" ] && [ "$BUMP" != "none" ]; then
             npm version $BUMP --no-git-tag-version
             NEW_VERSION=$(node -p "require('./package.json').version")
-            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           fi
 
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           echo "Final version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
