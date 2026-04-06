@@ -40,6 +40,16 @@ const ai_generator_1 = require("./ai-generator");
 const sidebar_1 = require("./sidebar");
 // ─── Constants ────────────────────────────────────────────────────────────────
 const AUTH_API = 'https://poly-glot.ai/api/auth';
+/**
+ * Base headers sent with every request to the Poly-Glot auth worker.
+ * X-Extension-Version lets the worker enforce a minimum version floor —
+ * any version below MIN_EXTENSION_VERSION is rejected with HTTP 426.
+ */
+function authHeaders(extra = {}) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ver = require('../package.json').version ?? '0.0.0';
+    return { 'Content-Type': 'application/json', 'X-Extension-Version': ver, ...extra };
+}
 const FREE_LANGUAGES = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS = ['pro', 'team', 'enterprise'];
 // EARLYBIRD3 locks Pro at $9/mo forever — applies to Pro Monthly only (expires May 1, 2026)
@@ -49,8 +59,10 @@ const FREE_SIGNUP_URL = 'https://poly-glot.ai/api/auth/free-signup';
 const PARTICIPANT_ID = 'poly-glot.chat';
 const FREE_LIMIT = 50;
 const FIRST_NUDGE_AT = 10;
-// Minimum extension version — older installs are blocked from generating
-const MINIMUM_VERSION = '1.4.30';
+// Minimum extension version — older installs are blocked from generating.
+// Bump this any time a security-critical auth change ships.
+// Current floor = 1.4.40 (first version with device fingerprint + server-only usage gate).
+const MINIMUM_VERSION = '1.4.40';
 const MAY1_2025 = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit() { return Date.now() >= MAY1_2025 ? 10 : 50; }
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -136,7 +148,7 @@ async function checkAndIncrementUsage() {
         try {
             const res = await fetch(`${AUTH_API}/track-usage`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ token: sessionToken, count: 1 }),
                 signal: AbortSignal.timeout(5000),
             });
@@ -182,7 +194,7 @@ async function checkAndIncrementUsage() {
         try {
             const regRes = await fetch(`${AUTH_API}/register-device`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ source: 'vscode', fingerprint }),
                 signal: AbortSignal.timeout(5000),
             });
@@ -200,7 +212,7 @@ async function checkAndIncrementUsage() {
         try {
             const devRes = await fetch(`${AUTH_API}/device-usage`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ deviceId, fingerprint }),
                 signal: AbortSignal.timeout(5000),
             });
@@ -219,7 +231,7 @@ async function checkAndIncrementUsage() {
                     try {
                         const r = await fetch(`${AUTH_API}/login`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: authHeaders(),
                             body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'vscode-gate' }),
                             signal: AbortSignal.timeout(8000),
                         });
@@ -266,7 +278,7 @@ async function checkAndIncrementUsage() {
                         try {
                             const nr = await fetch(`${AUTH_API}/login`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: authHeaders(),
                                 body: JSON.stringify({ email: nudgeEmail.trim().toLowerCase(), source: 'vscode-nudge' }),
                                 signal: AbortSignal.timeout(8000),
                             });
@@ -367,7 +379,7 @@ async function getVerifiedPlan() {
     try {
         const res = await fetch(`${AUTH_API}/check-plan`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ token }),
             signal: AbortSignal.timeout(4000),
         });
@@ -445,7 +457,7 @@ async function checkForNewerVersion(context) {
         // Fetch latest version from VS Code Marketplace via our proxy
         const res = await fetch(`${AUTH_API}/vsc-proxy`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'User-Agent': 'poly-glot-extension/1.0' },
+            headers: authHeaders({ 'User-Agent': 'poly-glot-extension/1.0' }),
             body: JSON.stringify({
                 filters: [{ criteria: [{ filterType: 7, value: 'poly-glot-ai.poly-glot' }] }],
                 flags: 914,
@@ -526,7 +538,7 @@ async function maybeShowFirstRunOnboarding() {
     try {
         const res = await fetch(`${AUTH_API}/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ email: email.trim().toLowerCase(), source: 'vscode-install' }),
             signal: AbortSignal.timeout(8000),
         });
@@ -564,6 +576,37 @@ async function maybeShowFirstRunOnboarding() {
 function activate(context) {
     extContext = context;
     aiGenerator = new ai_generator_1.AIGenerator(context);
+    // ── Version gate — MUST run before any command is registered ─────────────
+    // If the installed version is below MINIMUM_VERSION, we register stub
+    // handlers for all commands that immediately show the upgrade prompt and
+    // return — no generation is possible until the user updates.
+    const currentVersion = context.extension.packageJSON.version;
+    const isVersionBlocked = semverLt(currentVersion, MINIMUM_VERSION);
+    if (isVersionBlocked) {
+        // Show the blocking prompt once on activation (non-blocking async)
+        checkVersionGate(context).catch(() => { });
+        // Register every command as a hard stub — clicking anything shows upgrade
+        const blockedHandler = async () => { await checkVersionGate(context); };
+        const blockedCmds = [
+            'polyglot.generateComments', 'polyglot.whyComments', 'polyglot.bothComments',
+            'polyglot.commentFile', 'polyglot.commentFileFromExplorer',
+            'polyglot.whyFileFromExplorer', 'polyglot.explainCode',
+            'polyglot.configureApiKey', 'polyglot.configureLicenseToken',
+            'polyglot.startForFree', 'polyglot.openTemplates',
+        ];
+        for (const cmd of blockedCmds) {
+            context.subscriptions.push(vscode.commands.registerCommand(cmd, blockedHandler));
+        }
+        // Degraded status bar — visually signals the block
+        statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+        statusBarItem.command = 'polyglot.generateComments';
+        statusBarItem.text = '$(warning) Poly-Glot (update required)';
+        statusBarItem.tooltip = `Poly-Glot v${currentVersion} is no longer supported. Please update to v${MINIMUM_VERSION}+.`;
+        statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+        statusBarItem.show();
+        context.subscriptions.push(statusBarItem);
+        return; // ← EXIT EARLY — nothing else activates on blocked versions
+    }
     // Status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.command = 'polyglot.generateComments';
@@ -1064,7 +1107,7 @@ async function cmdStartForFree() {
         try {
             const res = await fetch(FREE_SIGNUP_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ email: email.trim().toLowerCase() }),
                 signal: AbortSignal.timeout(8000),
             });
