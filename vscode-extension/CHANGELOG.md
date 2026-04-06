@@ -6,6 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ---
 
 \#\#\ \[1\.4\.49\]\ —\ 2026\-04\-06\
+\-\ 🔧\ maintenance\ release\
+\
+\-\-\-\
+\
+
+\#\#\ \[1\.4\.49\]\ —\ 2026\-04\-06\
 \-\ v1\.4\.49\ —\ hard\ signup\ gate:\ account\ required\ before\ any\ generation\
 \-\ 🐛\ fix:\ add\ X\-PG\-Service\ header\ to\ MCP\ auth\ calls\ —\ v1\.1\.7\ published\ \[deploy\]\
 \-\ 🐛\ fix\(mcp\):\ server\-side\ per\-call\ quota\ tracking\ on\ all\ 4\ generative\ tools\ —\ fail\-closed\
