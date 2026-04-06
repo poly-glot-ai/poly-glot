@@ -116,23 +116,36 @@ jobs:
           vsce package --no-dependencies --out poly-glot-${{ steps.version.outputs.new_version }}.vsix
           echo "VSIX_PATH=vscode-extension/poly-glot-${{ steps.version.outputs.new_version }}.vsix" >> $GITHUB_ENV
 
-      - name: Publish to Marketplace
+      - name: Publish to VS Code Marketplace
         working-directory: vscode-extension
         run: |
           if [ -z "$VSCE_PAT" ]; then
-            echo "⚠️  VSCE_PAT secret is not set — skipping Marketplace publish."
-            echo "ℹ️  To enable auto-publish, add VSCE_PAT to repo secrets:"
-            echo "    https://github.com/poly-glot-ai/poly-glot/settings/secrets/actions"
-            echo "    Get a PAT at: https://dev.azure.com → User Settings → Personal Access Tokens"
-            echo "    Scope required: Marketplace → Manage"
-            echo "publish_skipped=true" >> $GITHUB_ENV
+            echo "⚠️  VSCE_PAT secret is not set — skipping VS Code Marketplace publish."
+            echo "ℹ️  Add VSCE_PAT to repo secrets (https://dev.azure.com → PAT → Marketplace → Manage)"
+            echo "marketplace_skipped=true" >> $GITHUB_ENV
           else
             vsce publish --no-dependencies \
               --packagePath poly-glot-${{ steps.version.outputs.new_version }}.vsix
-            echo "publish_skipped=false" >> $GITHUB_ENV
+            echo "✅ Published to VS Code Marketplace."
+            echo "marketplace_skipped=false" >> $GITHUB_ENV
           fi
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to Open VSX
+        working-directory: vscode-extension
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "⚠️  OVSX_PAT secret is not set — skipping Open VSX publish."
+            echo "ℹ️  Add OVSX_PAT to repo secrets (https://open-vsx.org → User Settings → Access Tokens)"
+          else
+            npm install -g ovsx
+            ovsx publish poly-glot-${{ steps.version.outputs.new_version }}.vsix \
+              --pat "$OVSX_PAT"
+            echo "✅ Published to Open VSX."
+          fi
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
 
       - name: Generate CHANGELOG entry
         id: changelog
