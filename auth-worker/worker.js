@@ -1,1015 +1,1175 @@
 /**
- * Poly-Glot Auth Worker
- * ─────────────────────
- * POST /api/auth/login           — generate + email a magic link
- * POST /api/auth/verify          — validate magic-link token → session
- * POST /api/auth/refresh         — validate session token (non-destructive)
- * POST /api/auth/validate-key    — verify OpenAI/Anthropic/Google key (zero tokens)
- * POST /api/auth/track-usage     — server-side file counter (50/mo free limit)
- * GET  /api/auth/get-usage       — return current usage for a session token
- * POST /api/auth/webhook/stripe  — Stripe webhook: activate plan on payment
- * POST /api/auth/set-plan        — admin: manually set a plan for an email
- * POST /api/auth/check-plan      — extension/CLI: verify session → { valid, plan }
+ * ============================================================
+ *  Poly-Glot AI — Auth + Usage Worker
+ *  Cloudflare Worker — production-ready
+ * ============================================================
  *
- * KV binding : AUTH_KV
- * Env vars   : RESEND_API_KEY, BASE_URL, STRIPE_WEBHOOK_SECRET, ADMIN_SECRET
+ *  Endpoints
+ *  ---------
+ *  POST /api/auth/login              — request a magic-link email
+ *  POST /api/auth/verify             — verify token (one-time use, deletes token)
+ *  POST /api/auth/refresh            — validate session token, return email + plan
+ *  POST /api/auth/set-plan           — admin: set plan for email
+ *  POST /api/usage/get               — get current month usage + limit for session
+ *  POST /api/usage/increment         — increment usage counter by N files
+ *  GET  /api/auth/get-usage          — CLI alias: get usage via ?token= query param
+ *  POST /api/auth/track-usage        — CLI alias: increment usage (body: {token, count})
+ *  POST /api/auth/free-signup        — "Start for Free" signup (email → magic link, plan=free)
+ *  POST /api/stripe/webhook          — Stripe webhook: subscription lifecycle events
+ *  OPTIONS *                         — CORS preflight → 204
+ *
+ *  KV bindings   : AUTH_KV
+ *  Env secrets   : RESEND_API_KEY, BASE_URL, ADMIN_SECRET
+ *
+ *  KV key schema
+ *  -------------
+ *  ratelimit:{email}           → "1"                (TTL = 60 s)
+ *  token:{token}               → JSON payload       (TTL = 900 s)
+ *  session:{token}             → JSON payload       (TTL = 30 days)
+ *  plan:{email}                → plan string        (no TTL — permanent)
+ *  usage:{email}:{YYYY-MM}     → integer string     (TTL = 35 days)
+ *  stripe:{customerId}         → email              (no TTL — permanent)
+ * ============================================================
  */
 
-/* ── Version gate ─────────────────────────────────────────────────────────── */
-const MINIMUM_CLI_VERSION = '2.1.15';
+// ─────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────
 
-function semverLt(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) < (pb[i] || 0)) return true;
-    if ((pa[i] || 0) > (pb[i] || 0)) return false;
-  }
-  return false;
-}
+const RATE_LIMIT_TTL  = 60;          // 1 request per email per 60 seconds
+const TOKEN_TTL       = 900;         // 15 minutes (magic link)
+const SESSION_TTL     = 30 * 24 * 60 * 60; // 30 days
 
-function checkVersion(request) {
-  const clientVersion = (request.headers.get('X-CLI-Version') || '').trim();
-  if (!clientVersion) return null;
-  if (semverLt(clientVersion, MINIMUM_CLI_VERSION)) {
-    return json({
-      error: 'upgrade_required',
-      message: `🚫 poly-glot v${clientVersion} is no longer supported.\n\nRun: npm install -g poly-glot-ai-cli\n\nThen: poly-glot login\n\nFree accounts get ${getFreeLimit()} files/month. Pro is $9/mo at poly-glot.ai`,
-      minimum_version: MINIMUM_CLI_VERSION,
-    }, 426);
-  }
-  return null;
-}
+// ── Usage / quota constants ───────────────────────────────────────────────
+const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
+const USAGE_TTL          = 35 * 24 * 60 * 60; // 35 days — outlasts the month
+const PRO_PLANS          = ['pro', 'team', 'enterprise'];
 
-/* ── Disposable email domain blocklist ─────────────────────────────────────── */
-const DISPOSABLE_DOMAINS = new Set([
-  'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
-  'guerrillamail.biz','guerrillamail.de','guerrillamailblock.com',
-  'tempmail.com','tempmail.net','tempmail.org','temp-mail.org','temp-mail.io',
-  'throwam.com','throwaway.email','sharklasers.com','guerrillamail.info',
-  'grr.la','guerrillamail.biz','spam4.me','yopmail.com','yopmail.fr',
-  'cool.fr.nf','jetable.fr.nf','nospam.ze.tc','nomail.xl.cx','mega.zik.dj',
-  'speed.1s.fr','courriel.fr.nf','moncourrier.fr.nf','monemail.fr.nf',
-  'monmail.fr.nf','maildrop.cc','mailnull.com','mailnull.net',
-  'dispostable.com','fakeinbox.com','filzmail.com','spamgourmet.com',
-  'trashmail.at','trashmail.com','trashmail.io','trashmail.me','trashmail.net',
-  'trashmail.org','trashmail.xyz','discard.email','spamspot.com','spamtrap.ro',
-  'spamevader.com','anonbox.net','anonymbox.com','dispostable.com',
-  'throwam.com','mailexpire.com','spamfree24.org','spamfree.eu',
-  'mailzilla.org','inoutmail.eu','inoutmail.info','inoutmail.net','inoutmail.de',
-  'filzmail.com','spamfree.eu','spamgourmet.net','spamgourmet.org',
-]);
-
-const CORS = {
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Stripe-Signature',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS },
-  });
+// ─────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────
+
+/** Attach CORS headers to any existing Response. */
+function withCors(response) {
+  const res = new Response(response.body, response);
+  for (const [key, val] of Object.entries(CORS_HEADERS)) {
+    res.headers.set(key, val);
+  }
+  return res;
 }
 
-function preflight() {
-  return new Response(null, { status: 204, headers: CORS });
+/** Build a JSON Response with CORS headers already attached. */
+function jsonResponse(data, status = 200) {
+  return withCors(
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  );
 }
 
-async function randomToken() {
-  const buf = new Uint8Array(32);
-  crypto.getRandomValues(buf);
-  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+/** Generate a cryptographically secure 32-byte (64 hex char) token. */
+function generateToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/* Returns YYYY-MM key for the current UTC month */
-function monthKey() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+/** Very basic but solid email validation. */
+function isValidEmail(email) {
+  return (
+    typeof email === 'string' &&
+    email.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)
+  );
 }
 
-const PAID_PLANS = ['pro', 'team', 'enterprise'];
-const SESSION_TTL = 30 * 24 * 60 * 60; // 30 days
+// ─────────────────────────────────────────────────────────────
+// Magic-link email HTML (dark theme, purple gradient branding)
+// ─────────────────────────────────────────────────────────────
 
-/* ── Magic link email HTML ───────────────────────────────────────────────── */
-function magicLinkEmail(magicUrl, email) {
-  return `<!DOCTYPE html>
+function buildEmailHtml(magicLink, toEmail) {
+  const year = new Date().getFullYear();
+  return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your Poly-Glot magic link</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Poly-Glot Magic Link</title>
 </head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:'Inter',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
-  <tr><td align="center">
-    <table width="560" cellpadding="0" cellspacing="0" style="background:#161b27;border-radius:16px;border:1px solid rgba(139,92,246,0.2);overflow:hidden;max-width:560px;width:100%;">
-      <tr>
-        <td style="background:linear-gradient(135deg,#1e1b4b 0%,#1e1035 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(139,92,246,0.15);">
-          <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#fff;">🦜 Poly-Glot</div>
-          <div style="font-size:13px;color:#a78bfa;margin-top:4px;letter-spacing:0.05em;text-transform:uppercase;">AI Code Comment Generator</div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:36px 40px 32px;">
-          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#f1f5f9;line-height:1.3;">Your magic link is ready ✨</h1>
-          <p style="margin:0 0 8px;font-size:15px;color:#94a3b8;line-height:1.6;">Click the button below to sign in to Poly-Glot. This link expires in <strong style="color:#c4b5fd;">15 minutes</strong> and can only be used once.</p>
-          <p style="margin:0 0 28px;font-size:13px;color:#64748b;">Signing in as: <strong style="color:#a78bfa;">${email}</strong></p>
-          <table cellpadding="0" cellspacing="0" width="100%">
-            <tr>
-              <td align="center">
-                <a href="${magicUrl}" style="display:inline-block;padding:15px 36px;background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%);color:#fff;font-size:16px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:0.01em;box-shadow:0 4px 20px rgba(124,58,237,0.4);">Sign in to Poly-Glot →</a>
-              </td>
-            </tr>
-          </table>
-          <p style="margin:24px 0 0;font-size:12px;color:#475569;text-align:center;line-height:1.6;">Button not working? Copy and paste this link into your browser:<br><a href="${magicUrl}" style="color:#7c3aed;word-break:break-all;font-size:11px;">${magicUrl}</a></p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 40px 28px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
-          <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">If you didn't request this, you can safely ignore this email.<br>Your account will not be affected.</p>
-          <p style="margin:10px 0 0;font-size:11px;color:#334155;">© 2026 Poly-Glot · <a href="https://poly-glot.ai" style="color:#7c3aed;text-decoration:none;">poly-glot.ai</a></p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-</table>
+<body style="margin:0;padding:0;background:#0f0f13;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+         style="background:#0f0f13;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+
+        <!-- ── Outer card ─────────────────────────────────── -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+               style="max-width:520px;background:#18181f;border-radius:20px;
+                      border:1px solid #2a2a38;overflow:hidden;
+                      box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+
+          <!-- Top gradient accent bar -->
+          <tr>
+            <td style="height:4px;
+                       background:linear-gradient(90deg,#7c3aed 0%,#6d28d9 50%,#4f46e5 100%);">
+            </td>
+          </tr>
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding:40px 40px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <!-- Icon badge -->
+                  <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);
+                             border-radius:14px;padding:10px 14px;
+                             box-shadow:0 4px 16px rgba(124,58,237,0.45);">
+                    <span style="font-size:22px;font-weight:900;color:#fff;
+                                 letter-spacing:-1px;line-height:1;">P</span>
+                  </td>
+                  <!-- Wordmark -->
+                  <td style="padding-left:14px;vertical-align:middle;">
+                    <div style="font-size:22px;font-weight:800;color:#f4f4f6;
+                                letter-spacing:-0.5px;line-height:1.1;">Poly-Glot</div>
+                    <div style="font-size:10px;font-weight:600;color:#7c3aed;
+                                letter-spacing:3px;text-transform:uppercase;
+                                margin-top:3px;">AI</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Headline -->
+          <tr>
+            <td style="padding:32px 40px 0;">
+              <h1 style="margin:0 0 12px;font-size:26px;font-weight:800;
+                         color:#f4f4f6;line-height:1.25;letter-spacing:-0.3px;">
+                Your magic link is here&nbsp;✨
+              </h1>
+              <p style="margin:0 0 10px;font-size:15px;color:#9ca3af;line-height:1.65;">
+                Click the button below to sign in instantly — no password needed.
+                This link expires in <strong style="color:#e5e7eb;">15&nbsp;minutes</strong>
+                and is single-use.
+              </p>
+              <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
+                Signing in as:&nbsp;<span style="color:#a78bfa;font-weight:600;">${toEmail}</span>
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA button -->
+          <tr>
+            <td align="center" style="padding:40px 40px 36px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="border-radius:14px;
+                             background:linear-gradient(135deg,#7c3aed 0%,#4f46e5 100%);
+                             box-shadow:0 6px 28px rgba(124,58,237,0.5);">
+                    <a href="${magicLink}" target="_blank"
+                       style="display:inline-block;padding:16px 44px;
+                              font-size:16px;font-weight:700;color:#ffffff;
+                              text-decoration:none;letter-spacing:0.1px;
+                              border-radius:14px;line-height:1;">
+                      Sign in to Poly-Glot&nbsp;→
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="height:1px;background:#2a2a38;"></div>
+            </td>
+          </tr>
+
+          <!-- Fallback URL -->
+          <tr>
+            <td style="padding:24px 40px 28px;">
+              <p style="margin:0 0 8px;font-size:12px;color:#6b7280;line-height:1.5;">
+                Button not working? Paste this URL into your browser:
+              </p>
+              <p style="margin:0;font-size:11px;color:#7c3aed;
+                        word-break:break-all;line-height:1.6;">
+                ${magicLink}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Security notice + footer -->
+          <tr>
+            <td style="background:#131318;border-top:1px solid #2a2a38;
+                       padding:20px 40px;border-radius:0 0 20px 20px;">
+              <p style="margin:0 0 6px;font-size:12px;color:#4b5563;
+                        line-height:1.6;text-align:center;">
+                🔒&nbsp;If you didn't request this link, you can safely ignore this email.
+                No account has been created.
+              </p>
+              <p style="margin:0;font-size:11px;color:#374151;
+                        text-align:center;line-height:1.6;">
+                © ${year} Poly-Glot AI&nbsp;·&nbsp;All rights reserved
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- ── / Outer card ───────────────────────────────── -->
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>`;
 }
 
-/* ── Plan-activated email HTML ─────────────────────────────────────────────── */
-function planActivatedEmail(email, plan) {
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Your Poly-Glot ${planLabel} plan is active</title></head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:'Inter',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:40px 20px;">
-  <tr><td align="center">
-    <table width="560" cellpadding="0" cellspacing="0" style="background:#161b27;border-radius:16px;border:1px solid rgba(52,211,153,0.2);overflow:hidden;max-width:560px;width:100%;">
-      <tr>
-        <td style="background:linear-gradient(135deg,#052e16 0%,#0f1f2e 100%);padding:32px 40px 28px;text-align:center;border-bottom:1px solid rgba(52,211,153,0.15);">
-          <div style="font-size:28px;font-weight:800;color:#fff;">🦜 Poly-Glot</div>
-          <div style="font-size:13px;color:#34d399;margin-top:4px;letter-spacing:0.05em;text-transform:uppercase;">${planLabel} Plan — Active</div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:36px 40px 32px;">
-          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#f1f5f9;">🎉 You're on ${planLabel}!</h1>
-          <p style="margin:0 0 24px;font-size:15px;color:#94a3b8;line-height:1.6;">Thank you for subscribing. Your <strong style="color:#34d399;">${planLabel} plan</strong> is now active on <strong style="color:#a78bfa;">${email}</strong>.</p>
-          <p style="margin:0 0 8px;font-size:14px;color:#94a3b8;">To activate Pro features in VS Code or the CLI, sign in with this email:</p>
-          <table cellpadding="0" cellspacing="0" width="100%">
-            <tr>
-              <td align="center" style="padding:8px 0 24px;">
-                <a href="https://poly-glot.ai/?source=payment-email" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#16a34a 0%,#059669 100%);color:#fff;font-size:15px;font-weight:700;text-decoration:none;border-radius:10px;">Sign in to activate →</a>
-              </td>
-            </tr>
-          </table>
-          <p style="margin:0 0 6px;font-size:13px;color:#64748b;font-weight:600;">VS Code extension:</p>
-          <p style="margin:0 0 16px;font-size:13px;color:#64748b;">Open Command Palette → <strong>Poly-Glot: Configure License Token</strong> → paste your session token after signing in.</p>
-          <p style="margin:0 0 6px;font-size:13px;color:#64748b;font-weight:600;">CLI:</p>
-          <p style="margin:0 0 0;font-size:13px;color:#64748b;">Run <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#7dd3fc;">poly-glot login</code> and enter this email address.</p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:20px 40px 28px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
-          <p style="margin:0;font-size:11px;color:#334155;">© 2026 Poly-Glot · <a href="https://poly-glot.ai" style="color:#34d399;text-decoration:none;">poly-glot.ai</a></p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-</table>
-</body>
-</html>`;
-}
+// ─────────────────────────────────────────────────────────────
+// Resend email sender
+// ─────────────────────────────────────────────────────────────
 
-async function sendMagicLinkEmail(env, email, magicUrl) {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from:    'Poly-Glot <noreply@poly-glot.ai>',
-      to:      [email],
-      subject: 'Your Poly-Glot magic link',
-      html:    magicLinkEmail(magicUrl, email),
-    }),
-  });
-  if (!res.ok) { console.error('Resend error:', res.status, await res.text()); return false; }
-  return true;
-}
+async function sendMagicLinkEmail(env, toEmail, magicLink) {
+  const payload = {
+    from:    'Poly-Glot <noreply@poly-glot.ai>',
+    to:      [toEmail],
+    subject: 'Your Poly-Glot magic link',
+    html:    buildEmailHtml(magicLink, toEmail),
+  };
 
-async function sendPlanActivatedEmail(env, email, plan) {
-  if (!env.RESEND_API_KEY) return;
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+  let res;
   try {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from:    'Poly-Glot <noreply@poly-glot.ai>',
-        to:      [email],
-        subject: `Your Poly-Glot ${planLabel} plan is now active 🎉`,
-        html:    planActivatedEmail(email, plan),
-      }),
+    res = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(payload),
     });
-  } catch (e) { console.error('Plan email error:', e.message); }
+  } catch (networkErr) {
+    console.error('Resend network error:', networkErr);
+    return { ok: false, reason: 'network_error' };
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`Resend HTTP ${res.status}: ${text}`);
+    return { ok: false, reason: `resend_${res.status}`, detail: text };
+  }
+
+  return { ok: true };
 }
 
-/** POST /api/auth/login */
+// ─────────────────────────────────────────────────────────────
+// Route handlers
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/auth/login
+ *
+ * 1. Validate email
+ * 2. Rate-limit check (1 req / email / 60 s)
+ * 3. Look up plan in KV (default: 'free')
+ * 4. Generate secure token, store in KV with 15-min TTL
+ * 5. Send magic-link email via Resend
+ * 6. Return { ok: true } or appropriate error
+ */
 async function handleLogin(request, env) {
+  // ── Parse body ──────────────────────────────────────────────
   let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const email = (body.email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: 'Valid email required' }, 400);
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
-  const domain = email.split('@')[1] || '';
-  if (DISPOSABLE_DOMAINS.has(domain)) {
-    return json({ error: 'Disposable email addresses are not allowed. Please use a real email.' }, 400);
+  const rawEmail = body?.email;
+  if (!rawEmail || !isValidEmail(rawEmail)) {
+    return jsonResponse({ error: 'A valid email address is required' }, 400);
   }
 
-  // Rate limit: 1 magic link per email per 60s
+  const email = rawEmail.trim().toLowerCase();
+
+  // ── Rate limiting ───────────────────────────────────────────
   const rateLimitKey = `ratelimit:${email}`;
-  const limited = await env.AUTH_KV.get(rateLimitKey);
-  if (limited) {
-    return json({ error: 'A link was already sent. Please wait 60 seconds and try again.' }, 429);
+  const rateLimitHit = await env.AUTH_KV.get(rateLimitKey);
+
+  if (rateLimitHit !== null) {
+    return jsonResponse(
+      { error: 'Too many requests. Please wait 60 seconds before trying again.' },
+      429
+    );
   }
 
-  // Fingerprint-based rate limit: max 3 unique emails per device fingerprint per day
-  // Prevents multiple-email abuse from the same machine
-  const fingerprint = (body.fingerprint || '').trim();
-  if (fingerprint) {
-    const fpEmailsKey = `fp-emails:${fingerprint}`;
-    const fpEmailsRaw = await env.AUTH_KV.get(fpEmailsKey);
-    const fpEmails    = fpEmailsRaw ? JSON.parse(fpEmailsRaw) : [];
-    if (!fpEmails.includes(email)) {
-      if (fpEmails.length >= 3) {
-        return json({
-          error: 'Too many accounts created from this device. Please use an existing account or contact support@poly-glot.ai.',
-        }, 429);
-      }
-      fpEmails.push(email);
-      // TTL: 24 hours — resets daily
-      await env.AUTH_KV.put(fpEmailsKey, JSON.stringify(fpEmails), { expirationTtl: 86400 });
-    }
+  // Reserve rate-limit slot immediately
+  await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: RATE_LIMIT_TTL });
+
+  // ── Plan lookup ─────────────────────────────────────────────
+  const plan = (await env.AUTH_KV.get(`plan:${email}`)) ?? 'free';
+
+  // ── Token generation + storage ──────────────────────────────
+  const token     = generateToken();
+  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
+  await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
+
+  // ── Build magic link ────────────────────────────────────────
+  const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
+
+  // ── Send email ──────────────────────────────────────────────
+  const result = await sendMagicLinkEmail(env, email, magicLink);
+
+  if (!result.ok) {
+    // Roll back rate-limit and token so the user can retry immediately
+    await Promise.allSettled([
+      env.AUTH_KV.delete(rateLimitKey),
+      env.AUTH_KV.delete(`token:${token}`),
+    ]);
+    return jsonResponse(
+      { error: 'Failed to send magic link email. Please try again.' },
+      502
+    );
   }
 
-  const token = await randomToken();
-  const existingPlan = await env.AUTH_KV.get(`plan:${email}`) || 'free';
-
-  await env.AUTH_KV.put(
-    `token:${token}`,
-    JSON.stringify({ email, plan: existingPlan, created: Date.now() }),
-    { expirationTtl: 900 }
-  );
-  await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: 60 });
-
-  const baseUrl = env.BASE_URL || 'https://poly-glot.ai';
-  // source param for UTM attribution on login page
-  const source = (body.source || '').trim();
-  const magicUrl = `${baseUrl}/?token=${token}&plan=${existingPlan}&email=${encodeURIComponent(email)}${source ? `&source=${encodeURIComponent(source)}` : ''}`;
-
-  const sent = await sendMagicLinkEmail(env, email, magicUrl);
-  if (!sent) {
-    await env.AUTH_KV.delete(`token:${token}`);
-    return json({ error: 'Email delivery failed — please try again in a moment.' }, 502);
-  }
-
-  incrementPromoCount(env, email).catch(() => {});
-  return json({ ok: true });
+  return jsonResponse({ ok: true });
 }
 
-/** POST /api/auth/verify — magic link token → long-lived session */
+/**
+ * POST /api/auth/verify
+ *
+ * Validate token (one-time use — token is deleted after successful lookup).
+ * Returns: { email, plan }
+ */
 async function handleVerify(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const token = (body.token || '').trim();
-  if (!token) return json({ error: 'Token required' }, 400);
-
-  const raw = await env.AUTH_KV.get(`token:${token}`);
-  if (!raw) return json({ error: 'Invalid or expired token' }, 401);
-
-  let data;
-  try { data = JSON.parse(raw); } catch { return json({ error: 'Malformed token data' }, 500); }
-
-  // One-time use — delete magic link token immediately
-  await env.AUTH_KV.delete(`token:${token}`);
-
-  const { email } = data;
-  // Always read the authoritative plan from KV (may have been upgraded since login)
-  const plan = await env.AUTH_KV.get(`plan:${email}`) || data.plan || 'free';
-
-  const sessionPayload = JSON.stringify({ email, plan, created: Date.now() });
-  await env.AUTH_KV.put(`session:${token}`, sessionPayload, { expirationTtl: SESSION_TTL });
-
-  return json({ email, plan, session: token, valid: true });
-}
-
-/** POST /api/auth/refresh — validate a session token (non-destructive) */
-async function handleRefresh(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const token = (body.token || '').trim();
-  if (!token) return json({ error: 'Token required' }, 400);
-
-  const raw = await env.AUTH_KV.get(`session:${token}`);
-  if (!raw) return json({ error: 'Invalid or expired session' }, 401);
-
-  let data;
-  try { data = JSON.parse(raw); } catch { return json({ error: 'Malformed session data' }, 500); }
-
-  // Always re-read plan from authoritative KV key (catches upgrades)
-  const livePlan = await env.AUTH_KV.get(`plan:${data.email}`) || data.plan || 'free';
-
-  // If plan changed, patch the session record in place
-  if (livePlan !== data.plan) {
-    data.plan = livePlan;
-    await env.AUTH_KV.put(`session:${token}`, JSON.stringify(data), { expirationTtl: SESSION_TTL });
-  }
-
-  return json({ email: data.email, plan: livePlan, valid: true });
-}
-
-/**
- * POST /api/auth/check-plan
- * Unified endpoint for extension + CLI license verification.
- * Accepts either a session token or a licenseToken (both stored as session: keys).
- * Returns { valid: bool, plan: string, email: string }
- * Never destroys the token — safe to call repeatedly.
- */
-async function handleCheckPlan(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ valid: false, plan: 'free', error: 'Invalid JSON' }, 400); }
-
-  const token = (body.token || '').trim();
-  if (!token) return json({ valid: false, plan: 'free', error: 'Token required' }, 400);
-
-  // Try session: key first (normal flow)
-  const sessionRaw = await env.AUTH_KV.get(`session:${token}`);
-  if (sessionRaw) {
-    let data;
-    try { data = JSON.parse(sessionRaw); } catch { return json({ valid: false, plan: 'free', error: 'Malformed session' }, 500); }
-    const livePlan = await env.AUTH_KV.get(`plan:${data.email}`) || data.plan || 'free';
-    if (livePlan !== data.plan) {
-      data.plan = livePlan;
-      await env.AUTH_KV.put(`session:${token}`, JSON.stringify(data), { expirationTtl: SESSION_TTL });
-    }
-    return json({ valid: true, plan: livePlan, email: data.email });
-  }
-
-  return json({ valid: false, plan: 'free', error: 'Invalid or expired token' }, 401);
-}
-
-const PROMO_LIMIT = 50;
-
-async function handlePromoCount(env) {
-  const raw   = await env.AUTH_KV.get('promo:count');
-  const count = raw ? parseInt(raw, 10) : 0;
-  const remaining = Math.max(0, PROMO_LIMIT - count);
-  return json({ count, limit: PROMO_LIMIT, remaining });
-}
-
-async function incrementPromoCount(env, email) {
-  const seenKey = `promo:seen:${email}`;
-  const seen    = await env.AUTH_KV.get(seenKey);
-  if (seen) return;
-  await env.AUTH_KV.put(seenKey, '1');
-  const raw   = await env.AUTH_KV.get('promo:count');
-  const count = raw ? parseInt(raw, 10) : 0;
-  await env.AUTH_KV.put('promo:count', String(count + 1));
-}
-
-/** POST /api/auth/validate-key */
-async function handleValidateKey(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
-
-  const provider = (body.provider || 'openai').toLowerCase();
-  const apiKey   = (body.apiKey   || '').trim();
-
-  if (!apiKey) return json({ ok: false, error: 'API key required' }, 400);
-
-  try {
-    if (provider === 'openai') {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-      });
-      if (res.ok) return json({ ok: true });
-      const err = await res.json().catch(() => ({}));
-      return json({ ok: false, error: err?.error?.message || `OpenAI returned ${res.status}` });
-
-    } else if (provider === 'anthropic') {
-      const res = await fetch('https://api.anthropic.com/v1/models', {
-        headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      });
-      if (res.ok) return json({ ok: true });
-      const err = await res.json().catch(() => ({}));
-      return json({ ok: false, error: err?.error?.message || `Anthropic returned ${res.status}` });
-
-    } else if (provider === 'google') {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
-      );
-      if (res.ok) return json({ ok: true });
-      const err = await res.json().catch(() => ({}));
-      return json({ ok: false, error: err?.error?.message || `Google returned ${res.status}` });
-
-    } else {
-      return json({ ok: false, error: 'Unknown provider — use openai, anthropic, or google' }, 400);
-    }
-  } catch (e) {
-    return json({ ok: false, error: e.message || 'Network error' }, 502);
-  }
-}
-
-/* ── Stripe Webhook ──────────────────────────────────────────────────────────
- * Handles checkout.session.completed and customer.subscription.* events.
- * Writes plan:${email} to KV and patches all active sessions for that email.
- * Also refreshes the session plan cache so next /refresh returns the new plan.
- */
-async function handleStripeWebhook(request, env) {
-  const sig     = request.headers.get('Stripe-Signature') || '';
-  const rawBody = await request.text();
-
-  // Verify Stripe signature if secret is configured
-  if (env.STRIPE_WEBHOOK_SECRET) {
-    const valid = await verifyStripeSignature(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
-    if (!valid) return json({ error: 'Invalid signature' }, 400);
-  }
-
-  let event;
-  try { event = JSON.parse(rawBody); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const type = event.type || '';
-  let email = '';
-  let plan  = 'free';
-
-  // checkout.session.completed — new subscription started
-  if (type === 'checkout.session.completed') {
-    const obj = event.data?.object || {};
-    email = (obj.customer_email || obj.customer_details?.email || '').toLowerCase().trim();
-    // Map Stripe price IDs to plan names via metadata or amount
-    plan = stripePlanFromSession(obj);
-  }
-  // customer.subscription.updated — plan change or renewal
-  else if (type === 'customer.subscription.updated' || type === 'customer.subscription.created') {
-    const obj = event.data?.object || {};
-    email = await emailFromStripeCustomer(obj.customer, env);
-    plan  = stripePlanFromSubscription(obj);
-  }
-  // customer.subscription.deleted — cancellation
-  else if (type === 'customer.subscription.deleted') {
-    const obj = event.data?.object || {};
-    email = await emailFromStripeCustomer(obj.customer, env);
-    plan  = 'free';
-  }
-  // invoice.payment_succeeded — renewal guard (belt-and-suspenders)
-  else if (type === 'invoice.payment_succeeded') {
-    const obj = event.data?.object || {};
-    email = (obj.customer_email || '').toLowerCase().trim();
-    if (!email) { return json({ received: true }); }
-    // Refresh plan from existing KV rather than overwriting (subscription.updated handles promotion)
-    const existingPlan = await env.AUTH_KV.get(`plan:${email}`) || 'free';
-    plan = existingPlan; // just keep what we have — subscription.updated already set it
-  }
-  else {
-    // Unhandled event type — acknowledge without processing
-    return json({ received: true });
-  }
-
-  if (!email) return json({ received: true, warning: 'No email found in event' });
-
-  // Write authoritative plan to KV (no TTL — persists until subscription.deleted)
-  await activatePlan(env, email, plan);
-
-  return json({ received: true, email, plan });
-}
-
-/**
- * Core plan-activation logic — used by webhook, set-plan, and any future flows.
- * 1. Writes plan:${email}
- * 2. Patches all active session: keys for this email so /refresh picks it up instantly
- * 3. Sends plan-activated email (only on upgrades, not on 'free')
- */
-async function activatePlan(env, email, plan) {
-  const prevPlan = await env.AUTH_KV.get(`plan:${email}`) || 'free';
-  await env.AUTH_KV.put(`plan:${email}`, plan);
-
-  // Patch active session keys — list sessions owned by this email
-  // We store a reverse-index: sessions:{email} = comma-separated list of token keys
-  const sessionIndex = await env.AUTH_KV.get(`sessions:${email}`) || '';
-  const tokens = sessionIndex.split(',').filter(Boolean);
-
-  for (const tok of tokens) {
-    const sessionRaw = await env.AUTH_KV.get(`session:${tok}`);
-    if (!sessionRaw) continue;
-    try {
-      const data = JSON.parse(sessionRaw);
-      data.plan = plan;
-      await env.AUTH_KV.put(`session:${tok}`, JSON.stringify(data), { expirationTtl: SESSION_TTL });
-    } catch { /* non-fatal */ }
-  }
-
-  // Send email notification on first upgrade (free → paid)
-  const isUpgrade = PAID_PLANS.includes(plan) && !PAID_PLANS.includes(prevPlan);
-  if (isUpgrade) {
-    sendPlanActivatedEmail(env, email, plan).catch(() => {});
-  }
-}
-
-/** Register a session token in the per-email reverse index */
-async function indexSession(env, email, token) {
-  const existing = await env.AUTH_KV.get(`sessions:${email}`) || '';
-  const tokens   = existing.split(',').filter(Boolean);
-  if (!tokens.includes(token)) {
-    tokens.push(token);
-    // Keep last 20 sessions per user — trim oldest
-    const trimmed = tokens.slice(-20);
-    await env.AUTH_KV.put(`sessions:${email}`, trimmed.join(','));
-  }
-}
-
-/* Map Stripe checkout session to plan name */
-function stripePlanFromSession(obj) {
-  // Check metadata first (set this in your Stripe payment links)
-  const meta = obj.metadata || {};
-  if (meta.plan) return meta.plan.toLowerCase();
-
-  // Fallback: map by amount_total (in cents)
-  const amount = obj.amount_total || 0;
-  if (amount >= 24900) return 'team';   // Team Yearly
-  if (amount >= 2900)  return 'team';   // Team Monthly
-  if (amount >= 7900)  return 'pro';    // Pro Yearly
-  if (amount >= 900)   return 'pro';    // Pro Monthly
-  return 'pro'; // default paid = pro
-}
-
-/* Map Stripe subscription to plan name */
-function stripePlanFromSubscription(obj) {
-  const meta = obj.metadata || {};
-  if (meta.plan) return meta.plan.toLowerCase();
-  // Check items
-  const items = obj.items?.data || [];
-  for (const item of items) {
-    const amount = item.price?.unit_amount || 0;
-    if (amount >= 24900) return 'team';
-    if (amount >= 2900)  return 'team';
-    if (amount >= 900)   return 'pro';
-  }
-  return obj.status === 'active' ? 'pro' : 'free';
-}
-
-/* Fetch email for a Stripe customer ID — cached in KV */
-async function emailFromStripeCustomer(customerId, env) {
-  if (!customerId) return '';
-  // Check cache first
-  const cached = await env.AUTH_KV.get(`stripe_customer:${customerId}`);
-  if (cached) return cached;
-  // Don't have STRIPE_SECRET_KEY to call Stripe API directly from worker easily
-  // Fall back to empty string — webhook handlers that carry email in the event body take priority
-  return '';
-}
-
-/* Minimal Stripe signature verification using Web Crypto */
-async function verifyStripeSignature(body, header, secret) {
-  try {
-    const parts   = header.split(',').reduce((acc, part) => {
-      const [k, v] = part.split('=');
-      if (k === 't') acc.t = v;
-      if (k === 'v1') acc.v1 = v;
-      return acc;
-    }, { t: '', v1: '' });
-
-    if (!parts.t || !parts.v1) return false;
-
-    const payload   = `${parts.t}.${body}`;
-    const keyBytes  = new TextEncoder().encode(secret);
-    const msgBytes  = new TextEncoder().encode(payload);
-    const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const sig       = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes);
-    const sigHex    = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-    return sigHex === parts.v1;
-  } catch { return false; }
+  return resolveToken(request, env, /* deleteAfter= */ true);
 }
 
 /**
  * POST /api/auth/set-plan
- * Admin endpoint to manually set a plan for any email.
- * Requires ADMIN_SECRET env var to be set.
- * Body: { secret: 'admin-secret', email: 'user@example.com', plan: 'pro' }
+ *
+ * Write (or overwrite) the plan for an email address in KV.
+ * Protected by ADMIN_SECRET env var — callers must supply:
+ *   { email, plan, secret }
+ *
+ * Valid plans: free | pro | team | enterprise
+ * No TTL — persists until explicitly changed (mirrors a DB row).
+ *
+ * Used by:
+ *  - Stripe webhook handler (when implemented)
+ *  - Manual admin calls to fix/upgrade a user
  */
 async function handleSetPlan(request, env) {
   let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const adminSecret = (env.ADMIN_SECRET || '').trim();
-  if (!adminSecret) return json({ error: 'Admin endpoint not configured' }, 503);
-  if ((body.secret || '').trim() !== adminSecret) return json({ error: 'Unauthorized' }, 401);
-
-  const email = (body.email || '').trim().toLowerCase();
-  const plan  = (body.plan  || 'free').trim().toLowerCase();
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: 'Valid email required' }, 400);
-  }
-  if (!['free', 'pro', 'team', 'enterprise'].includes(plan)) {
-    return json({ error: 'plan must be free, pro, team, or enterprise' }, 400);
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
-  await activatePlan(env, email, plan);
-  return json({ ok: true, email, plan });
+  const { email, plan, secret } = body ?? {};
+
+  // ── Auth check ─────────────────────────────────────────────
+  const adminSecret = env.ADMIN_SECRET ?? '';
+  if (!adminSecret || secret !== adminSecret) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  // ── Validate inputs ─────────────────────────────────────────
+  if (!email || !isValidEmail(email)) {
+    return jsonResponse({ error: 'A valid email address is required' }, 400);
+  }
+
+  const VALID_PLANS = ['free', 'pro', 'team', 'enterprise'];
+  const normalPlan  = (plan || '').trim().toLowerCase();
+  if (!VALID_PLANS.includes(normalPlan)) {
+    return jsonResponse({ error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` }, 400);
+  }
+
+  // ── Write to KV ─────────────────────────────────────────────
+  const kvKey = `plan:${email.trim().toLowerCase()}`;
+  await env.AUTH_KV.put(kvKey, normalPlan);  // no TTL — permanent until changed
+
+  console.log(`[set-plan] ${email} → ${normalPlan}`);
+  return jsonResponse({ ok: true, email: email.trim().toLowerCase(), plan: normalPlan });
 }
 
-/* ── Anonymous device tracking ───────────────────────────────────────────── */
-const ANON_LIFETIME_LIMIT = 5; // anonymous devices — lifetime, not monthly
-
-/* ── REGISTER-DEVICE ─────────────────────────────────────────────────────── */
-async function handleRegisterDevice(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
-
-  const fingerprint = (body.fingerprint || '').trim();
-  let deviceId = (body.deviceId || '').trim();
-
-  // Check if this machine fingerprint already has a device registered
-  // Prevents VM resets and multiple registrations per machine
-  if (fingerprint) {
-    const fpKey = `fingerprint:${fingerprint}`;
-    const existingId = await env.AUTH_KV.get(fpKey);
-    if (existingId) {
-      const existing = await env.AUTH_KV.get(`device:${existingId}`);
-      if (existing) {
-        const d = JSON.parse(existing);
-        return json({ ok: true, deviceId: existingId, used: d.used || 0, limit: ANON_LIFETIME_LIMIT });
-      }
-    }
-  }
-
-  // If deviceId provided, verify it exists
-  if (deviceId) {
-    const existing = await env.AUTH_KV.get(`device:${deviceId}`);
-    if (existing) {
-      const d = JSON.parse(existing);
-      // Verify fingerprint matches — prevent deviceId sharing across machines
-      if (fingerprint && d.fingerprint && d.fingerprint !== fingerprint) {
-        // Fingerprint mismatch — this deviceId belongs to a different machine
-        // Register a new device for this machine
-        deviceId = '';
-      } else {
-        return json({ ok: true, deviceId, used: d.used || 0, limit: ANON_LIFETIME_LIMIT });
-      }
-    }
-  }
-
-  // Create new device record
-  deviceId = await randomToken();
-  const record = {
-    used:        0,
-    createdAt:   Date.now(),
-    source:      body.source || 'vscode',
-    fingerprint: fingerprint || '',
-  };
-  await env.AUTH_KV.put(`device:${deviceId}`, JSON.stringify(record));
-
-  // Index fingerprint → deviceId (1 device per machine, ever)
-  if (fingerprint) {
-    await env.AUTH_KV.put(`fingerprint:${fingerprint}`, deviceId);
-  }
-
-  // Increment global device counter
-  const countRaw = await env.AUTH_KV.get('devices:count');
-  await env.AUTH_KV.put('devices:count', String((countRaw ? parseInt(countRaw, 10) : 0) + 1));
-
-  return json({ ok: true, deviceId, used: 0, limit: ANON_LIFETIME_LIMIT });
+/**
+ * POST /api/auth/refresh
+ *
+ * Validate session token (keeps token alive).
+ * Returns: { email, plan }
+ */
+async function handleRefresh(request, env) {
+  return resolveToken(request, env, /* deleteAfter= */ false);
 }
 
-/* ── DEVICE-USAGE ─────────────────────────────────────────────────────────── */
-async function handleDeviceUsage(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+// ─────────────────────────────────────────────────────────────
+// Session auth helper — resolves sessionToken → { email, plan }
+// Used by usage endpoints.
+// ─────────────────────────────────────────────────────────────
+async function resolveSession(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) return null;
 
-  const deviceId    = (body.deviceId    || '').trim();
-  const fingerprint = (body.fingerprint || '').trim();
-  if (!deviceId) return json({ ok: false, error: 'deviceId required' }, 400);
+  // Accept both session: keys (30-day) and legacy token: keys
+  for (const prefix of ['session:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        // Look up current plan (may have changed since token was issued)
+        const planRaw = await env.AUTH_KV.get(`plan:${data.email}`);
+        return { email: data.email, plan: planRaw || data.plan || 'free' };
+      } catch { return null; }
+    }
+  }
+  return null;
+}
 
-  const key = `device:${deviceId}`;
+// ─────────────────────────────────────────────────────────────
+// Usage helpers
+// ─────────────────────────────────────────────────────────────
+
+/** Returns YYYY-MM string for current UTC month */
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Get current monthly usage for an email. Returns integer. */
+async function getUsageCount(email, env) {
+  const key = `usage:${email}:${currentMonthKey()}`;
   const raw = await env.AUTH_KV.get(key);
-  if (!raw) return json({ ok: false, error: 'Unknown device — please re-register' }, 404);
-
-  const record = JSON.parse(raw);
-
-  // Fingerprint verification — detect VM resets or deviceId sharing
-  if (fingerprint && record.fingerprint && record.fingerprint !== fingerprint) {
-    // Fingerprint changed — this is a VM reset or copied device state
-    // Check if the new fingerprint has its own registered device
-    const fpKey = `fingerprint:${fingerprint}`;
-    const altId = await env.AUTH_KV.get(fpKey);
-    if (altId && altId !== deviceId) {
-      // Different machine — redirect to its own device record
-      const altRaw = await env.AUTH_KV.get(`device:${altId}`);
-      if (altRaw) {
-        const altRecord = JSON.parse(altRaw);
-        const used = altRecord.used || 0;
-        if (used >= ANON_LIFETIME_LIMIT) {
-          return json({ ok: false, limitReached: true, used, limit: ANON_LIFETIME_LIMIT, remaining: 0 }, 403);
-        }
-        altRecord.used = used + 1;
-        altRecord.lastAt = Date.now();
-        await env.AUTH_KV.put(`device:${altId}`, JSON.stringify(altRecord));
-        return json({ ok: true, used: altRecord.used, limit: ANON_LIFETIME_LIMIT, remaining: ANON_LIFETIME_LIMIT - altRecord.used, limitReached: altRecord.used >= ANON_LIFETIME_LIMIT });
-      }
-    }
-    // New fingerprint with no device — register it and count from 0
-    // But first check global rate limit: max 3 devices per day per IP
-    const newDeviceId = await randomToken();
-    const newRecord   = { used: 1, createdAt: Date.now(), source: 'vscode', fingerprint };
-    await env.AUTH_KV.put(`device:${newDeviceId}`, JSON.stringify(newRecord));
-    await env.AUTH_KV.put(fpKey, newDeviceId);
-    return json({ ok: true, used: 1, limit: ANON_LIFETIME_LIMIT, remaining: ANON_LIFETIME_LIMIT - 1, limitReached: false });
-  }
-
-  const used = record.used || 0;
-
-  // Already over limit
-  if (used >= ANON_LIFETIME_LIMIT) {
-    return json({ ok: false, limitReached: true, used, limit: ANON_LIFETIME_LIMIT, remaining: 0 }, 403);
-  }
-
-  const newUsed    = used + 1;
-  record.used      = newUsed;
-  record.lastAt    = Date.now();
-  if (fingerprint) record.fingerprint = fingerprint; // update fingerprint if changed
-  await env.AUTH_KV.put(key, JSON.stringify(record));
-
-  return json({
-    ok:           true,
-    used:         newUsed,
-    limit:        ANON_LIFETIME_LIMIT,
-    remaining:    ANON_LIFETIME_LIMIT - newUsed,
-    limitReached: newUsed >= ANON_LIFETIME_LIMIT,
-  });
+  return raw ? parseInt(raw, 10) : 0;
 }
 
-/* ── Usage tracking ──────────────────────────────────────────────────────── */
-const FREE_MONTHLY_LIMIT = 50;
-
-async function handleTrackUsage(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400); }
-
-  const token = (body.token || '').trim();
-  const count = parseInt(body.count, 10) || 1;
-
-  if (!token) return json({ ok: false, error: 'Session token required' }, 401);
-
-  const raw = await env.AUTH_KV.get(`token:${token}`);
-  let email, plan;
-
-  if (raw) {
-    try { ({ email, plan } = JSON.parse(raw)); } catch { return json({ ok: false, error: 'Malformed session' }, 500); }
-  } else {
-    const sessionRaw = await env.AUTH_KV.get(`session:${token}`);
-    if (!sessionRaw) return json({ ok: false, error: 'Invalid session' }, 401);
-    try { ({ email, plan } = JSON.parse(sessionRaw)); } catch { return json({ ok: false, error: 'Malformed session' }, 500); }
-  }
-
-  // Always read live plan
-  plan = (await env.AUTH_KV.get(`plan:${email}`) || plan || 'free').toLowerCase();
-  const isPaid = PAID_PLANS.includes(plan);
-
-  if (isPaid) {
-    const usageKey = `usage:${email}:${monthKey()}`;
-    const cur = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
-    const newCount = cur + count;
-    await env.AUTH_KV.put(usageKey, String(newCount), { expirationTtl: 35 * 24 * 60 * 60 });
-    return json({ ok: true, used: newCount, limit: null, remaining: null, plan });
-  }
-
-  const usageKey = `usage:${email}:${monthKey()}`;
-  const cur = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
-
-  if (cur >= FREE_MONTHLY_LIMIT) {
-    return json({ ok: false, error: 'Monthly limit reached', used: cur, limit: FREE_MONTHLY_LIMIT, remaining: 0, plan }, 403);
-  }
-
-  const newCount = Math.min(cur + count, FREE_MONTHLY_LIMIT);
-  await env.AUTH_KV.put(usageKey, String(newCount), { expirationTtl: 35 * 24 * 60 * 60 });
-
-  return json({ ok: true, used: newCount, limit: FREE_MONTHLY_LIMIT, remaining: FREE_MONTHLY_LIMIT - newCount, plan });
+/** Increment monthly usage for an email by n. Returns new count. */
+async function incrementUsageCount(email, n, env) {
+  const key     = `usage:${email}:${currentMonthKey()}`;
+  const current = await getUsageCount(email, env);
+  const next    = current + n;
+  await env.AUTH_KV.put(key, String(next), { expirationTtl: USAGE_TTL });
+  return next;
 }
 
-async function handleGetUsage(request, env) {
-  const url   = new URL(request.url);
-  const token = (url.searchParams.get('token') || '').trim();
+/** Returns monthly limit for a given plan */
+function planLimit(plan) {
+  return PRO_PLANS.includes(plan) ? null : FREE_MONTHLY_LIMIT; // null = unlimited
+}
 
-  if (!token) return json({ error: 'Token required' }, 401);
+// ─────────────────────────────────────────────────────────────
+// POST /api/usage/get
+// Headers: Authorization: Bearer {sessionToken}
+// Returns: { email, plan, used, limit, remaining, month }
+// ─────────────────────────────────────────────────────────────
+async function handleUsageGet(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const sessionRaw = await env.AUTH_KV.get(`session:${token}`);
-  if (!sessionRaw) return json({ error: 'Invalid session' }, 401);
+  const { email, plan } = session;
+  const used            = await getUsageCount(email, env);
+  const limit           = planLimit(plan);
+  const remaining       = limit === null ? null : Math.max(0, limit - used);
 
-  let email, plan;
-  try { ({ email, plan } = JSON.parse(sessionRaw)); } catch { return json({ error: 'Malformed session' }, 500); }
-
-  // Always read live plan
-  plan = (await env.AUTH_KV.get(`plan:${email}`) || plan || 'free').toLowerCase();
-  const isPaid   = PAID_PLANS.includes(plan);
-  const usageKey = `usage:${email}:${monthKey()}`;
-  const used     = parseInt(await env.AUTH_KV.get(usageKey) || '0', 10);
-
-  return json({
-    used,
-    limit:     isPaid ? null : FREE_MONTHLY_LIMIT,
-    remaining: isPaid ? null : Math.max(0, FREE_MONTHLY_LIMIT - used),
+  return jsonResponse({
+    email,
     plan,
+    used,
+    limit,        // null = unlimited (pro/team/enterprise)
+    remaining,    // null = unlimited
+    month: currentMonthKey(),
+    reset: (() => {
+      const d = new Date();
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
+    })()
   });
 }
 
-/* ── Proxy handlers (unchanged) ──────────────────────────────────────────── */
-function isAllowedOrigin(request) {
-  const origin  = request.headers.get('Origin')     || '';
-  const referer = request.headers.get('Referer')    || '';
-  const ua      = request.headers.get('User-Agent') || '';
-  return origin.startsWith('https://poly-glot.ai') ||
-         referer.startsWith('https://poly-glot.ai') ||
-         ua.startsWith('poly-glot-');
+// ─────────────────────────────────────────────────────────────
+// POST /api/usage/increment
+// Headers: Authorization: Bearer {sessionToken}
+// Body:    { files: number }
+// Returns: { used, limit, remaining, allowed, month }
+// ─────────────────────────────────────────────────────────────
+async function handleUsageIncrement(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const files = Math.max(1, parseInt(body?.files ?? 1, 10));
+  const { email, plan } = session;
+  const limit           = planLimit(plan);
+
+  // ── Pre-check: would this increment exceed the limit? ────────
+  if (limit !== null) {
+    const current = await getUsageCount(email, env);
+    if (current >= limit) {
+      return jsonResponse({
+        error:     'Monthly limit reached',
+        used:      current,
+        limit,
+        remaining: 0,
+        allowed:   false,
+        month:     currentMonthKey(),
+      }, 429);
+    }
+  }
+
+  // ── Increment ─────────────────────────────────────────────────
+  const used      = await incrementUsageCount(email, files, env);
+  const remaining = limit === null ? null : Math.max(0, limit - used);
+
+  console.log(`[usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
+
+  return jsonResponse({
+    used,
+    limit,
+    remaining,
+    allowed: true,
+    month:   currentMonthKey(),
+  });
 }
 
-async function handleVscProxy(request) {
-  if (!isAllowedOrigin(request)) return json({ error: 'Forbidden' }, 403);
+/**
+ * Shared token-resolution logic for verify & refresh.
+ */
+async function resolveToken(request, env, deleteAfter) {
+  // ── Parse body ──────────────────────────────────────────────
+  let body;
   try {
-    const body = await request.text();
-    const res  = await fetch(
-      'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',
-      {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept':       'application/json;api-version=3.0-preview.1',
-          'User-Agent':   'poly-glot-dashboard/1.0',
-        },
-        body: body || JSON.stringify({
-          filters: [{ criteria: [{ filterType: 7, value: 'poly-glot-ai.poly-glot' }] }],
-          flags: 914
-        }),
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const { token } = body ?? {};
+  if (!token || typeof token !== 'string' || token.trim().length === 0) {
+    return jsonResponse({ error: 'token is required' }, 400);
+  }
+
+  const kvKey = `token:${token.trim()}`;
+
+  // ── KV lookup ───────────────────────────────────────────────
+  const raw = await env.AUTH_KV.get(kvKey);
+
+  if (raw === null) {
+    return jsonResponse({ error: 'Invalid or expired token' }, 401);
+  }
+
+  // ── Parse stored data ───────────────────────────────────────
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    // Corrupted entry — clean up and reject
+    await env.AUTH_KV.delete(kvKey).catch(() => {});
+    return jsonResponse({ error: 'Invalid or expired token' }, 401);
+  }
+
+  // ── Consume or retain token ─────────────────────────────────
+  if (deleteAfter) {
+    await env.AUTH_KV.delete(kvKey);
+  }
+
+  return jsonResponse({ email: data.email, plan: data.plan });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Stripe webhook handler
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Maps Stripe price IDs → plan names.
+ * Update these IDs if you create new prices in the Stripe dashboard.
+ */
+const STRIPE_PRICE_TO_PLAN = {
+  'price_1THTUgRQVeNj16c8TvAVPfTJ': 'pro',   // Pro Monthly  $9/mo
+  'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',   // Pro Yearly   $79/yr
+  'price_1THTpsRQVeNj16c8IcauulXJ': 'team',  // Team Monthly $29/mo
+  'price_1TI9q1RQVeNj16c8BDKYHS3y': 'team',  // Team Yearly  $249/yr
+};
+
+/**
+ * Resolve plan from a Stripe subscription object.
+ * Looks at the first line item's price ID.
+ */
+function resolvePlanFromSubscription(subscription) {
+  try {
+    const items = subscription?.items?.data || [];
+    for (const item of items) {
+      const priceId = item?.price?.id;
+      if (priceId && STRIPE_PRICE_TO_PLAN[priceId]) {
+        return STRIPE_PRICE_TO_PLAN[priceId];
       }
-    );
-    const data = await res.json();
-    return json(data, res.status);
-  } catch(e) {
-    return json({ error: 'VSC proxy error: ' + e.message }, 502);
-  }
+      // Fallback: check product metadata for plan name
+      const meta = item?.price?.product?.metadata;
+      if (meta?.plan) return meta.plan.toLowerCase();
+    }
+    // Last resort: check subscription metadata
+    if (subscription?.metadata?.plan) return subscription.metadata.plan.toLowerCase();
+  } catch { /* ignore */ }
+  return 'pro'; // default to pro if we can't resolve (they paid, give them access)
 }
 
-async function handleGhProxy(request) {
-  const url      = new URL(request.url);
-  const endpoint = url.searchParams.get('endpoint') || 'health';
-  const GH_APP_BASE = 'https://poly-glot-github-app.onrender.com';
-  const allowed = ['health', 'stats'];
-  if (!allowed.includes(endpoint)) return json({ error: 'Invalid endpoint' }, 400);
+/**
+ * Verify Stripe webhook signature using HMAC-SHA256.
+ * Stripe sends: Stripe-Signature: t=timestamp,v1=signature
+ */
+async function verifyStripeSignature(payload, sigHeader, secret) {
   try {
-    const res  = await fetch(`${GH_APP_BASE}/${endpoint}`, {
-      headers: { 'User-Agent': 'poly-glot-dashboard/1.0' },
-    });
-    const data = await res.json().catch(() => ({}));
-    return json(data, res.status);
-  } catch(e) {
-    return json({ error: 'GH App proxy error: ' + e.message }, 502);
-  }
-}
+    const parts    = sigHeader.split(',');
+    const tPart    = parts.find(p => p.startsWith('t='));
+    const v1Part   = parts.find(p => p.startsWith('v1='));
+    if (!tPart || !v1Part) return false;
 
-async function handleCwsProxy(env) {
-  try {
-    const clientId     = env.CWS_CLIENT_ID     || '';
-    const clientSecret = env.CWS_CLIENT_SECRET || '';
-    const refreshToken = env.CWS_REFRESH_TOKEN || '';
-    const extensionId  = env.CWS_EXTENSION_ID  || 'hjpdgilolgcanemmngagpobdgdhpplai';
+    const timestamp = tPart.slice(2);
+    const signature = v1Part.slice(3);
 
-    if (!clientId || !clientSecret || !refreshToken) {
-      return new Response(JSON.stringify({ installs: 0, error: 'CWS OAuth secrets not configured' }), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300', 'Access-Control-Allow-Origin': '*' },
-      });
-    }
+    // Reject webhooks older than 5 minutes (replay attack protection)
+    const age = Math.abs(Date.now() / 1000 - parseInt(timestamp, 10));
+    if (age > 300) return false;
 
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id:     clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type:    'refresh_token',
-      }),
-    });
-    const tokenData = await tokenRes.json().catch(() => ({}));
-    if (!tokenData.access_token) {
-      return new Response(JSON.stringify({ installs: 0, error: 'OAuth token exchange failed: ' + (tokenData.error || 'unknown') }), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=60', 'Access-Control-Allow-Origin': '*' },
-      });
-    }
-
-    const cwsRes = await fetch(
-      `https://www.googleapis.com/chromewebstore/v1.1/items/${extensionId}?projection=DRAFT`,
-      { headers: { 'Authorization': `Bearer ${tokenData.access_token}` } }
+    const signedPayload = `${timestamp}.${payload}`;
+    const enc           = new TextEncoder();
+    const key           = await crypto.subtle.importKey(
+      'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
     );
-    const cwsData = await cwsRes.json().catch(() => ({}));
-    const installs = parseInt(cwsData.userCount || cwsData.installCount || '0', 10) || 0;
+    const mac    = await crypto.subtle.sign('HMAC', key, enc.encode(signedPayload));
+    const hexMac = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    return new Response(JSON.stringify({ installs }), {
-      headers: {
-        'Content-Type':                'application/json',
-        'Cache-Control':               'max-age=3600',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ installs: 0, error: e.message }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=60', 'Access-Control-Allow-Origin': '*' },
-    });
+    return hexMac === signature;
+  } catch {
+    return false;
   }
 }
 
 /**
- * POST /api/auth/free-signup
- * "Start for Free" button — website pricing card, VS Code extension (1.4.38+).
- * Identical to /api/auth/login but:
- *  - Always sets plan to 'free' for brand-new emails (never downgrades existing paid)
- *  - source is always 'free_signup' for attribution
+ * POST /api/stripe/webhook
+ *
+ * Handles Stripe subscription lifecycle events:
+ *   checkout.session.completed       → activate plan
+ *   customer.subscription.updated    → update plan
+ *   customer.subscription.deleted    → downgrade to free
+ *   invoice.payment_failed           → log (don't downgrade immediately — Stripe retries)
  */
-async function handleFreeSignup(request, env) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+async function handleStripeWebhook(request, env) {
+  const sigHeader = request.headers.get('Stripe-Signature');
+  if (!sigHeader) return jsonResponse({ error: 'Missing Stripe-Signature header' }, 400);
 
-  const email = (body.email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: 'Valid email required' }, 400);
+  const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('[stripe] STRIPE_WEBHOOK_SECRET not configured');
+    return jsonResponse({ error: 'Webhook secret not configured' }, 500);
   }
 
-  // Never downgrade a paying user — only set 'free' for brand-new accounts
+  // Read raw body (must be raw string for signature verification)
+  const rawBody = await request.text();
+
+  // Verify signature
+  const isValid = await verifyStripeSignature(rawBody, sigHeader, webhookSecret);
+  if (!isValid) {
+    console.warn('[stripe] Invalid webhook signature — rejecting');
+    return jsonResponse({ error: 'Invalid signature' }, 401);
+  }
+
+  // Parse event
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return jsonResponse({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { type, data } = event;
+  console.log(`[stripe] Event: ${type}`);
+
+  try {
+    switch (type) {
+
+      // ── New subscription / one-time payment ──────────────────────────────
+      case 'checkout.session.completed': {
+        const session      = data.object;
+        const email        = session?.customer_details?.email
+                          || session?.customer_email
+                          || null;
+        const customerId   = session?.customer;
+        const subscription = session?.subscription;
+
+        if (!email) {
+          console.warn('[stripe] checkout.session.completed — no email found');
+          break;
+        }
+
+        // Store customer ID → email mapping for future events
+        if (customerId) {
+          await env.AUTH_KV.put(`stripe:${customerId}`, email.toLowerCase());
+        }
+
+        // Determine plan from the subscription line items; fall back to 'pro'
+        let plan = 'pro';
+        if (subscription) {
+          // Fetch full subscription object so we have line items + price IDs
+          try {
+            const subRaw = await env.AUTH_KV.get(`stripe:sub:${subscription}`);
+            if (subRaw) plan = resolvePlanFromSubscription(JSON.parse(subRaw));
+          } catch { /* use default */ }
+        }
+        // Also check session metadata for an explicit plan hint from Stripe
+        if (session?.metadata?.plan) plan = session.metadata.plan.toLowerCase();
+
+        const kvKey = `plan:${email.trim().toLowerCase()}`;
+        await env.AUTH_KV.put(kvKey, plan);
+
+        console.log(`[stripe] ✅ Activated ${plan} for ${email} (customer: ${customerId})`);
+        break;
+      }
+
+      // ── Subscription updated (upgrade/downgrade/reactivation) ────────────
+      case 'customer.subscription.updated': {
+        const subscription = data.object;
+        const customerId   = subscription?.customer;
+        if (!customerId) break;
+
+        // Look up email from customer ID
+        const email = await env.AUTH_KV.get(`stripe:${customerId}`);
+        if (!email) {
+          console.warn(`[stripe] subscription.updated — no email for customer ${customerId}`);
+          break;
+        }
+
+        const status = subscription?.status;
+        // Only activate on active/trialing — not past_due/canceled
+        if (status === 'active' || status === 'trialing') {
+          const plan  = resolvePlanFromSubscription(subscription);
+          const kvKey = `plan:${email}`;
+          await env.AUTH_KV.put(kvKey, plan);
+          console.log(`[stripe] ✅ Updated plan → ${plan} for ${email} (status: ${status})`);
+        } else {
+          console.log(`[stripe] ⚠️ Subscription status ${status} for ${email} — no plan change`);
+        }
+        break;
+      }
+
+      // ── Subscription cancelled / expired ─────────────────────────────────
+      case 'customer.subscription.deleted': {
+        const subscription = data.object;
+        const customerId   = subscription?.customer;
+        if (!customerId) break;
+
+        const email = await env.AUTH_KV.get(`stripe:${customerId}`);
+        if (!email) {
+          console.warn(`[stripe] subscription.deleted — no email for customer ${customerId}`);
+          break;
+        }
+
+        // Downgrade to free
+        await env.AUTH_KV.put(`plan:${email}`, 'free');
+        console.log(`[stripe] ⬇️ Downgraded to free for ${email} (subscription cancelled)`);
+        break;
+      }
+
+      // ── Payment failed — log only, Stripe will retry ──────────────────────
+      case 'invoice.payment_failed': {
+        const invoice    = data.object;
+        const customerId = invoice?.customer;
+        const email      = customerId ? await env.AUTH_KV.get(`stripe:${customerId}`) : null;
+        console.warn(`[stripe] ⚠️ Payment failed for customer ${customerId} (${email || 'unknown'})`);
+        // Don't downgrade yet — Stripe retries 3x before cancelling subscription
+        break;
+      }
+
+      default:
+        console.log(`[stripe] Unhandled event type: ${type}`);
+    }
+  } catch (err) {
+    console.error(`[stripe] Error processing event ${type}:`, err?.message);
+    return jsonResponse({ error: 'Internal error processing webhook' }, 500);
+  }
+
+  // Always return 200 to Stripe — even for events we don't handle
+  return jsonResponse({ received: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Chrome Web Store proxy — GET /api/auth/cws-proxy
+// ─────────────────────────────────────────────────────────────
+// Returns { installs: N } using the Chrome Web Store Publish API.
+// Requires env secrets:
+//   CWS_CLIENT_ID      — OAuth2 client ID from Google Cloud Console
+//   CWS_CLIENT_SECRET  — OAuth2 client secret
+//   CWS_REFRESH_TOKEN  — long-lived refresh token (one-time setup)
+//   CWS_EXTENSION_ID   — Chrome extension ID (hjpdgilolgcanemmngagpobdgdhpplai)
+//
+// Flow: refresh_token → access_token → items API → userCount
+// ─────────────────────────────────────────────────────────────
+async function handleCwsProxy(request, env) {
+  try {
+    // 1. Exchange refresh token for a fresh access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     env.CWS_CLIENT_ID,
+        client_secret: env.CWS_CLIENT_SECRET,
+        refresh_token: env.CWS_REFRESH_TOKEN,
+        grant_type:    'refresh_token',
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const err = await tokenRes.text();
+      console.error('CWS token exchange failed:', err);
+      return jsonResponse({ error: 'token_exchange_failed', installs: null }, 502);
+    }
+
+    const { access_token } = await tokenRes.json();
+    if (!access_token) {
+      return jsonResponse({ error: 'no_access_token', installs: null }, 502);
+    }
+
+    // 2. Fetch extension item from Chrome Web Store Publish API
+    const extId = env.CWS_EXTENSION_ID || 'hjpdgilolgcanemmngagpobdgdhpplai';
+    const cwsRes = await fetch(
+      `https://www.googleapis.com/chromewebstore/v1.1/items/${extId}?projection=DRAFT`,
+      {
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'x-goog-api-version': '2',
+        },
+      }
+    );
+
+    if (!cwsRes.ok) {
+      const err = await cwsRes.text();
+      console.error('CWS items API failed:', err);
+      return jsonResponse({ error: 'cws_api_failed', installs: null }, 502);
+    }
+
+    const item = await cwsRes.json();
+
+    // userCount is the install count — may be 0 or absent for new extensions
+    const installs = typeof item.userCount === 'number'
+      ? item.userCount
+      : parseInt(item.userCount || '0', 10) || 0;
+
+    return new Response(JSON.stringify({ installs, id: extId }), {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json',
+        // Cache for 1 hour at the edge — CWS updates slowly
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+
+  } catch (err) {
+    console.error('handleCwsProxy error:', err?.stack ?? err);
+    return jsonResponse({ error: 'internal_error', installs: null }, 500);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// VS Code Marketplace proxy — POST /api/auth/vsc-proxy
+// Proxies the marketplace extension query API (avoids CORS)
+// ─────────────────────────────────────────────────────────────
+async function handleVscProxy(request, env) {
+  try {
+    const body = await request.text();
+    const res = await fetch(
+      'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json;api-version=3.0-preview.1',
+        },
+        body,
+      }
+    );
+    const data = await res.json();
+    return new Response(JSON.stringify(data), {
+      status: res.status,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('handleVscProxy error:', err?.stack ?? err);
+    return jsonResponse({ error: 'internal_error' }, 500);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/auth/free-signup
+// "Start for Free" button — registers a new free account via
+// magic-link email exactly like /api/auth/login.
+// Body: { email }
+// Accepts GET too (for redirect-based flows).
+// ─────────────────────────────────────────────────────────────
+async function handleFreeSignup(request, env) {
+  let email;
+  if (request.method === 'GET') {
+    email = new URL(request.url).searchParams.get('email') ?? '';
+  } else {
+    let body;
+    try { body = await request.json(); } catch {
+      return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+    }
+    email = (body?.email ?? '').trim().toLowerCase();
+  }
+
+  if (!email || !isValidEmail(email)) {
+    return jsonResponse({ error: 'A valid email address is required' }, 400);
+  }
+
+  // Rate-limit (shared with /api/auth/login — same 60 s window)
+  const rateLimitKey = `ratelimit:${email}`;
+  if (await env.AUTH_KV.get(rateLimitKey) !== null) {
+    return jsonResponse(
+      { error: 'Too many requests. Please wait 60 seconds before trying again.' },
+      429
+    );
+  }
+  await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: RATE_LIMIT_TTL });
+
+  // Ensure plan is set to 'free' for new signups (never overwrite a paid plan)
   const existingPlan = await env.AUTH_KV.get(`plan:${email}`);
   if (!existingPlan) {
     await env.AUTH_KV.put(`plan:${email}`, 'free');
   }
 
-  // Delegate to handleLogin with source attribution baked in
-  const enriched = new Request(request.url, {
-    method:  'POST',
-    headers: request.headers,
-    body:    JSON.stringify({ email, source: 'free_signup', fingerprint: body.fingerprint || '' }),
-  });
-  return handleLogin(enriched, env);
+  // Generate magic-link token
+  const token     = generateToken();
+  const plan      = existingPlan ?? 'free';
+  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
+  await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
+
+  const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
+
+  const result = await sendMagicLinkEmail(env, email, magicLink);
+
+  if (!result.ok) {
+    await Promise.allSettled([
+      env.AUTH_KV.delete(rateLimitKey),
+      env.AUTH_KV.delete(`token:${token}`),
+    ]);
+    return jsonResponse(
+      { error: 'Failed to send magic link email. Please try again.' },
+      502
+    );
+  }
+
+  console.log(`[free-signup] ✅ Magic link sent to ${email} (plan: ${plan})`);
+  return jsonResponse({ ok: true, message: 'Check your email for a magic link to sign in.' });
 }
 
-/** Main fetch handler */
+// ─────────────────────────────────────────────────────────────
+// GET /api/auth/get-usage  (CLI alias for /api/usage/get)
+// Query: ?token=<sessionToken>
+// ─────────────────────────────────────────────────────────────
+async function handleCliGetUsage(request, env) {
+  const token = new URL(request.url).searchParams.get('token') ?? '';
+  if (!token) return jsonResponse({ error: 'token query param required' }, 400);
+
+  // Resolve session from token (reuse resolveSession logic directly)
+  for (const prefix of ['session:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token.trim()}`);
+    if (raw) {
+      try {
+        const data  = JSON.parse(raw);
+        const email = data.email;
+        const planRaw = await env.AUTH_KV.get(`plan:${email}`);
+        const plan    = planRaw || data.plan || 'free';
+        const used    = await getUsageCount(email, env);
+        const limit   = planLimit(plan);
+        const remaining = limit === null ? null : Math.max(0, limit - used);
+        return jsonResponse({
+          ok: true,
+          email,
+          plan,
+          used,
+          limit,
+          remaining,
+          month: currentMonthKey(),
+        });
+      } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
+    }
+  }
+  return jsonResponse({ error: 'Invalid or expired token' }, 401);
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/auth/track-usage  (CLI alias for /api/usage/increment)
+// Body: { token, count }
+// ─────────────────────────────────────────────────────────────
+async function handleCliTrackUsage(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  const count = Math.max(1, parseInt(body?.count ?? 1, 10));
+  if (!token) return jsonResponse({ error: 'token is required' }, 400);
+
+  for (const prefix of ['session:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data    = JSON.parse(raw);
+        const email   = data.email;
+        const planRaw = await env.AUTH_KV.get(`plan:${email}`);
+        const plan    = planRaw || data.plan || 'free';
+        const limit   = planLimit(plan);
+
+        // Pre-check quota
+        if (limit !== null) {
+          const current = await getUsageCount(email, env);
+          if (current >= limit) {
+            return jsonResponse({
+              ok:        false,
+              error:     'Monthly limit reached',
+              used:      current,
+              limit,
+              remaining: 0,
+              allowed:   false,
+              month:     currentMonthKey(),
+            }, 429);
+          }
+        }
+
+        const used      = await incrementUsageCount(email, count, env);
+        const remaining = limit === null ? null : Math.max(0, limit - used);
+        console.log(`[track-usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
+        return jsonResponse({ ok: true, used, limit, remaining, allowed: true, month: currentMonthKey() });
+      } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
+    }
+  }
+  return jsonResponse({ error: 'Invalid or expired token' }, 401);
+}
+
+// ─────────────────────────────────────────────────────────────
+// GitHub App stats proxy — GET /api/auth/gh-proxy
+// Returns { installations: N } from the GitHub App
+// ─────────────────────────────────────────────────────────────
+async function handleGhProxy(request, env) {
+  try {
+    const url = new URL(request.url);
+    const endpoint = url.searchParams.get('endpoint') || 'stats';
+    // Route to the Render-hosted GitHub App stats endpoint
+    const ghRes = await fetch(
+      `https://poly-glot-github-app.onrender.com/${endpoint}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!ghRes.ok) return jsonResponse({ installations: 0 }, 200);
+    const data = await ghRes.json();
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('handleGhProxy error:', err?.stack ?? err);
+    return jsonResponse({ installations: 0 }, 200);
+  }
+}
+
+// Main fetch handler (entry point)
+// ─────────────────────────────────────────────────────────────
+
 export default {
-  async fetch(request, env) {
-    if (request.method === 'OPTIONS') return preflight();
+  async fetch(request, env, _ctx) {
+
+    // ── CORS preflight ────────────────────────────────────────
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status:  204,
+        headers: CORS_HEADERS,
+      });
+    }
 
     const url      = new URL(request.url);
-    const pathname = url.pathname.replace(/\/$/, '');
+    const pathname = url.pathname;
 
-    // Stripe webhook — skip version check (not a CLI client)
-    // Handle both the canonical path AND the legacy path already configured in Stripe
-    if (pathname === '/api/auth/webhook/stripe' || pathname === '/api/auth/stripe-webhook') {
-      return handleStripeWebhook(request, env);
-    }
-
-    // Version gate — reject CLI clients older than MINIMUM_CLI_VERSION
-    const versionError = checkVersion(request);
-    if (versionError) return versionError;
-
-    // GET endpoints
+    // ── GET routes ────────────────────────────────────────────
     if (request.method === 'GET') {
-      if (pathname === '/api/auth/promo-count') return handlePromoCount(env);
-      if (pathname === '/api/auth/get-usage')   return handleGetUsage(request, env);
-      if (pathname === '/api/auth/gh-proxy')    return handleGhProxy(request);
-      if (pathname === '/api/auth/cws-proxy')   return handleCwsProxy(env);
-      return json({ error: 'Not found' }, 404);
+      switch (pathname) {
+        case '/api/auth/ping':
+          return jsonResponse({ ok: true, ts: Date.now() }, 200);
+        case '/api/auth/cws-proxy':
+          return await handleCwsProxy(request, env);
+        case '/api/auth/gh-proxy':
+          return await handleGhProxy(request, env);
+        // CLI alias — GET /api/auth/get-usage?token=<sessionToken>
+        case '/api/auth/get-usage':
+          return await handleCliGetUsage(request, env);
+        default:
+          return jsonResponse({ error: 'Not found' }, 404);
+      }
     }
 
+    // ── Only POST allowed past this point ─────────────────────
     if (request.method !== 'POST') {
-      return json({ error: 'Method not allowed' }, 405);
+      return jsonResponse({ error: 'Method not allowed' }, 405);
     }
 
-    // POST endpoints
-    if (pathname === '/api/auth/login')            return handleLogin(request, env);
-    if (pathname === '/api/auth/free-signup')      return handleFreeSignup(request, env);
-    if (pathname === '/api/auth/verify')           return handleVerify(request, env);
-    if (pathname === '/api/auth/refresh')          return handleRefresh(request, env);
-    if (pathname === '/api/auth/check-plan')       return handleCheckPlan(request, env);
-    if (pathname === '/api/auth/set-plan')         return handleSetPlan(request, env);
-    if (pathname === '/api/auth/validate-key')     return handleValidateKey(request, env);
-    if (pathname === '/api/auth/track-usage')      return handleTrackUsage(request, env);
-    if (pathname === '/api/auth/register-device')  return handleRegisterDevice(request, env);
-    if (pathname === '/api/auth/device-usage')     return handleDeviceUsage(request, env);
-    if (pathname === '/api/auth/vsc-proxy')        return handleVscProxy(request);
+    // ── POST route dispatch ───────────────────────────────────
+    try {
+      switch (pathname) {
+        case '/api/auth/login':
+          return await handleLogin(request, env);
 
-    return json({ error: 'Not found' }, 404);
+        case '/api/auth/verify':
+          return await handleVerify(request, env);
+
+        case '/api/auth/refresh':
+          return await handleRefresh(request, env);
+
+        case '/api/auth/set-plan':
+          return await handleSetPlan(request, env);
+
+        // "Start for Free" button — website & extension
+        case '/api/auth/free-signup':
+          return await handleFreeSignup(request, env);
+
+        case '/api/usage/get':
+          return await handleUsageGet(request, env);
+
+        case '/api/usage/increment':
+          return await handleUsageIncrement(request, env);
+
+        // CLI aliases — keep old paths working
+        case '/api/auth/track-usage':
+          return await handleCliTrackUsage(request, env);
+
+        case '/api/auth/vsc-proxy':
+          return await handleVscProxy(request, env);
+
+        case '/api/stripe/webhook':
+          // Stripe sends POST with raw body — must NOT require JSON content-type
+          return await handleStripeWebhook(request, env);
+
+        default:
+          return jsonResponse({ error: 'Not found' }, 404);
+      }
+    } catch (err) {
+      // Last-resort catch — should never be reached in normal operation
+      console.error('Unhandled worker error:', err?.stack ?? err);
+      return jsonResponse({ error: 'Internal server error' }, 500);
+    }
   },
 };
