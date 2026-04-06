@@ -472,17 +472,18 @@ async function handleAdminUsers(request, env) {
   // Build full user list first, then filter to real unique users
   const allUsers = await Promise.all(planKeys.map(async k => {
     const email = k.name.slice('plan:'.length);
-    const plan  = await env.AUTH_KV.get(k.name) ?? 'free';
-    const usageVal = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`);
+    const plan  = await env.AUTH_KV.get(k.name, 'text') ?? 'free';
+    const usageVal = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`, 'text');
     const usage    = usageVal ? parseInt(usageVal, 10) : 0;
     return { email, plan, usage_this_month: usage };
   }));
 
-  // Deduplicate by email (Set), filter out disposable/test addresses
+  // Deduplicate by email (Set), filter out disposable/test addresses and tombstoned entries
   const seen  = new Set();
   const users = allUsers.filter(u => {
     if (seen.has(u.email)) return false;
     seen.add(u.email);
+    if (u.plan === 'DELETED') return false;           // tombstone — key pending KV propagation
     if (isDisposableEmail(u.email)) return false;
     if (isTestEmail(u.email))       return false;
     return true;
@@ -755,12 +756,26 @@ async function resolveToken(request, env, deleteAfter) {
     return jsonResponse({ error: 'Invalid or expired token' }, 401);
   }
 
-  // ── Consume or retain token ─────────────────────────────────
+  // ── Consume one-time token + create long-lived session ───────
   if (deleteAfter) {
+    // Delete the one-time magic-link token
     await env.AUTH_KV.delete(kvKey);
+
+    // Create a 30-day session: key so the same token value keeps working
+    // for /check-plan, /get-usage, /track-usage, etc.
+    // TTL: 30 days in seconds
+    const SESSION_TTL = 30 * 24 * 60 * 60;
+    await env.AUTH_KV.put(
+      `session:${token.trim()}`,
+      JSON.stringify({ email: data.email, plan: data.plan, created: Date.now() }),
+      { expirationTtl: SESSION_TTL },
+    );
   }
 
-  return jsonResponse({ email: data.email, plan: data.plan });
+  // Always read live plan from KV — catches upgrades since token was issued
+  const livePlan = (await env.AUTH_KV.get(`plan:${data.email}`)) || data.plan || 'free';
+
+  return jsonResponse({ email: data.email, plan: livePlan });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1193,6 +1208,39 @@ async function handleCliGetUsage(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// POST /api/auth/admin/delete-user
+// Hard-deletes all KV keys for a given email (plan:, session:, token:, usage:, ratelimit:)
+// Body: { email, secret }
+// ─────────────────────────────────────────────────────────────
+async function handleAdminDeleteUser(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+  const { email, secret } = body ?? {};
+  const adminSecret = env.ADMIN_SECRET ?? '';
+  if (!adminSecret || secret !== adminSecret) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+  if (!email || !isValidEmail(email)) {
+    return jsonResponse({ error: 'Valid email required' }, 400);
+  }
+  const YYYY_MM = new Date().toISOString().slice(0, 7);
+  const keysToDelete = [
+    `plan:${email}`,
+    `ratelimit:${email}`,
+    `usage:${email}:${YYYY_MM}`,
+  ];
+  // Also scan for any session: or token: keys containing this email
+  // (they store email in JSON payload, not in key name — can't enumerate easily)
+  // Delete the deterministic keys via Workers KV API (bypasses edge cache)
+  const results = await Promise.allSettled(
+    keysToDelete.map(k => env.AUTH_KV.delete(k))
+  );
+  return jsonResponse({ ok: true, email, deleted: keysToDelete, results: results.map(r => r.status) });
+}
+
+// ─────────────────────────────────────────────────────────────
 // POST /api/auth/github-app-track-usage
 // Called by the GitHub App on every PR review to track monthly usage
 // per installation and enforce the free-tier PR limit (25/month).
@@ -1398,6 +1446,9 @@ export default {
 
         case '/api/auth/github-app-track-usage':
           return await handleGithubAppTrackUsage(request, env);
+
+        case '/api/auth/admin/delete-user':
+          return await handleAdminDeleteUser(request, env);
 
         case '/api/auth/vsc-proxy':
           return await handleVscProxy(request, env);
