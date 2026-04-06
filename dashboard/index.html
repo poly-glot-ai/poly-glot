@@ -229,7 +229,13 @@
   <div class="grid-wide" id="svcGrid"></div>
 </div>
 
-<!-- Section 2: Endpoint health table -->
+<!-- Section 2: External Services (Resend + Cloudflare) -->
+<div class="section">
+  <div class="sec-title">☁️ External Services</div>
+  <div class="grid" id="externalGrid"></div>
+</div>
+
+<!-- Section 3: Endpoint health table -->
 <div class="section">
   <div class="sec-title">🔌 API Endpoint Health</div>
   <div class="ep-wrap">
@@ -244,19 +250,19 @@
   </div>
 </div>
 
-<!-- Section 3: Install metrics -->
+<!-- Section 4: Install metrics -->
 <div class="section">
   <div class="sec-title">📦 Install &amp; Download Metrics</div>
   <div class="grid" id="metricsGrid"></div>
 </div>
 
-<!-- Section 4: Platform stats -->
+<!-- Section 5: Platform stats -->
 <div class="section">
   <div class="sec-title">📊 Platform Stats</div>
   <div class="grid" id="statsGrid"></div>
 </div>
 
-<!-- Section 5: Versions -->
+<!-- Section 6: Versions -->
 <div class="section">
   <div class="sec-title">🏷 Published Versions</div>
   <div class="grid" id="versionsGrid"></div>
@@ -284,6 +290,9 @@ const ENDPOINTS = [
   { method:'GET',  key:'npmCli',    url:'https://registry.npmjs.org/poly-glot-ai-cli/latest',                      label:'npm CLI',              desc:'poly-glot-ai-cli latest version' },
   { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
   { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
+  { method:'GET',  key:'resend',    url:'https://resend-status.com/api/v2/status.json',                              label:'Resend Status',        desc:'Email delivery · resend-status.com API' },
+  { method:'GET',  key:'cfStatus',  url:'https://www.cloudflarestatus.com/api/v2/components.json',                   label:'Cloudflare Status',    desc:'Workers + KV + Pages component status' },
+  { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/get-usage?token=ping',                       label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/get-usage health probe' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
   { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 ];
@@ -397,6 +406,34 @@ async function collectAll() {
     }
   } catch { m.chromeInstalls = null; }
 
+  // Resend status
+  try {
+    const d = map.resend?.r?.data;
+    m.resendIndicator   = d?.status?.indicator    ?? null;   // none | minor | major | critical
+    m.resendDescription = d?.status?.description  ?? null;
+    m.resendUpdated     = d?.page?.updated_at      ?? null;
+  } catch { m.resendIndicator = null; }
+
+  // Cloudflare component statuses (Workers, Workers KV, Pages)
+  try {
+    const comps = map.cfStatus?.r?.data?.components ?? [];
+    const find  = name => comps.find(c => c.name === name)?.status ?? null;
+    m.cfWorkers   = find('Workers');
+    m.cfWorkersKV = find('Workers KV');
+    m.cfPages     = find('Pages');
+    m.cfCDN       = find('CDN/Cache');
+    m.cfUpdated   = map.cfStatus?.r?.data?.page?.updated_at ?? null;
+  } catch { m.cfWorkers = null; }
+
+  // Auth Worker reachability — GET /api/auth/get-usage?token=ping
+  // Worker is alive if we get ANY HTTP response (200/404/etc) — 500 or network error = crashed
+  try {
+    const s = map.authWorker?.r?.status;
+    m.authWorkerOk     = s != null && s !== 0 && s !== 500 && s !== 503;
+    m.authWorkerMs     = map.authWorker?.r?.ms ?? null;
+    m.authWorkerStatus = s ?? null;
+  } catch { m.authWorkerOk = null; }
+
   return { epStatus, m };
 }
 
@@ -429,15 +466,16 @@ function card(icon, label, val, meta) {
 // ─── Render sections ──────────────────────────────────────────────────────────
 function renderSvcs(epStatus) {
   const SVCS = [
-    { key:'site',      icon:'🌐', name:'poly-glot.ai',         desc:'Main website · GitHub Pages + Cloudflare' },
-    { key:'chrome',    icon:'🟢', name:'Chrome Web Store',     desc:'chromewebstore.google.com · poly-glot-ai' },
-    { key:'ghHealth',  icon:'🐙', name:'GitHub App',           desc:'poly-glot-github-app.onrender.com' },
-    { key:'ghStats',   icon:'📊', name:'GitHub App /stats',    desc:'Installation count endpoint' },
-    { key:'telHealth', icon:'📡', name:'Telemetry Worker',     desc:'telemetry.poly-glot.ai' },
-    { key:'telStats',  icon:'📈', name:'Telemetry /stats',     desc:'CLI command + milestone data' },
-    { key:'npmCli',    icon:'📦', name:'npm CLI Registry',     desc:'registry.npmjs.org · poly-glot-ai-cli' },
-    { key:'ovx',       icon:'🧩', name:'Open VSX',             desc:'open-vsx.org · poly-glot-ai/poly-glot' },
-    { key:'vsc',       icon:'💙', name:'VS Code Marketplace',  desc:'marketplace.visualstudio.com' },
+    { key:'site',       icon:'🌐', name:'poly-glot.ai',          desc:'Main website · GitHub Pages + Cloudflare' },
+    { key:'authWorker', icon:'⚡', name:'Auth Worker',            desc:'Cloudflare Worker · poly-glot.ai/api/auth/*' },
+    { key:'chrome',     icon:'🟢', name:'Chrome Web Store',      desc:'chromewebstore.google.com · poly-glot-ai' },
+    { key:'ghHealth',   icon:'🐙', name:'GitHub App',            desc:'poly-glot-github-app.onrender.com' },
+    { key:'ghStats',    icon:'📊', name:'GitHub App /stats',     desc:'Installation count endpoint' },
+    { key:'telHealth',  icon:'📡', name:'Telemetry Worker',      desc:'telemetry.poly-glot.ai · Cloudflare Worker' },
+    { key:'telStats',   icon:'📈', name:'Telemetry /stats',      desc:'CLI command + milestone data' },
+    { key:'npmCli',     icon:'📦', name:'npm CLI Registry',      desc:'registry.npmjs.org · poly-glot-ai-cli' },
+    { key:'ovx',        icon:'🧩', name:'Open VSX',              desc:'open-vsx.org · poly-glot-ai/poly-glot' },
+    { key:'vsc',        icon:'💙', name:'VS Code Marketplace',   desc:'marketplace.visualstudio.com' },
   ];
   document.getElementById('svcGrid').innerHTML = SVCS.map(s => {
     const d  = epStatus[s.key] || {};
@@ -460,6 +498,85 @@ function renderSvcs(epStatus) {
       </div>
     </div>`;
   }).join('');
+}
+
+function statusDot(status) {
+  // status: 'operational' | 'degraded_performance' | 'partial_outage' | 'major_outage' | null
+  if (status == null) return '<span class="badge loading">… Checking</span>';
+  if (status === 'operational') return '<span class="badge ok">✓ Operational</span>';
+  if (status === 'degraded_performance') return '<span class="badge warn">⚠ Degraded</span>';
+  if (status === 'partial_outage') return '<span class="badge warn">⚠ Partial Outage</span>';
+  return '<span class="badge error">✗ ' + status.replace(/_/g,' ') + '</span>';
+}
+
+function resendDot(indicator) {
+  if (indicator == null) return '<span class="badge loading">… Checking</span>';
+  if (indicator === 'none') return '<span class="badge ok">✓ All Systems Operational</span>';
+  if (indicator === 'minor') return '<span class="badge warn">⚠ Minor Incident</span>';
+  if (indicator === 'major') return '<span class="badge warn">⚠ Major Incident</span>';
+  return '<span class="badge error">✗ Critical Incident</span>';
+}
+
+function extCard(icon, name, statusHtml, meta, link) {
+  return `<div class="card" style="position:relative;">
+    <div class="card-hdr">
+      <div class="card-lbl">${icon} ${name}</div>
+      ${link ? `<a href="${link}" target="_blank" rel="noopener" style="font-size:10px;color:var(--muted);text-decoration:none;">↗</a>` : ''}
+    </div>
+    <div style="margin:6px 0 4px;">${statusHtml}</div>
+    <div class="card-meta">${meta || ''}</div>
+  </div>`;
+}
+
+function renderExternal(m) {
+  const cfUpdated   = m.cfUpdated   ? new Date(m.cfUpdated).toLocaleTimeString()   : null;
+  const rsUpdated   = m.resendUpdated ? new Date(m.resendUpdated).toLocaleTimeString() : null;
+
+  // Auth worker — shows 401 (not authed) which means the worker IS responding
+  const authOk = m.authWorkerOk;
+  const authBadge = authOk == null
+    ? '<span class="badge loading">… Checking</span>'
+    : authOk
+      ? `<span class="badge ok">✓ Responding · HTTP ${m.authWorkerStatus} (${m.authWorkerMs != null ? m.authWorkerMs + 'ms' : '—'})</span>`
+      : `<span class="badge error">✗ HTTP ${m.authWorkerStatus ?? 'ERR'} — Worker down</span>`;
+
+  document.getElementById('externalGrid').innerHTML = [
+    // ── Resend ──────────────────────────────────────────────────────────────
+    extCard('✉️', 'Resend — Email Delivery',
+      resendDot(m.resendIndicator),
+      `Magic-link & signup emails · noreply@poly-glot.ai${rsUpdated ? ' · updated ' + rsUpdated : ''}`,
+      'https://resend-status.com'),
+
+    // ── Cloudflare Auth Worker ───────────────────────────────────────────────
+    extCard('⚡', 'Cloudflare Auth Worker',
+      authBadge,
+      `poly-glot.ai/api/auth/* · login · verify · refresh · free-signup · Stripe webhook${m.authWorkerMs != null ? ' · ' + m.authWorkerMs + 'ms' : ''}`,
+      'https://dash.cloudflare.com'),
+
+    // ── Cloudflare Workers (platform) ────────────────────────────────────────
+    extCard('☁️', 'Cloudflare Workers (platform)',
+      statusDot(m.cfWorkers),
+      `Runtime for Auth Worker + Telemetry Worker${cfUpdated ? ' · CF updated ' + cfUpdated : ''}`,
+      'https://www.cloudflarestatus.com'),
+
+    // ── Cloudflare Workers KV ────────────────────────────────────────────────
+    extCard('🗄', 'Cloudflare Workers KV',
+      statusDot(m.cfWorkersKV),
+      `Stores sessions · tokens · plans · usage counters${cfUpdated ? ' · CF updated ' + cfUpdated : ''}`,
+      'https://www.cloudflarestatus.com'),
+
+    // ── Cloudflare Pages ─────────────────────────────────────────────────────
+    extCard('📄', 'Cloudflare Pages',
+      statusDot(m.cfPages),
+      `Hosts poly-glot.ai · GitHub Pages → Cloudflare CDN${cfUpdated ? ' · CF updated ' + cfUpdated : ''}`,
+      'https://www.cloudflarestatus.com'),
+
+    // ── Cloudflare CDN/Cache ─────────────────────────────────────────────────
+    extCard('🚀', 'Cloudflare CDN / Cache',
+      statusDot(m.cfCDN),
+      `Global edge caching for poly-glot.ai assets${cfUpdated ? ' · CF updated ' + cfUpdated : ''}`,
+      'https://www.cloudflarestatus.com'),
+  ].join('');
 }
 
 function renderEpTable(epStatus) {
@@ -560,12 +677,14 @@ async function runAll() {
   const loadingEp = {};
   ENDPOINTS.forEach(ep => { loadingEp[ep.key] = { ok: null, ms: null }; });
   renderSvcs(loadingEp);
+  renderExternal({ resendIndicator: null, cfWorkers: null, cfWorkersKV: null, cfPages: null, cfCDN: null, authWorkerOk: null });
   renderEpTable(loadingEp);
   renderBanner(loadingEp);
 
   try {
     const { epStatus, m } = await collectAll();
     renderSvcs(epStatus);
+    renderExternal(m);
     renderEpTable(epStatus);
     renderMetrics(m);
     renderStats(m);
