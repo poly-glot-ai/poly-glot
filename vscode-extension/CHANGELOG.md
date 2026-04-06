@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+\#\#\ \[1\.4\.51\]\ —\ 2026\-04\-06\
+\-\ 🐛\ fix:\ gate\ cmdWhyComments,\ cmdBothComments,\ cmdExplainCode\ —\ v1\.4\.51\ \[deploy\]\
+\
+\-\-\-\
+\
+
 \#\#\ \[1\.4\.50\]\ —\ 2026\-04\-06\
 \-\ 🐛\ fix:\ close\ Copilot\ Chat\ gate\ \+\ CLI\ escape\ hatch\ —\ v1\.4\.50\ \[deploy\]\
 \-\ 🐛\ fix:\ mobile\ nav\ overflow\ \+\ responsive\ signup\ banner\ \[deploy\]\
