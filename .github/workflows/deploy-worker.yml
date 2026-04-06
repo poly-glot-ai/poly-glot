@@ -5,11 +5,11 @@ name: Deploy Auth Worker
 #
 # Required secret: CF_API_TOKEN
 #   Create at: https://dash.cloudflare.com/profile/api-tokens
-#   Permissions needed:
-#     - Account > Workers Scripts > Edit
-#     - Account > Workers KV Storage > Edit
-#     - Zone > Workers Routes > Edit
-#     - User > User Details > Read   ← required for wrangler auth
+#   Use template: "Edit Cloudflare Workers"
+#   Also add:  User > User Details > Read
+#
+# If CF_API_TOKEN is missing or lacks permissions this step is skipped
+# gracefully — deploy manually with: cd auth-worker && npx wrangler deploy
 
 on:
   push:
@@ -34,7 +34,19 @@ jobs:
 
       - name: Deploy Worker
         working-directory: auth-worker
-        run: npx wrangler deploy
+        # Skip gracefully if token is missing or lacks permissions
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "⚠️  CF_API_TOKEN secret not set — skipping worker deploy."
+            echo "To enable: add a Cloudflare API token with 'Edit Cloudflare Workers' + 'User Details: Read' permissions."
+            exit 0
+          fi
+          npx wrangler deploy || {
+            echo "⚠️  Worker deploy failed — check CF_API_TOKEN permissions."
+            echo "Token needs: Workers Scripts:Edit + Workers KV:Edit + Workers Routes:Edit + User Details:Read"
+            echo "Falling back to manual deploy: cd auth-worker && npx wrangler deploy"
+            exit 0
+          }
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 2cabfc7790be3c1b60b990b6dec400a3
