@@ -4610,7 +4610,7 @@ function initCommentGenerator() {
                 'color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">',
                 '🚀 Sign Up Free — ' + FREE_MONTHLY_LIMIT + ' files/month',
                 '</button>',
-                (EARLYBIRD_ACTIVE ? '<div style="margin-top:8px;font-size:11px;color:#f59e0b;">🏷 EARLYBIRD3 — 3 months free Pro if you upgrade now (expires May 1, 2026)</div>' : ''),
+                (EARLYBIRD_ACTIVE ? '<div style="margin-top:8px;font-size:11px;color:#f59e0b;">🏷 EARLYBIRD3 — 50% off your first 3 months on Pro if you upgrade now (expires May 1, 2026)</div>' : ''),
                 '</div>'
             ].join('');
             if (existing) {
