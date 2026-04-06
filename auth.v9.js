@@ -1287,6 +1287,23 @@
 
     signInBtn.parentNode.replaceChild(chip, signInBtn);
 
+    // ── Mark body as authenticated — CSS hides signup buttons ────────────
+    document.body.classList.add('pg-authed');
+
+    // ── Hide the signup banner above the generator ────────────────────────
+    var signupBanner = document.getElementById('pgSignupBanner');
+    if (signupBanner) signupBanner.style.display = 'none';
+
+    // ── Hide the nav Sign Up Free button ──────────────────────────────────
+    var signupNavBtn = document.getElementById('headerSignUpBtn');
+    if (signupNavBtn) signupNavBtn.style.display = 'none';
+
+    // ── Hide mobile signup/signin links ───────────────────────────────────
+    var mobileSignUp = document.getElementById('mobileSignUpBtn');
+    if (mobileSignUp) mobileSignUp.style.display = 'none';
+    var mobileSignIn = document.getElementById('mobileSignInBtn');
+    if (mobileSignIn) mobileSignIn.style.display = 'none';
+
     // ── Click-to-toggle menu (works on touch + desktop) ──────────────────
     var menu = document.getElementById('pgUserChipMenu');
 
