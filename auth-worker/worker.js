@@ -213,7 +213,9 @@ function buildEmailHtml(magicLink, toEmail) {
                 Your magic link is here&nbsp;✨
               </h1>
               <p style="margin:0 0 10px;font-size:15px;color:#9ca3af;line-height:1.65;">
-                Click the button below to sign in instantly — no password needed.
+                Click the button below — if you have VS Code open,
+                <strong style="color:#e5e7eb;">you'll be signed in automatically</strong>
+                with no copy-paste needed.
                 This link expires in <strong style="color:#e5e7eb;">15&nbsp;minutes</strong>
                 and is single-use.
               </p>
@@ -225,7 +227,7 @@ function buildEmailHtml(magicLink, toEmail) {
 
           <!-- CTA button -->
           <tr>
-            <td align="center" style="padding:40px 40px 36px;">
+            <td align="center" style="padding:40px 40px 20px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="border-radius:14px;
@@ -241,6 +243,18 @@ function buildEmailHtml(magicLink, toEmail) {
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+
+          <!-- VS Code auto-signin note -->
+          <tr>
+            <td align="center" style="padding:0 40px 28px;">
+              <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;text-align:center;">
+                🖥 <strong style="color:#9ca3af;">VS Code user?</strong>
+                Keep VS Code open before clicking — it will sign you in automatically.
+                <br>🌐 <strong style="color:#9ca3af;">Web / CLI user?</strong>
+                You'll see your session token on the page to copy.
+              </p>
             </td>
           </tr>
 
@@ -391,8 +405,12 @@ async function handleLogin(request, env) {
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
+  // The web page at /?token=... fires a vscode:// deep link automatically,
+  // so VS Code users are signed in with zero copy-paste.
+  // Non-VS Code users (web, CLI) see the token panel as fallback.
   const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
+  const source    = body?.source ?? 'email';
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=${encodeURIComponent(source)}`;
 
   // ── Send email ──────────────────────────────────────────────
   const result = await sendMagicLinkEmail(env, email, magicLink);
@@ -1155,7 +1173,7 @@ async function handleFreeSignup(request, env) {
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=vscode-free-signup`;
 
   const result = await sendMagicLinkEmail(env, email, magicLink);
 

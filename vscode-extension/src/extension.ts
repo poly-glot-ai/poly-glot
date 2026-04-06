@@ -28,7 +28,7 @@ const FIRST_NUDGE_AT   = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION  = '1.4.52';
+const MINIMUM_VERSION  = '1.4.53';
 const MAY1_2025        = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit(): number { return Date.now() >= MAY1_2025 ? 10 : 50; }
 
@@ -259,15 +259,24 @@ async function requireSignUp(source: string): Promise<void> {
                 signal:  AbortSignal.timeout(8000),
             });
             if (res.ok) {
+                const rsDomain = email.trim().split('@')[1]?.toLowerCase() ?? '';
+                const rsEmailUrl = rsDomain.includes('gmail')    ? 'https://mail.google.com'
+                                 : rsDomain.includes('outlook') || rsDomain.includes('hotmail') || rsDomain.includes('live') ? 'https://outlook.live.com'
+                                 : rsDomain.includes('yahoo')    ? 'https://mail.yahoo.com'
+                                 : rsDomain.includes('icloud')  || rsDomain.includes('me.com') || rsDomain.includes('mac.com') ? 'https://www.icloud.com/mail'
+                                 : rsDomain.includes('proton')   ? 'https://mail.proton.me'
+                                 : rsDomain.includes('hey')      ? 'https://app.hey.com'
+                                 : rsDomain.includes('fastmail') ? 'https://app.fastmail.com'
+                                 : `https://${rsDomain}`;
                 vscode.window.showInformationMessage(
-                    `🦜 Magic link sent to ${email}! Click the link in your email, then paste your token here.`,
-                    'Enter Token',
+                    `✅ Magic link sent! Click it in your email and VS Code will sign you in automatically — no copy-paste needed.`,
                     'Open Email',
+                    'Enter Token Manually',
                 ).then(async (choice) => {
-                    if (choice === 'Enter Token') {
+                    if (choice === 'Open Email') {
+                        vscode.env.openExternal(vscode.Uri.parse(rsEmailUrl));
+                    } else if (choice === 'Enter Token Manually') {
                         await cmdConfigureLicenseToken();
-                    } else if (choice === 'Open Email') {
-                        vscode.env.openExternal(vscode.Uri.parse(`https://mail.google.com`));
                     }
                 });
             } else {
@@ -539,7 +548,7 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
     if (hasSession || hasLicenseToken) return;
 
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.52';
+    const ONBOARDING_VERSION = '1.4.53';
     const shownForVersion = extContext.globalState.get<string>('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION) return;
 
@@ -588,30 +597,38 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
         });
 
         if (res.ok) {
-            const tokenChoice = await vscode.window.showInformationMessage(
-                `✅ Magic link sent to ${email}! Click the link in your email, then paste your session token here.`,
-                'Enter Token',
-                'Open poly-glot.ai',
-            );
-            if (tokenChoice === 'Enter Token') {
-                await cmdConfigureLicenseToken();
-                // ── Gap 3 fix: immediately walk user through API key setup ──
-                // If they have a token now but no API key, they still can't generate.
-                // Offer to configure it right here so they can generate immediately.
-                const hasKey = await aiGenerator.isConfigured();
-                if (!hasKey) {
-                    const apiChoice = await vscode.window.showInformationMessage(
-                        '🔑 Almost there! You need an AI API key to generate comments. Set one up now — takes 30 seconds.',
-                        'Configure API Key',
-                        'Later',
-                    );
-                    if (apiChoice === 'Configure API Key') {
-                        await cmdConfigureApiKey();
+            // Magic link sent — clicking it will fire the vscode:// deep link
+            // which auto-saves the token. No copy-paste needed.
+            vscode.window.showInformationMessage(
+                `✅ Check your inbox for ${email} — click the magic link and VS Code will sign you in automatically.`,
+                'Open Email',
+                'Enter Token Manually',
+            ).then(async choice => {
+                if (choice === 'Open Email') {
+                    // Try to detect email provider from domain
+                    const domain = email.split('@')[1]?.toLowerCase() ?? '';
+                    const emailUrl = domain.includes('gmail')   ? 'https://mail.google.com'
+                                   : domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live') ? 'https://outlook.live.com'
+                                   : domain.includes('yahoo')   ? 'https://mail.yahoo.com'
+                                   : domain.includes('icloud')  || domain.includes('me.com') || domain.includes('mac.com') ? 'https://www.icloud.com/mail'
+                                   : domain.includes('proton')  ? 'https://mail.proton.me'
+                                   : domain.includes('hey')     ? 'https://app.hey.com'
+                                   : domain.includes('fastmail') ? 'https://app.fastmail.com'
+                                   : `https://${domain}`;
+                    await vscode.env.openExternal(vscode.Uri.parse(emailUrl));
+                } else if (choice === 'Enter Token Manually') {
+                    await cmdConfigureLicenseToken();
+                    const hasKey = await aiGenerator.isConfigured();
+                    if (!hasKey) {
+                        const apiChoice = await vscode.window.showInformationMessage(
+                            '🔑 Almost there! Add your AI API key to start generating.',
+                            'Configure API Key', 'Later',
+                        );
+                        if (apiChoice === 'Configure API Key') await cmdConfigureApiKey();
                     }
                 }
-            } else if (tokenChoice === 'Open poly-glot.ai') {
-                await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
-            }
+                // If dismissed: vscode:// deep link will still fire when they click email
+            });
         } else {
             // Rate-limited or already registered — go straight to token entry
             const tokenChoice2 = await vscode.window.showInformationMessage(
@@ -620,17 +637,13 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
             );
             if (tokenChoice2 === 'Enter Token') {
                 await cmdConfigureLicenseToken();
-                // ── Gap 3 fix: same post-token API key nudge ──
                 const hasKey = await aiGenerator.isConfigured();
                 if (!hasKey) {
                     const apiChoice = await vscode.window.showInformationMessage(
                         '🔑 Almost there! Set up your AI API key to start generating.',
-                        'Configure API Key',
-                        'Later',
+                        'Configure API Key', 'Later',
                     );
-                    if (apiChoice === 'Configure API Key') {
-                        await cmdConfigureApiKey();
-                    }
+                    if (apiChoice === 'Configure API Key') await cmdConfigureApiKey();
                 }
             }
         }
@@ -644,6 +657,87 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
                 await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
             }
         });
+    }
+}
+
+// ─── URI Handler (vscode://poly-glot-ai.poly-glot/auth?token=...) ────────────
+/**
+ * Handles the deep-link callback from the magic-link flow.
+ * When a user clicks their magic link on poly-glot.ai, the page fires:
+ *   vscode://poly-glot-ai.poly-glot/auth?token=<session_token>&email=<email>&plan=<plan>
+ * VS Code intercepts it and calls this handler — zero copy-paste required.
+ */
+class PolyGlotUriHandler implements vscode.UriHandler {
+    async handleUri(uri: vscode.Uri): Promise<void> {
+        if (uri.path !== '/auth') return;
+
+        const params = new URLSearchParams(uri.query);
+        const token  = params.get('token')?.trim();
+        const email  = params.get('email') ?? '';
+        const plan   = params.get('plan')  ?? 'free';
+
+        if (!token) {
+            vscode.window.showErrorMessage('Poly-Glot: Invalid sign-in link — no token found. Please try again.');
+            return;
+        }
+
+        // Save token — same as cmdConfigureLicenseToken does
+        await extContext.globalState.update('pg.sessionToken', token);
+        await vscode.workspace.getConfiguration('polyglot').update('licenseToken', token, vscode.ConfigurationTarget.Global);
+        if (email) {
+            await extContext.globalState.update('pg.sessionEmail', email);
+            await extContext.globalState.update('pg.lastKnownEmail', email);
+        }
+        await extContext.globalState.update('pg.lastKnownPlan', plan);
+
+        // Reset plan cache so next command re-verifies from server
+        _cachedPlan = undefined;
+
+        // Confirm to user
+        const isPaid = PRO_PLANS.includes(plan);
+        vscode.window.showInformationMessage(
+            isPaid
+                ? `🎉 Poly-Glot ${plan.charAt(0).toUpperCase() + plan.slice(1)} activated! All features unlocked.`
+                : `✅ Poly-Glot: Signed in as ${email || 'free user'}. You have 50 files/month free.`,
+            ...(isPaid ? [] : ['Upgrade to Pro']),
+        ).then(async choice => {
+            if (choice === 'Upgrade to Pro') {
+                vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+            }
+        });
+
+        // Immediately check API key — if missing, offer to set it up now
+        const hasKey = await aiGenerator.isConfigured();
+        if (!hasKey) {
+            const apiChoice = await vscode.window.showInformationMessage(
+                '🔑 Almost there! Add your AI API key to start generating comments.',
+                'Configure API Key',
+                'Later',
+            );
+            if (apiChoice === 'Configure API Key') {
+                await cmdConfigureApiKey();
+            }
+        } else {
+            // Already have API key — they can generate immediately
+            vscode.window.showInformationMessage(
+                '🚀 Ready! Run Poly-Glot: Generate Comments on any file to get started.',
+                'Generate Now',
+            ).then(async choice => {
+                if (choice === 'Generate Now') {
+                    vscode.commands.executeCommand('polyglot.generateComments');
+                }
+            });
+        }
+
+        // Track sign-in event
+        try {
+            await fetch(`${AUTH_API}/track-usage`, {
+                method:  'POST',
+                headers: authHeaders(),
+                body:    JSON.stringify({ token, count: 0 }), // count:0 = ping only, no usage increment
+                signal:  AbortSignal.timeout(4000),
+            });
+        } catch { /* non-critical */ }
     }
 }
 
@@ -688,6 +782,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
         return; // ← EXIT EARLY — nothing else activates on blocked versions
     }
+
+    // ── URI handler — receives vscode://poly-glot-ai.poly-glot/auth?token=... ─
+    // This is the deep-link callback from the magic-link flow.
+    // User clicks magic link → poly-glot.ai fires vscode:// URI → VS Code calls this → token saved automatically.
+    context.subscriptions.push(vscode.window.registerUriHandler(new PolyGlotUriHandler()));
 
     // Status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);

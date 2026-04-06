@@ -1015,18 +1015,46 @@
           PolyGlotAuth.onPlanLoaded(plan);
           updateHeaderForUser(email, plan);
 
-          // Welcome toast
+          // ── Fire vscode:// deep link — signs user into VS Code automatically ──
+          // vscode://poly-glot-ai.poly-glot/auth?token=...&email=...&plan=...
+          // If VS Code is open, it intercepts this and calls PolyGlotUriHandler.
+          // If VS Code is not open, the browser shows a "no handler" prompt — harmless.
+          // We delay 400ms so the page has finished rendering before the browser
+          // shows the "Open VS Code?" dialog (better UX than interrupting page load).
+          var vsCodeUri = 'vscode://poly-glot-ai.poly-glot/auth'
+            + '?token='  + encodeURIComponent(magicToken)
+            + '&email='  + encodeURIComponent(email)
+            + '&plan='   + encodeURIComponent(plan);
+          // Also support VS Code Insiders
+          var vsCodeInsidersUri = 'vscode-insiders://poly-glot-ai.poly-glot/auth'
+            + '?token='  + encodeURIComponent(magicToken)
+            + '&email='  + encodeURIComponent(email)
+            + '&plan='   + encodeURIComponent(plan);
+
+          var source = new URLSearchParams(window.location.search).get('source') || '';
+          var isVscodeSource = source.indexOf('vscode') !== -1;
+
+          setTimeout(function () {
+            // Always try — if VS Code isn't open browser just ignores or shows open dialog
+            window.location.href = vsCodeUri;
+            if (typeof gtag === 'function') gtag('event', 'vscode_deep_link_fired', { plan: plan, source: source });
+          }, 400);
+
+          // Welcome toast — different message for VS Code vs web users
           if (PAID_PLANS.indexOf(plan) !== -1) {
             var planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
-            showToast('🎉 Welcome back! Your ' + planDisplay + ' plan is active — all features unlocked.', 5000);
+            showToast('🎉 ' + planDisplay + ' plan active! VS Code is being signed in automatically…', 6000);
+          } else if (isVscodeSource) {
+            showToast('✅ Signed in! VS Code is being activated automatically — switch back to it now.', 7000);
           } else {
-            showToast('👋 Signed in! Python, JS & Java available free. Upgrade anytime for all 12 languages.', 6000);
+            showToast('👋 Signed in! Copy your token below to use VS Code or CLI.', 6000);
           }
 
-          // Show session token panel so VS Code / CLI users can copy it
-          showSessionTokenPanel(magicToken, email, plan);
+          // Show session token panel — fallback for CLI users + web users
+          // VS Code users can ignore it (they're already being signed in via deep link)
+          showSessionTokenPanel(magicToken, email, plan, isVscodeSource);
 
-          if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan });
+          if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan, source: source });
         })
         .catch(function () {
           showToast('⚠️ Sign-in failed — please check your connection and try again.', 5000);
@@ -1612,35 +1640,80 @@
      Session token panel — shown after sign-in so
      VS Code / CLI users can copy their token.
   ───────────────────────────────────────────── */
-  function showSessionTokenPanel(token, email, plan) {
+  function showSessionTokenPanel(token, email, plan, isVscodeSource) {
     // Remove any existing panel
     var existing = document.getElementById('pg-token-panel');
     if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
-    var isPaid = PAID_PLANS.indexOf(plan) !== -1;
-    var planLabel = isPaid ? (plan.charAt(0).toUpperCase() + plan.slice(1)) : 'Free';
-    var panelBg   = isPaid ? 'linear-gradient(135deg,#052e16 0%,#0f2027 100%)' : 'linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%)';
+    var isPaid      = PAID_PLANS.indexOf(plan) !== -1;
+    var planLabel   = isPaid ? (plan.charAt(0).toUpperCase() + plan.slice(1)) : 'Free';
+    var panelBg     = isPaid ? 'linear-gradient(135deg,#052e16 0%,#0f2027 100%)' : 'linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%)';
     var accentColor = isPaid ? '#34d399' : '#7dd3fc';
+
+    // VS Code users: show a prominent "Switch back to VS Code" banner at top
+    var vscodeBanner = isVscodeSource
+      ? '<div style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.2));border:1px solid rgba(124,58,237,.5);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;">'
+        + '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px;">🖥 Switch back to VS Code now</div>'
+        + '<div style="font-size:11px;color:#94a3b8;line-height:1.5;">VS Code is being signed in automatically.<br>Click the VS Code icon in your taskbar/dock.</div>'
+        + '</div>'
+      : '';
+
+    // CLI / non-VS Code: auto-copy token to clipboard silently
+    if (!isVscodeSource) {
+      try { navigator.clipboard.writeText(token); } catch(e) {}
+    }
 
     var panel = document.createElement('div');
     panel.id = 'pg-token-panel';
-    panel.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9998;background:' + panelBg + ';border:1px solid ' + accentColor + '33;border-radius:14px;padding:20px 22px;max-width:380px;width:calc(100vw - 48px);box-shadow:0 12px 40px rgba(0,0,0,0.55);font-family:Inter,sans-serif;animation:pg-slide-in .28s ease;';
-    panel.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
-      + '<div style="font-size:15px;font-weight:700;color:#f1f5f9;">✅ Signed in' + (isPaid ? ' — ' + planLabel + ' active 🎉' : '') + '</div>'
-      + '<button onclick="document.getElementById(\'pg-token-panel\').remove()" style="background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:0 0 0 12px;line-height:1;">×</button>'
+    // Mobile-optimised: full-width on small screens, fixed bottom-right on desktop
+    panel.style.cssText = [
+      'position:fixed',
+      'bottom:0',
+      'right:0',
+      'left:0',
+      'z-index:9998',
+      'background:' + panelBg,
+      'border:1px solid ' + accentColor + '33',
+      'border-radius:14px 14px 0 0',
+      'padding:20px 20px 28px',
+      'box-shadow:0 -8px 40px rgba(0,0,0,0.55)',
+      'font-family:Inter,sans-serif',
+      'animation:pg-slide-up .3s ease',
+    ].join(';');
+
+    // On wider screens override to bottom-right card
+    var styleEl = document.createElement('style');
+    styleEl.textContent = '@media(min-width:520px){#pg-token-panel{'
+      + 'bottom:24px!important;right:24px!important;left:auto!important;'
+      + 'border-radius:14px!important;max-width:400px;'
+      + 'animation:pg-slide-in .28s ease!important;}}';
+    document.head.appendChild(styleEl);
+
+    panel.innerHTML = vscodeBanner
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">'
+      + '<div style="font-size:15px;font-weight:700;color:#f1f5f9;">✅ Signed in' + (isPaid ? ' — ' + planLabel + ' 🎉' : '') + '</div>'
+      + '<button onclick="document.getElementById(\'pg-token-panel\').remove()" style="background:none;border:none;color:#64748b;font-size:22px;cursor:pointer;padding:0 0 0 12px;line-height:1;touch-action:manipulation;">×</button>'
       + '</div>'
       + '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">' + email + '</div>'
-      + (isPaid
-        ? '<div style="font-size:12px;color:' + accentColor + ';margin-bottom:12px;font-weight:600;">Copy your session token to activate Pro in VS Code or the CLI:</div>'
-        : '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy your session token to sync usage across devices (VS Code / CLI):</div>')
+      + (isVscodeSource
+          ? '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Token also shown below if you need it for the CLI:</div>'
+          : (isPaid
+              ? '<div style="font-size:12px;color:' + accentColor + ';margin-bottom:10px;font-weight:600;">Token copied to clipboard! Paste into VS Code or CLI:</div>'
+              : '<div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Token copied to clipboard! Paste into VS Code or CLI:</div>'))
       + '<div style="display:flex;gap:8px;align-items:center;">'
-      + '<input id="pg-token-input" type="password" readonly value="' + token + '" style="flex:1;background:#0d1117;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#e2e8f0;font-family:monospace;font-size:11px;outline:none;" />'
-      + '<button id="pg-token-show" onclick="var i=document.getElementById(\'pg-token-input\');i.type=i.type===\'password\'?\'text\':\'password\';this.textContent=i.type===\'password\'?\'👁\':\' 🙈\'" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 10px;color:#94a3b8;cursor:pointer;font-size:13px;">👁</button>'
-      + '<button id="pg-token-copy" onclick="navigator.clipboard.writeText(\''+token+'\').then(function(){var b=document.getElementById(\'pg-token-copy\');b.textContent=\'✓\';b.style.background=\'#16a34a\';setTimeout(function(){b.textContent=\'Copy\';b.style.background=\'#1e293b\';},2000);})" style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:8px 12px;color:#7dd3fc;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Copy</button>'
+      + '<input id="pg-token-input" type="password" readonly value="' + token + '" '
+      +   'style="flex:1;min-width:0;background:#0d1117;border:1px solid #334155;border-radius:7px;'
+      +   'padding:10px;color:#e2e8f0;font-family:monospace;font-size:11px;outline:none;" />'
+      + '<button id="pg-token-show" onclick="var i=document.getElementById(\'pg-token-input\');i.type=i.type===\'password\'?\'text\':\'password\';this.textContent=i.type===\'password\'?\'👁\':\' 🙈\'" '
+      +   'style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:10px;color:#94a3b8;cursor:pointer;font-size:14px;touch-action:manipulation;flex-shrink:0;">👁</button>'
+      + '<button id="pg-token-copy" onclick="navigator.clipboard.writeText(\'' + token + '\').then(function(){var b=document.getElementById(\'pg-token-copy\');b.textContent=\'✓\';b.style.background=\'#16a34a\';setTimeout(function(){b.textContent=\'Copy\';b.style.background=\'#1e293b\';},2000);})" '
+      +   'style="background:#1e293b;border:1px solid #334155;border-radius:7px;padding:10px 14px;color:#7dd3fc;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;touch-action:manipulation;flex-shrink:0;">Copy</button>'
       + '</div>'
-      + '<div style="margin-top:12px;font-size:11px;color:#475569;line-height:1.6;">'
-      + '<strong style="color:#94a3b8;">VS Code:</strong> Command Palette → <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#7dd3fc;">Poly-Glot: Configure License Token</code><br>'
-      + '<strong style="color:#94a3b8;">CLI:</strong> <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#7dd3fc;">poly-glot config --token &lt;token&gt;</code>'
+      + '<div style="margin-top:12px;font-size:11px;color:#475569;line-height:1.8;">'
+      + '<strong style="color:#94a3b8;">VS Code:</strong> '
+      + '<code style="background:#1e293b;padding:2px 6px;border-radius:3px;color:#7dd3fc;font-size:10px;">Poly-Glot: Configure License Token</code>'
+      + '&nbsp;&nbsp;<strong style="color:#94a3b8;">CLI:</strong> '
+      + '<code style="background:#1e293b;padding:2px 6px;border-radius:3px;color:#7dd3fc;font-size:10px;">poly-glot login</code>'
       + '</div>';
     document.body.appendChild(panel);
   }
