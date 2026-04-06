@@ -793,9 +793,11 @@ async function renderWorkers(m) {
                       : skipped ? '<span class="badge loading">⏭ skipped</span>'
                                 : '<span class="badge error">✗ ' + (run.conclusion || run.status) + '</span>';
         const msg = run.head_commit?.message?.split('\n')[0] || '—';
+        const shortMsg = msg.length > 60 ? msg.slice(0,60)+'…' : msg;
+        const skipNote = skipped ? ' · Add <code style="color:var(--purple2)">[deploy]</code> to commit message to trigger' : '';
         ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)',
           badge,
-          `Last run: ${ts} · ${msg.length > 60 ? msg.slice(0,60)+'…' : msg}`
+          `Last run: ${ts} · ${shortMsg}${skipNote}`
         );
       }
     }
