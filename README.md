@@ -1,16 +1,12 @@
 # 🦜 Poly-Glot AI — AI Code Documentation Platform
 
-> **AI-powered code documentation for 12 languages — web, VS Code, CLI, MCP, and GitHub App.**
+> **AI-powered code documentation for 12 languages — Web, VS Code, CLI, MCP, and GitHub App.**
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-poly--glot.ai-blue?style=for-the-badge)](https://poly-glot.ai/)
 [![VS Code](https://img.shields.io/badge/VS_Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 [![npm CLI](https://img.shields.io/badge/npm-poly--glot--ai--cli-CB3837?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/poly-glot-ai-cli)
+[![MCP](https://img.shields.io/badge/npm-poly--glot--mcp-CB3837?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/poly-glot-mcp)
 [![GitHub App](https://img.shields.io/badge/GitHub_App-poly--glot--ai-181717?style=for-the-badge&logo=github)](https://github.com/apps/poly-glot-ai)
-
-> Thanks for being one of our **1,200+ early CLI users**. The full platform is now open for subscriptions.
->
-> 🎁 **Early bird offer** — use code **EARLYBIRD3** at Pro Monthly checkout to lock Pro at **$9/mo forever** (expires May 1, 2026 — after that Pro goes to $12/mo).
-> ⚡ Limited to the first 50 subscribers — [grab it now →](https://poly-glot.ai/#pg-pricing-section)
 
 ---
 
@@ -32,7 +28,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 | 🌐 **Web App** | Paste code, get documented code back | [poly-glot.ai →](https://poly-glot.ai) |
 | 💻 **VS Code Extension** | `Cmd+Shift+/` to comment inline | [Marketplace →](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot) |
 | ⌨️ **CLI** | Comment files & directories from terminal | `npm install -g poly-glot-ai-cli` |
-| 🔌 **MCP Server** | Use `@poly-glot` in Claude, Goose, Cursor | `npx poly-glot-mcp` |
+| 🔌 **MCP Server** | Use Poly-Glot from Claude, Goose, Cursor, Windsurf | `npx poly-glot-mcp` (**Pro+ only**) |
 | 🐙 **GitHub App** | Auto-documents every PR with inline review comments | [github.com/apps/poly-glot-ai →](https://github.com/apps/poly-glot-ai) |
 | 🤖 **Copilot Chat** | `@poly-glot /comment` inside VS Code | Included with VS Code extension |
 
@@ -40,212 +36,109 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 
 ## 💰 Pricing
 
-| Feature | Free | 💎 Pro | 👥 Team | 🏢 Enterprise |
-|---------|------|--------|---------|---------------|
-| Generate doc-comments (JSDoc, Javadoc, PyDoc…) | ✅ | ✅ | ✅ | ✅ |
-| Explain Code — deep AI analysis panel | ✅ | ✅ | ✅ | ✅ |
-| JavaScript, TypeScript, Python, Java | ✅ | ✅ | ✅ | ✅ |
-| C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin | 🔒 | ✅ | ✅ | ✅ |
-| Why-Comments — intent & trade-off inline notes | 🔒 | ✅ | ✅ | ✅ |
-| Both Mode — doc + why comments in one pass | 🔒 | ✅ | ✅ | ✅ |
-| Templates Sidebar | ✅ | ✅ | ✅ | ✅ |
-| Real-time cost tracking in status bar | ✅ | ✅ | ✅ | ✅ |
-| GitHub App — auto-document PRs | ✅ | ✅ | ✅ | ✅ |
-| Files generated per month | 50 | Unlimited | Unlimited | Unlimited |
+| Feature | Free | 💎 Pro ($9/mo) | 👥 Team ($29/mo) | 🏢 Enterprise |
+|---------|:----:|:--------------:|:----------------:|:-------------:|
+| Web UI generator | ✅ | ✅ | ✅ | ✅ |
+| JS, TS, Python, Java | ✅ | ✅ | ✅ | ✅ |
+| All 12 languages | 🔒 | ✅ | ✅ | ✅ |
+| Why-Comments & Both mode | 🔒 | ✅ | ✅ | ✅ |
+| CLI tool | ✅ 50 files/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
+| VS Code Extension | ✅ 50 files/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
+| **MCP Server** | 🔒 | ✅ 200 calls/mo | ✅ 1,000 calls/mo | ✅ Unlimited |
+| GitHub App | ✅ | ✅ | ✅ | ✅ |
 | Seats | 1 | 1 | 5 | Custom |
-| Team analytics dashboard | ❌ | ❌ | ✅ | ✅ |
-| SSO / SAML | ❌ | ❌ | ❌ | ✅ |
-| Custom model / private deployment | ❌ | ❌ | ❌ | ✅ |
-| SLA + dedicated support | ❌ | ❌ | ❌ | ✅ |
-| Priority support | ❌ | ✅ | ✅ | ✅ |
-| **Price** | **$0/mo** | **$9/mo** | **$29/mo** | **Contact us** |
-| | [Get started →](https://poly-glot.ai) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [Upgrade →](https://poly-glot.ai/#pg-pricing-section) | [hwmoses2@icloud.com](mailto:hwmoses2@icloud.com) |
+| Support | Community | Email | Priority | Dedicated |
 
-> 🎁 Use code **EARLYBIRD3** at Pro Monthly checkout to lock Pro at **$9/mo forever** (expires May 1, 2026). [See plans →](https://poly-glot.ai/#pg-pricing-section)
+> 🎁 Use code **`EARLYBIRD3`** at Pro checkout to lock $9/mo forever (expires May 1, 2026).
+
+---
+
+## 🔐 Authentication & Plans
+
+Every surface requires a free account or higher plan:
+
+- **Web UI** — sign in required before any generation
+- **CLI v1.9.0+** — `poly-glot login` required; server-side quota enforced
+- **VS Code Extension v1.4.40+** — device fingerprint + session token enforced
+- **MCP Server** — `POLYGLOT_SESSION_TOKEN` required; **Pro, Team, or Enterprise only**
+- **GitHub App** — API key required in `.polyglot.yml`
+
+> Old CLI versions (v1.0–v1.6) are deprecated on npm and blocked from all server endpoints.
 
 ---
 
 ## 🚀 Quick Start
 
-### Web App
-Visit **[poly-glot.ai](https://poly-glot.ai)** — no installation required.
+### Web
+Go to [poly-glot.ai](https://poly-glot.ai), sign up free, paste code → get docs.
 
-1. Click **⚙️ AI Settings** → paste your OpenAI, Anthropic, or Google AI key
-2. Paste your code into the editor
-3. Click **Generate Comments**
-
-### VS Code Extension
-
+### VS Code
 ```bash
-# Search in Extensions (Cmd+Shift+X)
-Poly-Glot
+# Install from Marketplace
+code --install-extension poly-glot-ai.poly-glot
 ```
-
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+Shift+/` | Generate doc-comments |
-| `Cmd+Shift+W` | Generate why-comments (Pro) |
-| `Cmd+Shift+B` | Both modes in one pass (Pro) |
-| `Cmd+Shift+E` | Explain Code — deep analysis |
+Then `Cmd+Shift+/` (Mac) or `Ctrl+Shift+/` (Windows/Linux) to generate comments.
 
 ### CLI
-
 ```bash
-# Install
 npm install -g poly-glot-ai-cli
-
-# Sign in (creates free account, tracks usage server-side)
-poly-glot login
-
-# One-time setup — add your API key
-poly-glot config
-
-# Comment a single file
-poly-glot comment src/auth.js
-
-# Comment an entire directory
-poly-glot comment --dir src/ --yes
-
-# Why-comments
-poly-glot why src/auth.js
-
-# Both modes in one pass (Pro)
-poly-glot both src/auth.js
-
-# Deep analysis
-poly-glot explain src/auth.js
-poly-glot bugs src/auth.js
-poly-glot refactor src/utils.ts
-poly-glot test src/auth.js
+poly-glot login                          # create free account
+poly-glot config --provider openai       # set your API key
+poly-glot comment src/auth.js            # comment a file
+poly-glot comment --dir src/ --yes       # comment entire directory
 ```
 
-### GitHub App
-
+### MCP (Pro+ only)
 ```bash
-# 1. Install at github.com/apps/poly-glot-ai
-# 2. Add .polyglot.yml to your repo root:
+# Add POLYGLOT_SESSION_TOKEN from your poly-glot.ai account dashboard
+# Then add to your MCP client config:
+npx poly-glot-mcp
 ```
-
-```yaml
-# .polyglot.yml
-provider: openai
-openai_api_key: sk-your-key-here
-mode: doc                  # doc | why | both
-coverage_threshold: 0.5    # files below 50% get suggestions
-max_files: 15
-```
-
-```bash
-# 3. Open a Pull Request — Poly-Glot AI will:
-#    ✅ Analyze every changed file for documentation coverage
-#    ✅ Post inline JSDoc/PyDoc/Javadoc suggestions as review comments
-#    ✅ Run a GitHub Check showing per-file coverage scores
-#    ✅ Include a deep-link to open any file in the web editor
-```
-
-### MCP Server
-
-```json
-{
-  "command": "npx",
-  "args": ["-y", "poly-glot-mcp"],
-  "env": {
-    "POLYGLOT_PROVIDER": "openai",
-    "POLYGLOT_API_KEY": "sk-..."
-  }
-}
-```
-
-Works with: Goose · Claude Desktop · Cursor · Windsurf · any MCP client
 
 ---
 
-## 📋 Supported Languages
-
-| Language | Doc-comment style | Free | Pro |
-|----------|------------------|------|-----|
-| JavaScript | JSDoc | ✅ | ✅ |
-| TypeScript | TSDoc / JSDoc | ✅ | ✅ |
-| Python | Google-style docstrings | ✅ | ✅ |
-| Java | Javadoc | ✅ | ✅ |
-| C / C++ | Doxygen | 🔒 | ✅ |
-| C# | XML doc comments | 🔒 | ✅ |
-| Go | GoDoc | 🔒 | ✅ |
-| Rust | `///` Rustdoc | 🔒 | ✅ |
-| Ruby | YARD | 🔒 | ✅ |
-| PHP | PHPDoc | 🔒 | ✅ |
-| Swift | Swift Markup | 🔒 | ✅ |
-| Kotlin | KDoc | 🔒 | ✅ |
-
----
-
-## 🤖 Supported AI Models
-
-### OpenAI
-
-| Model | Notes |
-|-------|-------|
-| `gpt-4.1-mini` ⭐ | **Recommended** — best quality-to-cost ratio |
-| `gpt-4.1` | Best GPT-4.1 quality |
-| `gpt-4.1-nano` | Fastest & cheapest OpenAI option |
-| `gpt-4o` / `gpt-4o-mini` | Great quality, widely supported |
-| `o3` / `o3-mini` | Reasoning models |
-| `o1` / `o1-mini` | Full reasoning |
-| `gpt-4-turbo` / `gpt-4` / `gpt-3.5-turbo` | Legacy |
-
-### Anthropic
-
-| Model | Notes |
-|-------|-------|
-| `claude-sonnet-4-5` ⭐ | **Recommended** — excellent quality & speed |
-| `claude-opus-4-5` | Most powerful Claude |
-| `claude-haiku-4-5` | Fastest & cheapest Anthropic |
-| `claude-3-5-sonnet-20241022` | Proven quality, previous gen |
-| `claude-3-5-haiku-20241022` | Budget Claude |
-| `claude-3-opus-20240229` | Deep reasoning |
-| `claude-3-haiku-20240307` | Lightest legacy Claude |
-
-> Custom model IDs also supported — pass any valid model ID via `poly-glot config --model <id>`
-
----
-
-## ⚙️ CLI — Full Reference
+## ⌨️ CLI Full Reference
 
 ```bash
-poly-glot login                                     # Sign in / create free account
-poly-glot config                                    # Interactive setup
-poly-glot config --key sk-... --provider openai        # OpenAI
+# Account
+poly-glot login                                      # sign in / create free account
+poly-glot config                                     # interactive setup
+poly-glot config --key sk-... --provider openai      # OpenAI
 poly-glot config --key sk-ant-... --provider anthropic # Anthropic
-poly-glot config --key AIza... --provider google       # Google Gemini
-poly-glot config --token <license-token>            # Activate Pro
+poly-glot config --key AIza... --provider google     # Google Gemini
+poly-glot config --token <session-token>             # activate Pro
 
-poly-glot comment src/auth.js                       # Doc-comment a file
-poly-glot comment src/auth.js --dry-run             # Preview without writing
-poly-glot comment src/auth.js --diff                # Show unified diff
-poly-glot comment src/auth.js --backup              # Write + save .orig backup
-poly-glot comment src/auth.js --why                 # Why-comments (Pro)
-poly-glot comment src/auth.js --both                # Doc + why (Pro)
-poly-glot comment --dir src/ --yes                  # Comment entire directory
+# Single file
+poly-glot comment src/auth.js                        # doc-comments
+poly-glot comment src/auth.js --dry-run              # preview without writing
+poly-glot comment src/auth.js --diff                 # show unified diff
+poly-glot comment src/auth.js --backup               # write + save .orig backup
+poly-glot comment src/auth.js --why                  # why-comments (Pro)
+poly-glot comment src/auth.js --both                 # doc + why (Pro)
 
-poly-glot why src/auth.js                           # Why-comments shorthand (Pro)
-poly-glot both src/auth.js                          # Both modes shorthand (Pro)
-poly-glot bugs src/auth.js                          # Find bugs & edge cases
-poly-glot refactor src/utils.ts                     # Before/after refactor diffs
-poly-glot test src/auth.js                          # Generate unit tests
-poly-glot explain src/utils.ts                      # Deep code analysis
+# Directory
+poly-glot comment --dir src/ --yes                   # comment entire directory
+poly-glot comment --dir src/ --dry-run               # preview all files
+poly-glot comment --dir src/ --output-dir src-out/   # preserve originals
+
+# Analysis (Pro)
+poly-glot bugs src/auth.js                           # find bugs & edge cases
+poly-glot refactor src/utils.ts                      # before/after refactor diffs
+poly-glot test src/auth.js                           # generate unit tests
+poly-glot explain src/utils.ts                       # deep code analysis
 ```
 
 ### Environment variables (CI/CD)
 
 ```bash
 POLYGLOT_API_KEY=sk-proj-...
-POLYGLOT_PROVIDER=openai          # openai | anthropic
+POLYGLOT_PROVIDER=openai               # openai | anthropic | google
 POLYGLOT_MODEL=gpt-4.1-mini
-POLYGLOT_MODE=both                # comment | why | both
-POLYGLOT_LICENSE_TOKEN=...        # Pro license token
+POLYGLOT_MODE=both                     # comment | why | both
+POLYGLOT_LICENSE_TOKEN=<session-token> # Pro license token — skips login in CI
 ```
 
-### GitHub Actions example
+### GitHub Actions
 
 ```yaml
 - name: Document code with Poly-Glot
@@ -261,12 +154,62 @@ POLYGLOT_LICENSE_TOKEN=...        # Pro license token
 
 ---
 
+## 🔌 MCP Server (Pro+ only)
+
+The MCP server lets Claude Desktop, Goose, Cursor, Windsurf, and any MCP-compatible client call Poly-Glot directly.
+
+**Requires:** Pro, Team, or Enterprise plan + `POLYGLOT_SESSION_TOKEN`
+
+```json
+{
+  "mcpServers": {
+    "poly-glot": {
+      "command": "npx",
+      "args": ["-y", "poly-glot-mcp"],
+      "env": {
+        "POLYGLOT_PROVIDER": "openai",
+        "POLYGLOT_API_KEY": "sk-your-key-here",
+        "POLYGLOT_MODEL": "gpt-4.1-mini",
+        "POLYGLOT_SESSION_TOKEN": "your-session-token-from-poly-glot.ai"
+      }
+    }
+  }
+}
+```
+
+| Plan | MCP calls/month |
+|------|----------------|
+| Free | 🔒 Not available |
+| Pro | 200 |
+| Team | 1,000 |
+| Enterprise | Unlimited |
+
+---
+
 ## 🔒 Privacy & Security
 
 - **Your code never touches Poly-Glot servers** — all AI calls go directly from your machine to OpenAI, Anthropic, or Google
-- **API keys stored locally** — in browser localStorage (web) or `~/.config/polyglot/config.json` (CLI), never sent to us
-- **GitHub App** — reads only changed PR files, never stores code, requests minimal permissions (`pull_requests:write`, `checks:write`, `contents:read`)
+- **API keys stored locally** — in `~/.config/polyglot/config.json` (CLI) or VS Code SecretStorage, never sent to us
+- **Session tokens** — server-verified, 30-day TTL, stored in KV
+- **GitHub App** — reads only changed PR files, never stores code
 - **Zero telemetry by default** — opt in with `poly-glot config --telemetry`
+
+---
+
+## 🏗️ Repo Structure
+
+```
+poly-glot/
+├── index.html              # Main website (poly-glot.ai)
+├── dashboard/              # Admin health dashboard (/dashboard)
+├── cli/                    # CLI source (poly-glot-ai-cli on npm)
+├── poly-glot-mcp/          # MCP server source (poly-glot-mcp on npm)
+├── vscode-extension/       # VS Code extension source
+├── auth-worker/            # Cloudflare Worker — auth + usage (source copy)
+├── telemetry-worker/       # Cloudflare Worker — CLI telemetry
+├── team-dashboard/         # Team analytics dashboard
+└── .github/workflows/      # CI/CD — publish CLI, MCP, VS Code, purge cache
+```
 
 ---
 

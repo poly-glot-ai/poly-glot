@@ -376,8 +376,18 @@ async function collectAll() {
   // npm CLI
   try { if (map.npmCli.r.data) m.cliVer = map.npmCli.r.data.version; } catch {}
 
-  // npm MCP
+  // npm MCP version
   try { if (map.npmMcp.r.data) m.mcpVer = map.npmMcp.r.data.version; } catch {}
+
+  // npm download counts (last 30 days) — parallel fetch
+  try {
+    const [cliDlRes, mcpDlRes] = await Promise.all([
+      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-ai-cli'),
+      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-mcp'),
+    ]);
+    if (cliDlRes.ok) { const d = await cliDlRes.json(); m.cliDl30 = d.downloads ?? 0; }
+    if (mcpDlRes.ok) { const d = await mcpDlRes.json(); m.mcpDl30 = d.downloads ?? 0; }
+  } catch {}
 
   // Open VSX
   try {
@@ -420,7 +430,7 @@ async function collectAll() {
     if (adminRes.ok) {
       const d = await adminRes.json();
       if (d.ok) {
-        m.totalSignups    = d.total_signups;
+        m.totalSignups    = d.unique_users ?? d.total_signups ?? 0;
         m.activeSessions  = d.active_sessions;
         m.planFree        = d.plan_breakdown?.free       ?? 0;
         m.planPro         = d.plan_breakdown?.pro        ?? 0;
@@ -638,7 +648,10 @@ function renderMetrics(m) {
          `chromewebstore.google.com · ${m.chromeStatus || ''}${m.chromeInstalls != null ? ' · ' + m.chromeInstalls.toLocaleString() + ' installs' : ''}`),
     card('🐙', 'GitHub App Installs', num(m.ghInstalls),
          m.ghTs ? `as of ${new Date(m.ghTs).toLocaleTimeString()}` : 'via GitHub App API · 5-min cache'),
-
+    card('⚡', 'CLI Downloads (30d)', m.cliDl30 != null ? num(m.cliDl30) : '—',
+         `poly-glot-ai-cli · npm · last 30 days · BYOK enforced v1.9+`),
+    card('🔌', 'MCP Downloads (30d)', m.mcpDl30 != null ? num(m.mcpDl30) : '—',
+         `poly-glot-mcp · npm · last 30 days · BYOK — no server auth`),
   ].join('');
 }
 

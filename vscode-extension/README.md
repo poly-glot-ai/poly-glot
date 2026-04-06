@@ -54,6 +54,7 @@ Powered by **OpenAI** (GPT-4.1, GPT-4o, o3), **Anthropic** (Claude Sonnet 4, Cla
 | C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, SQL | 🔒 | ✅ | ✅ | ✅ |
 | **Why-Comments** — intent & trade-off inline notes | 🔒 | ✅ | ✅ | ✅ |
 | **Both Mode** — doc + why comments in one pass | 🔒 | ✅ | ✅ | ✅ |
+| **MCP Server** — use from Claude, Goose, Cursor | 🔒 | ✅ 200/mo | ✅ 1,000/mo | ✅ Unlimited |
 | Templates Sidebar | ✅ | ✅ | ✅ | ✅ |
 | Real-time cost tracking in status bar | ✅ | ✅ | ✅ | ✅ |
 | Files generated per month | 50 | **Unlimited** | **Unlimited** | **Unlimited** |

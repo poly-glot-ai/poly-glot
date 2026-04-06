@@ -8,10 +8,10 @@
 
 ## Overview
 
-Team dashboard for Poly-Glot Pro Team tier ($29/mo).
-Allows teams of 5 or 15 to share usage, history, and exports.
+Team dashboard for Poly-Glot Pro Team tier ($29/mo, 5 seats).
+Allows teams to share usage, history, templates, and exports.
 
-**Stack:** Supabase (DB + Auth) + Clerk (Auth UI) + Next.js or vanilla JS
+**Stack:** Cloudflare Workers + KV (no external DB — consistent with existing auth infra)
 
 ---
 
@@ -21,8 +21,9 @@ Allows teams of 5 or 15 to share usage, history, and exports.
 - [ ] Per-member usage analytics (languages, files, comments generated)
 - [ ] Shared export history (JSONL downloads)
 - [ ] Shared API key pool (team pays once, members use it)
-- [ ] Admin panel (add/remove members, view usage)
-- [ ] Subscription management (LemonSqueezy webhook → Supabase)
+- [ ] Admin panel (add/remove members, view usage breakdown)
+- [ ] MCP usage tracking per team member
+- [ ] Subscription management (Stripe webhook → KV plan updates)
 
 ---
 
@@ -32,9 +33,21 @@ Trigger: **$1k MRR or 10 paying Team subscribers** — whichever comes first.
 
 ---
 
-## Architecture
+## Pricing Context
+
+| Plan | Seats | MCP calls/mo | Price |
+|------|:-----:|:------------:|-------|
+| Pro | 1 | 200 | $9/mo |
+| **Team** | **5** | **1,000** | **$29/mo** |
+| Enterprise | Custom | Unlimited | Custom |
+
+---
+
+## Architecture Notes
+
+- Auth: reuse existing `session:{token}` KV pattern from auth-worker
+- Usage: `usage:{email}:{YYYY-MM}` already per-member — just aggregate on team ID
+- MCP: `mcp-usage:{email}:{YYYY-MM}` — same pattern, pool across team
+- Team KV keys: `team:{teamId}` → `{members:[emails], plan, adminEmail}`
 
 See `ARCHITECTURE.md` for full technical plan.
-See `SCHEMA.md` for database schema.
-See `AUTH.md` for authentication flow.
-See `API.md` for planned API endpoints.

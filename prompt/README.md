@@ -1,37 +1,39 @@
-# Prompt Poly-Glot.AI 🚀
+# 🧪 Prompt Poly-Glot.AI
 
-> **Professional Prompt Engineering with Human-in-the-Loop Testing**
+> **Professional prompt engineering with human-in-the-loop testing.**
 
-**🌐 Live App:** [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/)
+**🌐 Live:** [poly-glot.ai/prompt](https://poly-glot.ai/prompt/)
 
 ---
 
 ## Overview
 
-**Prompt Poly-Glot.AI** is a professional prompt engineering tool for creating, testing, and refining prompts for OpenAI and Anthropic APIs.
+A standalone prompt engineering tool for creating, testing, and refining prompts for OpenAI and Anthropic APIs. Part of the Poly-Glot AI suite — not gated behind a plan.
 
-## Key Features
+---
+
+## Features
 
 ### 🔄 Human-in-the-Loop Testing
 - Test prompts with mock AI responses
-- Quality metrics (Clarity, Completeness, Tone)
+- Quality metrics: Clarity, Completeness, Tone
 - Smart improvement suggestions
 - Version control with diff view
 - A/B comparison mode
 
 ### 🎨 Variable System
-- Use `{{variable}}` syntax for reusable templates
-- Auto-detection and configuration
+- `{{variable}}` syntax for reusable prompt templates
+- Auto-detection and inline configuration
 - Real-time preview
 
 ### 🌐 Multi-Provider Export
 - OpenAI JSON format
 - Anthropic JSON format
 - cURL commands
-- Plain text
+- Plain text copy
 
 ### 📚 Template Library
-8 professional templates:
+8 built-in professional templates:
 - Code Review Assistant
 - Content Writer
 - Data Analyst
@@ -41,17 +43,25 @@
 - Technical Documentation
 - Customer Support
 
-### 💾 Advanced Features
+### 💾 Utilities
 - Auto-save to localStorage
 - Token counter
 - Syntax highlighting
 - Import/export JSON
 - Share via URL
 
-## Quick Start
+---
 
-Visit [https://hmoses.github.io/poly-glot/prompt/](https://hmoses.github.io/poly-glot/prompt/) and start building better prompts!
+## Links
+
+- 🌐 Website: [poly-glot.ai](https://poly-glot.ai)
+- 💻 VS Code Extension: [Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
+- ⌨️ CLI: [poly-glot-ai-cli](https://www.npmjs.com/package/poly-glot-ai-cli)
+- 🔌 MCP Server: [poly-glot-mcp](https://www.npmjs.com/package/poly-glot-mcp) (**Pro+ only**)
+- 🐙 GitHub App: [github.com/apps/poly-glot-ai](https://github.com/apps/poly-glot-ai)
+
+---
 
 ## License
 
-MIT License - Part of the Poly-Glot Suite
+MIT © Harold Moses

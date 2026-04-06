@@ -1,91 +1,73 @@
-# 🦜 poly-glot-mcp
+# 🔌 poly-glot-mcp
 
-**MCP server for [Poly-Glot AI](https://poly-glot.ai)** — generate professional code comments and documentation in 12 languages directly from Claude Desktop, Goose, Cursor, Windsurf, or any MCP-compatible AI client.
+> MCP server for Poly-Glot AI — generate professional code comments & documentation in 12 languages directly from Claude, Goose, Cursor, Windsurf, or any MCP-compatible AI client.
 
-[![npm version](https://img.shields.io/npm/v/poly-glot-mcp?color=blue)](https://www.npmjs.com/package/poly-glot-mcp)
-[![MCP](https://img.shields.io/badge/MCP-compatible-8b5cf6)](https://modelcontextprotocol.io)
-[![Languages](https://img.shields.io/badge/languages-12-green)](https://poly-glot.ai)
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-orange)](../LICENSE)
+[![npm version](https://img.shields.io/npm/v/poly-glot-mcp?color=CB3837&logo=npm&style=flat-square)](https://www.npmjs.com/package/poly-glot-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/poly-glot-mcp?color=CB3837&logo=npm&style=flat-square)](https://www.npmjs.com/package/poly-glot-mcp)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-green?style=flat-square)](LICENSE)
 
 ---
 
-## What it does
+## ⚠️ Pro Plan Required
 
-Instead of copying code to a web app, you stay in your AI chat and say:
+The MCP server is available on **Pro, Team, and Enterprise plans only**.
 
-> *"Add JSDoc comments to this function"*
-> *"Explain this Python class and score the documentation quality"*
-> *"Add WHY-comments to this Go code"*
+| Plan | MCP calls/month | Price |
+|------|:--------------:|-------|
+| Free | 🔒 Not available | $0 |
+| **Pro** | **200** | **$9/mo** |
+| **Team** | **1,000** | **$29/mo** |
+| **Enterprise** | **Unlimited** | Custom |
 
-Poly-Glot handles the rest — using your own OpenAI or Anthropic API key, so **your code never touches Poly-Glot's servers**.
+👉 [Upgrade at poly-glot.ai →](https://poly-glot.ai/#pg-pricing-section)
+
+You need a `POLYGLOT_SESSION_TOKEN` from your account dashboard. Usage is tracked server-side — limits reset on the 1st of each month.
 
 ---
 
 ## Tools
 
-| Tool | What it does |
+| Tool | Description |
 |------|-------------|
-| `polyglot_add_doc_comments` | JSDoc · Javadoc · PyDoc · Doxygen · XML docs · GoDoc · Rustdoc · YARD · PHPDoc · KDoc · Swift markup |
-| `polyglot_add_why_comments` | Inline WHY-comments explaining decisions, trade-offs, edge-case reasoning |
-| `polyglot_add_all_comments` | Both passes in one call — fully commented, review-ready code |
-| `polyglot_explain_code` | Complexity score, function breakdown, bug detection, doc quality score |
-| `polyglot_list_languages` | All 12 supported languages with comment styles |
-| `polyglot_list_models` | All available models with cost tiers |
+| `polyglot_add_doc_comments` | Add JSDoc, Javadoc, PyDoc, Doxygen, KDoc, rustdoc, GoDoc, PHPDoc, YARD, Swift markup |
+| `polyglot_add_why_comments` | Add inline WHY-comments explaining reasoning & intent |
+| `polyglot_add_all_comments` | Doc-comments + WHY-comments in one pass |
+| `polyglot_explain_code` | Deep analysis: complexity, bugs, quality score, suggestions |
+| `polyglot_list_languages` | List all 12 supported languages + comment styles |
+| `polyglot_list_models` | List available models for your provider |
+| `polyglot_github_app_info` | Q&A about the Poly-Glot GitHub App |
 
 ---
 
-## Supported Languages
+## Setup
 
-| Language | Comment Style |
-|----------|--------------|
-| `javascript` | JSDoc |
-| `typescript` | TSDoc / JSDoc |
-| `python` | Google-style docstrings |
-| `java` | Javadoc |
-| `cpp` | Doxygen |
-| `csharp` | XML doc-comments (`///`) |
-| `go` | GoDoc |
-| `rust` | Rustdoc (`///`) |
-| `ruby` | YARD |
-| `php` | PHPDoc |
-| `swift` | Swift markup (`///`) |
-| `kotlin` | KDoc |
+### 1. Get your session token
 
----
-
-## Quick Start
-
-### 1. Get an API key
-
-- **OpenAI:** https://platform.openai.com/api-keys
-- **Anthropic:** https://console.anthropic.com/settings/keys
+1. Sign up / log in at [poly-glot.ai](https://poly-glot.ai)
+2. Upgrade to Pro or Team
+3. Copy your session token from the account dashboard
 
 ### 2. Configure your MCP client
 
 #### Goose
 
-Add to your Goose config (`~/.config/goose/config.yaml` or via `goose configure`):
-
 ```yaml
+# ~/.config/goose/config.yaml
 extensions:
   poly-glot:
     type: stdio
     cmd: npx
-    args:
-      - "-y"
-      - "poly-glot-mcp"
+    args: ["-y", "poly-glot-mcp"]
     env:
       POLYGLOT_PROVIDER: openai
       POLYGLOT_API_KEY: sk-your-key-here
-      POLYGLOT_MODEL: gpt-4.1-mini   # optional
-    enabled: true
+      POLYGLOT_MODEL: gpt-4.1-mini
+      POLYGLOT_SESSION_TOKEN: your-session-token
     name: poly-glot
     description: AI code documentation — JSDoc, Javadoc, PyDoc and more in 12 languages
 ```
 
 #### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -96,16 +78,17 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
       "env": {
         "POLYGLOT_PROVIDER": "openai",
         "POLYGLOT_API_KEY": "sk-your-key-here",
-        "POLYGLOT_MODEL": "gpt-4.1-mini"
+        "POLYGLOT_MODEL": "gpt-4.1-mini",
+        "POLYGLOT_SESSION_TOKEN": "your-session-token"
       }
     }
   }
 }
 ```
 
-#### Cursor / Windsurf
+Add to: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-Add to `.cursor/mcp.json` or `.windsurf/mcp.json` in your project:
+#### Cursor / Windsurf
 
 ```json
 {
@@ -116,21 +99,23 @@ Add to `.cursor/mcp.json` or `.windsurf/mcp.json` in your project:
       "env": {
         "POLYGLOT_PROVIDER": "anthropic",
         "POLYGLOT_API_KEY": "sk-ant-your-key-here",
-        "POLYGLOT_MODEL": "claude-haiku-4-5"
+        "POLYGLOT_MODEL": "claude-haiku-4-5",
+        "POLYGLOT_SESSION_TOKEN": "your-session-token"
       }
     }
   }
 }
 ```
 
+Add to `.cursor/mcp.json` or `.windsurf/mcp.json` in your project root.
+
 ### 3. Use it
 
-Just talk to your AI client naturally:
-
 ```
-"Add JSDoc to this TypeScript file"
+"Add JSDoc comments to this TypeScript file"
 "Explain this Python class"
 "Add WHY-comments to this Go code"
+"Document this entire file with doc + why comments"
 "What languages does Poly-Glot support?"
 ```
 
@@ -138,40 +123,64 @@ Just talk to your AI client naturally:
 
 ## Configuration
 
-| Environment Variable | Required | Default | Description |
-|----------------------|----------|---------|-------------|
-| `POLYGLOT_API_KEY` | ✅ Yes | — | Your OpenAI or Anthropic API key |
-| `POLYGLOT_PROVIDER` | No | `openai` | `openai` or `anthropic` |
-| `POLYGLOT_MODEL` | No | Smart default | Any model ID (see `polyglot_list_models`) |
+| Variable | Required | Default | Description |
+|----------|:--------:|---------|-------------|
+| `POLYGLOT_SESSION_TOKEN` | ✅ Yes | — | Session token from poly-glot.ai (Pro+ required) |
+| `POLYGLOT_API_KEY` | ✅ Yes | — | Your OpenAI, Anthropic, or Google AI API key |
+| `POLYGLOT_PROVIDER` | No | `openai` | `openai` \| `anthropic` \| `google` |
+| `POLYGLOT_MODEL` | No | Smart default | Any valid model ID (see `polyglot_list_models`) |
 
-### Recommended models
+---
 
-| Use case | Provider | Model | Cost/request* |
-|----------|----------|-------|--------------|
-| Best balance | OpenAI | `gpt-4.1-mini` | ~$0.0003 |
-| Cheapest | OpenAI | `gpt-4.1-nano` | ~$0.00008 |
-| Most accurate | OpenAI | `gpt-4.1` | ~$0.0015 |
-| Best balance | Anthropic | `claude-haiku-4-5` | ~$0.0003 |
-| Most accurate | Anthropic | `claude-sonnet-4-5` | ~$0.002 |
+## Supported Models
 
-*Estimates based on ~200 token input / 400 token output.
+### OpenAI
+| Model | Notes |
+|-------|-------|
+| `gpt-4.1-mini` ⭐ | **Recommended** — best quality-to-cost |
+| `gpt-4.1` | Best quality |
+| `gpt-4.1-nano` | Fastest & cheapest |
+| `gpt-4o` | Great quality, widely supported |
+| `o3` | Most powerful reasoning |
+
+### Anthropic
+| Model | Notes |
+|-------|-------|
+| `claude-sonnet-4-5` ⭐ | **Recommended** — excellent quality & speed |
+| `claude-opus-4-5` | Most powerful Claude |
+| `claude-haiku-4-5` | Fastest & cheapest |
+
+### Google
+| Model | Notes |
+|-------|-------|
+| `gemini-2.5-flash` ⭐ | **Recommended** — fast, accurate, low cost |
+| `gemini-2.5-pro` | Most powerful Gemini |
+| `gemini-2.5-flash-lite` | Cheapest Gemini |
+
+---
+
+## Supported Languages
+
+JavaScript · TypeScript · Python · Java · C++ · C · C# · Go · Rust · Ruby · PHP · Swift · Kotlin · SQL
 
 ---
 
 ## Privacy
 
-- Your **code** goes directly from this MCP server → OpenAI/Anthropic API
-- Your **API key** is set as an environment variable — never sent to Poly-Glot servers
-- **Nothing** is logged or stored by Poly-Glot
-- Each tool call is a single, stateless API call
+- Your **code** goes directly from this MCP server → OpenAI/Anthropic/Google API — never to Poly-Glot servers
+- Your **API key** is an environment variable — never logged or stored by Poly-Glot
+- **Session token** is verified server-side for plan/quota only — your code is never sent to us
+- Each tool call is a single, stateless AI API call
 
 ---
 
 ## Links
 
 - 🌐 Website: [poly-glot.ai](https://poly-glot.ai)
+- 💰 Pricing: [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)
 - 💻 VS Code Extension: [Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)
 - ⌨️ CLI: [`poly-glot-ai-cli`](https://www.npmjs.com/package/poly-glot-ai-cli)
+- 🐙 GitHub App: [github.com/apps/poly-glot-ai](https://github.com/apps/poly-glot-ai)
 - 🐛 Issues: [GitHub](https://github.com/poly-glot-ai/poly-glot/issues)
 
 ---
