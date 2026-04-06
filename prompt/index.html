@@ -1603,6 +1603,192 @@
 
   <div class="pg2-divider"></div>
 
+  <!-- ══ TEAM CUSTOM TEMPLATE BUILDER ════════════════════════ -->
+  <section class="pg2-section" id="pga-team-builder" aria-labelledby="pga-team-builder-heading">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;">
+
+      <!-- Left: copy -->
+      <div>
+        <span class="pg2-eyebrow">👥 Team Plan</span>
+        <h2 class="pg2-section__h2" id="pga-team-builder-heading">Build your team's prompt playbook.</h2>
+        <p class="pg2-section__sub">Create, lock, and share custom templates across your whole team. Brand voice, tone rules, variable defaults — set once, used by everyone.</p>
+
+        <ul class="pga-feature-list" style="margin-top:0;">
+          <li>
+            <span class="pga-feature-list__icon">🔧</span>
+            <div><strong>Custom template builder</strong> — drag-and-drop blocks: role, context, instructions, format, constraints. No prompt engineering experience needed.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔒</span>
+            <div><strong>Lock variables</strong> — set default values your team can't override. Enforce brand voice, tone, output format across every prompt run.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">📂</span>
+            <div><strong>Shared library</strong> — publish templates to your team workspace. Role-based access: editors build, viewers run.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">📊</span>
+            <div><strong>Usage analytics</strong> — see which templates get used most, who's running what, and where prompts are failing.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔁</span>
+            <div><strong>Version sync</strong> — when you update a template, all team members get the new version instantly. No stale copies in Notion.</div>
+          </li>
+        </ul>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;">
+          <a href="mailto:support@poly-glot.ai?subject=Team Custom Template Builder" class="btn-primary" style="font-size:14px;padding:12px 24px;">
+            👥 Talk to us about Team →
+          </a>
+          <a href="#pga-pricing" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;" class="btn-secondary" style="font-size:13px;padding:11px 20px;">
+            See Team pricing
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: custom builder mockup -->
+      <div>
+        <div style="background:var(--bg-card);border:1px solid rgba(167,139,250,.25);border-radius:14px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.4);">
+
+          <!-- Bar -->
+          <div class="pga-mockup__bar">
+            <span class="pga-mockup__dot pga-mockup__dot--red"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--yellow"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--green"></span>
+            <span class="pga-mockup__bar-title">template-builder — Acme Corp</span>
+            <span class="pga-mockup__bar-badge">👥 Team</span>
+          </div>
+
+          <!-- Builder blocks -->
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);">Template Blocks</div>
+
+            <!-- Role block -->
+            <div class="pga-builder-block" id="pbb-role">
+              <div class="pga-builder-block__label">🎭 Role</div>
+              <div class="pga-builder-block__val">You are a <span class="pga-mockup__var">{{role}}</span> at <span class="pga-mockup__var">{{company}}</span>.</div>
+              <span class="pga-builder-block__lock" title="Locked by admin">🔒</span>
+            </div>
+
+            <!-- Context block -->
+            <div class="pga-builder-block pga-builder-block--active" id="pbb-ctx">
+              <div class="pga-builder-block__label">📋 Context</div>
+              <div class="pga-builder-block__val"><span class="pga-mockup__var">{{context}}</span></div>
+            </div>
+
+            <!-- Instructions block -->
+            <div class="pga-builder-block" id="pbb-inst">
+              <div class="pga-builder-block__label">📝 Instructions</div>
+              <div class="pga-builder-block__val"><span class="pga-mockup__var">{{task}}</span></div>
+            </div>
+
+            <!-- Format block -->
+            <div class="pga-builder-block" id="pbb-fmt">
+              <div class="pga-builder-block__label">📐 Format</div>
+              <div class="pga-builder-block__val">Respond in <span class="pga-mockup__var">{{format}}</span>. Tone: <span style="color:#34d399;font-weight:600;">professional</span> <span class="pga-builder-block__lock pga-builder-block__lock--locked" title="Locked">🔒</span></div>
+            </div>
+
+            <!-- Constraints block -->
+            <div class="pga-builder-block" id="pbb-con">
+              <div class="pga-builder-block__label">⚠️ Constraints</div>
+              <div class="pga-builder-block__val">Max <span class="pga-mockup__var">{{max_words}}</span> words. No disclaimers.</div>
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:2px 0;"></div>
+
+            <!-- Add block button -->
+            <button style="background:rgba(167,139,250,.08);border:1px dashed rgba(167,139,250,.3);border-radius:8px;padding:9px;font-size:12px;color:var(--accent-prompt2);cursor:pointer;width:100%;transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.14)'" onmouseout="this.style.background='rgba(167,139,250,.08)'">
+              + Add block
+            </button>
+
+            <!-- Variable defaults -->
+            <div style="background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">🔒 Locked Defaults (team-wide)</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{company}}</span><span style="color:#34d399;">Acme Corp</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{format}}</span><span style="color:#34d399;">markdown</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{max_words}}</span><span style="color:#34d399;">300</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action bar -->
+          <div class="pga-mockup__actions-bar">
+            <button class="pga-mockup__action-btn">👁 Preview</button>
+            <button class="pga-mockup__action-btn">📋 Variables</button>
+            <button class="pga-mockup__action-btn" style="margin-left:auto;">📤 Publish to Team</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <style>
+    /* ── Team Builder blocks ─────────────────────────────────── */
+    .pga-builder-block {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: grab;
+      transition: border-color .2s, background .2s, transform .15s;
+      position: relative;
+    }
+    .pga-builder-block:hover {
+      border-color: rgba(167,139,250,.35);
+      background: rgba(167,139,250,.05);
+      transform: translateX(3px);
+    }
+    .pga-builder-block--active {
+      border-color: rgba(167,139,250,.5);
+      background: rgba(167,139,250,.08);
+      box-shadow: 0 0 0 1px rgba(167,139,250,.15);
+    }
+    .pga-builder-block__label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+    }
+    .pga-builder-block__val {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .pga-builder-block__lock {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 11px;
+      opacity: .6;
+    }
+    @keyframes pga-block-pulse {
+      0%,100% { border-color: rgba(167,139,250,.5); }
+      50%      { border-color: rgba(167,139,250,.9); box-shadow: 0 0 12px rgba(167,139,250,.2); }
+    }
+    .pga-builder-block--active { animation: pga-block-pulse 2.5s ease-in-out infinite; }
+    @media (max-width: 800px) {
+      #pga-team-builder > div { grid-template-columns: 1fr !important; }
+    }
+  </style>
+
+  <div class="pg2-divider"></div>
+
   <!-- ══ CTA ═══════════════════════════════════════════════════ -->
   <section class="pga-cta-section" id="pga-cta" aria-labelledby="pga-cta-heading">
 
@@ -2037,6 +2223,9 @@
   <!-- Auth: load poly-glot auth system -->
   <script defer src="../auth.v11.js"></script>
 
+  <!-- Chat widget (same as poly-glot.ai) -->
+  <script defer src="../chat.v8.js"></script>
+
   <!-- ══ AUTH GATE BANNER (matches poly-glot.ai pattern) ══════ -->
   <div id="pgaAuthGate" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:500;width:min(560px,calc(100vw - 32px));">
     <div style="background:#12131e;border:1px solid rgba(167,139,250,.35);border-radius:16px;padding:20px 24px;box-shadow:0 16px 48px rgba(0,0,0,.7);backdrop-filter:blur(12px);display:flex;gap:16px;align-items:flex-start;">
@@ -2467,6 +2656,29 @@
         if (entries[0].isIntersecting) { transObs.disconnect(); setTimeout(typePhrase, 800); }
       }, { threshold: 0.4 });
       if (voiceSection) transObs.observe(voiceSection);
+    })();
+
+    // ══════════════════════════════════════════════════════════
+    // ANIMATION 4: Team builder block cycle highlight
+    // ══════════════════════════════════════════════════════════
+    (function() {
+      const builderSection = document.getElementById('pga-team-builder');
+      if (!builderSection) return;
+      const blockIds = ['pbb-role','pbb-ctx','pbb-inst','pbb-fmt','pbb-con'];
+      let bIdx = 1; // start on ctx (already active in HTML)
+      function cycleBlock() {
+        blockIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('pga-builder-block--active');
+        });
+        const next = document.getElementById(blockIds[bIdx % blockIds.length]);
+        if (next) next.classList.add('pga-builder-block--active');
+        bIdx++;
+      }
+      const blkObs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { blkObs.disconnect(); setInterval(cycleBlock, 1800); }
+      }, { threshold: 0.3 });
+      blkObs.observe(builderSection);
     })();
 
     // ══════════════════════════════════════════════════════════
