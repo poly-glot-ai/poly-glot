@@ -21,10 +21,21 @@ jobs:
     steps:
       - name: Purge Cloudflare cache
         run: |
+          # Use CF_CACHE_TOKEN if set (needs Zone:Cache Purge permission only).
+          # Falls back to CF_API_TOKEN. If neither works, skip gracefully —
+          # worker deploy is the critical path; cache purge is best-effort.
+          TOKEN="${{ secrets.CF_CACHE_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN="${{ secrets.CF_API_TOKEN }}"
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "⚠️  No CF token available — skipping cache purge"
+            exit 0
+          fi
           echo "🧹 Purging Cloudflare CDN for poly-glot.ai…"
           RESPONSE=$(curl -s -X POST \
             "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+            -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             --data '{"purge_everything":true}')
           echo "Response: $RESPONSE"
@@ -32,7 +43,8 @@ jobs:
           if [ "$SUCCESS" = "True" ]; then
             echo "✅ Cloudflare cache purged successfully"
           else
-            echo "❌ Cache purge failed — check CF_ZONE_ID and CF_API_TOKEN secrets"
+            echo "⚠️  Cache purge failed (token may lack Zone:Cache Purge permission) — skipping"
+            echo "To fix: add CF_CACHE_TOKEN secret with Zone:Cache Purge permission"
             echo "$RESPONSE"
-            exit 1
+            exit 0
           fi
