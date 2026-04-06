@@ -1610,7 +1610,7 @@
       /* Hide noisy items on small mobile */
       .pg2-live-badge { display: none !important; }
       .pg2-nav__pricing-cta { display: none !important; }
-      /* Sign Up Free: visible on mobile, slightly smaller */
+      /* Sign Up Free: primary CTA on mobile nav — shown when logged out */
       .pg2-nav__signup-cta {
         display: inline-flex !important;
         padding: 0 10px !important;
@@ -1618,15 +1618,13 @@
         height: 32px !important;
         flex-shrink: 0 !important;
       }
-      /* Sign In: always visible */
+      /* Sign In: hidden on mobile nav — it lives in the drawer instead.
+         Prevents [☰][Logo][Sign Up Free][Sign In] overflow on 375px screens. */
       .pg2-nav__signin {
-        display: inline-flex !important;
-        padding: 0 12px !important;
-        font-size: 12px !important;
-        height: 32px !important;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
+        display: none !important;
       }
+      /* Once authed: hide signup, show nothing (chip replaces both) */
+      body.pg-authed .pg2-nav__signup-cta { display: none !important; }
 
       /* Hero */
       .pg2-hero { padding: 48px 16px 40px; }
@@ -1673,12 +1671,83 @@
     @media (max-width: 380px) {
       .pg2-nav__brand-text { font-size: 11px; }
       .pg2-nav__logo { width: 28px; height: 20px; }
-      .pg2-nav__signin { padding: 0 8px !important; font-size: 11px !important; }
       .pg2-nav__signup-cta { padding: 0 8px !important; font-size: 10px !important; }
       .pg2-hero__headline { font-size: 24px; }
       .pg2-hero__sub { font-size: 14px; }
       .pg2-trust-bar__inner { flex-direction: column; gap: 8px; align-items: flex-start; padding: 0 8px; }
       .pg2-gen-heading h2 { font-size: 20px; }
+    }
+
+    /* ── SIGNUP BANNER (generator gate) ─────────────────────── */
+    .pg-signup-banner {
+      max-width: 720px;
+      margin: 0 auto 28px;
+      padding: 24px 32px;
+      background: linear-gradient(135deg,rgba(124,58,237,0.15),rgba(79,70,229,0.1));
+      border: 1px solid rgba(124,58,237,0.35);
+      border-radius: 14px;
+      text-align: center;
+      display: block;
+    }
+    .pg-signup-banner__title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #f4f4f6;
+      margin-bottom: 6px;
+    }
+    .pg-signup-banner__sub {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .pg-signup-banner__btn {
+      display: inline-block;
+      padding: 12px 32px;
+      background: linear-gradient(135deg,#7c3aed,#4f46e5);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(124,58,237,0.4);
+      margin-bottom: 10px;
+      transition: opacity .15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .pg-signup-banner__btn:hover { opacity: .88; }
+    .pg-signup-banner__signin {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 8px;
+    }
+    /* Tablet */
+    @media (max-width: 768px) {
+      .pg-signup-banner { padding: 20px 20px; }
+      .pg-signup-banner__title { font-size: 16px; }
+    }
+    /* Mobile */
+    @media (max-width: 600px) {
+      .pg-signup-banner {
+        margin: 0 0 20px;
+        padding: 18px 16px;
+        border-radius: 10px;
+      }
+      .pg-signup-banner__title { font-size: 15px; }
+      .pg-signup-banner__sub { font-size: 12px; margin-bottom: 14px; }
+      .pg-signup-banner__btn {
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+    }
+    /* Very small screens */
+    @media (max-width: 380px) {
+      .pg-signup-banner { padding: 14px 12px; }
+      .pg-signup-banner__title { font-size: 14px; }
+      .pg-signup-banner__btn { font-size: 13px; padding: 12px 12px; }
     }
 
     /* ── SECTION DIVIDER ────────────────────────────────────── */
@@ -2030,18 +2099,18 @@ for (const user of users) {
   </div>
 
   <!-- Sign-up CTA banner — visible by default for unauthenticated users; auth.v10 hides it after login -->
-  <div id="pgSignupBanner" style="max-width:720px;margin:0 auto 28px;padding:20px 28px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(79,70,229,0.1));border:1px solid rgba(124,58,237,0.35);border-radius:14px;text-align:center;display:block;">
+  <div id="pgSignupBanner" class="pg-signup-banner">
     <div style="font-size:28px;margin-bottom:8px;">🚀</div>
-    <div style="font-size:17px;font-weight:700;color:#f4f4f6;margin-bottom:6px;">Create your free account to get started</div>
-    <div style="font-size:13px;color:#94a3b8;margin-bottom:18px;line-height:1.6;">
+    <div class="pg-signup-banner__title">Create your free account to get started</div>
+    <div class="pg-signup-banner__sub">
       50 files/month free · no credit card · takes 30 seconds<br>
       Your API key goes directly to OpenAI, Anthropic, or Google — never to us.
     </div>
-    <button onclick="if(typeof gtag==='function') gtag('event','signup_banner_click'); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('signup_banner');}else{pgSignIn('signup_banner');}"
-       style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:15px;border-radius:10px;border:none;cursor:pointer;box-shadow:0 4px 18px rgba(124,58,237,0.4);margin-bottom:10px;">
+    <button class="pg-signup-banner__btn"
+      onclick="if(typeof gtag==='function') gtag('event','signup_banner_click'); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal==='function'){window.PolyGlotAuth.openLoginModal('signup_banner');}else{pgSignIn('signup_banner');}">
       🚀 Create Free Account
     </button>
-    <div style="font-size:12px;color:#64748b;margin-top:8px;">
+    <div class="pg-signup-banner__signin">
       Already have an account?
       <a href="#" onclick="pgSignIn('signin-banner'); return false;"
          style="color:#a78bfa;text-decoration:none;font-weight:600;">Sign in →</a>
