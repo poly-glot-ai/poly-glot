@@ -959,6 +959,149 @@ coverage_threshold: 0.3
     return null;
   }
 
+  // ─── Prompt Studio override ───────────────────────────────────────────────────
+  // When loaded on /prompt/, swap KNOWLEDGE, RULES, and SUGGESTIONS for
+  // Prompt Studio-specific content. Main site behaviour is fully unchanged.
+
+  const IS_PROMPT_STUDIO = window.location.pathname.indexOf('/prompt') === 0;
+
+  if (IS_PROMPT_STUDIO) {
+
+    // ── Prompt Studio knowledge base ────────────────────────────────────────
+    KNOWLEDGE = `
+You are the Poly-Glot Prompt Studio assistant embedded on poly-glot.ai/prompt/.
+You help users get the most out of Prompt Studio — a browser-based tool for writing,
+editing, testing, versioning, and sharing AI prompt templates.
+
+== WHAT IS PROMPT STUDIO ==
+- A landing page + web app at poly-glot.ai/prompt/
+- Users write prompt templates with {{variable}} placeholders
+- Fill variables → see the rendered prompt → copy or test against real AI models
+- 21 ready-made templates (1 free — user picks, 20 Pro)
+- Free plan: 1 template (your choice), editor, variables, copy-to-clipboard, 3 version history
+- Pro ($9/mo): all 21 templates, AI model testing, share via URL, voice input, MCP server
+- Team ($29/mo): everything Pro + custom template builder, locked defaults, shared team library
+
+== TEMPLATES ==
+- 21 total: 1 free (user picks any 1), 20 Pro
+- Free templates include: Code Review Assistant, Blog Post Generator, Email Writer,
+  Cold Email Outreach, Meeting Agenda Builder, Job Description Writer,
+  Product Requirements Doc, Study Guide Creator, Social Media Caption Generator,
+  Customer Support Response, Technical Documentation, Performance Review Writer, Research Summary
+- Pro templates include: Legal Contract Reviewer, Financial Report Analyst,
+  Medical Case Summarizer, Security Audit Checklist, Video Script Writer,
+  System Design Architect, Executive Briefing, Competitive Intelligence Report
+- Templates use {{variable}} syntax — e.g. {{role}}, {{tone}}, {{topic}}, {{language}}
+- Users can create their own templates from scratch (Pro)
+
+== VOICE INPUT ==
+- Click the 🎙️ mic button → browser asks for mic permission first time
+- Speak naturally — words appear in real-time as you speak
+- Stop: click mic again or pause for 2 seconds
+- Transcript drops into the prompt field — edit then run
+- 40+ languages supported — follows your browser's system language
+- Uses browser-native Web Speech API — audio never sent to Poly-Glot servers
+- Works in: Chrome ✅, Edge ✅, Safari iOS ✅, Firefox ⚠️ (limited)
+- Pro feature — free users see an upgrade prompt
+
+== ONE-SHOT PROMPTING ==
+- Prompt Studio is built around getting great AI responses on the FIRST try
+- Good prompts = less back-and-forth = cheaper API costs
+- Templates enforce structure: Role, Context, Instructions, Format, Constraints
+- Variables make prompts reusable without rewriting from scratch
+- Version history lets you iterate and compare what worked
+
+== MCP SERVER ==
+- Pro+ feature: use Prompt Studio tools from any MCP client (Claude Desktop, Cursor, etc.)
+- Config uses PG_PROMPT_SESSION_TOKEN env var
+- Tools: prompt_list_templates, prompt_get_template, prompt_render, prompt_run,
+  prompt_save_version, prompt_share
+- Free: blocked · Pro: 200 calls/mo · Team: 1,000/mo · Enterprise: unlimited
+- Install: npx poly-glot-prompt-mcp
+
+== PRICING ==
+- Free: $0/mo — 1 template (user picks), editor + variables, copy-to-clipboard, 3 version history
+- Pro: $9/mo (or $79/yr) — all 21 templates, AI testing, share via URL, voice input, MCP
+- Team: $29/mo — everything Pro + custom template builder, locked defaults, team library, 5 seats
+- No credit card required for free plan
+
+== HOW TO GET STARTED ==
+1. Go to poly-glot.ai/prompt
+2. Click "Try 1 Template Free"
+3. Enter your email — magic link sent instantly
+4. Click the link — you land back on Prompt Studio signed in
+5. Pick any 1 template from the library
+6. Fill in the {{variables}}
+7. Hit Copy — paste into ChatGPT, Claude, or Gemini
+
+== PRIVACY ==
+- Voice audio: never stored — processed in browser only via Web Speech API
+- Templates: stored in your browser localStorage — not on Poly-Glot servers
+- API keys: never sent to Poly-Glot — go directly from browser to AI provider
+- MCP tokens: 30-day expiry, can be revoked anytime
+- Full privacy policy: poly-glot.ai/prompt/privacy/
+
+NOT ALLOWED — redirect to the app:
+- Do NOT generate full prompt templates for users in chat
+- If asked to write a prompt or template, say: "Building prompts is what Prompt Studio
+  is designed for — try it free at poly-glot.ai/prompt/ where you can save, version,
+  and test them!"
+- Keep answers focused on Prompt Studio features, how-tos, and pricing
+`.trim();
+
+    // ── Prompt Studio rules ─────────────────────────────────────────────────
+    RULES.unshift(
+      {
+        patterns: [/what.*template|which.*template|template.*free|free.*template|pick.*template|choose.*template/i],
+        answer: `**Free plan — pick any 1 template** from the full library of 21.\n\nPopular free choices:\n- 💻 Code Review Assistant\n- ✍️ Blog Post Generator\n- 📧 Email Writer\n- 📋 Meeting Agenda Builder\n- 📝 Job Description Writer\n\n**Pro unlocks all 21** including Legal, Finance, Medical, Security, Video Scripts & more.\n\n[Browse all templates →](https://poly-glot.ai/prompt/)`,
+      },
+      {
+        patterns: [/how.*voice|voice.*work|mic|microphone|speak|dictate|speech/i],
+        answer: `**Voice Input — how it works:**\n\n1. Click the 🎙️ mic button\n2. Allow mic access when your browser asks (first time only)\n3. Speak naturally — transcript appears word by word in real time\n4. Click mic again (or pause 2s) to stop\n5. Transcript drops into your prompt field — edit then run\n\n✅ Chrome & Edge · ✅ Safari iOS · ⚠️ Firefox limited\n\n🔒 Audio never leaves your device — processed by your browser's built-in Web Speech API.\n\n_Voice input is a **Pro** feature._`,
+      },
+      {
+        patterns: [/what.*one.?shot|one.?shot.*prompt|first.?try|fewer.*follow|follow.?up|better.*response/i],
+        answer: `**One-shot prompting** means getting the perfect AI response on the **first try** — no back-and-forth.\n\nPrompt Studio helps by:\n- 📐 Enforcing structure: Role → Context → Instructions → Format → Constraints\n- 🔧 Variables: fill in {{role}}, {{tone}}, {{topic}} — no rewriting from scratch\n- ▶️ Test instantly against GPT-4, Claude, or Gemini\n- 📚 Version history: compare what worked\n\n**Result:** 5× fewer follow-ups, 80% better responses, $0 to start.`,
+      },
+      {
+        patterns: [/mcp|model.?context.?protocol|claude.?desktop|cursor.*prompt|prompt.*cursor/i],
+        answer: `**Prompt Studio MCP Server** — use your templates from any AI client:\n\n\`\`\`json\n{\n  "command": "npx",\n  "args": ["-y", "poly-glot-prompt-mcp"],\n  "env": {\n    "PG_PROMPT_SESSION_TOKEN": "pgp_...",\n    "PG_PROMPT_PROVIDER": "openai",\n    "PG_PROMPT_API_KEY": "sk-...",\n    "PG_PROMPT_MODEL": "gpt-4o-mini"\n  }\n}\n\`\`\`\n\n**6 tools:** \`prompt_list_templates\` · \`prompt_get_template\` · \`prompt_render\` · \`prompt_run\` · \`prompt_save_version\` · \`prompt_share\`\n\n💎 **Pro required** — 200 calls/mo · Team: 1,000/mo\n\n_Get your session token from your Prompt Studio dashboard after signing in._`,
+      },
+      {
+        patterns: [/how.*start|get.*start|sign.?up|create.*account|free.*access|access.*free|try.*free/i],
+        answer: `**Get started free in 60 seconds:**\n\n1. Go to **[poly-glot.ai/prompt](https://poly-glot.ai/prompt)**\n2. Click **"Try 1 Template Free"**\n3. Enter your email — magic link sent instantly\n4. Click the link — you land back here, signed in ✅\n5. Pick **any 1 template** from the library\n6. Fill in the \`{{variables}}\`\n7. Hit **Copy** → paste into ChatGPT, Claude, or Gemini\n\nNo credit card. No install. Works in Chrome, Edge, and Safari.`,
+      },
+      {
+        patterns: [/pric|how much|cost|pro plan|team plan|upgrad|paid|subscription/i],
+        answer: `**Prompt Studio pricing:**\n\n| Plan | Price | Key features |\n|------|-------|--------------|\n| **Free** | $0/mo | 1 template (you pick), editor, copy export, 3 versions |\n| **Pro** | $9/mo | All 21 templates, AI testing, voice input, share URL, MCP |\n| **Team** | $29/mo | Everything Pro + custom builder, team library, 5 seats |\n\nNo credit card for free. [See full pricing →](https://poly-glot.ai/prompt/#pga-pricing)`,
+      },
+      {
+        patterns: [/what.*variable|variable.*work|placeholder|syntax|\{\{/i],
+        answer: `**Template variables** use \`{{double-brace}}\` syntax:\n\n\`\`\`\nYou are a {{role}}. Write a {{format}} about {{topic}} in a {{tone}} tone.\n\`\`\`\n\nWhen you open a template:\n- Each \`{{variable}}\` becomes an input field automatically\n- Fill them in → see the rendered prompt live\n- Hit Copy or Run — the filled values are substituted in\n\nYou can add as many variables as you need. Variable names become the field labels.`,
+      },
+      {
+        patterns: [/privacy|voice.*data|audio.*stor|data.*retain|mic.*data|what.*collect/i],
+        answer: `**Prompt Studio privacy — short version:**\n\n🎙️ **Voice audio** — never stored. Processed entirely in your browser via the Web Speech API. Nothing is sent to Poly-Glot.\n\n📝 **Templates** — stored in your browser's localStorage only. Not on our servers.\n\n🔑 **API keys** — go directly from your browser to your AI provider. Poly-Glot never sees them.\n\n🔗 **MCP tokens** — expire after 30 days, revocable anytime.\n\n[Full privacy policy →](https://poly-glot.ai/prompt/privacy/)`,
+      },
+      {
+        patterns: [/write.*prompt|create.*prompt|make.*prompt|generate.*prompt|build.*prompt|give me a prompt/i],
+        answer: `Building and saving prompts is exactly what Prompt Studio is designed for! 🎯\n\nTry it free → **[poly-glot.ai/prompt](https://poly-glot.ai/prompt)**\n\n- Pick from 21 templates or start from scratch\n- Add \`{{variables}}\` for any dynamic values\n- Test against GPT-4, Claude, or Gemini instantly\n- Save versions, share via URL, or export with one click\n\n_I can help explain how the tool works, but the best prompts are built inside the editor where you can save, version, and test them!_`,
+      },
+    );
+
+    // ── Prompt Studio suggestions ────────────────────────────────────────────
+    SUGGESTIONS.unshift(
+      'How do I use voice input?',
+      'What templates are included for free?',
+      'How does one-shot prompting work?',
+      'What is the MCP server?',
+      'How do I get started for free?',
+      'What are template variables?',
+      'What\'s the difference between Free and Pro?',
+      'Is my voice data stored anywhere?',
+    );
+  }
+
   // ─── Suggestions pool ─────────────────────────────────────────────────────────
   // Mix of feature questions AND navigation questions
 
@@ -1827,7 +1970,11 @@ coverage_threshold: 0.3
 
       if (!hasOpened) {
         hasOpened = true;
-        const greetings = [
+        const greetings = IS_PROMPT_STUDIO ? [
+          "Hey! 🦜 I'm the Prompt Studio assistant. Ask me about templates, voice input, variables, pricing, or the MCP server. Pick 1 free template to get started — no credit card needed!",
+          "Hi there! ✨ I can help you get the most out of Prompt Studio — templates, {{variables}}, one-shot prompting, voice input, or the MCP server. What would you like to know?",
+          "Hello! I'm your Prompt Studio guide. Ask me how templates work, what's included for free, how voice input works, or how to connect via MCP. What can I help with?",
+        ] : [
           "Hey! 👋 I'm the Poly-Glot assistant. Ask me about setup, pricing, or any feature — VS Code, GitHub App, CLI, or MCP. New to Poly-Glot? Try Google Gemini — it's free to start at aistudio.google.com. Or paste code and I'll explain it, find bugs, or write tests!",
           "Hi there! 🦜 Ask me anything about Poly-Glot — features, pricing, VS Code, GitHub App, CLI, MCP. Need an API key? Google AI Studio is free to get started. Or paste a function and I'll find bugs, suggest refactors, or write unit tests!",
           "Hello! I'm your Poly-Glot guide. You can use OpenAI, Anthropic, or Google Gemini (free tier available!). Ask me about setup, the GitHub App, VS Code extension, CLI, MCP, pricing, or paste code to explain, debug, or refactor it.",
