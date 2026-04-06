@@ -1,6 +1,6 @@
 {
   "name": "poly-glot-mcp",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "MCP server for Poly-Glot AI — generate professional code comments & documentation in 12 languages directly from Claude, Goose, Cursor, or any MCP-compatible AI client",
   "author": "Harold Moses",
   "license": "AGPL-3.0-or-later",

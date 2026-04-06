@@ -55,6 +55,74 @@ const PLAN_LABELS: Record<string, string> = {
   team:       'Team (1,000 calls/mo)',
   enterprise: 'Enterprise (unlimited)',
 };
+// ─── Per-call usage tracking ─────────────────────────────────────────────────
+
+/**
+ * Fire-and-forget POST to /api/auth/mcp-track-usage.
+ * Called inside every generative tool handler BEFORE the AI call.
+ * Returns:
+ *   { ok: true, used, remaining, limit }  — quota incremented, call allowed
+ *   { ok: false, error, code }            — quota exceeded (429) or plan blocked (403)
+ * Never throws — catches all network errors so a connectivity blip never
+ * breaks a paying user mid-session. On network failure: logs warning, allows call.
+ */
+async function trackMcpUsage(token: string): Promise<{ allowed: boolean; message?: string }> {
+  const url = `${POLYGLOT_AUTH_BASE}/api/auth/mcp-track-usage`;
+  try {
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent':   'poly-glot-mcp/tool-call',
+      },
+      body:   JSON.stringify({ token }),
+      signal: AbortSignal.timeout(6_000),
+    });
+
+    if (res.status === 403) {
+      // Free plan — hard block
+      return { allowed: false, message: '❌ MCP requires a Pro plan. Upgrade at https://poly-glot.ai/#pricing' };
+    }
+
+    if (res.status === 429) {
+      // Quota exhausted
+      let body: { used?: number; limit?: number; month?: string } = {};
+      try { body = (await res.json()) as typeof body; } catch { /* ignore */ }
+      return {
+        allowed: false,
+        message: `❌ MCP quota exhausted (${body.used ?? '?'}/${body.limit ?? '?'} calls used in ${body.month ?? 'this month'}).\n` +
+                 `Quota resets on the 1st of next month. Upgrade at https://poly-glot.ai/#pricing`,
+      };
+    }
+
+    if (res.status === 401) {
+      return { allowed: false, message: '❌ POLYGLOT_SESSION_TOKEN is invalid or expired. Get a new token at https://poly-glot.ai/dashboard' };
+    }
+
+    if (!res.ok) {
+      // Unexpected server error — fail open so paying users aren't blocked
+      process.stderr.write(`[poly-glot-mcp] ⚠️  mcp-track-usage returned ${res.status} — allowing call\n`);
+      return { allowed: true };
+    }
+
+    // Success — quota incremented
+    let body: { used?: number; remaining?: number | null; limit?: number | null } = {};
+    try { body = (await res.json()) as typeof body; } catch { /* ignore */ }
+    const remaining = body.remaining == null ? 'unlimited' : body.remaining;
+    process.stderr.write(`[poly-glot-mcp] 📊 MCP usage: ${body.used ?? '?'} calls used · ${remaining} remaining\n`);
+    return { allowed: true };
+
+  } catch (err) {
+    // Network error — fail CLOSED: block the call to prevent untracked usage
+    process.stderr.write(
+      `[poly-glot-mcp] ❌ Could not reach auth server: ${(err as Error)?.message ?? String(err)}\n`
+    );
+    return {
+      allowed: false,
+      message: '❌ Could not reach Poly-Glot auth server to verify your quota. Check your internet connection and try again.',
+    };
+  }
+}
 
 // ─── Session token validation ─────────────────────────────────────────────────
 
@@ -240,6 +308,9 @@ async function main() {
   // Exits with a clear error if the token is invalid, plan is Free, or quota exhausted.
   await validateSessionToken(cfg.sessionToken!);
 
+  // Session token reference for per-call tracking
+  const sessionToken = cfg.sessionToken!;
+
   const generator = new PolyGlotGenerator(cfg);
 
   const server = new McpServer({
@@ -263,6 +334,8 @@ async function main() {
       },
     },
     async ({ code, language }) => {
+      const quota = await trackMcpUsage(sessionToken);
+      if (!quota.allowed) return { content: [{ type: 'text' as const, text: quota.message! }], isError: true };
       try {
         const r = await generator.generateComments(code, language);
         const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
@@ -293,6 +366,8 @@ async function main() {
       },
     },
     async ({ code, language }) => {
+      const quota = await trackMcpUsage(sessionToken);
+      if (!quota.allowed) return { content: [{ type: 'text' as const, text: quota.message! }], isError: true };
       try {
         const r = await generator.generateWhyComments(code, language);
         const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
@@ -323,6 +398,8 @@ async function main() {
       },
     },
     async ({ code, language }) => {
+      const quota = await trackMcpUsage(sessionToken);
+      if (!quota.allowed) return { content: [{ type: 'text' as const, text: quota.message! }], isError: true };
       try {
         const r = await generator.generateBoth(code, language);
         const text = r.code + usageFooter(r.provider, r.model, r.inputTokens, r.outputTokens, r.costUSD);
@@ -353,6 +430,8 @@ async function main() {
       },
     },
     async ({ code, language }) => {
+      const quota = await trackMcpUsage(sessionToken);
+      if (!quota.allowed) return { content: [{ type: 'text' as const, text: quota.message! }], isError: true };
       try {
         const r = await generator.explainCode(code, language);
         const text = [
