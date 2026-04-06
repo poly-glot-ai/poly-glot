@@ -2220,6 +2220,176 @@
     }
   </style>
 
+  <!-- ── Prompt Studio auth shim ──────────────────────────────────────────
+       Runs BEFORE auth.v11.js loads.  Handles three things:
+
+       A) Stamp pg_source = 'prompt_page' in sessionStorage immediately so
+          that when the user submits their email, auth.v11 sends source=prompt_page
+          to the Worker → Worker routes the magic link back to /prompt/ not /.
+
+       B) Block the vscode:// deep-link redirect that auth.v11 fires after
+          verifying a ?token= in the URL.  That redirect makes sense on the
+          main site (developer tool) but is jarring on a landing page.
+
+       C) Replace the "session token panel" (a copy-paste widget for VS Code
+          / CLI users) with a clean, branded welcome toast.
+  ──────────────────────────────────────────────────────────────────────── -->
+  <script>
+  (function () {
+    /* ── A. Stamp source immediately ────────────────────────────────── */
+    try { sessionStorage.setItem('pg_source', 'prompt_page'); } catch(e) {}
+
+    /* ── B. Block vscode:// navigation ─────────────────────────────── */
+    // auth.v11 calls window.location.href = 'vscode://...' inside a setTimeout.
+    // We wrap setTimeout to intercept callbacks that try to navigate to vscode://.
+    var _nativeSetTimeout = window.setTimeout;
+    window.setTimeout = function (fn, delay) {
+      var rest = Array.prototype.slice.call(arguments, 2);
+      var wrapped = function () {
+        // Temporarily make location.href assignment a no-op for vscode:// URIs
+        var _origAssign = window.location.assign.bind(window.location);
+        window.location.assign = function (url) {
+          if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
+          _origAssign(url);
+        };
+        try {
+          fn.apply(this, rest);
+        } catch(e) {}
+        window.location.assign = _origAssign;
+      };
+      return _nativeSetTimeout.call(window, wrapped, delay);
+    };
+
+    /* ── C. Welcome toast (replaces dev token panel) ────────────────── */
+    function pgaWelcomeToast(email, plan) {
+      // Don't show twice
+      if (document.getElementById('pga-welcome-toast')) return;
+
+      var isPaid = plan && plan !== 'free';
+      var emoji  = isPaid ? '🎉' : '✅';
+      var msg    = isPaid
+        ? emoji + ' <strong>' + plan.charAt(0).toUpperCase() + plan.slice(1)
+          + ' plan active</strong>' + (email ? ' · ' + email : '')
+          + ' — you\'re all set!'
+        : emoji + ' <strong>Signed in</strong>'
+          + (email ? ' as ' + email : '')
+          + ' — start building prompts below.';
+
+      if (!document.getElementById('pga-toast-kf')) {
+        var kf = document.createElement('style');
+        kf.id  = 'pga-toast-kf';
+        kf.textContent = [
+          '@keyframes pga-toast-in{',
+            'from{opacity:0;transform:translateX(-50%) translateY(14px)}',
+            'to  {opacity:1;transform:translateX(-50%) translateY(0)}',
+          '}'
+        ].join('');
+        document.head.appendChild(kf);
+      }
+
+      var t = document.createElement('div');
+      t.id = 'pga-welcome-toast';
+      t.style.cssText = [
+        'position:fixed','bottom:28px','left:50%',
+        'transform:translateX(-50%) translateY(0)',
+        'z-index:10000',
+        'background:#13141f',
+        'border:1px solid rgba(167,139,250,.4)',
+        'border-radius:12px',
+        'padding:13px 18px',
+        'display:flex','align-items:center','gap:10px',
+        'box-shadow:0 8px 36px rgba(0,0,0,.6)',
+        'font-family:Inter,system-ui,sans-serif',
+        'font-size:14px','color:#f1f5f9',
+        'max-width:min(480px,calc(100vw - 32px))',
+        'animation:pga-toast-in .3s ease',
+        'line-height:1.45',
+      ].join(';');
+      t.innerHTML = '<span style="flex:1;">' + msg + '</span>'
+        + '<button onclick="this.parentNode.remove()" aria-label="Dismiss" '
+        + 'style="background:none;border:none;color:#64748b;font-size:20px;'
+        + 'cursor:pointer;padding:0;line-height:1;flex-shrink:0;margin-left:4px;">×</button>';
+
+      document.body.appendChild(t);
+
+      // Auto-dismiss after 6 s
+      _nativeSetTimeout(function () {
+        t.style.transition = 'opacity .35s ease, transform .35s ease';
+        t.style.opacity    = '0';
+        t.style.transform  = 'translateX(-50%) translateY(10px)';
+        _nativeSetTimeout(function () {
+          if (t.parentNode) t.parentNode.removeChild(t);
+        }, 360);
+      }, 6000);
+    }
+
+    /* ── D. Remove token panel + show toast when auth completes ─────── */
+    // auth.v11 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
+    // We watch for both and also poll briefly for the token panel to nuke it.
+
+    var _toastShown = false;
+    function onAuthed() {
+      if (_toastShown) return;
+      _toastShown = true;
+
+      // Pull email + plan from localStorage (auth.v11 writes these)
+      var email = '';
+      var plan  = 'free';
+      try {
+        email = localStorage.getItem('pg_email') || '';
+        plan  = localStorage.getItem('pg_plan')  || 'free';
+      } catch(e) {}
+
+      // Nuke the developer token panel if it appeared
+      var nukePanel = function () {
+        var p = document.getElementById('pg-token-panel');
+        if (p && p.parentNode) { p.parentNode.removeChild(p); }
+      };
+      nukePanel();
+      // Poll briefly in case it appears a moment later
+      var _nukeCount = 0;
+      var _nukeTimer = _nativeSetTimeout(function poll() {
+        nukePanel();
+        if (++_nukeCount < 8) _nativeSetTimeout(poll, 200);
+      }, 100);
+
+      pgaWelcomeToast(email, plan);
+    }
+
+    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v11 onPlanLoaded)
+    window.addEventListener('pg:plan-loaded', function (e) {
+      // Only fire the toast if the user is genuinely authenticated
+      // (plan-loaded fires on every page load, even for anonymous free users)
+      if (document.body.classList.contains('pg-authed')) {
+        onAuthed();
+      }
+    });
+
+    // Hook 2: MutationObserver on body class — catches the exact moment
+    //         auth.v11 calls document.body.classList.add('pg-authed')
+    var _mo = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          if (document.body.classList.contains('pg-authed')) {
+            _mo.disconnect();
+            onAuthed();
+          }
+        }
+      });
+    });
+    // Start observing once DOM is ready
+    function startObserver() {
+      _mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startObserver);
+    } else {
+      startObserver();
+    }
+
+  }());
+  </script>
+
   <!-- Auth: load poly-glot auth system -->
   <script defer src="../auth.v11.js"></script>
 
@@ -2244,14 +2414,21 @@
 
   <script>
     // ── Auth sign-in helper ──────────────────────────────────
+    // Always stamp sessionStorage with a prompt-scoped source BEFORE opening
+    // the modal. auth.v11.js reads pg_source from sessionStorage and sends it
+    // to the Worker as `source`. The Worker uses this to route the magic link
+    // back to /prompt/ instead of the main poly-glot.ai homepage.
     function pgPromptSignIn(source) {
+      var effectiveSource = source || 'prompt_page';
+      try { sessionStorage.setItem('pg_source', effectiveSource); } catch(e) {}
+
       if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
-        window.PolyGlotAuth.openLoginModal(source || 'prompt_page');
+        window.PolyGlotAuth.openLoginModal(effectiveSource);
       } else if (typeof window.pgSignIn === 'function') {
-        window.pgSignIn(source || 'prompt_page');
+        window.pgSignIn(effectiveSource);
       } else {
-        // Fallback: navigate to main site sign-in
-        window.location.href = 'https://poly-glot.ai/?signin=1&from=prompt';
+        // Fallback: navigate to main site sign-in with explicit return destination
+        window.location.href = 'https://poly-glot.ai/?signin=1&source=prompt_page&from=prompt';
       }
     }
 

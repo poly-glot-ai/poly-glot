@@ -408,8 +408,16 @@ async function handleLogin(request, env) {
   // The web page at /?token=... fires a vscode:// deep link for VS Code users.
   // CLI users pass callbackUrl=http://127.0.0.1:PORT/callback — the page POSTs
   // the token there automatically, so the terminal signs in with zero copy-paste.
-  const baseUrl     = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
   const source      = body?.source ?? 'email';
+
+  // Route magic link back to the surface the user signed in from.
+  // prompt_* sources → Prompt Studio landing page
+  // All other sources → main poly-glot.ai site
+  const PROMPT_SOURCES = ['prompt', 'prompt_page', 'nav_cta', 'hero_cta', 'voice_cta',
+                          'cta_section', 'pricing_free', 'auth_gate', 'auth_gate_signin'];
+  const isPromptSource = PROMPT_SOURCES.some(s => source === s || source.startsWith('prompt'));
+  const rootBase  = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+  const baseUrl   = isPromptSource ? `${rootBase}/prompt` : rootBase;
   const rawCallback = body?.callbackUrl ?? '';
 
   // Validate callbackUrl — only allow localhost/127.0.0.1 to prevent open redirect
