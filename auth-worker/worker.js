@@ -368,6 +368,65 @@ async function handleVerify(request, env) {
  *  - Stripe webhook handler (when implemented)
  *  - Manual admin calls to fix/upgrade a user
  */
+/**
+ * GET /api/auth/admin/users?secret=<ADMIN_SECRET>
+ *
+ * Returns all registered users from KV:
+ *  - total signups (plan: keys)
+ *  - per-plan breakdown (free / pro / team / enterprise)
+ *  - active sessions count (session: keys)
+ *  - list of emails + plan + this-month usage
+ */
+async function handleAdminUsers(request, env) {
+  const url    = new URL(request.url);
+  const secret = url.searchParams.get('secret') ?? '';
+
+  const adminSecret = env.ADMIN_SECRET ?? '';
+  if (!adminSecret || secret !== adminSecret) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  // ── List all KV keys ──────────────────────────────────────
+  const allKeys = [];
+  let cursor;
+  do {
+    const opts = { limit: 1000 };
+    if (cursor) opts.cursor = cursor;
+    const page = await env.AUTH_KV.list(opts);
+    allKeys.push(...page.keys);
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+
+  // ── Parse plan: keys → user list ─────────────────────────
+  const planKeys    = allKeys.filter(k => k.name.startsWith('plan:'));
+  const sessionKeys = allKeys.filter(k => k.name.startsWith('session:'));
+  const usageKeys   = allKeys.filter(k => k.name.startsWith('usage:'));
+
+  const YYYY_MM = new Date().toISOString().slice(0, 7); // e.g. "2026-04"
+
+  const users = await Promise.all(planKeys.map(async k => {
+    const email = k.name.slice('plan:'.length);
+    const plan  = await env.AUTH_KV.get(k.name) ?? 'free';
+    // usage this month
+    const usageVal = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`);
+    const usage    = usageVal ? parseInt(usageVal, 10) : 0;
+    return { email, plan, usage_this_month: usage };
+  }));
+
+  // ── Plan breakdown ────────────────────────────────────────
+  const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
+  users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
+
+  return jsonResponse({
+    ok:             true,
+    total_signups:  users.length,
+    active_sessions: sessionKeys.length,
+    plan_breakdown: breakdown,
+    period:         YYYY_MM,
+    users:          users.sort((a, b) => b.usage_this_month - a.usage_this_month),
+  });
+}
+
 async function handleSetPlan(request, env) {
   let body;
   try {
@@ -1110,6 +1169,9 @@ export default {
       switch (pathname) {
         case '/api/auth/ping':
           return jsonResponse({ ok: true, ts: Date.now() }, 200);
+
+        case '/api/auth/admin/users':
+          return await handleAdminUsers(request, env);
         case '/api/auth/cws-proxy':
           return await handleCwsProxy(request, env);
         case '/api/auth/gh-proxy':

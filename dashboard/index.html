@@ -250,6 +250,12 @@
   </div>
 </div>
 
+<!-- Section 3b: Signups -->
+<div class="section">
+  <div class="sec-title">👤 Users &amp; Signups</div>
+  <div class="grid" id="signupsGrid"></div>
+</div>
+
 <!-- Section 4: Install metrics -->
 <div class="section">
   <div class="sec-title">📦 Install &amp; Download Metrics</div>
@@ -271,7 +277,9 @@
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────────
 const POLL_MS  = 15 * 60 * 1000;
-const TEL_SECRET = 'polyglot-stats-2026';
+const TEL_SECRET   = 'polyglot-stats-2026';
+const ADMIN_SECRET = 'pg-admin-2026-polyglot';
+const ADMIN_USERS  = `https://poly-glot.ai/api/auth/admin/users?secret=${ADMIN_SECRET}`;
 const VSC_BODY = JSON.stringify({
   filters:[{criteria:[{filterType:7,value:'poly-glot-ai.poly-glot'}]}],
   flags: 914
@@ -405,6 +413,22 @@ async function collectAll() {
       }
     }
   } catch { m.chromeInstalls = null; }
+
+  // Admin user stats — total signups, plan breakdown, active sessions
+  try {
+    const adminRes = await fetch(ADMIN_USERS);
+    if (adminRes.ok) {
+      const d = await adminRes.json();
+      if (d.ok) {
+        m.totalSignups    = d.total_signups;
+        m.activeSessions  = d.active_sessions;
+        m.planFree        = d.plan_breakdown?.free       ?? 0;
+        m.planPro         = d.plan_breakdown?.pro        ?? 0;
+        m.planTeam        = d.plan_breakdown?.team       ?? 0;
+        m.signupPeriod    = d.period;
+      }
+    }
+  } catch { m.totalSignups = null; }
 
   // Resend status
   try {
@@ -578,6 +602,17 @@ function renderExternal(m) {
   ].join('');
 }
 
+function renderSignups(m) {
+  const period = m.signupPeriod || new Date().toISOString().slice(0,7);
+  document.getElementById('signupsGrid').innerHTML = [
+    card('👤', 'Total Signups',       m.totalSignups   != null ? m.totalSignups   : '—', `all time · ${period}`),
+    card('🆓', 'Free Plan Users',     m.planFree       != null ? m.planFree       : '—', 'active free accounts'),
+    card('💎', 'Pro Plan Users',      m.planPro        != null ? m.planPro        : '—', '$9/mo · paying customers'),
+    card('👥', 'Team Plan Users',     m.planTeam       != null ? m.planTeam       : '—', 'team accounts'),
+    card('🔐', 'Active Sessions',     m.activeSessions != null ? m.activeSessions : '—', 'valid session tokens in KV'),
+  ].join('');
+}
+
 function renderEpTable(epStatus) {
   document.getElementById('epBody').innerHTML = ENDPOINTS.map(ep => {
     const d   = epStatus[ep.key] || {};
@@ -678,6 +713,7 @@ async function runAll() {
   renderSvcs(loadingEp);
   renderExternal({ resendIndicator: null, cfWorkers: null, cfWorkersKV: null, cfPages: null, cfCDN: null, authWorkerOk: null });
   renderEpTable(loadingEp);
+  renderSignups({});
   renderBanner(loadingEp);
 
   try {
@@ -685,6 +721,7 @@ async function runAll() {
     renderSvcs(epStatus);
     renderExternal(m);
     renderEpTable(epStatus);
+    renderSignups(m);
     renderMetrics(m);
     renderStats(m);
     renderVersions(m);
