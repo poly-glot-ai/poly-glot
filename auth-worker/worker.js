@@ -374,8 +374,14 @@ async function handleLogin(request, env) {
   // Reserve rate-limit slot immediately
   await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: RATE_LIMIT_TTL });
 
-  // ── Plan lookup ─────────────────────────────────────────────
-  const plan = (await env.AUTH_KV.get(`plan:${email}`)) ?? 'free';
+  // ── Plan lookup + new-user registration ─────────────────────
+  // If no plan: key exists, this is a first-time signup — write 'free' immediately.
+  // This ensures admin/users counts ALL signups, not just paid upgrades.
+  const existingPlan = await env.AUTH_KV.get(`plan:${email}`);
+  if (!existingPlan) {
+    await env.AUTH_KV.put(`plan:${email}`, 'free');
+  }
+  const plan = existingPlan ?? 'free';
 
   // ── Token generation + storage ──────────────────────────────
   const token     = generateToken();
