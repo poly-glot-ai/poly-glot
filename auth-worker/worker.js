@@ -1193,6 +1193,56 @@ async function handleCliGetUsage(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// POST /api/auth/github-app-track-usage
+// Called by the GitHub App on every PR review to track monthly usage
+// per installation and enforce the free-tier PR limit (25/month).
+// Body: { installationId, owner, repo, month }
+// Returns:
+//   200 { ok:true, allowed:true,  used, limit }   — under quota
+//   429 { ok:false, allowed:false, used, limit }   — quota exceeded
+// ─────────────────────────────────────────────────────────────
+const GITHUB_APP_FREE_LIMIT = 25; // PRs per calendar month on free plan
+
+async function handleGithubAppTrackUsage(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const { installationId, month } = body ?? {};
+  if (!installationId) {
+    return jsonResponse({ error: 'installationId is required' }, 400);
+  }
+
+  // Resolve month key — use caller's value or fall back to server UTC month
+  const monthKey = (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month))
+    ? month
+    : currentMonthKey();
+
+  const kvKey = `gh-app-usage:${installationId}:${monthKey}`;
+
+  // Read current count
+  const raw  = await env.AUTH_KV.get(kvKey);
+  const used = raw ? parseInt(raw, 10) : 0;
+
+  if (used >= GITHUB_APP_FREE_LIMIT) {
+    // Already over limit — do not increment, return 429
+    return jsonResponse(
+      { ok: false, allowed: false, used, limit: GITHUB_APP_FREE_LIMIT, month: monthKey },
+      429,
+    );
+  }
+
+  // Increment and persist (TTL: 35 days — safely covers the calendar month)
+  const next = used + 1;
+  await env.AUTH_KV.put(kvKey, String(next), { expirationTtl: 35 * 24 * 60 * 60 });
+
+  return jsonResponse({
+    ok: true, allowed: true, used: next, limit: GITHUB_APP_FREE_LIMIT, month: monthKey,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // POST /api/auth/track-usage  (CLI alias for /api/usage/increment)
 // Body: { token, count }
 // ─────────────────────────────────────────────────────────────
@@ -1345,6 +1395,9 @@ export default {
         // CLI aliases — keep old paths working
         case '/api/auth/track-usage':
           return await handleCliTrackUsage(request, env);
+
+        case '/api/auth/github-app-track-usage':
+          return await handleGithubAppTrackUsage(request, env);
 
         case '/api/auth/vsc-proxy':
           return await handleVscProxy(request, env);
