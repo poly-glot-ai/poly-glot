@@ -24,6 +24,7 @@
 import * as fs       from 'fs';
 import * as path     from 'path';
 import * as os       from 'os';
+import * as http     from 'http';
 import * as readline from 'readline';
 import { PolyGlotGenerator, WhyResult, BothResult, BugsResult, RefactorResult, TestResult } from './generator';
 import { CommentMode } from './config';
@@ -34,7 +35,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } fr
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '2.1.31';  // improved postinstall + VS Code email-first onboarding
+const VERSION = '2.1.35';  // 1-click login: local callback server eliminates token copy-paste
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
@@ -556,6 +557,116 @@ async function runConfig(args: string[]): Promise<void> {
 
 // ─── Command: login ───────────────────────────────────────────────
 
+// ─── Local callback server ────────────────────────────────────────────────────
+// Starts a one-shot HTTP server on localhost. The magic link web page POSTs
+// the verified session token back here — zero copy-paste for the user.
+// Falls back to manual paste if the server can't bind or times out.
+
+const CALLBACK_PORTS = [9876, 9877, 9878, 19876]; // try in order, use first free one
+const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;        // 5 min — plenty of time to check email
+
+interface CallbackResult {
+    token:  string;
+    email:  string;
+    plan:   string;
+}
+
+function startCallbackServer(): Promise<{ port: number; result: Promise<CallbackResult>; close: () => void }> {
+    return new Promise((resolveServer, rejectServer) => {
+        let serverInstance: http.Server | null = null;
+        let resolveResult: ((r: CallbackResult) => void) | null = null;
+        let rejectResult:  ((e: Error) => void) | null = null;
+
+        const resultPromise = new Promise<CallbackResult>((res, rej) => {
+            resolveResult = res;
+            rejectResult  = rej;
+        });
+
+        const tryPort = (ports: number[]): void => {
+            if (ports.length === 0) {
+                rejectServer(new Error('No free port available'));
+                return;
+            }
+            const port = ports[0];
+            const server = http.createServer((req, res) => {
+                // Allow CORS so poly-glot.ai can POST here
+                res.setHeader('Access-Control-Allow-Origin', 'https://poly-glot.ai');
+                res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+                if (req.method === 'OPTIONS') {
+                    res.writeHead(204);
+                    res.end();
+                    return;
+                }
+
+                if (req.method === 'POST' && req.url === '/callback') {
+                    let body = '';
+                    req.on('data', chunk => { body += chunk; });
+                    req.on('end', () => {
+                        try {
+                            const data = JSON.parse(body) as { token?: string; email?: string; plan?: string };
+                            if (data.token) {
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ ok: true }));
+                                server.close();
+                                resolveResult!({
+                                    token: data.token,
+                                    email: data.email ?? '',
+                                    plan:  data.plan  ?? 'free',
+                                });
+                            } else {
+                                res.writeHead(400, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'missing token' }));
+                            }
+                        } catch {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: 'invalid JSON' }));
+                        }
+                    });
+                    return;
+                }
+
+                res.writeHead(404);
+                res.end();
+            });
+
+            server.on('error', () => {
+                // Port busy — try next
+                tryPort(ports.slice(1));
+            });
+
+            server.listen(port, '127.0.0.1', () => {
+                serverInstance = server;
+                resolveServer({
+                    port,
+                    result: resultPromise,
+                    close:  () => { try { server.close(); } catch { /* already closed */ } },
+                });
+            });
+        };
+
+        tryPort(CALLBACK_PORTS);
+    });
+}
+
+// ─── Shared sign-in success printer ──────────────────────────────────────────
+function printSignInSuccess(verifiedEmail: string, plan: string): void {
+    const planLabel = PRO_PLANS.includes(plan)
+        ? `${COLORS.cyan}${plan.charAt(0).toUpperCase() + plan.slice(1)}${COLORS.reset}`
+        : `${COLORS.dim}Free${COLORS.reset}`;
+
+    console.log(`\n\n  ${COLORS.green}${COLORS.bold}✓ Signed in as ${verifiedEmail}${COLORS.reset}`);
+    console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
+    if (!PRO_PLANS.includes(plan)) {
+        console.log(`  ${COLORS.dim}Free plan: 50 files/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
+        console.log(`  ${COLORS.yellow}🏷  Use code ${COLORS.reset}${COLORS.bold}EARLYBIRD3${COLORS.reset}${COLORS.yellow} to lock Pro at $9/mo forever (expires May 1, 2026)${COLORS.reset}`);
+        console.log(`  ${COLORS.bold}  Pro $9/mo   → ${COLORS.cyan}https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3${COLORS.reset}`);
+        console.log(`  ${COLORS.bold}  Team $29/mo → ${COLORS.cyan}https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3${COLORS.reset}\n`);
+    }
+}
+
+// ─── runLogin ─────────────────────────────────────────────────────────────────
 async function runLogin(): Promise<void> {
     if (!process.stdout.isTTY) {
         error('poly-glot login requires an interactive terminal.');
@@ -578,12 +689,36 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
         process.exit(1);
     }
 
+    // ── Try to start local callback server ────────────────────────────────────
+    // If it works, the magic link page will POST the token back automatically.
+    // If it fails (port conflict, firewall), fall back to manual paste.
+    let callbackPort: number | null = null;
+    let callbackResultPromise: Promise<CallbackResult> | null = null;
+    let closeCallback: (() => void) | null = null;
+
+    try {
+        const cb = await startCallbackServer();
+        callbackPort          = cb.port;
+        callbackResultPromise = cb.result;
+        closeCallback         = cb.close;
+    } catch {
+        // No free port — fall back to manual paste (silent, handled below)
+    }
+
+    // ── Send magic link ───────────────────────────────────────────────────────
     process.stdout.write(`\n  ${COLORS.dim}Sending magic link to ${email}…${COLORS.reset}`);
     try {
+        const body: Record<string, string> = {
+            email,
+            source: 'cli',
+        };
+        if (callbackPort) {
+            body.callbackUrl = `http://127.0.0.1:${callbackPort}/callback`;
+        }
         const res = await fetch(`${AUTH_API}/login`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'X-CLI-Version': VERSION },
-            body:    JSON.stringify({ email }),
+            body:    JSON.stringify(body),
             signal:  AbortSignal.timeout(8000),
         });
         if (!res.ok) {
@@ -597,22 +732,60 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
         process.exit(1);
     }
 
-    console.log(`\n\n  ${COLORS.green}✓${COLORS.reset} Magic link sent!\n`);
-    console.log(`  ${COLORS.dim}Check your inbox for an email from poly-glot.ai.${COLORS.reset}`);
-    console.log(`  ${COLORS.dim}Click the link, then come back here.${COLORS.reset}\n`);
+    console.log(`\n\n  ${COLORS.green}✓${COLORS.reset} Magic link sent to ${COLORS.bold}${email}${COLORS.reset}!\n`);
+
+    // ── Path A: callback server running — wait for browser to POST token ──────
+    if (callbackPort && callbackResultPromise) {
+        console.log(`  ${COLORS.dim}Click the link in your email — your terminal will sign in automatically.${COLORS.reset}`);
+        console.log(`  ${COLORS.dim}Waiting… (timeout: 5 minutes)${COLORS.reset}\n`);
+
+        // Animate a spinner while waiting
+        const spinChars = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+        let spinIdx = 0;
+        const spinTimer = setInterval(() => {
+            process.stdout.write(`\r  ${COLORS.cyan}${spinChars[spinIdx++ % spinChars.length]}${COLORS.reset}  Waiting for magic link click…`);
+        }, 100);
+
+        // Race: callback result vs timeout
+        const timeoutPromise = new Promise<null>(res =>
+            setTimeout(() => res(null), CALLBACK_TIMEOUT_MS)
+        );
+
+        const result = await Promise.race([callbackResultPromise, timeoutPromise]);
+
+        clearInterval(spinTimer);
+        process.stdout.write('\r' + ' '.repeat(60) + '\r'); // clear spinner line
+        closeCallback?.();
+
+        if (result) {
+            // ── Auto-received token via callback ──────────────────────────
+            const cfg = loadConfig();
+            cfg.sessionToken = result.token;
+            cfg.sessionEmail = result.email;
+            saveConfig(cfg);
+            printSignInSuccess(result.email || email, result.plan);
+            return;
+        }
+
+        // Timed out — fall through to manual paste
+        console.log(`  ${COLORS.yellow}⚠️  Timed out waiting for magic link click.${COLORS.reset}`);
+        console.log(`  ${COLORS.dim}No problem — paste the token manually instead.\n${COLORS.reset}`);
+    } else {
+        // Port unavailable — tell user what to expect
+        console.log(`  ${COLORS.dim}Check your inbox, click the link, then paste the token below.${COLORS.reset}\n`);
+    }
+
+    // ── Path B: manual paste fallback ─────────────────────────────────────────
+    console.log(`  ${COLORS.dim}After clicking the link, the page shows your session token.${COLORS.reset}`);
+    console.log(`  ${COLORS.dim}You can also paste the full magic link URL — we'll extract it.${COLORS.reset}\n`);
 
     const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
-    await new Promise<void>(res => rl2.question(`  Press ${COLORS.bold}Enter${COLORS.reset} once you've clicked the link… `, () => { rl2.close(); res(); }));
+    const rawToken = await new Promise<string>(res =>
+        rl2.question(`  ${COLORS.bold}Paste token or full URL:${COLORS.reset} `, res)
+    );
+    rl2.close();
 
-    // Ask user to paste the token from the magic link URL (?token=...)
-    console.log(`  ${COLORS.dim}The magic link looks like:${COLORS.reset}`);
-    console.log(`  ${COLORS.cyan}https://poly-glot.ai/?token=abc123...&plan=free&email=you@example.com${COLORS.reset}\n`);
-
-    const rl3 = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const rawToken = await new Promise<string>(res => rl3.question(`  Paste the ${COLORS.bold}?token=...${COLORS.reset} value from the link: `, res));
-    rl3.close();
-
-    // Extract token — accept full URL or bare token
+    // Accept full URL or bare token
     let token = rawToken.trim();
     const tokenMatch = token.match(/[?&]token=([^&\s]+)/);
     if (tokenMatch) token = tokenMatch[1];
@@ -623,7 +796,6 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
     }
 
     process.stdout.write(`\n  ${COLORS.dim}Verifying…${COLORS.reset}`);
-    let verified = false;
     try {
         const res = await fetch(`${AUTH_API}/verify`, {
             method:  'POST',
@@ -633,28 +805,16 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
         });
         if (res.ok) {
             const data = await res.json() as { email?: string; plan?: string; session?: string };
-            const sessionToken = data.session || token;
-            const verifiedEmail = data.email || email;
-            const plan = (data.plan || 'free').toLowerCase();
+            const sessionToken   = data.session || token;
+            const verifiedEmail  = data.email   || email;
+            const plan           = (data.plan   || 'free').toLowerCase();
 
             const cfg = loadConfig();
             cfg.sessionToken = sessionToken;
-            cfg.sessionEmail  = verifiedEmail;
+            cfg.sessionEmail = verifiedEmail;
             saveConfig(cfg);
 
-            const planLabel = PRO_PLANS.includes(plan)
-                ? `${COLORS.cyan}${plan.charAt(0).toUpperCase() + plan.slice(1)}${COLORS.reset}`
-                : `${COLORS.dim}Free${COLORS.reset}`;
-
-            console.log(`\n\n  ${COLORS.green}${COLORS.bold}✓ Signed in as ${verifiedEmail}${COLORS.reset}`);
-            console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
-            if (!PRO_PLANS.includes(plan)) {
-                console.log(`  ${COLORS.dim}Free plan: 50 files/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
-                console.log(`  ${COLORS.yellow}🏷  Use code ${COLORS.reset}${COLORS.bold}EARLYBIRD3${COLORS.reset}${COLORS.yellow} to lock Pro at $9/mo forever (expires May 1, 2026)${COLORS.reset}`);
-                console.log(`  ${COLORS.bold}  Pro $9/mo   → ${COLORS.cyan}https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3${COLORS.reset}`);
-                console.log(`  ${COLORS.bold}  Team $29/mo → ${COLORS.cyan}https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3${COLORS.reset}\n`);
-            }
-            verified = true;
+            printSignInSuccess(verifiedEmail, plan);
         } else {
             const err = await res.json() as { error?: string };
             console.log('');
@@ -664,12 +824,6 @@ ${COLORS.dim}We'll email you a magic link. No password needed.${COLORS.reset}
     } catch {
         console.log('');
         error('Network error — check your connection and try again.');
-        process.exit(1);
-    }
-
-    if (!verified) {
-        console.log(`\n\n  ${COLORS.yellow}⚠️  Could not verify token.${COLORS.reset}`);
-        console.log(`  ${COLORS.dim}Run ${COLORS.reset}${COLORS.cyan}poly-glot login${COLORS.reset}${COLORS.dim} again and paste the full magic link URL.${COLORS.reset}\n`);
         process.exit(1);
     }
 }

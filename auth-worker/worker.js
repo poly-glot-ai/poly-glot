@@ -405,12 +405,25 @@ async function handleLogin(request, env) {
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
-  // The web page at /?token=... fires a vscode:// deep link automatically,
-  // so VS Code users are signed in with zero copy-paste.
-  // Non-VS Code users (web, CLI) see the token panel as fallback.
-  const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const source    = body?.source ?? 'email';
-  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=${encodeURIComponent(source)}`;
+  // The web page at /?token=... fires a vscode:// deep link for VS Code users.
+  // CLI users pass callbackUrl=http://127.0.0.1:PORT/callback — the page POSTs
+  // the token there automatically, so the terminal signs in with zero copy-paste.
+  const baseUrl     = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+  const source      = body?.source ?? 'email';
+  const rawCallback = body?.callbackUrl ?? '';
+
+  // Validate callbackUrl — only allow localhost/127.0.0.1 to prevent open redirect
+  let callbackParam = '';
+  if (rawCallback) {
+    try {
+      const cbUrl = new URL(rawCallback);
+      if (cbUrl.hostname === '127.0.0.1' || cbUrl.hostname === 'localhost') {
+        callbackParam = `&callbackUrl=${encodeURIComponent(rawCallback)}`;
+      }
+    } catch { /* invalid URL — ignore */ }
+  }
+
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=${encodeURIComponent(source)}${callbackParam}`;
 
   // ── Send email ──────────────────────────────────────────────
   const result = await sendMagicLinkEmail(env, email, magicLink);

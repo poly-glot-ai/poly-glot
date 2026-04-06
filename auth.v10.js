@@ -1034,24 +1034,46 @@
           var source = new URLSearchParams(window.location.search).get('source') || '';
           var isVscodeSource = source.indexOf('vscode') !== -1;
 
+          // ── CLI callback — POST token to local server if callbackUrl present ──
+          // CLI v2.1.35+ starts http://127.0.0.1:PORT/callback before sending the
+          // magic link. We POST the session token there so the terminal auto-signs
+          // in with zero copy-paste. Security: worker only embeds localhost URLs.
+          var callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl') || '';
+          var isCliSource = source === 'cli' || callbackUrl !== '';
+          if (callbackUrl) {
+            fetch(callbackUrl, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ token: magicToken, email: email, plan: plan }),
+            })
+            .then(function () {
+              if (typeof gtag === 'function') gtag('event', 'cli_callback_success', { plan: plan });
+            })
+            .catch(function () {
+              // Callback server may have already closed — non-fatal, user sees token panel
+            });
+          }
+
           setTimeout(function () {
             // Always try — if VS Code isn't open browser just ignores or shows open dialog
             window.location.href = vsCodeUri;
             if (typeof gtag === 'function') gtag('event', 'vscode_deep_link_fired', { plan: plan, source: source });
           }, 400);
 
-          // Welcome toast — different message for VS Code vs web users
+          // Welcome toast — different message per surface
           if (PAID_PLANS.indexOf(plan) !== -1) {
             var planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
             showToast('🎉 ' + planDisplay + ' plan active! VS Code is being signed in automatically…', 6000);
+          } else if (isCliSource) {
+            showToast('✅ Signed in! Switch back to your terminal — it\'s already authenticated.', 7000);
           } else if (isVscodeSource) {
             showToast('✅ Signed in! VS Code is being activated automatically — switch back to it now.', 7000);
           } else {
             showToast('👋 Signed in! Copy your token below to use VS Code or CLI.', 6000);
           }
 
-          // Show session token panel — fallback for CLI users + web users
-          // VS Code users can ignore it (they're already being signed in via deep link)
+          // Show session token panel — fallback for web users and CLI timeout/fallback
+          // VS Code and CLI (auto-callback) users can ignore it
           showSessionTokenPanel(magicToken, email, plan, isVscodeSource);
 
           if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan, source: source });
