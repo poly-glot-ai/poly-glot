@@ -826,6 +826,24 @@
       transition: color 0.15s;
     }
     .pga-footer__link:hover { color: var(--text-muted); }
+    .pga-footer__pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .pga-footer__pill:hover {
+      color: var(--text);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+    }
 
     /* ── Misc utils ────────────────────────────────────────── */
     .highlight-purple { color: var(--accent-prompt2); font-weight: 600; }
@@ -1167,6 +1185,14 @@
           <div style="font-size:11px;color:var(--text-dim);">YouTube, TikTok, ads with hooks</div>
           <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 8px;border-radius:10px;">PRO</span>
         </div>
+        <!-- More coming soon card -->
+        <div style="grid-column:1/-1;background:rgba(167,139,250,.06);border:1px dashed rgba(167,139,250,.25);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;">
+          <span style="font-size:16px;">🚀</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent-prompt2);">More templates coming soon</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">HR, Sales, Product, Finance, Healthcare &amp; more</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1503,21 +1529,40 @@
   <!-- ══ FOOTER ════════════════════════════════════════════════ -->
   <div class="pg2-divider"></div>
   <footer class="pga-footer" role="contentinfo">
-    <div style="width:100%;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-        <div class="pga-footer__brand">
-          <span>poly-glot-prompt.ai</span> — part of the <a href="https://poly-glot.ai/" style="color:var(--accent);text-decoration:none;">Poly-Glot AI</a> suite · <a href="mailto:support@poly-glot.ai" style="color:var(--text-dim);text-decoration:none;">support@poly-glot.ai</a>
-        </div>
-        <nav class="pga-footer__links" aria-label="Footer links">
-          <a href="https://poly-glot.ai/" class="pga-footer__link">Poly-Glot AI</a>
-          <a href="https://poly-glot.ai/#pg-cli-section" class="pga-footer__link">CLI</a>
-          <a href="https://poly-glot.ai/#pg-vscode-section" class="pga-footer__link">VS Code</a>
-          <a href="https://poly-glot.ai/privacy/" class="pga-footer__link">Privacy</a>
-        </nav>
+    <div style="width:100%;text-align:center;">
+
+      <!-- Brand -->
+      <div class="pga-footer__brand" style="justify-content:center;margin-bottom:20px;">
+        <picture>
+          <source srcset="../parrot-logo.webp" type="image/webp">
+          <img src="../parrot-logo.png" alt="Poly-Glot" style="width:22px;height:22px;border-radius:5px;vertical-align:middle;margin-right:8px;">
+        </picture>
+        <span>poly-glot-prompt.ai</span> — part of the <a href="https://poly-glot.ai/" style="color:var(--accent);text-decoration:none;">Poly-Glot AI</a> suite
       </div>
-      <p style="font-size:11px;color:var(--text-dim);margin-top:14px;line-height:1.6;">
+
+      <!-- Product links grid -->
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 4px;margin-bottom:20px;">
+        <a href="https://poly-glot.ai/" class="pga-footer__link pga-footer__pill">🦜 Poly-Glot AI</a>
+        <a href="https://poly-glot.ai/#pg-generator-section" class="pga-footer__link pga-footer__pill">✨ Doc Generator</a>
+        <a href="https://poly-glot.ai/#pg-cli-section" class="pga-footer__link pga-footer__pill">⌨️ CLI Tool</a>
+        <a href="https://poly-glot.ai/#pg-vscode-section" class="pga-footer__link pga-footer__pill">💻 VS Code Extension</a>
+        <a href="https://poly-glot.ai/#pg-copilot-section" class="pga-footer__link pga-footer__pill">🤖 Copilot Chat</a>
+        <a href="https://poly-glot.ai/#pg-github-app-section" class="pga-footer__link pga-footer__pill">🐙 GitHub App</a>
+        <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pga-footer__link pga-footer__pill">🌐 Chrome Extension</a>
+        <a href="https://poly-glot.ai/prompt/" class="pga-footer__link pga-footer__pill" style="color:var(--accent-prompt2);border-color:rgba(167,139,250,.25);">✏️ Prompt Studio</a>
+        <a href="https://poly-glot.ai/#pg-pricing-section" class="pga-footer__link pga-footer__pill">💎 Pricing</a>
+        <a href="https://poly-glot.ai/privacy/" class="pga-footer__link pga-footer__pill">🔒 Privacy</a>
+        <a href="mailto:support@poly-glot.ai" class="pga-footer__link pga-footer__pill">✉️ Support</a>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:var(--border);margin:0 auto 16px;max-width:600px;"></div>
+
+      <!-- Copyright -->
+      <p style="font-size:11px;color:var(--text-dim);line-height:1.7;">
         © 2026 <strong style="color:var(--text-muted);">Harold Moses</strong> · <span style="color:var(--accent-prompt);">poly-glot.ai</span> is a registered domain owned by Harold Moses · Built with 🪿 Goose · <a href="https://poly-glot.ai/privacy/" style="color:var(--text-dim);text-decoration:underline;text-decoration-color:rgba(100,116,139,0.4);">Privacy Policy</a>
       </p>
+
     </div>
   </footer>
 
@@ -1726,6 +1771,22 @@
   <!-- Auth: load poly-glot auth system -->
   <script defer src="../auth.v11.js"></script>
 
+  <!-- ══ AUTH GATE BANNER (matches poly-glot.ai pattern) ══════ -->
+  <div id="pgaAuthGate" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:500;width:min(560px,calc(100vw - 32px));">
+    <div style="background:#12131e;border:1px solid rgba(167,139,250,.35);border-radius:16px;padding:20px 24px;box-shadow:0 16px 48px rgba(0,0,0,.7);backdrop-filter:blur(12px);display:flex;gap:16px;align-items:flex-start;">
+      <div style="font-size:28px;flex-shrink:0;line-height:1;">🔑</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">Sign in to use Prompt Studio</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Free account — no credit card. Access 13 templates, version history, and one-click sharing.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="pgaAuthGateDismiss(); pgPromptSignIn('auth_gate');" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.boxShadow='0 4px 14px rgba(124,58,237,.4)'" onmouseout="this.style.boxShadow='none'">🚀 Sign Up Free</button>
+          <button onclick="pgaAuthGateDismiss(); pgPromptSignIn('auth_gate_signin');" style="background:transparent;color:var(--accent);border:1px solid rgba(125,211,252,.25);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(125,211,252,.5)'" onmouseout="this.style.borderColor='rgba(125,211,252,.25)'">Sign In</button>
+        </div>
+      </div>
+      <button onclick="pgaAuthGateDismiss()" aria-label="Dismiss" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">×</button>
+    </div>
+  </div>
+
   <script>
     // ── Auth sign-in helper ──────────────────────────────────
     function pgPromptSignIn(source) {
@@ -1738,6 +1799,42 @@
         window.location.href = 'https://poly-glot.ai/?signin=1&from=prompt';
       }
     }
+
+    // ── Auth gate banner ─────────────────────────────────────
+    // Show unless user is already authed (body.pg-authed added by auth.v11.js)
+    let _gateDismissed = false;
+    function pgaAuthGateShow() {
+      if (_gateDismissed) return;
+      if (document.body.classList.contains('pg-authed')) return;
+      document.getElementById('pgaAuthGate').style.display = 'block';
+    }
+    function pgaAuthGateDismiss() {
+      _gateDismissed = true;
+      const gate = document.getElementById('pgaAuthGate');
+      gate.style.opacity = '0';
+      gate.style.transform = 'translateX(-50%) translateY(12px)';
+      gate.style.transition = 'opacity .25s, transform .25s';
+      setTimeout(() => { gate.style.display = 'none'; gate.style.opacity=''; gate.style.transform='translateX(-50%)'; gate.style.transition=''; }, 260);
+    }
+    // Dismiss on Escape
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') pgaAuthGateDismiss(); });
+    // Show gate after 8 seconds if not authed — gives user time to read first
+    setTimeout(pgaAuthGateShow, 8000);
+    // Also show gate when any gated action button is clicked and user is NOT authed
+    // (intercept the existing onclick= buttons by wrapping pgPromptSignIn)
+    const _origPgPromptSignIn = pgPromptSignIn;
+    window.pgPromptSignIn = function(source) {
+      pgaAuthGateDismiss();
+      _origPgPromptSignIn(source);
+    };
+    // Hide gate permanently once auth.v11 marks body as authed
+    const _bodyObserver = new MutationObserver(() => {
+      if (document.body.classList.contains('pg-authed')) {
+        pgaAuthGateDismiss();
+        _bodyObserver.disconnect();
+      }
+    });
+    _bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     // ── Templates data ───────────────────────────────────────
     const TEMPLATES = [
