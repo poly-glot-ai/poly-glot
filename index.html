@@ -654,85 +654,7 @@
       color: #000;
     }
 
-    .pg2-install-counter {
-      background: linear-gradient(135deg, rgba(99,102,241,.08) 0%, rgba(16,185,129,.08) 100%);
-      border-top: 1px solid rgba(99,102,241,.15);
-      border-bottom: 1px solid rgba(99,102,241,.15);
-      padding: 20px 24px;
-      width: 100%;
-      position: relative;
-    }
-    .pg2-install-counter__inner {
-      max-width: 640px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-    }
-    .pg2-install-counter__stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      flex: 1;
-      position: relative;
-    }
-    .pg2-install-counter__number {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      background: linear-gradient(135deg, #a78bfa, #34d399);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .pg2-install-counter__label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      white-space: nowrap;
-    }
-    .pg2-install-counter__divider {
-      width: 1px;
-      height: 36px;
-      background: rgba(255,255,255,.1);
-      flex-shrink: 0;
-      margin: 0 24px;
-    }
-    .pg2-install-counter__live-label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      margin-bottom: 10px;
-    }
-    .pg2-install-counter__live-text {
-      font-size: 11px;
-      color: rgba(52, 211, 153, 0.75);
-      letter-spacing: 0.04em;
-      font-weight: 500;
-    }
-    .pg2-install-counter__pulse {
-      position: relative;
-      top: auto;
-      left: auto;
-      transform: none;
-      flex-shrink: 0;
-      width: 7px;
-      height: 7px;
-      background: #34d399;
-      border-radius: 50%;
-      animation: pgCounterPulse 2s ease-in-out infinite;
-    }
-    @keyframes pgCounterPulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,.5); opacity: 1; }
-      50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0); opacity: .8; }
-    }
+
     @media (max-width: 600px) {
       /* ── Demo gate overlay ───────────────────────────────────────────────── */
     #pg2DemoGate {
@@ -770,18 +692,8 @@
       color: #000;
     }
 
-    .pg2-install-counter { padding: 16px 12px; }
-      .pg2-install-counter__inner { flex-wrap: wrap; gap: 14px 0; justify-content: center; }
-      .pg2-install-counter__stat { flex: 0 0 48%; min-width: 0; }
-      .pg2-install-counter__divider { display: none !important; }
-      .pg2-install-counter__number { font-size: 22px; }
-      .pg2-install-counter__label { font-size: 10px; }
-      .pg2-install-counter__live-text { font-size: 10px; }
     }
-    @media (max-width: 380px) {
-      .pg2-install-counter__number { font-size: 18px; }
-      .pg2-install-counter__stat { flex: 0 0 48%; }
-    }
+
 
     /* ── PRIVACY TRUST BAR ──────────────────────────────────── */
     .pg2-trust-bar {
@@ -1971,36 +1883,7 @@
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════════
-     REAL-TIME INSTALL COUNTER
-     ════════════════════════════════════════════════════════════ -->
-<div class="pg2-install-counter" id="pg2InstallCounter" aria-label="Live install statistics">
-  <div class="pg2-install-counter__live-label">
-    <span class="pg2-install-counter__pulse"></span>
-    <span class="pg2-install-counter__live-text">Live · Total Installs · updated periodically</span>
-  </div>
-  <div class="pg2-install-counter__inner">
-    <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterVSCode" data-target="183">183</span>
-      <span class="pg2-install-counter__label">VS Code</span>
-    </div>
-    <div class="pg2-install-counter__divider"></div>
-    <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterOVX" data-target="1854">1854</span>
-      <span class="pg2-install-counter__label">Open VSX</span>
-    </div>
-    <div class="pg2-install-counter__divider"></div>
-    <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterChrome" data-target="0">0</span>
-      <span class="pg2-install-counter__label">Chrome <span class="pg2-coming-soon pg2-coming-soon--md">Soon</span></span>
-    </div>
-    <div class="pg2-install-counter__divider"></div>
-    <div class="pg2-install-counter__stat">
-      <span class="pg2-install-counter__number" id="pg2CounterGitHub" data-target="0">0</span>
-      <span class="pg2-install-counter__label">GitHub repos</span>
-    </div>
-  </div>
-</div>
+
 
 <!-- ════════════════════════════════════════════════════════════
      PRIVACY TRUST BAR
