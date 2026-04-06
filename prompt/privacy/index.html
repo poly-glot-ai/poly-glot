@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Poly-Glot Prompt Studio</title>
+  <meta name="description" content="Poly-Glot Prompt Studio privacy policy. Learn how voice input, templates, API keys, and MCP session tokens are handled. Your prompts stay yours.">
+  <link rel="canonical" href="https://poly-glot.ai/prompt/privacy/">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:              #0a0b14;
+      --bg-alt:          #0f1117;
+      --bg-card:         #13141f;
+      --accent:          #7dd3fc;
+      --accent-prompt:   #a78bfa;
+      --accent2:         #38bdf8;
+      --purple:          #a78bfa;
+      --green:           #10b981;
+      --orange:          #f59e0b;
+      --border:          rgba(255,255,255,0.07);
+      --border-accent:   rgba(167,139,250,0.25);
+      --text:            #f1f5f9;
+      --text-muted:      #94a3b8;
+      --text-dim:        #64748b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,11,20,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav__logo {
+      font-size: 18px; font-weight: 700; text-decoration: none; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav__logo .prompt-badge {
+      font-size: 11px; font-weight: 600;
+      background: rgba(167,139,250,.15);
+      border: 1px solid var(--border-accent);
+      color: var(--accent-prompt);
+      padding: 2px 8px; border-radius: 99px;
+      letter-spacing: .04em;
+    }
+    .nav__back {
+      font-size: 13px; color: var(--text-muted); text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: color .15s;
+    }
+    .nav__back:hover { color: var(--accent-prompt); }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 72px 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero__badge {
+      display: inline-block;
+      background: rgba(167,139,250,.1);
+      border: 1px solid var(--border-accent);
+      color: var(--accent-prompt);
+      font-size: 12px; font-weight: 600; letter-spacing: .06em;
+      padding: 4px 12px; border-radius: 99px; margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 800; margin: 0 0 12px;
+      letter-spacing: -.02em;
+    }
+    .hero h1 span { color: var(--accent-prompt); }
+    .hero__sub {
+      color: var(--text-muted); font-size: 16px; margin: 0 auto;
+      max-width: 560px;
+    }
+    .hero__date {
+      margin-top: 16px; font-size: 13px; color: var(--text-dim);
+    }
+
+    /* ── TL;DR card ── */
+    .tldr {
+      max-width: 760px; margin: 48px auto 0;
+      background: rgba(16,185,129,.07);
+      border: 1px solid rgba(16,185,129,.22);
+      border-radius: 12px; padding: 28px 32px;
+    }
+    .tldr__title {
+      font-size: 13px; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--green); margin-bottom: 16px;
+    }
+    .tldr__list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .tldr__list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: 15px; color: var(--text);
+    }
+    .tldr__list li span:first-child { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Voice callout card ── */
+    .voice-callout {
+      max-width: 760px; margin: 0 auto 0;
+      background: rgba(167,139,250,.07);
+      border: 1px solid var(--border-accent);
+      border-radius: 12px; padding: 22px 28px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .voice-callout__icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+    .voice-callout__title {
+      font-size: 15px; font-weight: 700; color: var(--accent-prompt); margin-bottom: 6px;
+    }
+    .voice-callout__body { font-size: 14px; color: var(--text-muted); margin: 0; }
+
+    /* ── Main content ── */
+    .content {
+      max-width: 760px; margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+
+    .section { margin-bottom: 56px; }
+
+    .section__num {
+      font-size: 11px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent-prompt);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 22px; font-weight: 700;
+      margin: 0 0 16px; letter-spacing: -.01em;
+    }
+
+    p { color: var(--text-muted); margin: 0 0 14px; }
+
+    ul.prose {
+      color: var(--text-muted);
+      padding-left: 20px; margin: 0 0 14px;
+    }
+    ul.prose li { margin-bottom: 8px; }
+
+    .highlight {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-prompt);
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 20px 0;
+    }
+    .highlight strong { color: var(--text); }
+
+    .highlight--orange {
+      border-left-color: var(--orange);
+    }
+    .highlight--green {
+      border-left-color: var(--green);
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 2px 8px; border-radius: 99px;
+      margin-right: 4px; vertical-align: middle;
+    }
+    .tag--never  { background: rgba(239,68,68,.12);  color: #f87171; }
+    .tag--local  { background: rgba(16,185,129,.12); color: #34d399; }
+    .tag--user   { background: rgba(167,139,250,.12); color: var(--accent-prompt); }
+    .tag--pro    { background: rgba(245,158,11,.12); color: var(--orange); }
+
+    .table-wrap { overflow-x: auto; margin: 20px 0; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 10px 16px; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    td:first-child { color: var(--text); font-weight: 500; }
+    tr:last-child td { border-bottom: none; }
+
+    code {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 13px;
+      font-family: 'Fira Mono', 'Cascadia Code', monospace;
+      color: var(--accent);
+    }
+
+    a { color: var(--accent-prompt); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 0 0 56px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 13px; color: var(--text-dim);
+    }
+    .footer a { color: var(--text-muted); }
+    .footer a:hover { color: var(--accent-prompt); }
+
+    @media (max-width: 600px) {
+      .tldr, .voice-callout { padding: 20px; }
+      .content { padding: 40px 16px 64px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <a href="/prompt/" class="nav__logo">
+      ✨ Prompt Studio <span class="prompt-badge">Privacy</span>
+    </a>
+    <a href="/privacy/" class="nav__back">← Main Privacy Policy</a>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero__badge">Privacy Policy</div>
+    <h1>Prompt Studio <span>Privacy</span></h1>
+    <p class="hero__sub">
+      Your prompts are yours. This page explains how Prompt Studio handles
+      voice audio, template data, API keys, and MCP session tokens.
+    </p>
+    <p class="hero__date">Last updated: <strong>April 6, 2026</strong> · Effective: April 6, 2026</p>
+
+    <!-- TL;DR -->
+    <div class="tldr">
+      <div class="tldr__title">✅ TL;DR — The short version</div>
+      <ul class="tldr__list">
+        <li><span>🎙️</span><span><strong>Voice audio is never recorded or stored.</strong> Transcription happens live in your browser using the Web Speech API — audio never leaves your device.</span></li>
+        <li><span>📝</span><span><strong>Your templates live in your browser.</strong> All prompt templates, variables, and version history are stored in your browser's localStorage — not on our servers.</span></li>
+        <li><span>🔑</span><span><strong>We never see your API keys.</strong> AI provider keys you enter go directly from your browser to your chosen AI provider. Prompt Studio does not proxy or log them.</span></li>
+        <li><span>🔗</span><span><strong>MCP session tokens are short-lived.</strong> Pro/Team tokens are generated on login and scoped to your account only. They expire automatically.</span></li>
+        <li><span>📤</span><span><strong>Shared prompts are opt-in.</strong> Nothing is shared publicly unless you explicitly click "Share via URL". You control visibility.</span></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Voice callout (prominent) -->
+  <div style="max-width:760px;margin:32px auto 0;padding:0 24px;">
+    <div class="voice-callout">
+      <div class="voice-callout__icon">🎙️</div>
+      <div>
+        <div class="voice-callout__title">Voice Input — Zero Audio Retention</div>
+        <p class="voice-callout__body">
+          Voice input uses your browser's built-in <strong style="color:var(--text)">Web Speech API</strong>
+          (the same technology used by browser address bars and accessibility tools).
+          Audio is processed <em>entirely on your device</em> — no audio stream, recording,
+          or transcript is ever sent to Poly-Glot servers. Once you stop speaking,
+          the transcript text may be used to populate a prompt field — that's it.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <hr class="divider">
+
+    <!-- 01 -->
+    <div class="section" id="s01">
+      <div class="section__num">01</div>
+      <h2>What is Prompt Studio?</h2>
+      <p>
+        Poly-Glot Prompt Studio (<code>poly-glot-prompt.ai</code>) is a browser-based tool for
+        creating, editing, testing, versioning, and sharing prompt templates for AI language models.
+        It is part of the Poly-Glot AI product suite operated by <strong>Harold Moses</strong>.
+      </p>
+      <p>
+        This privacy policy covers only Prompt Studio. For the main Poly-Glot AI tool
+        (doc generation, VS Code extension, CLI, GitHub App), see the
+        <a href="/privacy/">main privacy policy</a>.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 02 -->
+    <div class="section" id="s02">
+      <div class="section__num">02</div>
+      <h2>🎙️ Voice Input</h2>
+
+      <p>
+        Prompt Studio offers an optional voice input feature that lets you dictate prompt text
+        hands-free in 40+ languages.
+      </p>
+
+      <div class="highlight">
+        <strong>How it works technically:</strong> Voice input uses the browser-native
+        <code>SpeechRecognition</code> / <code>webkitSpeechRecognition</code> Web API.
+        When you press the mic button, your browser (not Prompt Studio's servers) activates
+        your microphone and performs speech-to-text processing — typically on-device or via
+        the browser vendor's own speech service (e.g. Google Chrome's speech service for
+        Chrome users). Poly-Glot never receives, stores, or has access to your audio.
+      </div>
+
+      <p><strong>What we collect from voice input: nothing.</strong></p>
+
+      <ul class="prose">
+        <li><span class="tag tag--never">Never</span> Audio recordings of your speech</li>
+        <li><span class="tag tag--never">Never</span> Voice transcripts stored on our servers</li>
+        <li><span class="tag tag--never">Never</span> Language or accent data</li>
+        <li><span class="tag tag--never">Never</span> Microphone access outside of active recording sessions</li>
+        <li><span class="tag tag--local">Local only</span> The final transcript text is placed into the prompt editor in your browser — it is stored in localStorage with your template if you save it</li>
+      </ul>
+
+      <p>
+        <strong>Browser vendor note:</strong> Chrome, Edge, and Safari each route speech recognition
+        differently. Chrome sends audio to Google's speech service to produce the transcript.
+        This is governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>,
+        not Poly-Glot's. If you prefer fully on-device processing, use a browser with local
+        speech recognition support or disable voice input and type manually.
+      </p>
+
+      <div class="highlight highlight--orange">
+        <strong>Microphone permission:</strong> Your browser will ask for microphone access the first
+        time you use voice input. You can revoke this at any time in your browser's site settings.
+        Revoking mic access does not affect any other Prompt Studio feature.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 03 -->
+    <div class="section" id="s03">
+      <div class="section__num">03</div>
+      <h2>📝 Prompt Templates &amp; Version History</h2>
+
+      <p>
+        All prompt templates you create, edit, or save in Prompt Studio are stored in your
+        browser's <code>localStorage</code> — on your device, in your browser profile.
+      </p>
+
+      <ul class="prose">
+        <li><span class="tag tag--local">Local only</span> Template name, body, variable definitions</li>
+        <li><span class="tag tag--local">Local only</span> Version history (up to 3 versions on Free, unlimited on Pro/Team)</li>
+        <li><span class="tag tag--local">Local only</span> Selected AI provider, model, and language preferences</li>
+      </ul>
+
+      <p>
+        This means your templates are private by default — they exist only in the browser
+        you created them in. If you clear your browser data or use a different browser/device,
+        your locally-saved templates will not be present. We recommend using the
+        <strong>export/copy</strong> feature to back up important templates.
+      </p>
+
+      <div class="highlight highlight--green">
+        <strong>Shared templates (opt-in only):</strong> If you click "Share via URL" (Pro feature),
+        a copy of the template body is stored on Poly-Glot servers and assigned a short URL.
+        The shared copy contains only the template text and variable names — no account info,
+        no API keys, no version history. You can delete a shared URL at any time from your
+        Prompt Studio dashboard.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Where stored</th><th>Who can see it</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Templates (not shared)</td>
+              <td>Your browser localStorage</td>
+              <td>You only</td>
+            </tr>
+            <tr>
+              <td>Templates (shared via URL)</td>
+              <td>Poly-Glot servers (Cloudflare KV)</td>
+              <td>Anyone with the link</td>
+            </tr>
+            <tr>
+              <td>Version history</td>
+              <td>Your browser localStorage</td>
+              <td>You only</td>
+            </tr>
+            <tr>
+              <td>Variable values you fill in</td>
+              <td>Your browser (session memory)</td>
+              <td>You only — never sent to us</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 04 -->
+    <div class="section" id="s04">
+      <div class="section__num">04</div>
+      <h2>🔑 API Keys</h2>
+
+      <p>
+        Prompt Studio supports testing prompts directly against AI providers
+        (OpenAI, Anthropic, Google Gemini, and others) using API keys you supply.
+      </p>
+
+      <div class="highlight">
+        <strong>Your API keys are never sent to Poly-Glot.</strong> When you enter an API key in
+        Prompt Studio, it is stored in your browser's localStorage and sent directly from your
+        browser to the AI provider's API endpoint when you run a test. The key does not pass
+        through any Poly-Glot server or proxy.
+      </div>
+
+      <ul class="prose">
+        <li><span class="tag tag--local">Local only</span> API keys stored in browser localStorage — never transmitted to us</li>
+        <li><span class="tag tag--never">Never</span> API keys logged, proxied, or cached by Poly-Glot</li>
+        <li><span class="tag tag--user">Your responsibility</span> Rotating or revoking keys if you believe they have been compromised</li>
+      </ul>
+
+      <p>
+        <strong>Best practice:</strong> Use scoped API keys with usage limits set in your AI
+        provider dashboard. Never paste production keys into browser tools.
+      </p>
+
+      <p>Your use of AI providers via Prompt Studio is subject to their respective privacy policies:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Privacy Policy</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>OpenAI</td><td><a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">openai.com/policies/privacy-policy ↗</a></td></tr>
+            <tr><td>Anthropic</td><td><a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">anthropic.com/privacy ↗</a></td></tr>
+            <tr><td>Google (Gemini)</td><td><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy ↗</a></td></tr>
+            <tr><td>Mistral</td><td><a href="https://mistral.ai/privacy/" target="_blank" rel="noopener">mistral.ai/privacy ↗</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 05 -->
+    <div class="section" id="s05">
+      <div class="section__num">05</div>
+      <h2>🔗 MCP Session Tokens</h2>
+
+      <p>
+        The Poly-Glot Prompt Studio MCP (Model Context Protocol) server allows Pro and Team
+        subscribers to use Prompt Studio tools directly from any MCP-compatible AI client
+        (e.g. Claude Desktop, Cursor, VS Code Copilot).
+      </p>
+
+      <p>
+        To authenticate, a session token (<code>PG_PROMPT_SESSION_TOKEN</code>) is issued
+        to your account after login. Here's how it works:
+      </p>
+
+      <ul class="prose">
+        <li>Tokens are tied to your account and cannot be transferred</li>
+        <li>Tokens expire after <strong>30 days</strong> of inactivity and can be manually revoked from your dashboard at any time</li>
+        <li>Each MCP API call logs: timestamp, tool name called, and quota consumed — <strong>not</strong> the prompt content</li>
+        <li>Prompt content sent through MCP tool calls is forwarded to your configured AI provider directly — it is not stored by Poly-Glot</li>
+        <li>Token usage is tracked to enforce plan limits (Free: blocked · Pro: 200 calls/mo · Team: 1,000/mo)</li>
+      </ul>
+
+      <div class="highlight highlight--orange">
+        <strong>Treat your MCP session token like a password.</strong> Anyone with your token
+        can make API calls against your quota. If you suspect a token has been compromised,
+        revoke it immediately from your Prompt Studio dashboard and generate a new one.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Logged?</th><th>Retention</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>MCP tool name called</td>
+              <td>Yes</td>
+              <td>30 days rolling</td>
+            </tr>
+            <tr>
+              <td>Timestamp of call</td>
+              <td>Yes</td>
+              <td>30 days rolling</td>
+            </tr>
+            <tr>
+              <td>Quota consumed</td>
+              <td>Yes</td>
+              <td>Current billing period</td>
+            </tr>
+            <tr>
+              <td>Prompt content / template body</td>
+              <td><strong>No</strong></td>
+              <td>Not stored</td>
+            </tr>
+            <tr>
+              <td>AI provider response</td>
+              <td><strong>No</strong></td>
+              <td>Not stored</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 06 -->
+    <div class="section" id="s06">
+      <div class="section__num">06</div>
+      <h2>👤 Account &amp; Authentication</h2>
+
+      <p>
+        Prompt Studio uses the same authentication system as poly-glot.ai, powered by
+        Cloudflare Workers. When you sign up or log in:
+      </p>
+
+      <ul class="prose">
+        <li>Your <strong>email address</strong> is stored in Cloudflare KV (encrypted at rest) to manage your account and subscription tier</li>
+        <li>A <strong>session token</strong> (JWT) is issued and stored in your browser's localStorage</li>
+        <li>No passwords are stored — authentication uses a magic link / OAuth flow</li>
+        <li>Your plan tier (Free / Pro / Team) is stored server-side to enforce feature gates</li>
+      </ul>
+
+      <p>
+        To delete your account and all associated data, email
+        <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a> with the subject
+        "Delete my Prompt Studio account". We will process deletion within 5 business days.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 07 -->
+    <div class="section" id="s07">
+      <div class="section__num">07</div>
+      <h2>💳 Subscriptions &amp; Billing</h2>
+
+      <p>
+        Pro and Team subscriptions are handled by <strong>Stripe</strong>.
+        Poly-Glot never sees or stores your full payment card details — all billing
+        data is handled entirely by Stripe and governed by
+        <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Stripe's Privacy Policy ↗</a>.
+      </p>
+
+      <ul class="prose">
+        <li>Your email address is shared with Stripe to create a billing customer record</li>
+        <li>Your subscription status (active / cancelled) is stored in Cloudflare KV to gate Pro/Team features</li>
+        <li>No credit card numbers, CVVs, or billing addresses are ever stored by Poly-Glot</li>
+      </ul>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 08 -->
+    <div class="section" id="s08">
+      <div class="section__num">08</div>
+      <h2>🍪 Cookies &amp; Local Storage</h2>
+
+      <p>Prompt Studio uses <strong>browser localStorage</strong> (not cookies) to store:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Purpose</th><th>Clearable?</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Session token (<code>pg_token</code>)</td>
+              <td>Keeps you logged in</td>
+              <td>Yes — logs you out</td>
+            </tr>
+            <tr>
+              <td>Saved templates</td>
+              <td>Persists your prompt library locally</td>
+              <td>Yes — deletes local templates</td>
+            </tr>
+            <tr>
+              <td>Version history</td>
+              <td>Tracks template edits</td>
+              <td>Yes — clears history</td>
+            </tr>
+            <tr>
+              <td>API key (optional)</td>
+              <td>Remembers your AI provider key</td>
+              <td>Yes — re-enter next time</td>
+            </tr>
+            <tr>
+              <td>Selected provider / model</td>
+              <td>Remembers your AI preferences</td>
+              <td>Yes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        To clear all Prompt Studio localStorage, open your browser's developer tools
+        (<code>F12</code> → Application → Local Storage → <code>poly-glot.ai</code>) and
+        clear the relevant keys, or clear all site data from your browser's privacy settings.
+      </p>
+
+      <p>
+        Standard web analytics (Google Analytics 4) is used on poly-glot.ai to understand
+        aggregate page traffic. This collects anonymized data only — no template content,
+        no API keys, no voice data.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 09 -->
+    <div class="section" id="s09">
+      <div class="section__num">09</div>
+      <h2>📤 Data You Choose to Share</h2>
+
+      <p>
+        All sharing features in Prompt Studio are strictly opt-in. Here's a summary:
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Feature</th><th>What's shared</th><th>Who sees it</th><th>Plan</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Share via URL</td>
+              <td>Template text + variable names</td>
+              <td>Anyone with the link</td>
+              <td><span class="tag tag--pro">Pro</span></td>
+            </tr>
+            <tr>
+              <td>Export (copy to clipboard)</td>
+              <td>Template text only</td>
+              <td>You control it entirely</td>
+              <td>Free</td>
+            </tr>
+            <tr>
+              <td>MCP tool call</td>
+              <td>Template name + rendered prompt</td>
+              <td>Your AI provider only</td>
+              <td><span class="tag tag--pro">Pro</span></td>
+            </tr>
+            <tr>
+              <td>Team template library</td>
+              <td>Templates shared with your team</td>
+              <td>Team members only</td>
+              <td><span class="tag tag--pro">Team</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 10 -->
+    <div class="section" id="s10">
+      <div class="section__num">10</div>
+      <h2>🗑️ Data Retention &amp; Deletion</h2>
+
+      <p>We retain the following data and for these periods:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Data</th><th>Retention period</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Account email</td>
+              <td>Until account deletion request</td>
+            </tr>
+            <tr>
+              <td>Subscription status</td>
+              <td>Until account deletion or subscription end</td>
+            </tr>
+            <tr>
+              <td>Shared template URLs</td>
+              <td>Until you delete the share link, or account deletion</td>
+            </tr>
+            <tr>
+              <td>MCP call logs (tool + timestamp)</td>
+              <td>30 days rolling</td>
+            </tr>
+            <tr>
+              <td>Voice audio</td>
+              <td><strong>Never stored</strong> — processed in browser only</td>
+            </tr>
+            <tr>
+              <td>Local templates / version history</td>
+              <td>Until you clear your browser data</td>
+            </tr>
+            <tr>
+              <td>API keys</td>
+              <td>Until you clear your browser localStorage</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        To request full account deletion: email
+        <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a> with subject
+        <strong>"Delete my Prompt Studio account"</strong>.
+        We will confirm deletion within 5 business days. This removes your email,
+        session tokens, subscription record, and any shared template URLs from our servers.
+        Your browser localStorage is under your control and must be cleared separately.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 11 -->
+    <div class="section" id="s11">
+      <div class="section__num">11</div>
+      <h2>👶 Children's Privacy</h2>
+      <p>
+        Prompt Studio is not directed at children under the age of 13. We do not knowingly
+        collect any information from children under 13. If you believe a child under 13 has
+        provided personal information, please contact us at
+        <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a>.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 12 -->
+    <div class="section" id="s12">
+      <div class="section__num">12</div>
+      <h2>🌍 GDPR &amp; CCPA</h2>
+
+      <p>
+        If you are located in the European Union or California, you have additional rights
+        regarding your personal data:
+      </p>
+
+      <ul class="prose">
+        <li><strong>Right to access</strong> — request a copy of the personal data we hold about you</li>
+        <li><strong>Right to erasure</strong> — request deletion of your account and associated server-side data</li>
+        <li><strong>Right to portability</strong> — request your data in a machine-readable format</li>
+        <li><strong>Right to object</strong> — object to processing of your personal data</li>
+        <li><strong>Right to correct</strong> — request correction of inaccurate data</li>
+      </ul>
+
+      <p>
+        Because most Prompt Studio data lives in your own browser (localStorage), you already
+        have direct control over the majority of your data. For server-side data (account record,
+        shared templates, MCP logs), contact us at
+        <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a>.
+      </p>
+
+      <div class="highlight">
+        <strong>No voice data GDPR concerns:</strong> Voice audio is processed entirely by your
+        browser and is never transmitted to or stored by Poly-Glot. There is no voice data
+        subject to GDPR access or deletion requests on our end.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 13 -->
+    <div class="section" id="s13">
+      <div class="section__num">13</div>
+      <h2>🔄 Changes to This Policy</h2>
+      <p>
+        We may update this privacy policy as Prompt Studio adds new features
+        (e.g. new AI providers, collaboration features, or platform integrations).
+        When we do, we will update the "Last updated" date at the top of this page.
+        Significant changes will be noted with a banner on the Prompt Studio landing page.
+        Continued use of Prompt Studio after changes constitutes acceptance of the updated policy.
+      </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 14 -->
+    <div class="section" id="s14">
+      <div class="section__num">14</div>
+      <h2>✉️ Contact</h2>
+      <p>
+        Questions about this privacy policy or how Prompt Studio handles your data?
+      </p>
+      <p>
+        Email us at <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a><br>
+        Or visit the main site: <a href="https://poly-glot.ai">poly-glot.ai</a>
+      </p>
+      <p>
+        For the main Poly-Glot AI privacy policy (covering the doc generator, VS Code extension,
+        CLI, GitHub App, and Chrome extension), see
+        <a href="https://poly-glot.ai/privacy/">poly-glot.ai/privacy/ ↗</a>
+      </p>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      © 2026 <strong style="color:#94a3b8">Harold Moses</strong> ·
+      <a href="/prompt/">Prompt Studio</a> ·
+      <a href="/">poly-glot.ai</a> ·
+      <a href="/privacy/">Main Privacy Policy</a> ·
+      <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a>
+    </p>
+    <p style="margin-top:6px;font-size:11px;">Built with 🪿 Goose · poly-glot.ai is a registered domain owned by Harold Moses</p>
+  </footer>
+
+</body>
+</html>
