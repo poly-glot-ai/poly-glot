@@ -1759,6 +1759,7 @@
       <a href="#pg-copilot-section" class="pg2-nav__link">Copilot</a>
       <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__link pg2-nav__link--chrome">🌐 Chrome<span class="pg2-coming-soon">Soon</span></a>
       <a href="#pg-github-app-section" class="pg2-nav__link pg2-nav__link--github">🐙 GitHub App</a>
+      <a href="/prompt/" class="pg2-nav__link" style="border:1px solid rgba(167,139,250,.3);color:#c4b5fd;border-radius:6px;padding:5px 10px;font-weight:700;" onclick="if(typeof gtag==='function') gtag('event','nav_prompt_click');">✨ Prompt Studio</a>
     </div>
 
     <!-- Right side — always visible -->
@@ -1787,6 +1788,7 @@
   <a href="#pg-copilot-section" class="pg2-nav__mobile-link" onclick="closeMobileMenu()">🤖 Copilot</a>
   <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pg2-nav__mobile-link pg2-nav__mobile-link--chrome" onclick="closeMobileMenu()">🌐 Chrome Extension<span class="pg2-coming-soon">Soon</span></a>
   <a href="#pg-github-app-section" class="pg2-nav__mobile-link pg2-nav__mobile-link--github" onclick="closeMobileMenu()">🐙 GitHub App</a>
+  <a href="/prompt/" class="pg2-nav__mobile-link" onclick="closeMobileMenu();" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.18));border:1px solid rgba(124,58,237,.4);border-radius:8px;color:#c4b5fd;font-weight:700;">✨ Prompt Studio</a>
   <a href="#" class="pg2-nav__mobile-link" id="mobileSignUpBtn" onclick="closeMobileMenu(); if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'mobile_signup\');}else{pgSignIn(\'mobile_signup\');} return false;" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.18));border:1px solid rgba(124,58,237,.4);border-radius:8px;margin-top:6px;color:#c4b5fd;font-weight:700;">🚀 Sign Up Free</a>
   <a href="#" class="pg2-nav__mobile-link" id="mobileSignInBtn" onclick="closeMobileMenu(); pgSignIn('mobile-menu'); return false;" style="border-top:1px solid rgba(125,211,252,.12);margin-top:6px;padding-top:14px;color:var(--accent);">🔑 Sign In</a>
 </div>
@@ -3147,6 +3149,7 @@ function pg2OpenAssistant(text) {
     <a href="https://chromewebstore.google.com/detail/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(66,133,244,.3);color:#60a5fa;">🌐 Chrome Web Store<span class="pg2-coming-soon pg2-coming-soon--md" style="margin-left:5px;">Soon</span> ↗</a>
     <a href="https://www.npmjs.com/package/poly-glot-ai-cli" target="_blank" rel="noopener" class="pg2-footer__link pg2-footer__link--cli">⌨️ CLI on npm ↗</a>
     <a href="#pg-copilot-section" class="pg2-footer__link pg2-footer__link--copilot">🤖 Copilot Chat ↗</a>
+    <a href="/prompt/" class="pg2-footer__link" style="border-color:rgba(167,139,250,.3);color:#c4b5fd;" onclick="if(typeof gtag==='function') gtag('event','footer_prompt_click');">✨ Prompt Studio ↗</a>
     <a href="https://github.com/apps/poly-glot-ai" target="_blank" rel="noopener" class="pg2-footer__link" style="border-color:rgba(99,102,241,.3);color:#818cf8;">🐙 GitHub App ↗</a>
   </div>
   <div class="pg2-footer__badges">
