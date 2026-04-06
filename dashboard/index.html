@@ -292,7 +292,7 @@ const ENDPOINTS = [
   { method:'GET',  key:'ovx',       url:'https://open-vsx.org/api/poly-glot-ai/poly-glot',                         label:'Open VSX',             desc:'Extension version + download count' },
   { method:'GET',  key:'resend',    url:'https://resend-status.com/api/v2/status.json',                              label:'Resend Status',        desc:'Email delivery · resend-status.com API' },
   { method:'GET',  key:'cfStatus',  url:'https://www.cloudflarestatus.com/api/v2/components.json',                   label:'Cloudflare Status',    desc:'Workers + KV + Pages component status' },
-  { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/get-usage?token=ping',                       label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/get-usage health probe' },
+  { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/ping',                                        label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/ping health probe' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
   { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 ];
@@ -425,13 +425,12 @@ async function collectAll() {
     m.cfUpdated   = map.cfStatus?.r?.data?.page?.updated_at ?? null;
   } catch { m.cfWorkers = null; }
 
-  // Auth Worker reachability — GET /api/auth/get-usage?token=ping
-  // Worker is alive if we get ANY HTTP response (200/404/etc) — 500 or network error = crashed
+  // Auth Worker reachability — GET /api/auth/ping → 200 { ok:true }
   try {
-    const s = map.authWorker?.r?.status;
-    m.authWorkerOk     = s != null && s !== 0 && s !== 500 && s !== 503;
-    m.authWorkerMs     = map.authWorker?.r?.ms ?? null;
-    m.authWorkerStatus = s ?? null;
+    const r = map.authWorker?.r;
+    m.authWorkerOk     = r?.ok === true && r?.data?.ok === true;
+    m.authWorkerMs     = r?.ms ?? null;
+    m.authWorkerStatus = r?.status ?? null;
   } catch { m.authWorkerOk = null; }
 
   return { epStatus, m };
