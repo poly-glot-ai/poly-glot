@@ -595,7 +595,7 @@ async function handleRefresh(request, env) {
 async function handleCheckPlan(request, env) {
   let body;
   try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+    return jsonResponse({ valid: false, error: 'token is required' }, 401);
   }
 
   const token = (body?.token ?? '').trim();
@@ -762,7 +762,7 @@ async function resolveToken(request, env, deleteAfter) {
   try {
     body = await request.json();
   } catch {
-    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+    return jsonResponse({ error: 'token is required' }, 401);
   }
 
   const { token } = body ?? {};
@@ -1339,7 +1339,7 @@ async function handleGithubAppTrackUsage(request, env) {
 async function handleCliTrackUsage(request, env) {
   let body;
   try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+    return jsonResponse({ error: 'token is required' }, 401);
   }
 
   const token = (body?.token ?? '').trim();
