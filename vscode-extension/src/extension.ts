@@ -28,7 +28,7 @@ const FIRST_NUDGE_AT   = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION  = '1.4.50';
+const MINIMUM_VERSION  = '1.4.51';
 const MAY1_2025        = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit(): number { return Date.now() >= MAY1_2025 ? 10 : 50; }
 
@@ -494,7 +494,7 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
     if (hasSession || hasLicenseToken) return;
 
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.50';
+    const ONBOARDING_VERSION = '1.4.51';
     const shownForVersion = extContext.globalState.get<string>('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION) return;
 
@@ -890,6 +890,8 @@ async function cmdGenerateComments(): Promise<void> {
 }
 
 async function cmdWhyComments(): Promise<void> {
+    // Account gate first — no token means no access regardless of plan
+    if (!await checkAndIncrementUsage()) return;
     if (!await hasPro()) { await showProGate('Why-comments'); return; }
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
@@ -917,6 +919,8 @@ async function cmdWhyComments(): Promise<void> {
 }
 
 async function cmdBothComments(): Promise<void> {
+    // Account gate first — no token means no access regardless of plan
+    if (!await checkAndIncrementUsage()) return;
     if (!await hasPro()) { await showProGate('Both mode'); return; }
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
@@ -1017,6 +1021,8 @@ async function _commentDocument(doc: vscode.TextDocument, mode: 'comment' | 'why
 }
 
 async function cmdExplainCode(): Promise<void> {
+    // Account gate — explain code requires a free account like all other commands
+    if (!await checkAndIncrementUsage()) return;
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showErrorMessage('Poly-Glot: No active editor.'); return; }
     if (!await requireApiKey()) return;

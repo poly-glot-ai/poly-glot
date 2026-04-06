@@ -62,7 +62,7 @@ const FIRST_NUDGE_AT = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION = '1.4.50';
+const MINIMUM_VERSION = '1.4.51';
 const MAY1_2025 = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit() { return Date.now() >= MAY1_2025 ? 10 : 50; }
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -450,7 +450,7 @@ async function maybeShowFirstRunOnboarding() {
     if (hasSession || hasLicenseToken)
         return;
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.50';
+    const ONBOARDING_VERSION = '1.4.51';
     const shownForVersion = extContext.globalState.get('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION)
         return;
@@ -775,6 +775,9 @@ async function cmdGenerateComments() {
     });
 }
 async function cmdWhyComments() {
+    // Account gate first — no token means no access regardless of plan
+    if (!await checkAndIncrementUsage())
+        return;
     if (!await hasPro()) {
         await showProGate('Why-comments');
         return;
@@ -804,6 +807,9 @@ async function cmdWhyComments() {
     });
 }
 async function cmdBothComments() {
+    // Account gate first — no token means no access regardless of plan
+    if (!await checkAndIncrementUsage())
+        return;
     if (!await hasPro()) {
         await showProGate('Both mode');
         return;
@@ -912,6 +918,9 @@ async function _commentDocument(doc, mode) {
     });
 }
 async function cmdExplainCode() {
+    // Account gate — explain code requires a free account like all other commands
+    if (!await checkAndIncrementUsage())
+        return;
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showErrorMessage('Poly-Glot: No active editor.');
