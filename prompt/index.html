@@ -2330,6 +2330,7 @@
     .pga-tpl-card--pro { border-color: rgba(245,158,11,.2); }
     .pga-tpl-card--pro:hover { border-color: rgba(245,158,11,.45); background: rgba(245,158,11,.05); }
     .pga-tpl-card--locked { cursor: default; opacity: .7; }
+    .pga-tpl-card--picked { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.04); }
 
     .pga-tpl-card__name {
       font-size: 15px; font-weight: 700; color: #7dd3fc;
@@ -2795,23 +2796,122 @@
     ];
 
     // ── Render template library ──────────────────────────────
+    // ── Template viewer modal ─────────────────────────────────
+    // Shown when a signed-in free user picks a template.
+    // Renders variables as input fields, shows the rendered prompt live,
+    // and provides a copy-to-clipboard button.
+
+    function openTemplateViewer(tpl) {
+      // Build or reuse viewer modal
+      var existing = document.getElementById('pgaTplViewer');
+      if (existing) existing.remove();
+
+      var varNames = Object.keys(tpl.vars);
+      var varFields = varNames.map(k =>
+        `<div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">${k.replace(/_/g,' ')}</label>
+          <input id="pgaTplVar_${k}" type="text" value="${tpl.vars[k] || ''}" placeholder="${tpl.vars[k] || k}"
+            style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
+            oninput="pgaRenderPrompt()" onfocus="this.style.borderColor='rgba(167,139,250,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.07)'">
+        </div>`
+      ).join('');
+
+      var modal = document.createElement('div');
+      modal.id = 'pgaTplViewer';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML = `
+        <div style="background:#13141f;border:1px solid rgba(167,139,250,.25);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div>
+              <div style="font-size:18px;font-weight:800;color:var(--text);">${tpl.name}</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">${tpl.desc}</div>
+            </div>
+            <button onclick="document.getElementById('pgaTplViewer').remove()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px;line-height:1;">×</button>
+          </div>
+          <!-- Variables -->
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-prompt);margin-bottom:14px;">Fill in your variables</div>
+            ${varFields || '<p style="color:var(--text-muted);font-size:13px;">No variables — this template is ready to use.</p>'}
+          </div>
+          <!-- Rendered prompt -->
+          <div style="padding:20px 24px;flex:1;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#34d399;margin-bottom:10px;">✅ Your rendered prompt</div>
+            <div id="pgaTplRendered" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;font-family:'Fira Code',monospace;min-height:80px;">${tpl.tpl}</div>
+          </div>
+          <!-- Actions -->
+          <div style="padding:16px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;">
+            <button id="pgaTplCopyBtn" onclick="pgaCopyPrompt()" style="flex:1;min-width:140px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;padding:11px 20px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;">📋 Copy Prompt</button>
+            <button onclick="document.getElementById('pgaTplViewer').remove()" style="flex:1;min-width:100px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:11px 20px;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;">Close</button>
+          </div>
+        </div>`;
+
+      // Close on backdrop click
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.remove();
+      });
+
+      document.body.appendChild(modal);
+
+      // Store template for rendering
+      window._pgaActiveTpl = tpl;
+      pgaRenderPrompt();
+    }
+
+    window.pgaRenderPrompt = function() {
+      var tpl = window._pgaActiveTpl;
+      if (!tpl) return;
+      var rendered = tpl.tpl;
+      Object.keys(tpl.vars).forEach(function(k) {
+        var el = document.getElementById('pgaTplVar_' + k);
+        var val = el ? (el.value.trim() || tpl.vars[k] || '{{' + k + '}}') : ('{{' + k + '}}');
+        rendered = rendered.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), val);
+      });
+      var out = document.getElementById('pgaTplRendered');
+      if (out) out.textContent = rendered;
+    };
+
+    window.pgaCopyPrompt = function() {
+      var out = document.getElementById('pgaTplRendered');
+      if (!out) return;
+      navigator.clipboard.writeText(out.textContent).then(function() {
+        var btn = document.getElementById('pgaTplCopyBtn');
+        if (btn) {
+          btn.textContent = '✅ Copied!';
+          btn.style.background = 'linear-gradient(135deg,#059669,#047857)';
+          setTimeout(function() {
+            btn.textContent = '📋 Copy Prompt';
+            btn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+          }, 2000);
+        }
+      });
+    };
+
     function renderTemplateLibrary() {
       const grid = document.getElementById('templateLibraryGrid');
       const free = TEMPLATES.filter(t => t.plan === 'free');
       const pro  = TEMPLATES.filter(t => t.plan === 'pro');
+      const isAuthed = document.body.classList.contains('pg-authed');
+      // Track which free template this user has already picked (stored in localStorage)
+      let pickedTemplate = '';
+      try { pickedTemplate = localStorage.getItem('pg_prompt_picked_tpl') || ''; } catch(e) {}
 
       function cardHTML(t) {
-        const isPro   = t.plan === 'pro';
+        const isPro = t.plan === 'pro';
         const varCount = Object.keys(t.vars).length;
-        return `<div class="pga-tpl-card${isPro ? ' pga-tpl-card--pro pga-tpl-card--locked' : ''}" data-name="${t.name}">
-          <div class="pga-tpl-card__name">${t.name}${isPro ? `<span style="font-size:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:2px;">PRO</span>` : ''}</div>
+        const isPicked = !isPro && pickedTemplate === t.name;
+        return `<div class="pga-tpl-card${isPro ? ' pga-tpl-card--pro pga-tpl-card--locked' : ''}${isPicked ? ' pga-tpl-card--picked' : ''}" data-name="${t.name}" data-pro="${isPro}">
+          <div class="pga-tpl-card__name">${t.name}
+            ${isPro ? `<span style="font-size:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">PRO</span>` : ''}
+            ${isPicked ? `<span style="font-size:10px;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">YOUR PICK</span>` : ''}
+          </div>
           <p class="pga-tpl-card__desc">${t.desc}</p>
-          <span class="pga-tpl-badge${isPro ? ' pga-tpl-badge--pro' : ''}">${isPro ? '🔒 ' : ''}${varCount} variables</span>
+          <span class="pga-tpl-badge${isPro ? ' pga-tpl-badge--pro' : ''}">${isPro ? '🔒 ' : '✅ '}${varCount} variable${varCount !== 1 ? 's' : ''}</span>
         </div>`;
       }
 
       grid.innerHTML =
-        `<div class="pga-tpl-section pga-tpl-section--free">✅ Free Templates</div>` +
+        `<div class="pga-tpl-section pga-tpl-section--free">✅ Free Templates — pick any 1</div>` +
         free.map(cardHTML).join('') +
         `<div class="pga-tpl-section pga-tpl-section--pro">⭐ Pro Templates</div>` +
         pro.map(cardHTML).join('') +
@@ -2820,11 +2920,35 @@
           <button class="pga-tpl-upgrade__btn" onclick="document.getElementById('templateLibraryModal').classList.remove('active');document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'})">See Plans →</button>
         </div>`;
 
-      // Free cards — scroll to CTA
+      // Free cards
       grid.querySelectorAll('.pga-tpl-card:not(.pga-tpl-card--locked)').forEach(card => {
         card.addEventListener('click', () => {
+          const name = card.dataset.name;
+          const tpl  = TEMPLATES.find(t => t.name === name);
+          if (!tpl) return;
+
           document.getElementById('templateLibraryModal').classList.remove('active');
-          document.getElementById('pga-cta').scrollIntoView({ behavior: 'smooth' });
+
+          if (!isAuthed) {
+            // Not signed in — prompt sign-in, remember their pick
+            try { sessionStorage.setItem('pg_pending_tpl', name); } catch(e) {}
+            pgPromptSignIn('template_pick');
+            return;
+          }
+
+          // Signed in — check if they already have a picked template
+          if (pickedTemplate && pickedTemplate !== name) {
+            // Already picked a different one — show it anyway (Pro would lock but free can use their 1)
+            if (confirm(`You already picked "${pickedTemplate}". Open that instead?\n\nClick Cancel to open "${name}".`)) {
+              const existingTpl = TEMPLATES.find(t => t.name === pickedTemplate);
+              if (existingTpl) openTemplateViewer(existingTpl);
+              return;
+            }
+          }
+
+          // Save their pick and open
+          try { localStorage.setItem('pg_prompt_picked_tpl', name); } catch(e) {}
+          openTemplateViewer(tpl);
         });
       });
 
@@ -2836,6 +2960,21 @@
         });
       });
     }
+
+    // After sign-in, open any pending template the user had clicked
+    window.addEventListener('pg:plan-loaded', function() {
+      if (!document.body.classList.contains('pg-authed')) return;
+      var pending = '';
+      try { pending = sessionStorage.getItem('pg_pending_tpl') || ''; } catch(e) {}
+      if (pending) {
+        try { sessionStorage.removeItem('pg_pending_tpl'); } catch(e) {}
+        var tpl = TEMPLATES.find(function(t) { return t.name === pending; });
+        if (tpl && tpl.plan === 'free') {
+          try { localStorage.setItem('pg_prompt_picked_tpl', pending); } catch(e) {}
+          setTimeout(function() { openTemplateViewer(tpl); }, 400);
+        }
+      }
+    });
 
     // ── Modal open/close ─────────────────────────────────────
     document.getElementById('openTemplateLibrary').addEventListener('click', () => {
