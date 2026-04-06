@@ -1688,7 +1688,16 @@
     /** Apply plan gating manually (useful if plan arrives asynchronously). */
     applyPlanGating: applyPlanGating,
 
-    /** Returns the current session token (from localStorage). */
+    /**
+     * Returns the current session token.
+     * _token is set exclusively by a live server verification (verifyStoredToken / magic-link).
+     * localStorage is a persistence cache only — the token stored there is always
+     * re-validated against the server on every page load via verifyStoredToken().
+     * If verifyStoredToken() fails (expired/invalid), _token is nulled, localStorage is
+     * purged, and the #pg-user-chip is removed — so isAuthed() returns false.
+     * A token forged in localStorage without a matching KV entry gets 401 from
+     * checkUsageFromServer() → generation is blocked server-side regardless.
+     */
     getToken: function () {
       return _token || localStorage.getItem(LS_TOKEN_KEY) || null;
     },

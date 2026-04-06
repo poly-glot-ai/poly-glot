@@ -28,7 +28,7 @@ const FIRST_NUDGE_AT   = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION  = '1.4.51';
+const MINIMUM_VERSION  = '1.4.52';
 const MAY1_2025        = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit(): number { return Date.now() >= MAY1_2025 ? 10 : 50; }
 
@@ -119,12 +119,35 @@ function updateStatusBarUsage(isPro: boolean): void {
  * Users without an account are directed to sign up before any generation.
  * Returns false if the limit is exceeded or user is not signed in.
  */
-async function checkAndIncrementUsage(): Promise<boolean> {
-    if (await hasPro()) {
-        updateStatusBarUsage(true);
-        return true;
+/**
+ * Flush any usage counts that were queued offline (Pro users only).
+ * Called at the top of checkAndIncrementUsage() whenever we have a token,
+ * so offline usage is always reconciled on next successful connection.
+ * Fire-and-forget — never blocks generation.
+ */
+async function flushOfflineUsageQueue(token: string): Promise<void> {
+    const queued = extContext.globalState.get<number>('pg.offlineUsageQueue', 0);
+    if (queued <= 0) return;
+    try {
+        const res = await fetch(`${AUTH_API}/track-usage`, {
+            method:  'POST',
+            headers: authHeaders(),
+            body:    JSON.stringify({ token, count: queued }),
+            signal:  AbortSignal.timeout(5000),
+        });
+        if (res.ok) {
+            // Successfully flushed — clear the queue
+            await extContext.globalState.update('pg.offlineUsageQueue', 0);
+            const data = await res.json() as { used?: number };
+            if (typeof data.used === 'number') await syncLocalCount(data.used);
+        }
+        // If flush fails, leave queue intact — retry next invocation
+    } catch {
+        // Still offline — leave queue intact
     }
+}
 
+async function checkAndIncrementUsage(): Promise<boolean> {
     const sessionToken = extContext.globalState.get<string>('pg.sessionToken', '');
     const licenseToken = vscode.workspace.getConfiguration('polyglot').get<string>('licenseToken', '').trim();
     const token = sessionToken || licenseToken;
@@ -133,6 +156,16 @@ async function checkAndIncrementUsage(): Promise<boolean> {
     if (!token) {
         await requireSignUp('generate');
         return false;
+    }
+
+    // ── Flush any offline-queued usage before checking plan ──────────────
+    // This ensures Pro users who generated offline have accurate server counts
+    // before we check quota — prevents undercounting from offline sessions.
+    await flushOfflineUsageQueue(token);
+
+    if (await hasPro()) {
+        updateStatusBarUsage(true);
+        return true;
     }
 
     // ── Server-side tracking (authoritative) ─────────────────────────────
@@ -153,7 +186,7 @@ async function checkAndIncrementUsage(): Promise<boolean> {
             await syncLocalCount(data.used);
         }
 
-        // Limit reached (403 from server)
+        // Limit reached (429 from server)
         if (!data.ok && data.remaining !== null && data.remaining <= 0) {
             updateStatusBarUsage(false);
             await showLimitReached(data.used, data.limit ?? FREE_LIMIT);
@@ -168,7 +201,21 @@ async function checkAndIncrementUsage(): Promise<boolean> {
         await showUsageNudge(used, remaining);
         return true;
     } catch {
-        // Server unreachable — hard block; cannot verify account offline
+        // Server unreachable — hard block for free/unknown users.
+        // Pro users with a verified cached plan are allowed through,
+        // but usage is queued locally and flushed on next successful connection.
+        const lastKnownPlan = extContext?.globalState.get<string>('pg.lastKnownPlan', '');
+        if (lastKnownPlan && PRO_PLANS.includes(lastKnownPlan)) {
+            // Pro user offline — allow through but queue the usage for later reconciliation
+            const queued = extContext.globalState.get<number>('pg.offlineUsageQueue', 0);
+            await extContext.globalState.update('pg.offlineUsageQueue', queued + 1);
+            updateStatusBarUsage(true);
+            vscode.window.showWarningMessage(
+                '⚠️ Poly-Glot: Server unreachable — generating offline. Usage will sync when reconnected.',
+            );
+            return true;
+        }
+        // Free/unknown user offline — fail closed, no generation without server verification
         const choice = await vscode.window.showErrorMessage(
             `🚫 Poly-Glot cannot reach the server to verify your account. Please check your internet connection.`,
             'Retry',
@@ -183,9 +230,6 @@ async function checkAndIncrementUsage(): Promise<boolean> {
         }
         return false;
     }
-
-    // Anonymous device tracking removed in 1.4.49 — account required before use.
-    return false;
 }
 
 /**
@@ -375,14 +419,15 @@ async function getVerifiedPlan(): Promise<string | null> {
             await extContext.globalState.update('pg.lastKnownPlan', '');
         }
     } catch {
-        // Network error — check if we have a cached plan from a previous successful check
-        // Pro users: fail open (they paid, don't block them for connectivity issues)
-        // Free/unknown users: fail closed (null = no pro access)
+        // Network error — return cached plan only for Pro users (they paid).
+        // checkAndIncrementUsage() handles the offline queue tracking separately.
+        // Free/unknown users: return null so checkAndIncrementUsage() fails closed.
         const lastKnownPlan = extContext?.globalState.get<string>('pg.lastKnownPlan', '');
         if (lastKnownPlan && PRO_PLANS.includes(lastKnownPlan)) {
-            _cachedPlan = lastKnownPlan; // Pro user offline — allow through
+            _cachedPlan = lastKnownPlan; // Pro user offline — hasPro() returns true,
+                                         // checkAndIncrementUsage() queues usage for flush
         } else {
-            _cachedPlan = null; // Free/unknown offline — block Pro features, hit usage gate
+            _cachedPlan = null; // Free/unknown offline — checkAndIncrementUsage() blocks
         }
     }
     return _cachedPlan;
@@ -494,7 +539,7 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
     if (hasSession || hasLicenseToken) return;
 
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.51';
+    const ONBOARDING_VERSION = '1.4.52';
     const shownForVersion = extContext.globalState.get<string>('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION) return;
 
@@ -543,25 +588,51 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
         });
 
         if (res.ok) {
-            vscode.window.showInformationMessage(
-                `✅ Magic link sent to ${email}! Click the link in your email, then paste your token here to activate.`,
+            const tokenChoice = await vscode.window.showInformationMessage(
+                `✅ Magic link sent to ${email}! Click the link in your email, then paste your session token here.`,
                 'Enter Token',
                 'Open poly-glot.ai',
-            ).then(async (choice) => {
-                if (choice === 'Enter Token') {
-                    await cmdConfigureLicenseToken();
-                } else if (choice === 'Open poly-glot.ai') {
-                    await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+            );
+            if (tokenChoice === 'Enter Token') {
+                await cmdConfigureLicenseToken();
+                // ── Gap 3 fix: immediately walk user through API key setup ──
+                // If they have a token now but no API key, they still can't generate.
+                // Offer to configure it right here so they can generate immediately.
+                const hasKey = await aiGenerator.isConfigured();
+                if (!hasKey) {
+                    const apiChoice = await vscode.window.showInformationMessage(
+                        '🔑 Almost there! You need an AI API key to generate comments. Set one up now — takes 30 seconds.',
+                        'Configure API Key',
+                        'Later',
+                    );
+                    if (apiChoice === 'Configure API Key') {
+                        await cmdConfigureApiKey();
+                    }
                 }
-            });
+            } else if (tokenChoice === 'Open poly-glot.ai') {
+                await vscode.env.openExternal(vscode.Uri.parse(SIGNUP_URL));
+            }
         } else {
             // Rate-limited or already registered — go straight to token entry
-            vscode.window.showInformationMessage(
+            const tokenChoice2 = await vscode.window.showInformationMessage(
                 `🦜 Account found for ${email}. Enter your session token to sign in.`,
                 'Enter Token',
-            ).then(async (choice) => {
-                if (choice === 'Enter Token') await cmdConfigureLicenseToken();
-            });
+            );
+            if (tokenChoice2 === 'Enter Token') {
+                await cmdConfigureLicenseToken();
+                // ── Gap 3 fix: same post-token API key nudge ──
+                const hasKey = await aiGenerator.isConfigured();
+                if (!hasKey) {
+                    const apiChoice = await vscode.window.showInformationMessage(
+                        '🔑 Almost there! Set up your AI API key to start generating.',
+                        'Configure API Key',
+                        'Later',
+                    );
+                    if (apiChoice === 'Configure API Key') {
+                        await cmdConfigureApiKey();
+                    }
+                }
+            }
         }
     } catch {
         // Network error
