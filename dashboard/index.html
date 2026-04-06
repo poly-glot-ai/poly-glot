@@ -291,6 +291,12 @@
   <div class="grid" id="versionsGrid"></div>
 </div>
 
+<!-- Section 7: Workers CI/CD & Gate Enforcement -->
+<div class="section">
+  <div class="sec-title">🔐 Workers CI/CD &amp; Gate Enforcement</div>
+  <div class="grid" id="workersGrid"></div>
+</div>
+
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────────
 const POLL_MS  = 15 * 60 * 1000;
@@ -730,6 +736,120 @@ function renderVersions(m) {
   ].join('');
 }
 
+async function renderWorkers(m) {
+  const el = document.getElementById('workersGrid');
+  if (!el) return;
+
+  // ── 1. Auto-deploy CI status — fetch latest deploy-worker run from GitHub API ──
+  let ciCard = '';
+  try {
+    const ciRes = await fetch(
+      'https://api.github.com/repos/poly-glot-ai/poly-glot/actions/workflows/deploy-worker.yml/runs?per_page=1',
+      { headers: { 'Accept': 'application/vnd.github+json' } }
+    );
+    if (ciRes.ok) {
+      const ciData = await ciRes.json();
+      const run = ciData.workflow_runs?.[0];
+      if (run) {
+        const ts      = run.updated_at ? new Date(run.updated_at).toLocaleString() : '—';
+        const ok      = run.conclusion === 'success';
+        const skipped = run.conclusion === 'skipped';
+        const badge   = ok      ? '<span class="badge ok">✓ success</span>'
+                      : skipped ? '<span class="badge loading">⏭ skipped</span>'
+                                : '<span class="badge error">✗ ' + (run.conclusion || run.status) + '</span>';
+        const msg = run.head_commit?.message?.split('\n')[0] || '—';
+        ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)',
+          badge,
+          `Last run: ${ts} · ${msg.length > 60 ? msg.slice(0,60)+'…' : msg}`
+        );
+      }
+    }
+  } catch(e) { /* skip if GitHub API unavailable */ }
+  if (!ciCard) {
+    ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)', '<span class="badge loading">… Checking</span>', 'Triggers on every [deploy] commit');
+  }
+
+  // ── 2. Gate enforcement — live check all 3 server endpoints with forged token ──
+  async function gateCheck(label, method, url, body) {
+    try {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const t0  = Date.now();
+      const res = await fetch(url, opts);
+      const ms  = Date.now() - t0;
+      const d   = await res.json().catch(() => ({}));
+      // Gate is working if it returns 400/401 (rejected) — NOT 200 (allowed through)
+      const gateOk = res.status === 401 || res.status === 400 || (res.status === 200 && d.valid === false);
+      const b = gateOk
+        ? `<span class="badge ok">✓ Blocked (${res.status}) · ${ms}ms</span>`
+        : `<span class="badge error">✗ GATE OPEN — returned ${res.status}</span>`;
+      return card('🔒', label, b, `Forged token → must return 400/401 · ${url.replace('https://poly-glot.ai','')}`);
+    } catch(e) {
+      return card('🔒', label, '<span class="badge error">✗ Network error</span>', url.replace('https://poly-glot.ai',''));
+    }
+  }
+
+  const [checkPlanCard, trackUsageCard, getUsageCard] = await Promise.all([
+    gateCheck('check-plan gate',   'POST', 'https://poly-glot.ai/api/auth/check-plan',   { token: 'forged-gate-probe-xyz' }),
+    gateCheck('track-usage gate',  'POST', 'https://poly-glot.ai/api/auth/track-usage',  { token: 'forged-gate-probe-xyz', count: 1 }),
+    gateCheck('get-usage gate',    'GET',  'https://poly-glot.ai/api/auth/get-usage?token=forged-gate-probe-xyz', null),
+  ]);
+
+  // ── 3. Extension version gate ──
+  const minVer   = '1.4.52';
+  const vscVer   = m.vscVer || '—';
+  const verOk    = vscVer !== '—' && vscVer >= minVer;
+  const verBadge = vscVer === '—'
+    ? '<span class="badge loading">… Checking</span>'
+    : verOk
+      ? `<span class="badge ok">✓ v${vscVer} ≥ MINIMUM_VERSION ${minVer}</span>`
+      : `<span class="badge error">✗ v${vscVer} below MINIMUM_VERSION ${minVer}</span>`;
+  const verCard = card('💙', 'VS Code MINIMUM_VERSION gate', verBadge,
+    `MINIMUM_VERSION = ${minVer} · All older installs blocked from generating`);
+
+  // ── 4. Offline usage queue endpoint check ──
+  let queueCard = '';
+  try {
+    const t0  = Date.now();
+    const res = await fetch('https://poly-glot.ai/api/auth/track-usage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'offline-queue-probe', count: 5 })
+    });
+    const ms  = Date.now() - t0;
+    // Should return 401 — confirms count:N bulk flush endpoint is live
+    const ok  = res.status === 401;
+    const b   = ok
+      ? `<span class="badge ok">✓ Accepts count:N · returns 401 for invalid token · ${ms}ms</span>`
+      : `<span class="badge error">✗ Unexpected ${res.status}</span>`;
+    queueCard = card('📦', 'Offline usage queue flush (count:N)', b,
+      'Pro users offline → queue flushed as single track-usage call on reconnect');
+  } catch(e) {
+    queueCard = card('📦', 'Offline usage queue flush', '<span class="badge error">✗ Network error</span>', 'track-usage count:N');
+  }
+
+  // ── 5. isTestEmail gate — verify test123@ is blocked ──
+  let emailGateCard = '';
+  try {
+    const res = await fetch('https://poly-glot.ai/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test123@proton.me' })
+    });
+    const d  = await res.json().catch(() => ({}));
+    const ok = res.status === 400 && d.error && d.error.toLowerCase().includes('disposable');
+    const b  = ok
+      ? `<span class="badge ok">✓ test123@ blocked (400)</span>`
+      : `<span class="badge error">✗ test123@ was NOT blocked — regex broken</span>`;
+    emailGateCard = card('🚫', 'Test email filter (/login)', b,
+      'test123@, demo2@, fake@, test-foo@ all blocked · tester@/testing@ allowed');
+  } catch(e) {
+    emailGateCard = card('🚫', 'Test email filter', '<span class="badge error">✗ Network error</span>', '/login test email block');
+  }
+
+  el.innerHTML = [ciCard, verCard, checkPlanCard, trackUsageCard, getUsageCard, queueCard, emailGateCard].join('');
+}
+
 function renderBanner(epStatus) {
   const vals      = Object.values(epStatus);
   const hardErrors = vals.filter(d => d.ok === false && !d.coldStart).length;
@@ -786,8 +906,8 @@ async function runAll() {
   renderEpTable(loadingEp);
   renderSignups({});
   renderUserTable([]);
-  renderUserTable([]);
   renderBanner(loadingEp);
+  document.getElementById('workersGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking worker gates…</div>';
 
   try {
     const { epStatus, m } = await collectAll();
@@ -800,6 +920,7 @@ async function runAll() {
     renderStats(m);
     renderVersions(m);
     renderBanner(epStatus);
+    renderWorkers(m); // async — fires independently, updates grid when done
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
   } catch(e) {
     console.error('Dashboard error:', e);
