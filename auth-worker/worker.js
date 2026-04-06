@@ -1193,12 +1193,19 @@ async function handleFreeSignup(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// GET /api/auth/get-usage  (CLI alias for /api/usage/get)
-// Query: ?token=<sessionToken>
+// GET  /api/auth/get-usage?token=<sessionToken>
+// POST /api/auth/get-usage  { token: "<sessionToken>" }
+// Returns 401 (not 404) for invalid/missing tokens.
 // ─────────────────────────────────────────────────────────────
 async function handleCliGetUsage(request, env) {
-  const token = new URL(request.url).searchParams.get('token') ?? '';
-  if (!token) return jsonResponse({ error: 'token query param required' }, 400);
+  let token = new URL(request.url).searchParams.get('token') ?? '';
+  if (!token && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      token = body?.token ?? '';
+    } catch { /* malformed body — fall through to 401 */ }
+  }
+  if (!token) return jsonResponse({ error: 'Invalid or expired token' }, 401);
 
   // Resolve session from token (reuse resolveSession logic directly)
   for (const prefix of ['session:', 'token:']) {
@@ -1461,6 +1468,9 @@ export default {
           return await handleUsageIncrement(request, env);
 
         // CLI aliases — keep old paths working
+        case '/api/auth/get-usage':
+          return await handleCliGetUsage(request, env);
+
         case '/api/auth/track-usage':
           return await handleCliTrackUsage(request, env);
 
