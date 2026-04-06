@@ -1087,35 +1087,63 @@
   <section class="pga-detail-section" id="pga-voice" aria-labelledby="pga-voice-heading">
     <div class="pga-detail-inner">
 
-      <!-- Left: copy -->
+      <!-- Left: copy + steps -->
       <div>
         <span class="pg2-eyebrow">🎙️ Voice Input</span>
         <h2 class="pg2-section__h2" id="pga-voice-heading">Say it. Don't type it.</h2>
-        <p class="pg2-section__sub">Dictate prompts and variable values hands-free using your browser's built-in speech recognition. No plugins, no setup — just click the mic and speak.</p>
+        <p class="pg2-section__sub">Dictate prompts and variable values hands-free using your browser's built-in speech recognition. No plugins, no setup — works right on this page.</p>
 
-        <ul class="pga-feature-list">
-          <li>
-            <span class="pga-feature-list__icon">🎤</span>
-            <div><strong>Dictate directly into any field</strong> — click the mic icon next to any prompt or variable input to start recording. Transcription appears instantly.</div>
+        <!-- HOW TO USE — numbered steps -->
+        <ol class="pga-steps" aria-label="How to use voice input" style="margin-top:24px;">
+          <li class="pga-step">
+            <div class="pga-step__num">1</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Click the 🎙️ mic button</div>
+              <div class="pga-step__desc">Hit the mic button in the demo on the right — or next to any field inside the app. Your browser will ask for microphone permission the first time.</div>
+            </div>
           </li>
-          <li>
-            <span class="pga-feature-list__icon">🌐</span>
-            <div><strong>40+ languages supported</strong> — speech recognition follows your system language. Works in English, Spanish, French, Japanese, and more.</div>
+          <li class="pga-step">
+            <div class="pga-step__num">2</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Speak naturally</div>
+              <div class="pga-step__desc">Talk at a normal pace. Words appear in real-time as you speak. Works in 40+ languages — detection follows your browser's system language.</div>
+            </div>
           </li>
-          <li>
-            <span class="pga-feature-list__icon">📱</span>
-            <div><strong>Works on desktop and mobile</strong> — Chrome, Edge, and Safari on iOS all support the Web Speech API natively. No app needed.</div>
+          <li class="pga-step">
+            <div class="pga-step__num">3</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Stop — transcript is ready</div>
+              <div class="pga-step__desc">Click the mic again (or pause for 2 seconds) to stop. The transcribed text is dropped straight into the prompt field — ready to edit or run.</div>
+            </div>
           </li>
-          <li>
-            <span class="pga-feature-list__icon">⚡</span>
-            <div><strong>Real-time transcript</strong> — see words appear as you speak. Edit after or re-record — it never overwrites a version.</div>
+          <li class="pga-step">
+            <div class="pga-step__num">4</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Edit &amp; run your prompt</div>
+              <div class="pga-step__desc">Tweak any words, fill remaining variables, then hit Run to test against your AI model. Voice never overwrites a saved version.</div>
+            </div>
           </li>
-        </ul>
+        </ol>
 
-        <div style="margin-top:28px;">
-          <button class="btn-primary" style="font-size:14px;padding:12px 24px;" onclick="pgPromptSignIn('voice_cta')">
-            🎙️ Try Voice Input Free →
+        <!-- Browser support note -->
+        <div style="margin-top:20px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+          ✅ <strong style="color:var(--text);">Chrome &amp; Edge</strong> — full support &nbsp;·&nbsp;
+          ✅ <strong style="color:var(--text);">Safari iOS</strong> — supported &nbsp;·&nbsp;
+          ⚠️ <strong style="color:var(--text);">Firefox</strong> — limited (type manually)
+        </div>
+
+        <!-- Try it live CTA -->
+        <div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn-primary" id="voiceLiveMicBtn" style="font-size:14px;padding:12px 22px;display:flex;align-items:center;gap:8px;" onclick="pgaStartVoice()">
+            🎙️ Try it now — speak a prompt
           </button>
+          <span style="font-size:12px;color:var(--text-dim);">No sign-up needed to test</span>
+        </div>
+        <!-- Live transcript output (shown when recording) -->
+        <div id="voiceLiveOutput" style="display:none;margin-top:16px;padding:14px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:10px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#34d399;margin-bottom:8px;">🎙️ Live transcript</div>
+          <div id="voiceLiveText" style="font-size:14px;color:var(--text);line-height:1.6;min-height:24px;"></div>
+          <div id="voiceLiveStatus" style="font-size:12px;color:var(--text-muted);margin-top:8px;">Listening…</div>
         </div>
       </div>
 
@@ -2783,12 +2811,12 @@
       }
       drawIdle();
 
-      // Mic button toggle (demo only)
+      // ── Mockup mic button: drives the visual demo in the right panel ──
       window.toggleVoiceMockup = function() {
         recording = !recording;
-        const btn = document.getElementById('voiceMicBtn');
-        const dot = document.getElementById('voiceStatusDot');
-        const txt = document.getElementById('voiceStatusText');
+        const btn   = document.getElementById('voiceMicBtn');
+        const dot   = document.getElementById('voiceStatusDot');
+        const txt   = document.getElementById('voiceStatusText');
         const timer = document.getElementById('voiceTimer');
         if (recording) {
           btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
@@ -2797,7 +2825,6 @@
           txt.textContent = 'Recording… speak naturally';
           if (rafId) cancelAnimationFrame(rafId);
           drawWave();
-          // Fake timer
           let secs = 0;
           btn._timerInterval = setInterval(() => {
             secs++;
@@ -2813,6 +2840,112 @@
           drawIdle();
           clearInterval(btn._timerInterval);
         }
+      };
+
+      // ── Real Web Speech API — wired to "Try it now" button in left panel ──
+      let _recognition = null;
+      let _recognizing = false;
+
+      window.pgaStartVoice = function() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const liveBtn    = document.getElementById('voiceLiveMicBtn');
+        const liveOutput = document.getElementById('voiceLiveOutput');
+        const liveText   = document.getElementById('voiceLiveText');
+        const liveStatus = document.getElementById('voiceLiveStatus');
+
+        // Browser not supported
+        if (!SR) {
+          liveOutput.style.display = 'block';
+          liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+          liveOutput.style.background  = 'rgba(239,68,68,.06)';
+          liveText.textContent   = '';
+          liveStatus.innerHTML   = '⚠️ Your browser doesn\'t support the Web Speech API. '
+            + 'Try <strong>Chrome</strong> or <strong>Edge</strong> for live voice input.';
+          return;
+        }
+
+        // Stop if already running
+        if (_recognizing && _recognition) {
+          _recognition.stop();
+          return;
+        }
+
+        _recognition = new SR();
+        _recognition.continuous      = true;   // keep listening until stop()
+        _recognition.interimResults  = true;   // show words as they come
+        _recognition.maxAlternatives = 1;
+        // Use browser language — falls back to en-US
+        _recognition.lang = navigator.language || 'en-US';
+
+        _recognition.onstart = function() {
+          _recognizing = true;
+          liveOutput.style.display      = 'block';
+          liveOutput.style.borderColor  = 'rgba(16,185,129,.25)';
+          liveOutput.style.background   = 'rgba(16,185,129,.06)';
+          liveText.textContent          = '';
+          liveStatus.innerHTML          = '<span style="color:#34d399;">● Recording</span> — speak now. Click the button again to stop.';
+          liveBtn.innerHTML             = '⏹ Stop recording';
+          liveBtn.style.background      = 'linear-gradient(135deg,#ef4444,#dc2626)';
+          // Also animate the mockup waveform in sync
+          recording = true;
+          if (rafId) cancelAnimationFrame(rafId);
+          drawWave();
+        };
+
+        _recognition.onresult = function(event) {
+          let interim = '', final = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const t = event.results[i][0].transcript;
+            if (event.results[i].isFinal) { final += t; }
+            else { interim += t; }
+          }
+          // Accumulate finals, show interim in lighter colour
+          if (final) { liveText.dataset.final = (liveText.dataset.final || '') + final + ' '; }
+          liveText.innerHTML = '<span style="color:var(--text);">'
+            + (liveText.dataset.final || '')
+            + '</span><span style="color:var(--text-muted);">' + interim + '</span>';
+        };
+
+        _recognition.onerror = function(event) {
+          const friendly = {
+            'not-allowed':   '🔒 Microphone access denied. Allow mic access in your browser settings and try again.',
+            'no-speech':     '🤫 No speech detected — try speaking closer to the mic.',
+            'network':       '🌐 Network error — speech recognition needs an internet connection.',
+            'audio-capture': '🎤 No microphone found. Please connect a mic and try again.',
+          };
+          liveStatus.innerHTML = friendly[event.error]
+            || ('⚠️ Error: ' + event.error + ' — please try again.');
+          _recognizing = false;
+          recording = false;
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          drawIdle();
+          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+          liveBtn.style.background = '';
+        };
+
+        _recognition.onend = function() {
+          _recognizing = false;
+          recording = false;
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          drawIdle();
+          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+          liveBtn.style.background = '';
+          // Show final status
+          const finalText = (liveText.dataset.final || '').trim();
+          if (finalText) {
+            liveStatus.innerHTML = '✅ Done — transcript ready. Copy it into your prompt above.';
+            // Also populate the mockup's transcript panel
+            const mockupTranscript = document.getElementById('voiceTranscript');
+            if (mockupTranscript) mockupTranscript.textContent = finalText.slice(0, 80);
+            const mockupText = document.getElementById('voiceMockupText');
+            if (mockupText) mockupText.innerHTML = finalText.slice(0, 40) + '<span class="cursor">|</span>';
+          } else {
+            liveStatus.innerHTML = 'Recording stopped.';
+          }
+          liveText.dataset.final = '';
+        };
+
+        _recognition.start();
       };
 
       // Transcript typewriter when section visible
