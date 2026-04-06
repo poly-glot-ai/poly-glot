@@ -599,7 +599,7 @@ async function handleCheckPlan(request, env) {
   }
 
   const token = (body?.token ?? '').trim();
-  if (!token) return jsonResponse({ valid: false, error: 'token is required' }, 400);
+  if (!token) return jsonResponse({ valid: false, error: 'token is required' }, 401);
 
   // Check session: prefix first (long-lived 30-day tokens from login flow)
   for (const prefix of ['session:', 'token:']) {
@@ -767,7 +767,7 @@ async function resolveToken(request, env, deleteAfter) {
 
   const { token } = body ?? {};
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    return jsonResponse({ error: 'token is required' }, 400);
+    return jsonResponse({ error: 'token is required' }, 401);
   }
 
   const kvKey = `token:${token.trim()}`;
@@ -1344,7 +1344,7 @@ async function handleCliTrackUsage(request, env) {
 
   const token = (body?.token ?? '').trim();
   const count = Math.max(1, parseInt(body?.count ?? 1, 10));
-  if (!token) return jsonResponse({ error: 'token is required' }, 400);
+  if (!token) return jsonResponse({ error: 'token is required' }, 401);
 
   for (const prefix of ['session:', 'token:']) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
