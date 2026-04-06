@@ -62,25 +62,8 @@
         to   { opacity: 1; transform: translateY(0)    scale(1); }
       }
 
-      /* ── Close Button ── */
-      .pg-modal-close {
-        position: absolute;
-        top: 14px;
-        right: 18px;
-        background: none;
-        border: none;
-        color: rgba(240, 249, 255, 0.45);
-        font-size: 22px;
-        line-height: 1;
-        cursor: pointer;
-        padding: 4px 6px;
-        border-radius: 6px;
-        transition: color 0.15s, background 0.15s;
-      }
-      .pg-modal-close:hover {
-        color: #f0f9ff;
-        background: rgba(255, 255, 255, 0.06);
-      }
+      /* ── Close Button — hidden; sign-in is mandatory ── */
+      .pg-modal-close { display: none !important; }
 
       /* ── Typography ── */
       .pg-modal-title {
@@ -531,9 +514,8 @@
 
     overlay.innerHTML = `
       <div class="pg-modal-card">
-        <button class="pg-modal-close" id="pgAuthModalClose" aria-label="Close">&times;</button>
         <h2 class="pg-modal-title" id="pgAuthModalTitle">Sign in to Poly-Glot</h2>
-        <p class="pg-modal-subtitle">Enter your email — we'll send you a magic link</p>
+        <p class="pg-modal-subtitle">A free account is required to use Poly-Glot. Enter your email — we'll send you a magic link.</p>
         <form id="pgAuthModalForm" novalidate>
           <input
             class="pg-modal-input"
@@ -551,15 +533,10 @@
           ✅ Check your email!
         </div>
         <div class="pg-modal-free-cta" id="pgAuthModalFreeCta" style="display:none;">
-          <div class="pg-modal-free-cta__icon">🦜</div>
-          <h3 class="pg-modal-free-cta__title">You're all set to explore!</h3>
-          <p class="pg-modal-free-cta__body">
-            While you wait for your magic link, you can use <strong>Poly-Glot free</strong> right now —
-            Python, JavaScript &amp; Java with doc-comments included.
-          </p>
-          <button class="pg-modal-free-cta__btn" id="pgAuthModalStartFree">Start Using Free →</button>
-          <div class="pg-modal-free-cta__divider">or</div>
-          <button class="pg-modal-free-cta__plans" id="pgAuthModalSeePlans">⭐ See Pro Plans</button>
+          <div style="margin-top:10px;font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;">
+            ✅ Magic link sent! Check your inbox and click the link to sign in.<br>
+            <span style="font-size:12px;color:#64748b;">Link expires in 15 minutes. Check your spam folder if you don't see it.</span>
+          </div>
         </div>
       </div>
     `;
@@ -568,19 +545,22 @@
 
     // ── Close on overlay click
     overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) closeModal();
+      // Overlay click — only close if user is already authenticated
+      if (e.target === overlay && _isFullyAuthed()) closeModal();
     });
 
-    // ── Close button
-    document.getElementById('pgAuthModalClose').addEventListener('click', closeModal);
-
-    // ── Escape key
+    // ── Escape key — only close if user is already authenticated
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Escape' && _isFullyAuthed()) closeModal();
     });
 
     // ── Form submit
     document.getElementById('pgAuthModalForm').addEventListener('submit', handleMagicLinkSubmit);
+  }
+
+  // True only when the server has confirmed a valid token this session
+  function _isFullyAuthed() {
+    return !!_token && !!document.getElementById('pg-user-chip');
   }
 
   function openModal() {
@@ -604,6 +584,8 @@
   }
 
   function closeModal() {
+    // Never close if user is not authenticated
+    if (!_isFullyAuthed()) return;
     var modal = document.getElementById(MODAL_ID);
     if (modal) modal.classList.remove('pg-open');
   }
@@ -648,24 +630,6 @@
           var freeCta = document.getElementById('pgAuthModalFreeCta');
           if (freeCta) {
             freeCta.style.display = 'block';
-            var startFreeBtn = document.getElementById('pgAuthModalStartFree');
-            if (startFreeBtn) {
-              startFreeBtn.addEventListener('click', function () {
-                closeModal();
-                applyPlanGating('free');
-                scrollToTool();
-                showToast('👋 Using Poly-Glot free — Python, JS & Java unlocked. Click your email link anytime to restore your session.');
-              });
-            }
-            var seePlansBtn = document.getElementById('pgAuthModalSeePlans');
-            if (seePlansBtn) {
-              seePlansBtn.addEventListener('click', function () {
-                closeModal();
-                var el = document.getElementById('pg-pricing-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-                if (typeof gtag === 'function') gtag('event', 'modal_see_plans_click');
-              });
-            }
           }
           if (typeof gtag === 'function') gtag('event', 'magic_link_sent', { method: 'email' });
         } else {
@@ -732,10 +696,24 @@
         updateHeaderForUser(email, plan);
       })
       .catch(function () {
-        // Token truly invalid — purge only the token, keep pg_plan so
-        // gating stays correct until we can re-verify
+        // Token invalid or expired — force full sign-out and require re-auth
         localStorage.removeItem(LS_TOKEN_KEY);
+        localStorage.removeItem(LS_PLAN_KEY);
+        localStorage.removeItem('pg_email');
         _token = null;
+        _plan  = null;
+        // Remove user chip if present so isAuthed() returns false
+        var chip = document.getElementById('pg-user-chip');
+        if (chip && chip.parentNode) {
+          var btn = document.createElement('button');
+          btn.id        = 'headerSignInBtn';
+          btn.className = 'pg-header-signin-btn';
+          btn.textContent = 'Sign In';
+          btn.addEventListener('click', function () { openModal(); });
+          chip.parentNode.replaceChild(btn, chip);
+        }
+        showToast('⚠️ Your session has expired. Please sign in again.', 5000);
+        setTimeout(function () { openModal(); }, 600);
       });
   }
 
@@ -1011,8 +989,6 @@
           dlBtnFree.appendChild(dlBadge);
         }
       }
-      // Show the nudge bar for free users (delayed slightly so page renders first)
-      setTimeout(showNudgeBar, 2000);
       return;
     }
 
@@ -1194,157 +1170,12 @@
   ───────────────────────────────────────────── */
   var NUDGE_DISMISSED_KEY = 'pg_nudge_dismissed';
 
-  function injectNudgeBarStyles() {
-    var s = document.createElement('style');
-    s.textContent = `
-      .pg-nudge-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 9990;
-        background: linear-gradient(90deg, #0d1f12 0%, #0f1f2e 50%, #0d1f12 100%);
-        border-top: 1px solid rgba(52, 211, 153, 0.25);
-        box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-        flex-wrap: wrap;
-        animation: pg-nudge-slide-up 0.5s cubic-bezier(0.34,1.56,0.64,1);
-      }
-      @keyframes pg-nudge-slide-up {
-        from { transform: translateY(100%); opacity: 0; }
-        to   { transform: translateY(0);    opacity: 1; }
-      }
-      .pg-nudge-bar.pg-nudge-hiding {
-        animation: pg-nudge-slide-down 0.3s ease forwards;
-      }
-      @keyframes pg-nudge-slide-down {
-        to { transform: translateY(100%); opacity: 0; }
-      }
-      .pg-nudge-bar__text {
-        font-family: Inter, sans-serif;
-        font-size: 14px;
-        color: #94a3b8;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .pg-nudge-bar__text strong {
-        color: #e2e8f0;
-      }
-      .pg-nudge-bar__cta {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 18px;
-        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-        color: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        border: none;
-        border-radius: 100px;
-        cursor: pointer;
-        font-family: Inter, sans-serif;
-        box-shadow: 0 2px 10px rgba(34,197,94,0.35);
-        transition: opacity 0.2s, transform 0.2s;
-        white-space: nowrap;
-      }
-      .pg-nudge-bar__cta:hover { opacity: 0.88; transform: translateY(-1px); }
-      .pg-nudge-bar__plans {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 18px;
-        background: transparent;
-        color: #a5b4fc;
-        font-size: 13px;
-        font-weight: 600;
-        border: 1.5px solid rgba(99,102,241,0.35);
-        border-radius: 100px;
-        cursor: pointer;
-        font-family: Inter, sans-serif;
-        transition: background 0.2s;
-        white-space: nowrap;
-      }
-      .pg-nudge-bar__plans:hover { background: rgba(79,70,229,0.15); }
-      .pg-nudge-bar__dismiss {
-        background: none;
-        border: none;
-        color: #475569;
-        font-size: 18px;
-        cursor: pointer;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-family: Inter, sans-serif;
-        transition: color 0.2s;
-        line-height: 1;
-      }
-      .pg-nudge-bar__dismiss:hover { color: #94a3b8; }
-    `;
-    document.head.appendChild(s);
-  }
-
-  function showNudgeBar() {
-    // Don't show if: already dismissed, already paid, already shown
-    if (localStorage.getItem(NUDGE_DISMISSED_KEY)) return;
-    if (document.getElementById('pg-nudge-bar')) return;
-
-    injectNudgeBarStyles();
-
-    var bar = document.createElement('div');
-    bar.id        = 'pg-nudge-bar';
-    bar.className = 'pg-nudge-bar';
-    bar.setAttribute('role', 'complementary');
-    bar.innerHTML =
-      '<span class="pg-nudge-bar__text">' +
-        '🦜 <strong>Poly-Glot is free to use</strong> — Python, JavaScript &amp; Java with doc-comments, no account needed.' +
-      '</span>' +
-      '<button class="pg-nudge-bar__cta" id="pg-nudge-try">Try It Free Now ↓</button>' +
-      '<button class="pg-nudge-bar__plans" id="pg-nudge-plans">⭐ See Pro Plans</button>' +
-      '<button class="pg-nudge-bar__dismiss" id="pg-nudge-dismiss" aria-label="Dismiss" title="Dismiss">×</button>';
-
-    document.body.appendChild(bar);
-
-    // Try It Free — scroll to tool
-    document.getElementById('pg-nudge-try').addEventListener('click', function () {
-      dismissNudgeBar(false); // hide but don't permanently dismiss
-      scrollToTool();
-      if (typeof gtag === 'function') gtag('event', 'nudge_bar_try_free');
-    });
-
-    // See Pro Plans — scroll to pricing
-    document.getElementById('pg-nudge-plans').addEventListener('click', function () {
-      dismissNudgeBar(true);
-      var el = document.getElementById('pg-pricing-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-      if (typeof gtag === 'function') gtag('event', 'nudge_bar_see_plans');
-    });
-
-    // Dismiss — hide permanently
-    document.getElementById('pg-nudge-dismiss').addEventListener('click', function () {
-      dismissNudgeBar(true);
-      if (typeof gtag === 'function') gtag('event', 'nudge_bar_dismissed');
-    });
-  }
-
-  function dismissNudgeBar(permanent) {
-    var bar = document.getElementById('pg-nudge-bar');
-    if (!bar) return;
-    if (permanent) localStorage.setItem(NUDGE_DISMISSED_KEY, '1');
-    bar.classList.add('pg-nudge-hiding');
-    setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 320);
-  }
+  function injectNudgeBarStyles() { /* removed — sign-in now required */ }
+  function showNudgeBar() { /* removed — sign-in now required */ }
+  function dismissNudgeBar() { /* removed */ }
 
   function hideNudgeBarForPaidUser() {
-    // Called when plan resolves to paid — remove bar and mark dismissed
-    var bar = document.getElementById('pg-nudge-bar');
-    if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
-    localStorage.setItem(NUDGE_DISMISSED_KEY, '1');
+    // No-op — nudge bar removed
   }
 
   /* ─────────────────────────────────────────────
@@ -1548,39 +1379,41 @@
     // Auto-detect device — create/retrieve stable device ID
     var deviceId = getOrCreateDeviceId();
 
-    // 1. Apply the stored plan immediately (before any network call) so the
-    //    UI is correct on every page load — not just the first magic-link click.
-    //    Falls back to 'free' for brand-new visitors with no localStorage entry.
-    var cachedPlan  = (localStorage.getItem(LS_PLAN_KEY)  || 'free').toLowerCase();
-    var cachedEmail = localStorage.getItem('pg_email') || '';
-    applyPlanGating(cachedPlan);
-    if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
-
-    // Show plan toast for returning signed-in users on this device
-    if (cachedEmail && localStorage.getItem(LS_TOKEN_KEY)) {
-      showPlanToast(cachedPlan, cachedEmail);
-    }
-
     // Parse URL params once — used by handleUrlParams and source tracking
     var params = new URLSearchParams(window.location.search);
 
-    // 2. Check URL params first — magic link click takes highest priority
-    handleUrlParams();
-
-    // 2b. Capture ?source= / ?utm_source= for attribution on magic-link sends
+    // 1. Capture ?source= / ?utm_source= for attribution on magic-link sends
     var urlSource = params.get('source') || params.get('utm_source') || '';
     if (urlSource) {
       try { sessionStorage.setItem('pg_source', urlSource); } catch(e) {}
     }
 
-    // 3. If no magic link in URL, silently re-validate the stored token via
-    //    /refresh (non-destructive) to confirm it's still live and get
-    //    the latest plan from the Worker (e.g. after a plan upgrade).
-    if (!_token) {
-      var storedToken = localStorage.getItem(LS_TOKEN_KEY);
-      if (storedToken) {
-        verifyStoredToken(storedToken);
-      }
+    // 2. Magic-link / checkout URL params take highest priority — process first
+    //    This sets _token and calls PolyGlotAuth.onPlanLoaded on success.
+    handleUrlParams();
+
+    // 3. If URL params resolved a session, we're done.
+    if (_token) return;
+
+    // 4. No URL token — check localStorage for a stored session token.
+    var storedToken = localStorage.getItem(LS_TOKEN_KEY);
+
+    if (storedToken) {
+      // Optimistically apply cached plan while server validates
+      var cachedPlan  = (localStorage.getItem(LS_PLAN_KEY) || 'free').toLowerCase();
+      var cachedEmail = localStorage.getItem('pg_email') || '';
+      if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
+      applyPlanGating(cachedPlan);
+      showPlanToast(cachedPlan, cachedEmail);
+      // Silently re-validate — if invalid, verifyStoredToken will force sign-out
+      verifyStoredToken(storedToken);
+    } else {
+      // 5. No token at all — purge any stale plan/email data (prevent spoofing)
+      //    and show the mandatory sign-in modal immediately.
+      localStorage.removeItem(LS_PLAN_KEY);
+      localStorage.removeItem('pg_email');
+      // Small delay so the page renders before the modal appears
+      setTimeout(function () { openModal(); }, 300);
     }
   }
 
