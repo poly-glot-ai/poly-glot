@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+\#\#\ \[1\.4\.52\]\ —\ 2026\-04\-06\
+\-\ 🐛\ fix:\ commit\ worker\.js\ —\ session\ key\ creation,\ live\ plan\ reads,\ tombstone\ filter\ \[deploy\]\
+\-\ 🐛\ fix:\ close\ 3%\ gap\ —\ offline\ usage\ queue,\ API\ key\ onboarding,\ token\ comment\ hardening\ —\ v1\.4\.52\ \[deploy\]\
+\
+\-\-\-\
+\
+
 \#\#\ \[1\.4\.51\]\ —\ 2026\-04\-06\
 \-\ 🐛\ fix:\ gate\ cmdWhyComments,\ cmdBothComments,\ cmdExplainCode\ —\ v1\.4\.51\ \[deploy\]\
 \
