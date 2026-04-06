@@ -1877,41 +1877,100 @@
       <div class="pga-plan-card pga-plan-card--pro">
         <div class="pga-plan-card__popular">MOST POPULAR</div>
         <div class="pga-plan-card__tier" style="color:#f59e0b;">Pro</div>
-        <div class="pga-plan-card__price">$9<span class="pga-plan-card__period">/mo</span></div>
-        <div class="pga-plan-card__note">or $79/yr — save 27%</div>
+        <!-- Billing toggle -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 4px;">
+          <span id="pgaBillingLabelMonth" style="font-size:12px;font-weight:600;color:var(--text);">Monthly</span>
+          <button id="pgaBillingToggle" onclick="pgaToggleBilling()" aria-label="Toggle billing period"
+            style="position:relative;width:40px;height:22px;border-radius:99px;border:none;cursor:pointer;background:rgba(245,158,11,.3);padding:0;flex-shrink:0;transition:background .2s;">
+            <span id="pgaBillingKnob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#f59e0b;transition:transform .2s;display:block;"></span>
+          </button>
+          <span id="pgaBillingLabelYear" style="font-size:12px;color:var(--text-muted);">Yearly <span style="color:#34d399;font-weight:700;">save 27%</span></span>
+        </div>
+        <div class="pga-plan-card__price" id="pgaProPrice">$9<span class="pga-plan-card__period">/mo</span></div>
+        <div class="pga-plan-card__note" id="pgaProNote">billed monthly — or switch to yearly</div>
         <hr class="pga-plan-card__divider" style="border-color:rgba(245,158,11,.2);">
         <ul class="pga-plan-card__features">
           <li class="pga-plan-card__feat pga-plan-card__feat--yes">Everything in Free</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--pro">8 Pro templates (legal, finance, medical…)</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Mistral Large + all future models</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">All 21 templates (8 Pro unlocked)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">AI model testing — GPT-4o, Claude, Gemini</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Voice input (40+ languages)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Share via URL</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">MCP server — 200 calls/mo</li>
           <li class="pga-plan-card__feat pga-plan-card__feat--pro">Unlimited version history</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Private prompt library</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Priority email support</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--no">Team workspace</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">Team workspace (Team plan)</li>
         </ul>
-        <a href="https://poly-glot.ai/#pg-pricing-section" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--pro">Upgrade to Pro →</a>
+        <a id="pgaProBtn" href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--pro">Upgrade to Pro →</a>
       </div>
 
       <!-- TEAM -->
       <div class="pga-plan-card pga-plan-card--team">
         <div class="pga-plan-card__tier" style="color:#a78bfa;">Team</div>
         <div class="pga-plan-card__price">$29<span class="pga-plan-card__period">/mo</span></div>
-        <div class="pga-plan-card__note">Up to 5 seats · $6/seat after</div>
+        <div class="pga-plan-card__note">Up to 5 seats · or $249/yr</div>
         <hr class="pga-plan-card__divider" style="border-color:rgba(124,58,237,.2);">
         <ul class="pga-plan-card__features">
           <li class="pga-plan-card__feat pga-plan-card__feat--yes">Everything in Pro</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--team">Shared team prompt library</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--team">Role-based access (editor/viewer)</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--team">Team version history &amp; diffs</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--team">API export for CI/CD</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Slack/Notion integrations</li>
-          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Dedicated support</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Custom template builder</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Shared team template library</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Locked variable defaults</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">MCP server — 1,000 calls/mo</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Team version history</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Priority support</li>
         </ul>
-        <a href="mailto:support@poly-glot.ai?subject=poly-glot-prompt.ai Team Plan" class="pga-plan-card__btn pga-plan-card__btn--team">Contact Us →</a>
+        <a href="https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--team">Upgrade to Team →</a>
       </div>
 
     </div>
-    <p style="text-align:center;font-size:13px;color:var(--text-dim);margin-top:24px;">Enterprise (SSO, private deployment)? <a href="mailto:support@poly-glot.ai?subject=Enterprise" style="color:var(--text-muted);text-decoration:underline;">Email support@poly-glot.ai</a></p>
+    <p style="text-align:center;font-size:13px;color:var(--text-dim);margin-top:24px;">
+      Enterprise (SSO, private deployment, unlimited MCP)? <a href="mailto:support@poly-glot.ai?subject=Prompt Studio Enterprise" style="color:var(--text-muted);text-decoration:underline;">Email support@poly-glot.ai</a>
+    </p>
+
+    <script>
+      // ── Pro billing toggle (monthly ↔ yearly) ─────────────────────────
+      var _pgaBillingYearly = false;
+      function pgaToggleBilling() {
+        _pgaBillingYearly = !_pgaBillingYearly;
+        var knob    = document.getElementById('pgaBillingKnob');
+        var toggle  = document.getElementById('pgaBillingToggle');
+        var price   = document.getElementById('pgaProPrice');
+        var note    = document.getElementById('pgaProNote');
+        var btn     = document.getElementById('pgaProBtn');
+        var lMonth  = document.getElementById('pgaBillingLabelMonth');
+        var lYear   = document.getElementById('pgaBillingLabelYear');
+        if (_pgaBillingYearly) {
+          knob.style.transform   = 'translateX(18px)';
+          toggle.style.background = 'rgba(245,158,11,.6)';
+          price.innerHTML  = '$79<span class="pga-plan-card__period">/yr</span>';
+          note.textContent = 'billed yearly — save $29 vs monthly';
+          btn.href         = 'https://buy.stripe.com/8x214p54M9fCaMmdw814404';
+          btn.textContent  = 'Upgrade to Pro (Yearly) →';
+          lMonth.style.color = 'var(--text-muted)';
+          lYear.style.color  = 'var(--text)';
+        } else {
+          knob.style.transform   = 'translateX(0)';
+          toggle.style.background = 'rgba(245,158,11,.3)';
+          price.innerHTML  = '$9<span class="pga-plan-card__period">/mo</span>';
+          note.textContent = 'billed monthly — or switch to yearly';
+          btn.href         = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
+          btn.textContent  = 'Upgrade to Pro →';
+          lMonth.style.color = 'var(--text)';
+          lYear.style.color  = 'var(--text-muted)';
+        }
+      }
+
+      // Pre-fill Stripe checkout email if user is already signed in
+      document.addEventListener('DOMContentLoaded', function() {
+        var email = '';
+        try { email = localStorage.getItem('pg_email') || ''; } catch(e) {}
+        if (email) {
+          var encoded = encodeURIComponent(email);
+          var proBtn  = document.getElementById('pgaProBtn');
+          var teamBtn = document.querySelector('.pga-plan-card__btn--team[href*="buy.stripe"]');
+          if (proBtn)  proBtn.href  += '?prefilled_email=' + encoded;
+          if (teamBtn) teamBtn.href += '?prefilled_email=' + encoded;
+        }
+      });
+    </script>
   </section>
 
   <!-- ══ FOOTER ════════════════════════════════════════════════ -->
@@ -1938,7 +1997,7 @@
         <a href="https://poly-glot.ai/#pg-github-app-section" class="pga-footer__link pga-footer__pill">🐙 GitHub App</a>
         <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pga-footer__link pga-footer__pill">🌐 Chrome Extension</a>
         <a href="https://poly-glot.ai/prompt/" class="pga-footer__link pga-footer__pill" style="color:var(--accent-prompt2);border-color:rgba(167,139,250,.25);">✏️ Prompt Studio</a>
-        <a href="https://poly-glot.ai/#pg-pricing-section" class="pga-footer__link pga-footer__pill">💎 Pricing</a>
+        <a href="/prompt/#pga-pricing" class="pga-footer__link pga-footer__pill">💎 Pricing</a>
         <a href="/prompt/privacy/" class="pga-footer__link pga-footer__pill">🔒 Privacy</a>
         <a href="mailto:support@poly-glot.ai" class="pga-footer__link pga-footer__pill">✉️ Support</a>
       </div>
