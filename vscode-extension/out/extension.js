@@ -62,7 +62,7 @@ const FIRST_NUDGE_AT = 10;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
-const MINIMUM_VERSION = '1.4.53';
+const MINIMUM_VERSION = '1.4.54';
 const MAY1_2025 = new Date('2025-05-01T00:00:00Z').getTime();
 function getCurrentFreeLimit() { return Date.now() >= MAY1_2025 ? 10 : 50; }
 // ─── Module-level state ───────────────────────────────────────────────────────
@@ -504,7 +504,7 @@ async function maybeShowFirstRunOnboarding() {
     if (hasSession || hasLicenseToken)
         return;
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.53';
+    const ONBOARDING_VERSION = '1.4.54';
     const shownForVersion = extContext.globalState.get('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION)
         return;
