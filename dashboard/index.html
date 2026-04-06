@@ -320,7 +320,7 @@ const ENDPOINTS = [
   { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/ping',                                        label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/ping health probe' },
   { method:'POST', key:'googleSignin', url:'https://poly-glot.ai/api/auth/google-signin',
     probe: JSON.stringify({ id_token: 'probe' }),
-    probeOk: r => r.status === 400,                                                                                  label:'Google Sign-In',       desc:'POST /api/auth/google-signin · 400 on bad token = endpoint live' },
+    probeOk: r => r.status === 400 || r.status === 401,                                                              label:'Google Sign-In',       desc:'POST /api/auth/google-signin · 401 on bad token = endpoint live' },
   { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',
     probe: JSON.stringify({ installationId: 'dashboard-probe', owner: 'probe', repo: 'probe' }),
     probeOk: r => r.ok || r.status === 429,                                                                          label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
