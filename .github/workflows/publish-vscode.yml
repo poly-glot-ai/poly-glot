@@ -220,29 +220,58 @@ jobs:
             const fs = require('fs');
             const version = '${{ steps.version.outputs.new_version }}';
             const vsixPath = 'vscode-extension/poly-glot-' + version + '.vsix';
+            const tagName  = `vscode-v${version}`;
 
-            // Create the release
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo:  context.repo.repo,
-              tag_name:   `vscode-v${version}`,
-              name:        `VS Code Extension v${version}`,
-              body:        `## Poly-Glot AI VS Code Extension v${version}\n\n${{ env.CHANGELOG_ENTRY }}\n\n**Install:** [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)`,
-              draft:       false,
-              prerelease:  false,
-            });
+            // Check if release already exists — skip creation if so
+            let release;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                tag:   tagName,
+              });
+              release = existing.data;
+              console.log(`ℹ️  Release ${tagName} already exists (id ${release.id}) — skipping creation.`);
+            } catch (err) {
+              if (err.status !== 404) throw err;
 
-            // Attach .vsix to release
-            const vsixData = fs.readFileSync(vsixPath);
-            await github.rest.repos.uploadReleaseAsset({
-              owner:    context.repo.owner,
-              repo:     context.repo.repo,
-              release_id: release.data.id,
-              name:     `poly-glot-${version}.vsix`,
-              data:     vsixData,
-              headers:  { 'content-type': 'application/zip' },
+              // Release does not exist — create it
+              const body = `## Poly-Glot AI VS Code Extension v${version}\n\n${{ env.CHANGELOG_ENTRY }}\n\n**Install:** [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poly-glot-ai.poly-glot)`;
+              const created = await github.rest.repos.createRelease({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                tag_name:   tagName,
+                name:       `VS Code Extension v${version}`,
+                body,
+                draft:      false,
+                prerelease: false,
+              });
+              release = created.data;
+              console.log(`✅ Release ${tagName} created (id ${release.id}).`);
+            }
+
+            // Attach .vsix — skip if already uploaded
+            const assets = await github.rest.repos.listReleaseAssets({
+              owner:      context.repo.owner,
+              repo:       context.repo.repo,
+              release_id: release.id,
             });
-            console.log(`✅ Release vscode-v${version} created with .vsix attached`);
+            const assetName = `poly-glot-${version}.vsix`;
+            const alreadyUploaded = assets.data.some(a => a.name === assetName);
+            if (alreadyUploaded) {
+              console.log(`ℹ️  Asset ${assetName} already attached — skipping upload.`);
+            } else {
+              const vsixData = fs.readFileSync(vsixPath);
+              await github.rest.repos.uploadReleaseAsset({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                release_id: release.id,
+                name:       assetName,
+                data:       vsixData,
+                headers:    { 'content-type': 'application/zip' },
+              });
+              console.log(`✅ Asset ${assetName} uploaded.`);
+            }
 
       - name: Commit version bump + CHANGELOG
         run: |
