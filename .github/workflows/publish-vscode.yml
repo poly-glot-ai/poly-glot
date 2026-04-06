@@ -119,8 +119,18 @@ jobs:
       - name: Publish to Marketplace
         working-directory: vscode-extension
         run: |
-          vsce publish --no-dependencies \
-            --packagePath poly-glot-${{ steps.version.outputs.new_version }}.vsix
+          if [ -z "$VSCE_PAT" ]; then
+            echo "⚠️  VSCE_PAT secret is not set — skipping Marketplace publish."
+            echo "ℹ️  To enable auto-publish, add VSCE_PAT to repo secrets:"
+            echo "    https://github.com/poly-glot-ai/poly-glot/settings/secrets/actions"
+            echo "    Get a PAT at: https://dev.azure.com → User Settings → Personal Access Tokens"
+            echo "    Scope required: Marketplace → Manage"
+            echo "publish_skipped=true" >> $GITHUB_ENV
+          else
+            vsce publish --no-dependencies \
+              --packagePath poly-glot-${{ steps.version.outputs.new_version }}.vsix
+            echo "publish_skipped=false" >> $GITHUB_ENV
+          fi
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
