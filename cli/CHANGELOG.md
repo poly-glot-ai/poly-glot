@@ -1,3 +1,10 @@
+## [2.1.34] — 2026-04-06
+- 🐛 fix: close Copilot Chat gate + CLI escape hatch — v1.4.50 [deploy]
+- docs: update all READMEs — MCP Pro-only gate, plan tables, session token requirement, security notes
+- ✨ feat: email-first VS Code onboarding, improved CLI postinstall CTA, EARLYBIRD3 May 1 2026 everywhere, CLI v2.1.31, VS Code v1.4.41
+
+---
+
 ## [2.1.32] — 2026-04-05
 - ✨ feat: email-first VS Code onboarding + CLI postinstall CTA overhaul (v2.1.31 / vscode 1.4.41)
 
