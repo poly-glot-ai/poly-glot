@@ -138,15 +138,15 @@ jobs:
         id: changelog
         run: |
           # Get last tag or fallback to 20 commits
-          LAST_TAG=$(git tag --sort=-version:refname | head -1 || echo "")
+          LAST_TAG=$(git tag --sort=-version:refname | head -1 || true)
           if [ -z "$LAST_TAG" ]; then
             COMMITS=$(git log --oneline -20 --no-merges \
               -- vscode-extension/ poly-glot-mcp/ cli/ index.html \
-              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release")
+              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release" || true)
           else
-            COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges \
+            COMMITS=$(git log "${LAST_TAG}..HEAD" --oneline --no-merges \
               -- vscode-extension/ poly-glot-mcp/ cli/ index.html \
-              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release")
+              | grep -v "\[skip ci\]\|chore: bump\|chore: auto-update\|chore: release" || true)
           fi
 
           DATE=$(date -u +%Y-%m-%d)
@@ -154,24 +154,28 @@ jobs:
 
           # Build changelog block
           ENTRY="## [${VERSION}] — ${DATE}"$'\n'
-          while IFS= read -r line; do
-            SHA="${line:0:7}"
-            MSG="${line:8}"
-            # Categorise by conventional commit prefix
-            if echo "$MSG" | grep -qiE "^feat"; then
-              ENTRY+="- ✨ ${MSG}"$'\n'
-            elif echo "$MSG" | grep -qiE "^fix"; then
-              ENTRY+="- 🐛 ${MSG}"$'\n'
-            elif echo "$MSG" | grep -qiE "^perf"; then
-              ENTRY+="- ⚡ ${MSG}"$'\n'
-            elif echo "$MSG" | grep -qiE "^docs"; then
-              ENTRY+="- 📖 ${MSG}"$'\n'
-            elif echo "$MSG" | grep -qiE "^ci|^chore"; then
-              ENTRY+="- 🔧 ${MSG}"$'\n'
-            else
-              ENTRY+="- ${MSG}"$'\n'
-            fi
-          done <<< "$COMMITS"
+          if [ -z "$COMMITS" ]; then
+            ENTRY+="- 🔧 maintenance release"$'\n'
+          else
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              MSG="${line:8}"
+              # Categorise by conventional commit prefix
+              if echo "$MSG" | grep -qiE "^feat"; then
+                ENTRY+="- ✨ ${MSG}"$'\n'
+              elif echo "$MSG" | grep -qiE "^fix"; then
+                ENTRY+="- 🐛 ${MSG}"$'\n'
+              elif echo "$MSG" | grep -qiE "^perf"; then
+                ENTRY+="- ⚡ ${MSG}"$'\n'
+              elif echo "$MSG" | grep -qiE "^docs"; then
+                ENTRY+="- 📖 ${MSG}"$'\n'
+              elif echo "$MSG" | grep -qiE "^ci|^chore"; then
+                ENTRY+="- 🔧 ${MSG}"$'\n'
+              else
+                ENTRY+="- ${MSG}"$'\n'
+              fi
+            done <<< "$COMMITS"
+          fi
 
           echo "CHANGELOG_ENTRY<<EOF" >> $GITHUB_ENV
           echo "$ENTRY" >> $GITHUB_ENV
@@ -179,10 +183,10 @@ jobs:
 
           # Write to CHANGELOG.md
           if [ -f vscode-extension/CHANGELOG.md ]; then
-            EXISTING=$(cat vscode-extension/CHANGELOG.md)
-            echo -e "${ENTRY}\n---\n\n${EXISTING}" > vscode-extension/CHANGELOG.md
+            EXISTING=$(cat vscode-extension/CHANGELOG.md || true)
+            printf '%s\n---\n\n%s\n' "$ENTRY" "$EXISTING" > vscode-extension/CHANGELOG.md
           else
-            echo "$ENTRY" > vscode-extension/CHANGELOG.md
+            printf '%s\n' "$ENTRY" > vscode-extension/CHANGELOG.md
           fi
           echo "changelog_written=true" >> $GITHUB_OUTPUT
 
