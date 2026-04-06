@@ -139,9 +139,11 @@ function isDisposableEmail(email) {
 function isTestEmail(email) {
   const local = email.split('@')[0]?.toLowerCase() ?? '';
   return (
-    /^(test|smoke|demo|fake|dummy|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)\b/.test(local) ||
-    /-(test|smoke|demo|fake|audit)\d*$/.test(local) ||
-    /\.(test|smoke|demo|fake|audit)\d*$/.test(local)
+    // Keyword alone, or followed by digits/separators/end — but NOT followed by letters
+    // Blocks: test@, test123@, test-foo@, test.foo@  — but NOT: tester@, testing@, testuser@
+    /^(test|smoke|demo|fake|dummy|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)(\d|[-._+]|$)/.test(local) ||
+    // Ends with -keyword or .keyword (e.g. my-test, audit.test2)
+    /[-._](test|smoke|demo|fake|audit|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)\d*$/.test(local)
   );
 }
 
