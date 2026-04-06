@@ -794,13 +794,16 @@
             if (typeof gtag === 'function') gtag('event', 'magic_link_verify_failed');
             return;
           }
-          var email = result.data.email || emailHint || '';
-          var plan  = (result.data.plan  || 'free').toLowerCase();
+          var email        = result.data.email || emailHint || '';
+          var plan         = (result.data.plan || 'free').toLowerCase();
+          // Use the long-lived session token returned by /verify (30 days),
+          // NOT the one-time magic token which is already consumed.
+          var sessionToken = result.data.session_token || magicToken;
 
           // Persist session
-          _token = magicToken;
+          _token = sessionToken;
           _plan  = plan;
-          localStorage.setItem(LS_TOKEN_KEY, magicToken);
+          localStorage.setItem(LS_TOKEN_KEY, sessionToken);
           localStorage.setItem(LS_PLAN_KEY,  plan);
           if (email) localStorage.setItem('pg_email', email);
 
@@ -811,13 +814,13 @@
           // Welcome toast
           if (PAID_PLANS.indexOf(plan) !== -1) {
             var planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
-            showToast('🎉 Welcome back! Your ' + planDisplay + ' plan is active — all features unlocked.', 5000);
+            showToast('🎉 Welcome! Your ' + planDisplay + ' plan is active — all features unlocked.', 5000);
           } else {
-            showToast('👋 Signed in! Python, JS & Java available free. Upgrade anytime for all 12 languages.', 6000);
+            showToast('👋 Signed in! You\'re on the Free plan — upgrade anytime for all 12 languages.', 6000);
           }
 
           // Show session token panel so VS Code / CLI users can copy it
-          showSessionTokenPanel(magicToken, email, plan);
+          showSessionTokenPanel(sessionToken, email, plan);
 
           if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan });
         })
