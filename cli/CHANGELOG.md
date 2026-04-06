@@ -1,3 +1,8 @@
+## [2.1.36] — 2026-04-06
+- ✨ feat: CLI 1-click login — local callback server, zero token copy-paste (v2.1.35) [deploy]
+
+---
+
 ## [2.1.34] — 2026-04-06
 - 🐛 fix: close Copilot Chat gate + CLI escape hatch — v1.4.50 [deploy]
 - docs: update all READMEs — MCP Pro-only gate, plan tables, session token requirement, security notes
