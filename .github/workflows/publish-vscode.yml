@@ -87,15 +87,15 @@ jobs:
           echo "Bump type       : $BUMP"
 
           # If repo version is already AHEAD of marketplace, skip bump and publish as-is.
-          # Write a temp python script to avoid quoting conflicts in YAML.
-          cat > /tmp/semver_check.py << 'PYEOF'
-import sys
-from packaging.version import Version
-repo_v = Version(sys.argv[1])
-mkt_v  = Version(sys.argv[2])
-bump   = sys.argv[3]
-print('true' if bump == 'none' or repo_v > mkt_v else 'false')
-PYEOF
+          # Use printf to write python script — avoids << heredoc (YAML merge-key conflict).
+          printf '%s\n' \
+            'import sys' \
+            'from packaging.version import Version' \
+            'repo_v = Version(sys.argv[1])' \
+            'mkt_v  = Version(sys.argv[2])' \
+            'bump   = sys.argv[3]' \
+            "print('true' if bump == 'none' or repo_v > mkt_v else 'false')" \
+            > /tmp/semver_check.py
           SKIP_BUMP=$(python3 /tmp/semver_check.py "$REPO_VERSION" "$MKT_VERSION" "$BUMP")
           echo "SKIP_BUMP=$SKIP_BUMP" >> $GITHUB_ENV
           NEW_VERSION="$REPO_VERSION"
