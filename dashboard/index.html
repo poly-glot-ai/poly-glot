@@ -292,7 +292,31 @@
   <div class="grid" id="versionsGrid"></div>
 </div>
 
-<!-- Section 7: Workers CI/CD & Gate Enforcement -->
+<!-- Section 7: Prompt Studio -->
+<div class="section">
+  <div class="sec-title">✨ Prompt Studio — <a href="https://poly-glot.ai/prompt/" target="_blank" rel="noopener" style="color:var(--purple2);font-size:10px;text-decoration:none;font-weight:600;letter-spacing:.04em;">poly-glot.ai/prompt/ ↗</a></div>
+  <div class="grid" id="promptGrid"></div>
+  <!-- Prompt Studio endpoint table -->
+  <div style="margin-top:12px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>Description</th></tr>
+      </thead>
+      <tbody id="promptEpBody"></tbody>
+    </table>
+  </div>
+  <!-- Prompt Studio resources -->
+  <div style="margin-top:12px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr><th>Resource</th><th>URL</th><th>Status</th><th>Notes</th></tr>
+      </thead>
+      <tbody id="promptResourceBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 8: Workers CI/CD & Gate Enforcement -->
 <div class="section">
   <div class="sec-title">🔐 Workers CI/CD &amp; Gate Enforcement</div>
   <div class="grid" id="workersGrid"></div>
@@ -330,6 +354,11 @@ const ENDPOINTS = [
     probeOk: r => r.ok || r.status === 429,                                                                          label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
   { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
+
+  // ── Prompt Studio ──────────────────────────────────────────────────────────
+  { method:'GET',  key:'promptSite',    url:'https://poly-glot.ai/prompt/',                                          label:'Prompt Studio',        desc:'Landing page · poly-glot.ai/prompt/' },
+  { method:'GET',  key:'promptPrivacy', url:'https://poly-glot.ai/prompt/privacy/',                                  label:'Prompt Privacy Policy', desc:'Privacy page · /prompt/privacy/' },
+  { method:'GET',  key:'npmMcpPrompt',  url:'https://registry.npmjs.org/poly-glot-mcp/latest',                       label:'npm poly-glot-mcp',    desc:'MCP package used by Prompt Studio' },
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -540,6 +569,8 @@ function renderSvcs(epStatus) {
     { key:'npmCli',     icon:'📦', name:'npm CLI Registry',      desc:'registry.npmjs.org · poly-glot-ai-cli' },
     { key:'ovx',        icon:'🧩', name:'Open VSX',              desc:'open-vsx.org · poly-glot-ai/poly-glot' },
     { key:'vsc',        icon:'💙', name:'VS Code Marketplace',   desc:'marketplace.visualstudio.com' },
+    { key:'promptSite',    icon:'✨', name:'Prompt Studio',         desc:'poly-glot.ai/prompt/ · landing page' },
+    { key:'promptPrivacy', icon:'🔒', name:'Prompt Privacy Page',   desc:'poly-glot.ai/prompt/privacy/' },
   ];
   document.getElementById('svcGrid').innerHTML = SVCS.map(s => {
     const d  = epStatus[s.key] || {};
@@ -851,6 +882,84 @@ async function renderWorkers(m) {
   el.innerHTML = [ciCard, verCard, checkPlanCard, trackUsageCard, getUsageCard, queueCard, emailGateCard].join('');
 }
 
+async function renderPromptStudio(epStatus, m) {
+  const grid = document.getElementById('promptGrid');
+  const epTbody = document.getElementById('promptEpBody');
+  const resTbody = document.getElementById('promptResourceBody');
+  if (!grid) return;
+
+  // ── Metric cards ──────────────────────────────────────────────────────────
+  // npm download counts for poly-glot-mcp (Prompt Studio uses this)
+  let mcpDl30 = m.mcpDl30 ?? null;
+
+  // Prompt Studio signup breakdown — users who signed up via prompt_page source
+  // (approximated from plan breakdown; exact source tracking TBD)
+  const promptFree = m.planFree ?? null;
+  const promptPro  = m.planPro  ?? null;
+  const promptTeam = m.planTeam ?? null;
+
+  // Landing page + privacy page status
+  const siteOk    = epStatus['promptSite']?.ok;
+  const privacyOk = epStatus['promptPrivacy']?.ok;
+  const siteMs    = epStatus['promptSite']?.ms;
+  const privacyMs = epStatus['promptPrivacy']?.ms;
+  const mcpOk     = epStatus['npmMcpPrompt']?.ok;
+
+  const siteBadge    = siteOk == null ? '<span class="badge loading">… Checking</span>'
+                     : siteOk ? `<span class="badge ok">✓ Online · ${siteMs}ms</span>`
+                     : '<span class="badge error">✗ Unreachable</span>';
+  const privacyBadge = privacyOk == null ? '<span class="badge loading">… Checking</span>'
+                     : privacyOk ? `<span class="badge ok">✓ Online · ${privacyMs}ms</span>`
+                     : '<span class="badge error">✗ Unreachable</span>';
+  const mcpBadge     = mcpOk == null ? '<span class="badge loading">… Checking</span>'
+                     : mcpOk ? `<span class="badge ok">✓ Listed</span>`
+                     : '<span class="badge error">✗ Unreachable</span>';
+
+  grid.innerHTML = [
+    card('✨', 'Prompt Studio',        siteBadge,    'poly-glot.ai/prompt/ · landing page'),
+    card('🔒', 'Privacy Page',         privacyBadge, 'poly-glot.ai/prompt/privacy/'),
+    card('📦', 'poly-glot-mcp (npm)',  mcpBadge,     `MCP package · v${m.mcpVer || '—'} · ${mcpDl30 != null ? mcpDl30.toLocaleString() + ' dl/30d' : 'loading…'}`),
+    card('🆓', 'Free Users',           promptFree != null ? num(promptFree) : '—', 'accounts on free plan'),
+    card('💎', 'Pro Users',            promptPro  != null ? num(promptPro)  : '—', '$9/mo · Prompt Studio Pro'),
+    card('👥', 'Team Users',           promptTeam != null ? num(promptTeam) : '—', '$29/mo · Prompt Studio Team'),
+  ].join('');
+
+  // ── Endpoint table ────────────────────────────────────────────────────────
+  const PROMPT_EPS = [
+    { method:'GET',  key:'promptSite',    path:'/prompt/',         desc:'Landing page' },
+    { method:'GET',  key:'promptPrivacy', path:'/prompt/privacy/', desc:'Privacy policy' },
+    { method:'GET',  key:'authWorker',    path:'/api/auth/ping',   desc:'Auth Worker (shared with main site)' },
+  ];
+  epTbody.innerHTML = PROMPT_EPS.map(ep => {
+    const d  = epStatus[ep.key] || {};
+    return `<tr>
+      <td><span class="meth ${ep.method}">${ep.method}</span></td>
+      <td><span class="ep-path">poly-glot.ai${ep.path}</span></td>
+      <td>${badge(d.ok)}</td>
+      <td class="ep-ms">${ms2str(d.ms)}</td>
+      <td class="ep-desc">${ep.desc}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Resources table ───────────────────────────────────────────────────────
+  const RESOURCES = [
+    { name:'🎙️ Voice Input',      url:'poly-glot.ai/prompt/#pga-voice',      status:'Web Speech API · browser-native · no server', note:'Chrome ✅  Edge ✅  Safari iOS ✅  Firefox ⚠️' },
+    { name:'🔌 MCP Server',        url:'npmjs.com/package/poly-glot-mcp',      status: mcpOk == null ? '… checking' : mcpOk ? '✓ Published' : '✗ Not found', note:`npx poly-glot-mcp · v${m.mcpVer || '—'} · Pro+ required` },
+    { name:'📝 Template Library',  url:'poly-glot.ai/prompt/#pga-templates',   status:'21 templates · 13 free · 8 Pro', note:'Picker flow · localStorage · copy-to-clipboard' },
+    { name:'💳 Stripe Checkout',   url:'buy.stripe.com (Pro + Team)',          status:'Direct links wired', note:'Pro $9/mo · Pro $79/yr · Team $29/mo' },
+    { name:'✉️ Magic Link Routing', url:'poly-glot.ai/api/auth/login',         status: epStatus['authWorker']?.ok ? '✓ Routes to /prompt/' : '… checking', note:'All sources → /prompt/?token=...' },
+    { name:'🔒 Privacy Policy',    url:'poly-glot.ai/prompt/privacy/',         status: privacyOk == null ? '… checking' : privacyOk ? '✓ Live' : '✗ Unreachable', note:'14 sections · voice, templates, API keys, MCP' },
+    { name:'🦜 Chat Widget',       url:'poly-glot.ai/chat.v8.js',              status:'✓ Loaded · Prompt Studio mode', note:'IS_PROMPT_STUDIO override · 14 rules · Prompt-specific suggestions' },
+    { name:'🔐 Auth Gate Banner',  url:'poly-glot.ai/prompt/#pgaAuthGate',     status:'✓ Active · 8s delay', note:'MutationObserver · Escape dismissible · hidden when pg-authed' },
+  ];
+  resTbody.innerHTML = RESOURCES.map(r => `<tr>
+    <td style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;">${r.name}</td>
+    <td><span class="ep-path" style="font-size:10px;">${r.url}</span></td>
+    <td><span class="badge ok" style="font-size:10px;">${r.status}</span></td>
+    <td class="ep-desc">${r.note}</td>
+  </tr>`).join('');
+}
+
 function renderBanner(epStatus) {
   const vals      = Object.values(epStatus);
   const hardErrors = vals.filter(d => d.ok === false && !d.coldStart).length;
@@ -908,6 +1017,7 @@ async function runAll() {
   renderSignups({});
   renderUserTable([]);
   renderBanner(loadingEp);
+  document.getElementById('promptGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking Prompt Studio…</div>';
   document.getElementById('workersGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking worker gates…</div>';
 
   try {
@@ -921,6 +1031,7 @@ async function runAll() {
     renderStats(m);
     renderVersions(m);
     renderBanner(epStatus);
+    renderPromptStudio(epStatus, m); // async — Prompt Studio section
     renderWorkers(m); // async — fires independently, updates grid when done
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
   } catch(e) {
