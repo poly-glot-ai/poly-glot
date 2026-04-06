@@ -542,6 +542,46 @@ async function handleRefresh(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// POST /api/auth/check-plan
+//
+// Non-destructive token → plan lookup. Used by:
+//   - CLI  (verifyLicense)
+//   - VS Code extension (getVerifiedPlan / hasPro)
+//
+// Body: { token: string }
+// Returns: { valid: bool, plan: string, email: string }
+// Never deletes the token — safe to call on every command.
+// ─────────────────────────────────────────────────────────────
+async function handleCheckPlan(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  if (!token) return jsonResponse({ valid: false, error: 'token is required' }, 400);
+
+  // Check session: prefix first (long-lived 30-day tokens from login flow)
+  for (const prefix of ['session:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data    = JSON.parse(raw);
+        const email   = data.email ?? '';
+        // Always read live plan from KV — catches post-payment upgrades immediately
+        const planRaw = await env.AUTH_KV.get(`plan:${email}`);
+        const plan    = planRaw || data.plan || 'free';
+        return jsonResponse({ valid: true, plan, email });
+      } catch {
+        return jsonResponse({ valid: false, error: 'Corrupt token data' }, 400);
+      }
+    }
+  }
+
+  return jsonResponse({ valid: false, error: 'Invalid or expired token' }, 401);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Session auth helper — resolves sessionToken → { email, plan }
 // Used by usage endpoints.
 // ─────────────────────────────────────────────────────────────
@@ -1246,6 +1286,11 @@ export default {
 
         case '/api/auth/admin/users':
           return await handleAdminUsers(request, env);
+
+        case '/api/auth/check-plan':
+          // CLI + VS Code extension use this to verify token and get live plan from KV
+          // Must be GET-compatible (some callers send GET, others POST)
+          return await handleCheckPlan(request, env);
         case '/api/auth/cws-proxy':
           return await handleCwsProxy(request, env);
         case '/api/auth/gh-proxy':
@@ -1266,6 +1311,9 @@ export default {
     // ── POST route dispatch ───────────────────────────────────
     try {
       switch (pathname) {
+        case '/api/auth/check-plan':
+          return await handleCheckPlan(request, env);
+
         case '/api/auth/login':
           return await handleLogin(request, env);
 
