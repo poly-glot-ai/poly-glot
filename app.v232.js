@@ -4731,9 +4731,8 @@ function initCommentGenerator() {
         showCgInlineError('<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">⏳ Checking usage…</div>');
         const usageCheck = await checkUsageFromServer();
 
-        // Network failure fallback — use cached count so UX isn't broken offline
-        const monthlyUsed = usageCheck.ok ? usageCheck.used : (usageCheck.fallback ?? getMonthlyCount());
-        const limitToUse  = usageCheck.ok && usageCheck.limit !== null ? usageCheck.limit : FREE_MONTHLY_LIMIT;
+        const monthlyUsed = usageCheck.used || 0;
+        const limitToUse  = usageCheck.limit !== null ? usageCheck.limit : FREE_MONTHLY_LIMIT;
 
         if (usageCheck.ok && usageCheck.limitHit) {
             showCgInlineError(
