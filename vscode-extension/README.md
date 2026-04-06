@@ -17,7 +17,7 @@
 
 ## 🎬 See It In Action
 
-[![Poly-Glot AI — Demo Video](https://img.youtube.com/vi/uIi7pbe5H6c/maxresdefault.jpg)](https://youtu.be/uIi7pbe5H6c)
+[![Poly-Glot AI — Demo Video](images/demo-thumbnail.jpg)](https://youtu.be/uIi7pbe5H6c)
 
 > *Click to watch the full demo on YouTube — see JSDoc, Javadoc, PyDoc, why-comments and Copilot Chat in action.*
 
