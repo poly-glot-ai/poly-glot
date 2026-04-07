@@ -5,10 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Poly-Glot AI — Health Dashboard</title>
-<link rel="icon" type="image/x-icon" href="../favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
 <meta name="robots" content="noindex,nofollow">
 <style>
   :root {
@@ -256,8 +253,17 @@
 
 <!-- Section 3b: Signups -->
 <div class="section">
-  <div class="sec-title">👤 Users &amp; Signups</div>
+  <div class="sec-title">👤 Users &amp; Signups <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— only emails that clicked their magic link</span></div>
   <div class="grid" id="signupsGrid"></div>
+  <!-- Signup source breakdown -->
+  <div style="margin-top:12px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr><th>Surface</th><th>Signups</th><th>% of total</th><th>Description</th></tr>
+      </thead>
+      <tbody id="signupSourceBody"></tbody>
+    </table>
+  </div>
 
   <!-- User list table -->
   <div style="margin-top:18px;overflow-x:auto;">
@@ -267,6 +273,8 @@
           <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">#</th>
           <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Email</th>
           <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Plan</th>
+          <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Surface</th>
+          <th style="padding:8px 12px;text-align:left;color:var(--muted);font-weight:600;">Signed up</th>
           <th style="padding:8px 12px;text-align:right;color:var(--muted);font-weight:600;">Usage this month</th>
         </tr>
       </thead>
@@ -492,13 +500,14 @@ async function collectAll() {
     if (adminRes.ok) {
       const d = await adminRes.json();
       if (d.ok) {
-        m.totalSignups    = d.unique_users ?? d.total_signups ?? 0;
-        m.activeSessions  = d.active_sessions;
-        m.planFree        = d.plan_breakdown?.free       ?? 0;
-        m.planPro         = d.plan_breakdown?.pro        ?? 0;
-        m.planTeam        = d.plan_breakdown?.team       ?? 0;
-        m.signupPeriod    = d.period;
-        m.userList        = d.users ?? [];
+        m.totalSignups       = d.unique_users ?? d.total_signups ?? 0;
+        m.activeSessions     = d.active_sessions;
+        m.planFree           = d.plan_breakdown?.free       ?? 0;
+        m.planPro            = d.plan_breakdown?.pro        ?? 0;
+        m.planTeam           = d.plan_breakdown?.team       ?? 0;
+        m.signupPeriod       = d.period;
+        m.surfaceBreakdown   = d.surface_breakdown ?? { prompt: 0, app: 0 };
+        m.userList           = d.users ?? [];
       }
     }
   } catch { m.totalSignups = null; m.userList = []; }
@@ -690,14 +699,35 @@ function renderSignups(m) {
     ? ((paidTotal / m.totalSignups) * 100).toFixed(1) + '%'
     : '0%';
 
+  // Surface breakdown
+  const promptSignups = m.surfaceBreakdown?.prompt ?? 0;
+  const appSignups    = m.surfaceBreakdown?.app    ?? 0;
+
   document.getElementById('signupsGrid').innerHTML = [
-    card('👤', 'Total Signups',       m.totalSignups   != null ? m.totalSignups   : '—', `all time · ${period} · GA: sign_up event`),
-    card('🆓', 'Free Users',          m.planFree       != null ? m.planFree       : '—', 'signed up · on free plan'),
+    card('👤', 'Total Signups',       m.totalSignups   != null ? m.totalSignups   : '—', `magic link clicked · ${period}`),
+    card('✨', 'Prompt Studio',       promptSignups    != null ? promptSignups    : '—', 'signed up via poly-glot.ai/prompt/'),
+    card('🦜', 'AI App (main site)',  appSignups       != null ? appSignups       : '—', 'signed up via poly-glot.ai'),
+    card('🆓', 'Free Users',          m.planFree       != null ? m.planFree       : '—', 'on free plan'),
     card('💎', 'Pro Users',           m.planPro        != null ? m.planPro        : '—', '$9/mo · paying customers'),
     card('👥', 'Team Users',          m.planTeam       != null ? m.planTeam       : '—', '$29/mo · team accounts'),
     card('💰', 'Est. MRR',            mrrStr,                                            `${paidTotal} paying · ${convRate} conversion`),
     card('🔐', 'Active Sessions',     m.activeSessions != null ? m.activeSessions : '—', 'valid 30-day session tokens in KV'),
   ].join('');
+
+  // Source breakdown table
+  const tbody = document.getElementById('signupSourceBody');
+  if (!tbody) return;
+  const total = m.totalSignups || 0;
+  const pct   = (n) => total > 0 ? ((n / total) * 100).toFixed(1) + '%' : '0%';
+  tbody.innerHTML = [
+    { surface:'✨ Prompt Studio', n: promptSignups, desc:'poly-glot.ai/prompt/ · nav_cta, hero_cta, pricing_free, auth_gate' },
+    { surface:'🦜 AI App',        n: appSignups,    desc:'poly-glot.ai · main site, VS Code, CLI, GitHub App, vscode-free-signup' },
+  ].map(r => `<tr>
+    <td style="font-weight:600;color:var(--text);">${r.surface}</td>
+    <td style="font-variant-numeric:tabular-nums;color:var(--purple2);font-weight:700;">${r.n.toLocaleString()}</td>
+    <td style="color:var(--muted);">${pct(r.n)}</td>
+    <td class="ep-desc">${r.desc}</td>
+  </tr>`).join('');
 }
 
 function renderUserTable(users) {
@@ -707,16 +737,21 @@ function renderUserTable(users) {
     tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No users yet</td></tr>';
     return;
   }
-  const PLAN_COLORS = { pro: '#a78bfa', team: '#34d399', enterprise: '#f59e0b', free: '#64748b' };
+  const PLAN_COLORS    = { pro: '#a78bfa', team: '#34d399', enterprise: '#f59e0b', free: '#64748b' };
+  const SURFACE_LABELS = { prompt: '✨ Prompt', app: '🦜 App' };
   tbody.innerHTML = users.map((u, i) => {
-    const planColor = PLAN_COLORS[u.plan] || '#64748b';
-    const planLabel = (u.plan || 'free').toUpperCase();
+    const planColor    = PLAN_COLORS[u.plan] || '#64748b';
+    const planLabel    = (u.plan || 'free').toUpperCase();
+    const surfaceLabel = SURFACE_LABELS[u.surface] || '🦜 App';
+    const signedUp     = u.signup_ts ? new Date(u.signup_ts).toLocaleDateString() : '—';
     return `<tr style="border-bottom:1px solid var(--border);${i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)'}">
       <td style="padding:8px 12px;color:var(--muted);">${i + 1}</td>
       <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}</td>
       <td style="padding:8px 12px;">
         <span style="background:${planColor}22;color:${planColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">${planLabel}</span>
       </td>
+      <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${surfaceLabel}</td>
+      <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${signedUp}</td>
       <td style="padding:8px 12px;text-align:right;color:var(--text);">${u.usage_this_month != null ? u.usage_this_month.toLocaleString() : '—'}</td>
     </tr>`;
   }).join('');

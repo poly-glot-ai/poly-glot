@@ -401,7 +401,7 @@ async function handleLogin(request, env) {
 
   // ── Token generation + storage ──────────────────────────────
   const token     = generateToken();
-  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
+  const tokenData = JSON.stringify({ email, plan, source: body?.source ?? 'unknown', created: Date.now() });
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
@@ -410,14 +410,8 @@ async function handleLogin(request, env) {
   // the token there automatically, so the terminal signs in with zero copy-paste.
   const source      = body?.source ?? 'email';
 
-  // Route magic link back to the surface the user signed in from.
-  // prompt_* sources → Prompt Studio landing page
-  // All other sources → main poly-glot.ai site
-  const PROMPT_SOURCES = ['prompt', 'prompt_page', 'nav_cta', 'hero_cta', 'voice_cta',
-                          'cta_section', 'pricing_free', 'auth_gate', 'auth_gate_signin'];
-  const isPromptSource = PROMPT_SOURCES.some(s => source === s || source.startsWith('prompt'));
   const rootBase  = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const baseUrl   = isPromptSource ? `${rootBase}/prompt` : rootBase;
+  const baseUrl   = `${rootBase}/prompt`;
   const rawCallback = body?.callbackUrl ?? '';
 
   // Validate callbackUrl — only allow localhost/127.0.0.1 to prevent open redirect
@@ -504,43 +498,57 @@ async function handleAdminUsers(request, env) {
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
 
-  // ── Parse plan: keys → user list — real users only ───────
-  const planKeys    = allKeys.filter(k => k.name.startsWith('plan:'));
+  // ── Only count emails that clicked their magic link ───────
+  // signup: keys are written in resolveToken (deleteAfter=true)
+  // — meaning the user actually received AND clicked the link.
+  // plan: keys are written at request time (before click) so
+  // they include unverified addresses — we no longer use them
+  // as the user count source of truth.
+  const signupKeys  = allKeys.filter(k => k.name.startsWith('signup:'));
   const sessionKeys = allKeys.filter(k => k.name.startsWith('session:'));
 
   const YYYY_MM = new Date().toISOString().slice(0, 7);
 
-  // Build full user list first, then filter to real unique users
-  const allUsers = await Promise.all(planKeys.map(async k => {
-    const email = k.name.slice('plan:'.length);
-    const plan  = await env.AUTH_KV.get(k.name, 'text') ?? 'free';
-    const usageVal = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`, 'text');
-    const usage    = usageVal ? parseInt(usageVal, 10) : 0;
-    return { email, plan, usage_this_month: usage };
+  // Build user list from signup: keys only
+  const allUsers = await Promise.all(signupKeys.map(async k => {
+    const email     = k.name.slice('signup:'.length);
+    const signupRaw = await env.AUTH_KV.get(k.name, 'json');
+    const surface   = signupRaw?.surface ?? 'app';
+    const source    = signupRaw?.source  ?? 'unknown';
+    const signupTs  = signupRaw?.ts      ?? null;
+    const plan      = (await env.AUTH_KV.get(`plan:${email}`, 'text')) ?? 'free';
+    const usageVal  = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`, 'text');
+    const usage     = usageVal ? parseInt(usageVal, 10) : 0;
+    return { email, plan, usage_this_month: usage, surface, source, signup_ts: signupTs };
   }));
 
-  // Deduplicate by email (Set), filter out disposable/test addresses and tombstoned entries
+  // Deduplicate + filter tombstones and disposable addresses
   const seen  = new Set();
   const users = allUsers.filter(u => {
     if (seen.has(u.email)) return false;
     seen.add(u.email);
-    if (u.plan === 'DELETED') return false;           // tombstone — key pending KV propagation
+    if (u.plan === 'DELETED')       return false;
     if (isDisposableEmail(u.email)) return false;
     if (isTestEmail(u.email))       return false;
     return true;
   });
 
-  // ── Plan breakdown (real users only) ─────────────────────
+  // ── Plan breakdown ────────────────────────────────────────
   const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
   users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
+
+  // ── Surface breakdown (prompt vs app) ─────────────────────
+  const surfaces = { prompt: 0, app: 0 };
+  users.forEach(u => { surfaces[u.surface] = (surfaces[u.surface] ?? 0) + 1; });
 
   return jsonResponse({
     ok:              true,
     unique_users:    users.length,
     active_sessions: sessionKeys.length,
     plan_breakdown:  breakdown,
+    surface_breakdown: surfaces,
     period:          YYYY_MM,
-    users:           users.sort((a, b) => b.usage_this_month - a.usage_this_month),
+    users:           users.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
   });
 }
 
@@ -811,6 +819,27 @@ async function resolveToken(request, env, deleteAfter) {
       JSON.stringify({ email: data.email, plan: data.plan, created: Date.now() }),
       { expirationTtl: SESSION_TTL },
     );
+
+    // ── Record confirmed signup (magic link clicked) ──────────
+    // signup:{email} is written ONLY when the user actually clicks
+    // the magic link — not at request time. This is the source of
+    // truth for "real signups" in the admin dashboard.
+    // source: prompt_page / nav_cta / hero_cta etc → "prompt"
+    //         website / vscode / cli etc            → "app"
+    const rawSource  = data.source ?? '';
+    const isPrompt   = /prompt/i.test(rawSource);
+    const surface    = isPrompt ? 'prompt' : 'app';
+    const signupKey  = `signup:${data.email}`;
+    const existing   = await env.AUTH_KV.get(signupKey, 'json');
+    if (!existing) {
+      // First-time click — record source + timestamp
+      await env.AUTH_KV.put(signupKey, JSON.stringify({
+        email:   data.email,
+        source:  rawSource || 'unknown',
+        surface: surface,
+        ts:      Date.now(),
+      }));
+    }
   }
 
   // Always read live plan from KV — catches upgrades since token was issued
@@ -1190,7 +1219,7 @@ async function handleFreeSignup(request, env) {
   // Generate magic-link token
   const token     = generateToken();
   const plan      = existingPlan ?? 'free';
-  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
+  const tokenData = JSON.stringify({ email, plan, source: 'vscode-free-signup', created: Date.now() });
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
