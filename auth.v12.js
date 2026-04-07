@@ -1071,7 +1071,16 @@
           // The prompt/index.html shim listens for pg:plan-loaded and shows
           // its own branded welcome toast. We must not show the dev token panel
           // (VS Code / CLI widget) on a consumer-facing landing page.
-          var isPromptSource = source.indexOf('prompt') !== -1;
+          // Detection order:
+          //   1. ?source=prompt_page in URL (set by Worker on magic link)
+          //   2. pg_source in sessionStorage (set when modal opens)
+          //   3. window.location.pathname contains '/prompt' (catch-all —
+          //      magic links land on /prompt/?token=XXX with no source param)
+          var _sessionSource = '';
+          try { _sessionSource = sessionStorage.getItem('pg_source') || ''; } catch(e) {}
+          var isPromptSource = source.indexOf('prompt') !== -1
+            || _sessionSource.indexOf('prompt') !== -1
+            || window.location.pathname.indexOf('/prompt') !== -1;
 
           // Welcome toast — different message per surface
           if (isPromptSource) {
