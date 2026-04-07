@@ -2595,13 +2595,13 @@
   </style>
 
   <!-- ── Prompt Studio auth shim ──────────────────────────────────────────
-       Runs BEFORE auth.v11.js loads.  Handles three things:
+       Runs BEFORE auth.v12.js loads.  Handles three things:
 
        A) Stamp pg_source = 'prompt_page' in sessionStorage immediately so
           that when the user submits their email, auth.v11 sends source=prompt_page
           to the Worker → Worker routes the magic link back to /prompt/ not /.
 
-       B) Block the vscode:// deep-link redirect that auth.v11 fires after
+       B) (vscode:// deep-link removed — no longer fired)
           verifying a ?token= in the URL.  That redirect makes sense on the
           main site (developer tool) but is jarring on a landing page.
 
@@ -2614,7 +2614,7 @@
     try { sessionStorage.setItem('pg_source', 'prompt_page'); } catch(e) {}
 
     /* ── B. Block vscode:// navigation ─────────────────────────────── */
-    // auth.v11 navigates to vscode:// via window.location.href, window.open,
+    // auth.v12 no longer fires vscode:// deep links.
     // and window.location.assign — all three must be blocked on this page.
     var _nativeSetTimeout = window.setTimeout;
 
@@ -2793,7 +2793,7 @@
   </script>
 
   <!-- Auth: load poly-glot auth system -->
-  <script defer src="../auth.v11.js"></script>
+  <script defer src="../auth.v12.js"></script>
 
   <!-- Chat widget (same as poly-glot.ai) -->
   <script defer src="../chat.v8.js"></script>
@@ -2817,7 +2817,7 @@
   <script>
     // ── Auth sign-in helper ──────────────────────────────────
     // Always stamp sessionStorage with a prompt-scoped source BEFORE opening
-    // the modal. auth.v11.js reads pg_source from sessionStorage and sends it
+    // the modal. auth.v12.js reads pg_source from sessionStorage and sends it
     // to the Worker as `source`. The Worker uses this to route the magic link
     // back to /prompt/ instead of the main poly-glot.ai homepage.
     function pgPromptSignIn(source) {
@@ -2835,7 +2835,7 @@
     }
 
     // ── Auth gate banner ─────────────────────────────────────
-    // Show unless user is already authed (body.pg-authed added by auth.v11.js)
+    // Show unless user is already authed (body.pg-authed added by auth.v12.js)
     let _gateDismissed = false;
     function pgaAuthGateShow() {
       if (_gateDismissed) return;
