@@ -1,0 +1,3509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://poly-glot-prompt.ai/">
+  <title>Prompt Studio — Write AI Prompts That Actually Work | poly-glot-prompt.ai</title>
+  <meta name="description" content="Write, test, version, and share AI prompts. poly-glot-prompt.ai is the prompt engineering studio built for developers — variables, live preview, iteration history, and one-click sharing.">
+  <meta property="og:title" content="poly-glot-prompt.ai — AI Prompt Engineering Studio">
+  <meta property="og:description" content="Write, test, version, and share AI prompts. Built for developers.">
+  <meta property="og:image" content="https://poly-glot.ai/parrot-logo.png">
+  <meta property="og:url" content="https://poly-glot-prompt.ai/">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <meta name="description" content="Pick a template, fill in the blanks, and copy a perfect AI prompt in 60 seconds. No experience needed. Works with ChatGPT, Claude, and Gemini. Free to start.">
+  <link rel="icon" type="image/x-icon" href="parrot-favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="parrot-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="parrot-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="parrot-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Reset + Root ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0a0b14;
+      --bg-alt:      #0f1117;
+      --bg-card:     #13141f;
+      --bg-card2:    #161824;
+      --accent:      #7dd3fc;
+      --accent2:     #38bdf8;
+      --accent-prompt: #a78bfa;   /* purple for prompt brand */
+      --accent-prompt2: #c4b5fd;
+      --green:       #10b981;
+      --red:         #ef4444;
+      --border:      rgba(255,255,255,0.07);
+      --border-accent: rgba(125,211,252,0.2);
+      --border-prompt: rgba(167,139,250,0.25);
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-dim:    #64748b;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { text-decoration: none; color: inherit; }
+    code { font-family: 'Fira Code', monospace; }
+
+    /* ── Nav ───────────────────────────────────────────────── */
+    .pga-nav {
+      /* ── matches pg2-nav exactly ── */
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(10,11,20,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      height: 58px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      overflow: visible;
+    }
+    .pga-nav__inner {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      overflow: visible;
+      flex-wrap: nowrap;
+    }
+    /* Hamburger — hidden desktop, shown mobile */
+    .pga-nav__hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 34px; height: 34px;
+      background: none; border: none; cursor: pointer;
+      padding: 5px; border-radius: 6px;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .pga-nav__hamburger:hover { background: rgba(255,255,255,.07); }
+    .pga-nav__hamburger span {
+      display: block; width: 18px; height: 2px;
+      background: var(--text-muted); border-radius: 2px;
+      transition: transform .2s, opacity .2s, width .2s;
+      transform-origin: center;
+    }
+    .pga-nav__hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .pga-nav__hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+    .pga-nav__hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    /* Brand */
+    .pga-nav__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      flex-shrink: 1;
+    }
+    .pga-nav__brand-logo {
+      width: 64px;
+      height: 46px;
+      object-fit: contain;
+    }
+    .pga-nav__brand-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .pga-nav__brand-sub {
+      font-weight: 400;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    /* Nav links */
+    .pga-nav__links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 16px;
+    }
+    .pga-nav__link {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      transition: color .15s, background .15s;
+      white-space: nowrap;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+    .pga-nav__link:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.05);
+    }
+    /* Right side */
+    .pga-nav__right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    /* ← Back link */
+    .pga-nav__back {
+      display: inline-flex; align-items: center;
+      height: 32px; padding: 0 14px;
+      background: transparent;
+      border: 1px solid rgba(125,211,252,.3);
+      border-radius: 8px;
+      color: var(--accent);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      transition: background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .pga-nav__back:hover {
+      background: rgba(125,211,252,.08);
+      border-color: rgba(125,211,252,.5);
+    }
+    /* Sign Up CTA */
+    .pga-nav__cta {
+      display: inline-flex; align-items: center;
+      height: 32px; padding: 0 14px;
+      background: linear-gradient(135deg,#7c3aed,#4f46e5);
+      border: none; border-radius: 8px;
+      color: #fff; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: opacity .15s, box-shadow .15s;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(124,58,237,.35);
+    }
+    .pga-nav__cta:hover {
+      opacity: .88;
+      box-shadow: 0 4px 16px rgba(124,58,237,.5);
+    }
+    body.pg-authed .pga-nav__cta { display: none !important; }
+    body.pg-authed #pgaNavSignIn { display: none !important; }
+    /* Mobile drawer */
+    .pga-nav__mobile-menu {
+      display: none;
+      position: fixed;
+      top: 58px; left: 0; right: 0;
+      background: rgba(13,14,26,.97);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      z-index: 9996;
+      flex-direction: column;
+      padding: 12px 16px 20px;
+      gap: 4px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      transform: translateY(-8px);
+      opacity: 0;
+      transition: transform .2s ease, opacity .2s ease;
+      pointer-events: none;
+    }
+    .pga-nav__mobile-menu.open {
+      display: flex;
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .pga-nav__mobile-link {
+      font-size: 14px; font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: color .15s, background .15s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .pga-nav__mobile-link:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.06);
+    }
+    @media (max-width: 640px) {
+      .pga-nav__hamburger { display: flex; }
+      .pga-nav__links { display: none; }
+      .pga-nav__back { display: none; }
+      .pga-nav__brand-sub { display: none; }
+    }
+
+    /* ── Divider ────────────────────────────────────────────── */
+    .pg2-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0;
+    }
+
+    /* ── Section base (matches pg2-section) ─────────────────── */
+    .pg2-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    .pg2-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent-prompt);
+      margin-bottom: 16px;
+    }
+    .pg2-section__h2 {
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin: 0 0 16px;
+      line-height: 1.15;
+    }
+    .pg2-section__sub {
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      margin: 0 0 40px;
+      max-width: 680px;
+    }
+
+    /* ── HERO ───────────────────────────────────────────────── */
+    .pga-hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 96px 24px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    @media (max-width: 800px) {
+      .pga-hero { grid-template-columns: 1fr; gap: 48px; padding: 64px 16px 48px; }
+    }
+
+    .pga-hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(167,139,250,0.1);
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-prompt2);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .pga-hero__badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-prompt);
+      animation: pulse-prompt 2s infinite;
+    }
+    @keyframes pulse-prompt {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .pga-hero__h1 {
+      font-size: clamp(36px, 5.5vw, 58px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 20px;
+      max-width: 520px;
+    }
+    .pga-hero__h1 em {
+      font-style: normal;
+      display: inline;
+      background: linear-gradient(135deg, var(--accent-prompt), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pga-hero__sub {
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      max-width: 500px;
+    }
+    .pga-hero__actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 26px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(124,58,237,0.45);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: 1px solid var(--border-prompt);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      color: var(--text);
+      border-color: rgba(167,139,250,0.5);
+      background: rgba(167,139,250,0.06);
+    }
+    .pga-hero__stat-row {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+    .pga-hero__stat {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pga-hero__stat strong {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .pga-hero__stat-check {
+      color: var(--green);
+      font-size: 13px;
+    }
+
+    /* ── HERO RIGHT: Prompt mockup ────────────────────────── */
+    .pga-mockup {
+      background: var(--bg-card);
+      border: 1px solid var(--border-prompt);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(167,139,250,0.06), 0 24px 64px rgba(0,0,0,0.5);
+    }
+    /* Window bar */
+    .pga-mockup__bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .pga-mockup__dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .pga-mockup__dot--red    { background: #ff5f57; }
+    .pga-mockup__dot--yellow { background: #ffbd2e; }
+    .pga-mockup__dot--green  { background: #28c840; }
+    .pga-mockup__bar-title {
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      font-family: 'Fira Code', monospace;
+      letter-spacing: 0.02em;
+    }
+    .pga-mockup__bar-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(167,139,250,0.15);
+      color: var(--accent-prompt2);
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 10px;
+      padding: 2px 8px;
+      letter-spacing: 0.04em;
+    }
+
+    /* Prompt editor area */
+    .pga-mockup__body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pga-mockup__label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .pga-mockup__editor {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.75;
+      color: #cbd5e1;
+    }
+    .pga-mockup__var {
+      display: inline-block;
+      background: rgba(167,139,250,0.18);
+      color: var(--accent-prompt2);
+      border: 1px solid rgba(167,139,250,0.35);
+      border-radius: 4px;
+      padding: 0 5px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pga-mockup__divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 -16px;
+    }
+    .pga-mockup__vars-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pga-mockup__var-chip {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .pga-mockup__var-chip-name {
+      color: var(--accent-prompt);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .pga-mockup__var-chip-val {
+      color: var(--text-muted);
+    }
+    .pga-mockup__output {
+      background: rgba(16,185,129,0.06);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #a7f3d0;
+    }
+    .pga-mockup__output-header {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #34d399;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pga-mockup__actions-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid var(--border);
+    }
+    .pga-mockup__action-btn {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pga-mockup__action-btn:hover {
+      color: var(--text-muted);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .pga-mockup__action-btn--run {
+      background: linear-gradient(135deg, rgba(124,58,237,.7), rgba(79,70,229,.6));
+      border-color: rgba(124,58,237,.5);
+      color: #c4b5fd;
+    }
+    .pga-mockup__action-btn--run:hover {
+      background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(79,70,229,.8));
+      box-shadow: 0 2px 10px rgba(124,58,237,0.3);
+    }
+
+    /* Animated cursor in editor */
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .cursor { animation: blink 1.1s step-end infinite; color: var(--accent-prompt); }
+
+    /* ── FEATURES GRID ─────────────────────────────────────── */
+    .pga-features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+    @media (max-width: 900px) { .pga-features { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .pga-features { grid-template-columns: 1fr; } }
+
+    .pga-feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .pga-feature-card:hover {
+      border-color: var(--border-prompt);
+      transform: translateY(-2px);
+    }
+    .pga-feature-card__icon {
+      font-size: 24px;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .pga-feature-card__title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .pga-feature-card__desc {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-muted);
+    }
+
+    /* ── HOW IT WORKS (CLI-style demo section) ──────────────── */
+    .pga-demo-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .pga-demo-section { grid-template-columns: 1fr; gap: 48px; padding: 48px 16px; }
+    }
+
+    /* Steps list */
+    .pga-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 32px;
+    }
+    .pga-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .pga-step__num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(167,139,250,0.15);
+      border: 1px solid rgba(167,139,250,0.35);
+      color: var(--accent-prompt);
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pga-step__body {}
+    .pga-step__title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .pga-step__desc {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-muted);
+    }
+
+    /* Version history mockup (right side of how-it-works) */
+    .pga-version-mockup {
+      background: var(--bg-card);
+      border: 1px solid var(--border-prompt);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .pga-version-mockup__header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .pga-version-mockup__header-icon { font-size: 14px; }
+    .pga-version-list {
+      padding: 8px 0;
+    }
+    .pga-version-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .pga-version-item:last-child { border-bottom: none; }
+    .pga-version-item:hover { background: rgba(255,255,255,0.02); }
+    .pga-version-item--active {
+      background: rgba(167,139,250,0.06);
+      border-left: 2px solid var(--accent-prompt);
+    }
+    .pga-version-item__dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .pga-version-item--active .pga-version-item__dot {
+      background: var(--accent-prompt);
+    }
+    .pga-version-item__body { flex: 1; }
+    .pga-version-item__name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'Fira Code', monospace;
+    }
+    .pga-version-item__meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .pga-version-item__score {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 8px;
+    }
+    .pga-version-item__score--good {
+      background: rgba(16,185,129,0.15);
+      color: #34d399;
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+    .pga-version-item__score--mid {
+      background: rgba(251,191,36,0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(251,191,36,0.25);
+    }
+    .pga-version-item__score--low {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    /* ── FEATURE DETAIL (CLI-section style 2-col) ───────────── */
+    .pga-detail-section {
+      background: rgba(167,139,250,0.03);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .pga-detail-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    @media (max-width: 800px) {
+      .pga-detail-inner { grid-template-columns: 1fr; gap: 40px; padding: 48px 16px; }
+      .pga-detail-inner .pga-detail-visual { order: -1; }
+    }
+
+    .pga-feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 28px;
+    }
+    .pga-feature-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+    .pga-feature-list__icon {
+      color: var(--accent-prompt);
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .pga-feature-list li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Share mockup */
+    .pga-share-mockup {
+      background: var(--bg-card);
+      border: 1px solid var(--border-prompt);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .pga-share-mockup__bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'Fira Code', monospace;
+    }
+    .pga-share-mockup__url {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--accent-prompt2);
+      font-family: 'Fira Code', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pga-share-mockup__body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pga-share-mockup__stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .pga-share-stat {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .pga-share-stat__val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent-prompt2);
+      display: block;
+    }
+    .pga-share-stat__label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── CTA SECTION ────────────────────────────────────────── */
+    .pga-cta-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .pga-cta-section__h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .pga-cta-section__sub {
+      font-size: 17px;
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto 40px;
+      line-height: 1.65;
+    }
+    .pga-cta-section__actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .pga-cta-section__note {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .pga-cta-section__note a {
+      color: var(--text-dim);
+      text-decoration: underline;
+      text-decoration-color: rgba(100,116,139,0.4);
+    }
+    .pga-cta-section__note a:hover { color: var(--text-muted); }
+
+    /* ── FOOTER ────────────────────────────────────────────── */
+    .pga-footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 24px 28px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .pga-footer__brand {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+    .pga-footer__brand span {
+      background: linear-gradient(90deg, var(--accent-prompt), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pga-footer__links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .pga-footer__link {
+      font-size: 12px;
+      color: var(--text-dim);
+      transition: color 0.15s;
+    }
+    .pga-footer__link:hover { color: var(--text-muted); }
+    .pga-footer__pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .pga-footer__pill:hover {
+      color: var(--text);
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+    }
+
+    /* ── Misc utils ────────────────────────────────────────── */
+    .highlight-purple { color: var(--accent-prompt2); font-weight: 600; }
+    .highlight-green  { color: #34d399; font-weight: 600; }
+
+    /* Animated shimmer on mockup border */
+    @keyframes shimmer-border {
+      0%, 100% { border-color: rgba(167,139,250,0.25); }
+      50%       { border-color: rgba(167,139,250,0.55); }
+    }
+    .pga-mockup { animation: shimmer-border 4s ease-in-out infinite; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══ NAV ═══════════════════════════════════════════════════ -->
+  <nav class="pga-nav" role="navigation" aria-label="Prompt Studio navigation">
+    <div class="pga-nav__inner">
+
+      <!-- Hamburger (mobile only) -->
+      <button class="pga-nav__hamburger" id="pgaNavHamburger" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
+      <!-- Brand — same logo + size as main site -->
+      <a href="/prompt/" class="pga-nav__brand" aria-label="Poly-Glot Prompt Studio home">
+        <picture>
+          <source srcset="../parrot-logo.webp" type="image/webp">
+          <img loading="eager" src="../parrot-logo.png" alt="Poly-Glot parrot logo" class="pga-nav__brand-logo">
+        </picture>
+        <span class="pga-nav__brand-text">Poly-Glot AI<span class="pga-nav__brand-sub"> · Prompt Studio</span></span>
+      </a>
+
+      <!-- Nav links (desktop) -->
+      <div class="pga-nav__links">
+        <a href="#pga-how-it-works" class="pga-nav__link" onclick="document.getElementById('pga-how-it-works').scrollIntoView({behavior:'smooth'});return false;">How it works</a>
+        <a href="#pga-features" class="pga-nav__link" onclick="document.getElementById('pga-features').scrollIntoView({behavior:'smooth'});return false;">Features</a>
+        <a href="#pga-voice" class="pga-nav__link" onclick="document.getElementById('pga-voice').scrollIntoView({behavior:'smooth'});return false;">🎙️ Voice</a>
+        <a href="#pga-mcp" class="pga-nav__link" onclick="document.getElementById('pga-mcp').scrollIntoView({behavior:'smooth'});return false;">🔌 MCP</a>
+        <a href="#pga-pricing" class="pga-nav__link" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;">Pricing</a>
+        <a href="#pga-faq" class="pga-nav__link" onclick="document.getElementById('pga-faq').scrollIntoView({behavior:'smooth'});return false;">FAQ</a>
+        <button id="openTemplateLibrary" class="pga-nav__link">📚 Templates</button>
+        <a href="https://poly-glot.ai/" class="pga-nav__link" style="border:1px solid rgba(125,211,252,.25);color:var(--accent);border-radius:6px;padding:5px 10px;font-weight:600;">🦜 Poly-Glot AI</a>
+      </div>
+
+      <!-- Right side -->
+      <div class="pga-nav__right">
+        <button class="pga-nav__cta" id="pgaNavCta" onclick="pgPromptSignIn('nav_cta')">🚀 Try for Free</button>
+        <button class="pga-nav__back" id="pgaNavSignIn" onclick="pgPromptSignIn('nav_signin')">Sign In</button>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- Mobile nav drawer -->
+  <div class="pga-nav__mobile-menu" id="pgaMobileMenu" role="dialog" aria-label="Navigation menu">
+    <a href="#pga-how-it-works" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('pga-how-it-works').scrollIntoView({behavior:'smooth'});">🔍 How it works</a>
+    <a href="#pga-features" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('pga-features').scrollIntoView({behavior:'smooth'});">⚡ Features</a>
+    <a href="#pga-voice" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('pga-voice').scrollIntoView({behavior:'smooth'});">🎙️ Voice Input</a>
+    <a href="#pga-mcp" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('pga-mcp').scrollIntoView({behavior:'smooth'});">🔌 MCP Server</a>
+    <a href="#pga-pricing" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});">💎 Pricing</a>
+    <a href="#" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();document.getElementById('openTemplateLibrary').click();return false;">📚 Templates</a>
+    <a href="https://poly-glot.ai/" class="pga-nav__mobile-link" style="border:1px solid rgba(125,211,252,.2);color:var(--accent);margin-top:4px;">🦜 Poly-Glot AI</a>
+    <a href="#" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();pgPromptSignIn('mobile_signup');return false;" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.18));border:1px solid rgba(124,58,237,.4);border-radius:8px;color:#c4b5fd;font-weight:700;margin-top:6px;">🚀 Try for Free</a>
+    <a href="#" class="pga-nav__mobile-link" onclick="pgaCloseMobileMenu();pgPromptSignIn('mobile_signin');return false;" style="border-top:1px solid rgba(125,211,252,.12);margin-top:6px;padding-top:14px;color:var(--accent);">🔑 Sign In</a>
+  </div>
+
+  <script>
+    (function() {
+      var btn  = document.getElementById('pgaNavHamburger');
+      var menu = document.getElementById('pgaMobileMenu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var open = menu.classList.toggle('open');
+        btn.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+      });
+      document.addEventListener('click', function(e) {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.classList.remove('open');
+          btn.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+    function pgaCloseMobileMenu() {
+      var menu = document.getElementById('pgaMobileMenu');
+      var btn  = document.getElementById('pgaNavHamburger');
+      if (menu) menu.classList.remove('open');
+      if (btn)  { btn.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+    }
+  </script>
+
+  <!-- ══ HERO ══════════════════════════════════════════════════ -->
+  <section class="pga-hero" aria-labelledby="pga-hero-h1">
+
+    <!-- Left: copy -->
+    <div>
+      <div class="pga-hero__badge">
+        <span class="pga-hero__badge-dot"></span>
+        Try ✨ FREE · No credit card required
+      </div>
+
+      <h1 class="pga-hero__h1" id="pga-hero-h1">
+        Write AI prompts that
+        <em>actually work.</em>
+      </h1>
+
+      <p class="pga-hero__sub">
+        Pick a template, fill in the blanks, and copy a perfect AI prompt — in under a minute. No experience needed. Works with ChatGPT, Claude, and Gemini.
+      </p>
+
+      <!-- Value props — broad appeal -->
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--text-muted);">
+          <span style="color:#34d399;font-size:16px;flex-shrink:0;">✅</span>
+          <span><strong style="color:var(--text);">No blank-page stress</strong> — 21 ready-made templates for coding, writing, legal, marketing &amp; more.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--text-muted);">
+          <span style="color:#a78bfa;font-size:16px;flex-shrink:0;">⚡</span>
+          <span><strong style="color:var(--text);">Get it right the first time</strong> — structured prompts mean fewer follow-ups and better AI answers.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--text-muted);">
+          <span style="color:#38bdf8;font-size:16px;flex-shrink:0;">🎯</span>
+          <span><strong style="color:var(--text);">For everyone</strong> — marketers, developers, students, CEOs. If you use AI, this makes it better.</span>
+        </div>
+      </div>
+
+      <div class="pga-hero__actions">
+        <button class="btn-primary" id="heroSignUpBtn" onclick="pgPromptSignIn('hero_cta')">
+          🚀 Pick Your Free Template →
+        </button>
+        <a href="#pga-how-it-works" class="btn-secondary" onclick="document.getElementById('pga-how-it-works').scrollIntoView({behavior:'smooth'}); return false;">
+          See how it works ↓
+        </a>
+      </div>
+
+      <div class="pga-hero__stat-row">
+        <div class="pga-hero__stat"><span class="pga-hero__stat-check">✓</span> <strong>Free — no credit card</strong></div>
+        <div class="pga-hero__stat"><span class="pga-hero__stat-check">✓</span> <strong>Works with ChatGPT, Claude, Gemini</strong></div>
+        <div class="pga-hero__stat"><span class="pga-hero__stat-check">✓</span> <strong>Ready in 60 seconds</strong></div>
+      </div>
+    </div>
+
+    <!-- Right: interactive prompt mockup -->
+    <div>
+      <div class="pga-mockup" role="img" aria-label="poly-glot-prompt.ai prompt editor preview">
+
+        <!-- Window chrome -->
+        <div class="pga-mockup__bar">
+          <span class="pga-mockup__dot pga-mockup__dot--red"></span>
+          <span class="pga-mockup__dot pga-mockup__dot--yellow"></span>
+          <span class="pga-mockup__dot pga-mockup__dot--green"></span>
+          <span class="pga-mockup__bar-title">prompt-studio — poly-glot-prompt.ai</span>
+          <span class="pga-mockup__bar-badge">v7 · saved</span>
+        </div>
+
+        <div class="pga-mockup__body">
+
+          <!-- Prompt template -->
+          <div>
+            <div class="pga-mockup__label">📝 Prompt Template</div>
+            <div class="pga-mockup__editor">
+              You are a <span class="pga-mockup__var">{{role}}</span> specializing in
+              <span class="pga-mockup__var">{{domain}}</span>.<br><br>
+              Review the following code and:<br>
+              1. Identify any <span class="pga-mockup__var">{{issue_type}}</span> issues<br>
+              2. Suggest specific improvements<br>
+              3. Provide a corrected version<br><br>
+              Code:<br>
+              <code style="color:#a5f3fc;">```<span class="pga-mockup__var">{{language}}</span></code><br>
+              <code style="color:#e2e8f0;">{{code}}</code><br>
+              <code style="color:#a5f3fc;">```</code>
+              <span class="cursor">|</span>
+            </div>
+          </div>
+
+          <div class="pga-mockup__divider"></div>
+
+          <!-- Variable chips -->
+          <div>
+            <div class="pga-mockup__label">⚙️ Variables</div>
+            <div class="pga-mockup__vars-row">
+              <div class="pga-mockup__var-chip">
+                <span class="pga-mockup__var-chip-name">{{role}}</span>
+                <span class="pga-mockup__var-chip-val">senior engineer</span>
+              </div>
+              <div class="pga-mockup__var-chip">
+                <span class="pga-mockup__var-chip-name">{{domain}}</span>
+                <span class="pga-mockup__var-chip-val">Python / ML</span>
+              </div>
+              <div class="pga-mockup__var-chip">
+                <span class="pga-mockup__var-chip-name">{{issue_type}}</span>
+                <span class="pga-mockup__var-chip-val">performance</span>
+              </div>
+              <div class="pga-mockup__var-chip">
+                <span class="pga-mockup__var-chip-name">{{language}}</span>
+                <span class="pga-mockup__var-chip-val">python</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pga-mockup__divider"></div>
+
+          <!-- Live output preview -->
+          <div>
+            <div class="pga-mockup__output">
+              <div class="pga-mockup__output-header">
+                <span>✅</span> Live Preview
+              </div>
+              You are a <span style="color:#c4b5fd;">senior engineer</span> specializing in
+              <span style="color:#c4b5fd;">Python / ML</span>. Review the following code and identify
+              any <span style="color:#c4b5fd;">performance</span> issues…
+            </div>
+          </div>
+        </div>
+
+        <!-- Action bar -->
+        <div class="pga-mockup__actions-bar">
+          <button class="pga-mockup__action-btn pga-mockup__action-btn--run">▶ Run</button>
+          <button class="pga-mockup__action-btn">💾 Save v8</button>
+          <button class="pga-mockup__action-btn">📤 Share</button>
+          <button class="pga-mockup__action-btn" style="margin-left:auto;">📋 History</button>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ FEATURES GRID ═════════════════════════════════════════ -->
+  <section class="pg2-section" id="pga-features" aria-labelledby="pga-features-heading">
+    <span class="pg2-eyebrow">🧩 What's inside</span>
+    <h2 class="pg2-section__h2" id="pga-features-heading">Everything you need to write great AI prompts.</h2>
+    <p class="pg2-section__sub">Whether you're a developer building AI features or someone who just wants better answers from ChatGPT — Prompt Studio has you covered.</p>
+
+    <div class="pga-features">
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">📝</span>
+        <div class="pga-feature-card__title">21 Ready-Made Templates</div>
+        <div class="pga-feature-card__desc">Pick a template for your use case — code review, email writing, research, legal summaries &amp; more. Fill in the blanks. Done.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">⚙️</span>
+        <div class="pga-feature-card__title">Fill-in-the-Blank Variables</div>
+        <div class="pga-feature-card__desc">Every template has smart fields — type your role, topic, or goal and watch the prompt update live. No coding, no copy-pasting.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">▶️</span>
+        <div class="pga-feature-card__title">Test on ChatGPT, Claude &amp; Gemini</div>
+        <div class="pga-feature-card__desc">Run your prompt against multiple AI models in one click. See which gives the best answer before you commit to using it.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">📚</span>
+        <div class="pga-feature-card__title">Version History — Never Lose a Good Prompt</div>
+        <div class="pga-feature-card__desc">Every time you save, a version is created. Go back to any previous version, compare changes, and restore what worked.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">📤</span>
+        <div class="pga-feature-card__title">Share with One Click</div>
+        <div class="pga-feature-card__desc">Send a prompt to your team, a client, or a friend as a simple URL. They see the template, variables, and preview — no account needed to view.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">📋</span>
+        <div class="pga-feature-card__title">Copy &amp; Paste Anywhere</div>
+        <div class="pga-feature-card__desc">Copy your finished prompt to the clipboard and paste it into ChatGPT, Claude, Gemini — or export as code for developers building AI apps.</div>
+      </div>
+
+      <div class="pga-feature-card pga-feature-card--voice">
+        <span class="pga-feature-card__icon">🎙️</span>
+        <div class="pga-feature-card__title">Voice Input <span style="font-size:10px;font-weight:700;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:2px 7px;border-radius:8px;vertical-align:middle;margin-left:4px;">NEW</span></div>
+        <div class="pga-feature-card__desc">Speak your prompt out loud instead of typing. Your browser transcribes it in real time — hands-free, no plugins, works in 40+ languages.</div>
+      </div>
+
+      <div class="pga-feature-card">
+        <span class="pga-feature-card__icon">🔌</span>
+        <div class="pga-feature-card__title">MCP Server — Use from Any AI Tool <span style="font-size:10px;font-weight:700;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 7px;border-radius:8px;vertical-align:middle;margin-left:4px;">PRO</span></div>
+        <div class="pga-feature-card__desc">Developers: connect Prompt Studio to Goose, Claude Desktop, or Cursor. Your saved prompts become callable tools inside your AI coding workflow.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ VOICE INPUT SECTION ═══════════════════════════════════ -->
+  <section class="pga-detail-section" id="pga-voice" aria-labelledby="pga-voice-heading">
+    <div class="pga-detail-inner">
+
+      <!-- Left: copy + steps -->
+      <div>
+        <span class="pg2-eyebrow">🎙️ Voice Input</span>
+        <h2 class="pg2-section__h2" id="pga-voice-heading">Talk to it. No typing required.</h2>
+        <p class="pg2-section__sub">Hit the mic, speak your prompt out loud, and watch it appear on screen — transcribed in real time, right in your browser. No app to install, no account needed to try it.</p>
+        <p style="margin-top:8px;font-size:13px;color:var(--text-muted);">Voice data never leaves your device. <a href="/prompt/privacy/" style="color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(125,211,252,.3);" target="_blank" rel="noopener">Privacy policy →</a></p>
+
+
+        <!-- HOW TO USE — numbered steps -->
+        <ol class="pga-steps" aria-label="How to use voice input" style="margin-top:24px;">
+          <li class="pga-step">
+            <div class="pga-step__num">1</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Click the 🎙️ mic button</div>
+              <div class="pga-step__desc">Hit the mic button on the right — or next to any field in the app. Your browser asks for mic permission once, then remembers.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">2</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Speak naturally</div>
+              <div class="pga-step__desc">Talk at a normal pace — words appear as you speak. Works in 40+ languages. No special commands needed.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">3</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Pause — your text is ready</div>
+              <div class="pga-step__desc">Click the mic again or simply pause for 2 seconds. Your spoken words drop straight into the prompt field — ready to use.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">4</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Edit, copy, or run</div>
+              <div class="pga-step__desc">Tweak any words, fill remaining fields, then copy to ChatGPT or hit Run to test instantly. Voice input never overwrites a saved version.</div>
+            </div>
+          </li>
+        </ol>
+
+        <!-- Browser support note -->
+        <div style="margin-top:20px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+          ✅ <strong style="color:var(--text);">Chrome &amp; Edge</strong> — full support &nbsp;·&nbsp;
+          ✅ <strong style="color:var(--text);">Safari iOS</strong> — supported &nbsp;·&nbsp;
+          ⚠️ <strong style="color:var(--text);">Firefox</strong> — limited (type manually)
+        </div>
+
+        <!-- Try it live CTA -->
+        <div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn-primary" id="voiceLiveMicBtn" style="font-size:14px;padding:12px 22px;display:flex;align-items:center;gap:8px;" onclick="pgaStartVoice()">
+            🎙️ Try it now — speak a prompt
+          </button>
+          <span style="font-size:12px;color:var(--text-dim);">No sign-up needed to test</span>
+        </div>
+        <!-- Live transcript output (shown when recording) -->
+        <div id="voiceLiveOutput" style="display:none;margin-top:16px;padding:14px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.25);border-radius:10px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#34d399;margin-bottom:8px;">🎙️ Live transcript</div>
+          <div id="voiceLiveText" style="font-size:14px;color:var(--text);line-height:1.6;min-height:24px;"></div>
+          <div id="voiceLiveStatus" style="font-size:12px;color:var(--text-muted);margin-top:8px;">Listening…</div>
+        </div>
+      </div>
+
+      <!-- Right: voice mockup with live waveform animation -->
+      <div class="pga-detail-visual">
+        <div class="pga-voice-mockup" role="img" aria-label="Voice input interface demo">
+
+          <!-- Window bar -->
+          <div class="pga-share-mockup__bar">
+            <span class="pga-mockup__dot pga-mockup__dot--red"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--yellow"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--green"></span>
+            <span style="margin-left:8px;font-size:11px;color:var(--text-dim);font-family:'Fira Code',monospace;">voice-input — prompt-studio</span>
+          </div>
+
+          <div style="padding:20px 16px;display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Field label + mic button -->
+            <div>
+              <div class="pga-mockup__label">🎙️ Dictating into: <span style="color:var(--accent-prompt2);">{{role}}</span></div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                <div style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(167,139,250,.4);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);font-family:'Fira Code',monospace;min-height:40px;" id="voiceMockupText">senior software engineer<span class="cursor">|</span></div>
+                <!-- Mic button — animated recording state -->
+                <button id="voiceMicBtn" onclick="toggleVoiceMockup()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .2s;box-shadow:0 0 0 0 rgba(124,58,237,0);" aria-label="Toggle voice recording">🎙️</button>
+              </div>
+            </div>
+
+            <!-- Waveform canvas -->
+            <div style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;height:64px;display:flex;align-items:center;gap:4px;overflow:hidden;" id="voiceWaveContainer">
+              <canvas id="voiceWaveCanvas" width="360" height="44" style="width:100%;height:44px;display:block;"></canvas>
+            </div>
+
+            <!-- Status row -->
+            <div style="display:flex;align-items:center;gap:8px;" id="voiceStatusRow">
+              <span id="voiceStatusDot" style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+              <span id="voiceStatusText" style="font-size:12px;color:var(--text-muted);">Recording… speak naturally</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-dim);font-family:'Fira Code',monospace;" id="voiceTimer">0:04</span>
+            </div>
+
+            <!-- Transcript preview -->
+            <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:12px 14px;">
+              <div class="pga-mockup__output-header"><span>✅</span> Transcribed</div>
+              <div style="font-size:13px;color:#a7f3d0;line-height:1.65;" id="voiceTranscript">senior software engineer</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ SAVE MONEY + ONE-SHOT PROMPTING ══════════════════════ -->
+  <section class="pg2-section" id="pga-savings" aria-labelledby="pga-savings-heading">
+    <span class="pg2-eyebrow">💰 Why it matters</span>
+    <h2 class="pg2-section__h2" id="pga-savings-heading">Stop going back and forth with AI. Get it right the first time.</h2>
+    <p class="pg2-section__sub">Most people send 4–6 follow-up messages before AI gives them what they actually wanted. That's wasted time. Prompt Studio templates are built to get you there in one message.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;">
+
+      <div style="background:var(--bg-card);border:1px solid rgba(16,185,129,.2);border-radius:14px;padding:24px 20px;">
+        <div style="font-size:32px;font-weight:900;color:#34d399;margin-bottom:6px;">5×</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">Fewer back-and-forth messages</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">Templates give the AI everything it needs upfront — role, context, format, constraints. No more "can you be more specific?"</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid rgba(167,139,250,.2);border-radius:14px;padding:24px 20px;">
+        <div style="font-size:32px;font-weight:900;color:#a78bfa;margin-bottom:6px;">80%</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">Better AI answers, first try</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">A complete prompt = a complete answer. Our templates are pre-built for clarity so the AI knows exactly what you need.</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid rgba(56,189,248,.2);border-radius:14px;padding:24px 20px;">
+        <div style="font-size:32px;font-weight:900;color:#38bdf8;margin-bottom:6px;">$0</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">Free to start — forever</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">Pick 1 template free. No credit card. Works with ChatGPT, Claude, Gemini — copy the finished prompt and paste it anywhere.</div>
+      </div>
+
+    </div>
+
+    <!-- One-shot callout -->
+    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:16px;padding:28px 32px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="font-size:40px;flex-shrink:0;">🎯</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;">What makes a prompt "good"?</div>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:12px;">
+          A great prompt tells the AI <strong style="color:var(--text);">who it is, what to do, what format to use, and any rules to follow</strong> — all in one message. That's called a one-shot prompt, and it's what separates people who get great AI results from those who don't.
+        </p>
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.7;">
+          Every Prompt Studio template is <strong style="color:var(--text);">pre-built with all four ingredients</strong> — just fill in your specific details and the AI gets everything it needs before you even hit send.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ TEMPLATE LIBRARY SECTION ══════════════════════════════ -->
+  <section class="pg2-section" id="pga-templates-section" aria-labelledby="pga-templates-heading">
+    <span class="pg2-eyebrow">📚 Template Library</span>
+    <h2 class="pg2-section__h2" id="pga-templates-heading">21 templates. Pick one and go.</h2>
+    <p class="pg2-section__sub">No blank box. No guessing. Every template is pre-built for a real task — just pick yours, fill in the details, and copy a finished prompt in seconds.</p>
+
+    <!-- Section-level CTA -->
+    <div style="display:flex;justify-content:center;margin:24px 0 8px;">
+      <button onclick="renderTemplateLibrary(); document.getElementById('templateLibraryModal').classList.add('active');" class="btn-primary" style="font-size:15px;padding:13px 28px;">
+        📚 Browse All 21 Templates →
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:32px;margin-top:32px;align-items:start;">
+
+      <!-- Left: who it's for -->
+      <div>
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:16px;">Who uses it</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:20px;flex-shrink:0;">👩‍💻</span>
+            <div><strong style="color:var(--text);font-size:14px;">Developers</strong><br><span style="font-size:13px;color:var(--text-muted);">Code review, system design, security threat models, technical documentation</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:20px;flex-shrink:0;">✍️</span>
+            <div><strong style="color:var(--text);font-size:14px;">Marketers &amp; Writers</strong><br><span style="font-size:13px;color:var(--text-muted);">Ad copy, social captions, cold email, blog posts, content strategy</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:20px;flex-shrink:0;">🎓</span>
+            <div><strong style="color:var(--text);font-size:14px;">Students &amp; Researchers</strong><br><span style="font-size:13px;color:var(--text-muted);">Study guides, research abstracts, summarization, translation</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:20px;flex-shrink:0;">💼</span>
+            <div><strong style="color:var(--text);font-size:14px;">Business &amp; Operations</strong><br><span style="font-size:13px;color:var(--text-muted);">Meeting summaries, customer support, financial analysis, legal review</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <span style="font-size:20px;flex-shrink:0;">🎬</span>
+            <div><strong style="color:var(--text);font-size:14px;">Creators &amp; Freelancers</strong><br><span style="font-size:13px;color:var(--text-muted);">Video scripts, creative storytelling, client proposals, brand voice</span></div>
+          </div>
+        </div>
+
+        <button onclick="renderTemplateLibrary(); document.getElementById('templateLibraryModal').classList.add('active');" class="btn-primary" style="margin-top:24px;font-size:13px;padding:10px 20px;">
+          📚 Browse All 21 Templates →
+        </button>
+
+        <!-- Template creation animation -->
+        <div id="pgaTplAnimBox">
+          <div class="pga-mockup__bar">
+            <span class="pga-mockup__dot pga-mockup__dot--red"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--yellow"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--green"></span>
+            <span class="pga-mockup__bar-title">building prompt…</span>
+            <span id="pgaTplAnimLabel" class="pga-mockup__bar-badge">✍️ typing</span>
+          </div>
+          <div id="pgaTplProgress"></div>
+          <div id="pgaTplAnimText"></div>
+        </div>
+      </div>
+
+      <!-- Right: template preview cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">💻 Code Review</div>
+          <div style="font-size:11px;color:var(--text-dim);">Review for bugs, style, security</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:#bd00ff;color:#fff;padding:2px 8px;border-radius:10px;">FREE</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">🎯 Ad Copy</div>
+          <div style="font-size:11px;color:var(--text-dim);">Google, Meta, LinkedIn ads</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 8px;border-radius:10px;">PRO</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">📧 Cold Email</div>
+          <div style="font-size:11px;color:var(--text-dim);">Personalized outreach that converts</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:#bd00ff;color:#fff;padding:2px 8px;border-radius:10px;">FREE</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">⚖️ Legal Review</div>
+          <div style="font-size:11px;color:var(--text-dim);">Contract risks &amp; clause analysis</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 8px;border-radius:10px;">PRO</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">🧠 Meeting Summary</div>
+          <div style="font-size:11px;color:var(--text-dim);">Notes → action items instantly</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:#bd00ff;color:#fff;padding:2px 8px;border-radius:10px;">FREE</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:4px;">🎬 Video Script</div>
+          <div style="font-size:11px;color:var(--text-dim);">YouTube, TikTok, ads with hooks</div>
+          <span style="display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 8px;border-radius:10px;">PRO</span>
+        </div>
+        <!-- More coming soon card -->
+        <div style="grid-column:1/-1;background:rgba(167,139,250,.06);border:1px dashed rgba(167,139,250,.25);border-radius:10px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🚀</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--accent-prompt2);">More templates coming soon</div>
+              <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">HR, Sales, Product, Finance, Healthcare &amp; more</div>
+            </div>
+          </div>
+          <button onclick="renderTemplateLibrary(); document.getElementById('templateLibraryModal').classList.add('active');" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            📚 See All 21 Now →
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ HOW IT WORKS (CLI-section style) ══════════════════════ -->
+  <section id="pga-how-it-works" aria-labelledby="pga-how-heading">
+    <div class="pga-demo-section">
+
+      <!-- Left: steps -->
+      <div>
+        <span class="pg2-eyebrow">⌨️ How it works</span>
+        <h2 class="pg2-section__h2" id="pga-how-heading">
+          From blank to brilliant<br>in 60 seconds.
+        </h2>
+        <p class="pg2-section__sub">
+          Pick a template, fill in the blanks, copy your prompt. For power users: test against real AI models, save versions, and share with your team.
+        </p>
+
+        <ol class="pga-steps" aria-label="How poly-glot-prompt.ai works">
+          <li class="pga-step">
+            <div class="pga-step__num">1</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Pick a template</div>
+              <div class="pga-step__desc">Browse 21 templates for coding, writing, marketing, legal, research and more. Free users pick 1 to keep — Pro unlocks all 21.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">2</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Fill in the blanks</div>
+              <div class="pga-step__desc">Each template has smart fields — type your role, topic, or goal. Watch the finished prompt appear live as you type.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">3</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Copy &amp; paste — or test live</div>
+              <div class="pga-step__desc">Copy your prompt straight to the clipboard and paste it into ChatGPT, Claude, or Gemini. Or hit ▶ Run to test it right here and see the AI response instantly.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">4</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Save &amp; improve over time</div>
+              <div class="pga-step__desc">Every save creates a version. Tweak, re-run, compare. Your best prompt is always one click away — never lost, never overwritten.</div>
+            </div>
+          </li>
+          <li class="pga-step">
+            <div class="pga-step__num">5</div>
+            <div class="pga-step__body">
+              <div class="pga-step__title">Share with anyone</div>
+              <div class="pga-step__desc">Send a link to your team, a client, or a collaborator. They see your template and filled variables — no account needed to view.</div>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Right: version history mockup -->
+      <div>
+        <div class="pga-version-mockup" role="img" aria-label="Version history panel preview">
+          <div class="pga-version-mockup__header">
+            <span class="pga-version-mockup__header-icon">📚</span>
+            Version History — code-review-prompt
+          </div>
+          <div class="pga-version-list">
+
+            <div class="pga-version-item pga-version-item--active">
+              <div class="pga-version-item__dot"></div>
+              <div class="pga-version-item__body">
+                <div class="pga-version-item__name">v7 · current</div>
+                <div class="pga-version-item__meta">Added {{issue_type}} variable · 2 min ago</div>
+              </div>
+              <span class="pga-version-item__score pga-version-item__score--good">92%</span>
+            </div>
+
+            <div class="pga-version-item">
+              <div class="pga-version-item__dot"></div>
+              <div class="pga-version-item__body">
+                <div class="pga-version-item__name">v6</div>
+                <div class="pga-version-item__meta">Tightened output format · 15 min ago</div>
+              </div>
+              <span class="pga-version-item__score pga-version-item__score--good">88%</span>
+            </div>
+
+            <div class="pga-version-item">
+              <div class="pga-version-item__dot"></div>
+              <div class="pga-version-item__body">
+                <div class="pga-version-item__name">v5</div>
+                <div class="pga-version-item__meta">Added code block formatting · 1 hr ago</div>
+              </div>
+              <span class="pga-version-item__score pga-version-item__score--mid">74%</span>
+            </div>
+
+            <div class="pga-version-item">
+              <div class="pga-version-item__dot"></div>
+              <div class="pga-version-item__body">
+                <div class="pga-version-item__name">v3</div>
+                <div class="pga-version-item__meta">First working draft · yesterday</div>
+              </div>
+              <span class="pga-version-item__score pga-version-item__score--mid">61%</span>
+            </div>
+
+            <div class="pga-version-item">
+              <div class="pga-version-item__dot"></div>
+              <div class="pga-version-item__body">
+                <div class="pga-version-item__name">v1</div>
+                <div class="pga-version-item__meta">Initial draft · 2 days ago</div>
+              </div>
+              <span class="pga-version-item__score pga-version-item__score--low">38%</span>
+            </div>
+
+          </div>
+
+          <!-- Diff preview -->
+          <div style="padding:12px 16px;border-top:1px solid var(--border);background:rgba(0,0,0,0.2);">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:8px;">v6 → v7 diff</div>
+            <div style="font-family:'Fira Code',monospace;font-size:11px;line-height:1.8;color:#94a3b8;">
+              <div style="color:#f87171;background:rgba(239,68,68,.08);padding:1px 6px;border-radius:3px;margin-bottom:2px;">- identify any issues in the code</div>
+              <div style="color:#34d399;background:rgba(16,185,129,.08);padding:1px 6px;border-radius:3px;">+ identify any <span style="background:rgba(167,139,250,.2);color:#c4b5fd;border-radius:2px;padding:0 3px;">{{issue_type}}</span> issues</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ SHARE FEATURE (CLI-section 2-col reversed) ════════════ -->
+  <section class="pga-detail-section" id="pga-share" aria-labelledby="pga-share-heading">
+    <div class="pga-detail-inner">
+
+      <!-- Left: text -->
+      <div>
+        <span class="pg2-eyebrow">📤 Share &amp; Collaborate</span>
+        <h2 class="pg2-section__h2" id="pga-share-heading">Send your prompt to anyone — in one click.</h2>
+        <p class="pg2-section__sub">
+          Every prompt gets a shareable link. Your teammate, client, or friend opens it and sees the full template — no account needed to view or copy.
+        </p>
+
+        <ul class="pga-feature-list" aria-label="Share features">
+          <li>
+            <span class="pga-feature-list__icon">🔗</span>
+            <div><strong>One-click share link</strong> — paste in Slack, Notion, email, or a GitHub PR. The recipient sees your template and variables instantly.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">📋</span>
+            <div><strong>Your personal prompt library</strong> — save, tag, and reuse your best prompts across every project. Never write the same prompt twice.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔌</span>
+            <div><strong>Export as code</strong> — developers can export as an OpenAI messages array, Python string, or LangChain template. Drop straight into your app.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔒</span>
+            <div><strong>Private by default</strong> — your prompts are yours. Sign in with your Poly-Glot account and sharing is always opt-in.</div>
+          </li>
+        </ul>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:32px;">
+          <a href="#pga-cta" class="btn-primary" style="font-size:14px;padding:11px 22px;" onclick="document.getElementById('pga-cta').scrollIntoView({behavior:'smooth'}); return false;">🚀 Try it free</a>
+          <a href="https://poly-glot.ai/" class="btn-secondary" style="font-size:13px;padding:10px 18px;">← Back to Poly-Glot</a>
+        </div>
+      </div>
+
+      <!-- Right: share mockup -->
+      <div class="pga-detail-visual">
+        <div class="pga-share-mockup" role="img" aria-label="Prompt sharing interface preview">
+
+          <!-- URL bar -->
+          <div class="pga-share-mockup__bar">
+            <span>🔗</span>
+            <div class="pga-share-mockup__url">poly-glot-prompt.ai/?share=eyJ0ZW1wbGF0ZSI6Illvd…</div>
+            <button class="pga-mockup__action-btn" style="font-size:10px;padding:3px 8px;flex-shrink:0;">Copy</button>
+          </div>
+
+          <div class="pga-share-mockup__body">
+
+            <!-- Stats row -->
+            <div class="pga-share-mockup__stat-row">
+              <div class="pga-share-stat">
+                <span class="pga-share-stat__val">v7</span>
+                <span class="pga-share-stat__label">Version</span>
+              </div>
+              <div class="pga-share-stat">
+                <span class="pga-share-stat__val" style="color:#34d399;">92%</span>
+                <span class="pga-share-stat__label">Score</span>
+              </div>
+              <div class="pga-share-stat">
+                <span class="pga-share-stat__val">4</span>
+                <span class="pga-share-stat__label">Variables</span>
+              </div>
+            </div>
+
+            <!-- Prompt preview card -->
+            <div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:6px;">code-review-prompt · shared by hwmoses</div>
+              <div style="font-family:'Fira Code',monospace;font-size:11.5px;line-height:1.75;color:#94a3b8;">
+                You are a <span style="color:#c4b5fd;">{{role}}</span> specializing in <span style="color:#c4b5fd;">{{domain}}</span>.<br>
+                Review the code and identify <span style="color:#c4b5fd;">{{issue_type}}</span> issues…
+              </div>
+            </div>
+
+            <!-- Variable fill for recipient -->
+            <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);margin-bottom:8px;">⚙️ Fill variables to run</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:11px;color:var(--accent-prompt);font-family:'Fira Code',monospace;width:90px;flex-shrink:0;">{{role}}</span>
+                  <div style="flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text-muted);">senior engineer</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:11px;color:var(--accent-prompt);font-family:'Fira Code',monospace;width:90px;flex-shrink:0;">{{domain}}</span>
+                  <div style="flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text-muted);">Python / ML</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;gap:8px;">
+              <button class="pga-mockup__action-btn pga-mockup__action-btn--run" style="flex:1;padding:8px;">▶ Run this prompt</button>
+              <button class="pga-mockup__action-btn" style="padding:8px 14px;">💾 Save to library</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ MCP SECTION ══════════════════════════════════════════ -->
+  <div style="background:var(--bg-alt);" id="pga-mcp">
+    <div class="pg2-section" aria-labelledby="pga-mcp-heading" style="text-align:center;">
+      <span class="pg2-eyebrow" style="justify-content:center;">🔌 For Developers — MCP Server</span>
+      <h2 class="pg2-section__h2" id="pga-mcp-heading">Use your prompts as tools inside your AI coding workflow</h2>
+      <p class="pg2-section__sub" style="margin-left:auto;margin-right:auto;">Connect Prompt Studio to Goose, Claude Desktop, Cursor, or Windsurf via MCP. Your saved templates become callable tools — fill variables, run prompts, and get AI responses without leaving your editor.</p>
+
+      <!-- Pro+ gate badge — exact match of poly-glot.ai -->
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:8px 16px;margin-bottom:24px;font-size:13px;flex-wrap:wrap;justify-content:center;">
+        <span style="color:#a78bfa;font-weight:700;">💎 Pro+ Required</span>
+        <span style="color:var(--text-muted);">·</span>
+        <span style="color:var(--text-muted);">Free: 🔒 blocked &nbsp;·&nbsp; Pro: 200 calls/mo &nbsp;·&nbsp; Team: 1,000 calls/mo &nbsp;·&nbsp; Enterprise: unlimited</span>
+        <a href="#pga-pricing" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;" style="color:var(--accent);font-size:12px;white-space:nowrap;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See plans →</a>
+      </div>
+
+      <!-- Config block -->
+      <div class="pga-mcp-config" style="text-align:left;">
+        <div class="pga-mcp-config__bar">
+          <span class="pga-mcp-config__dot" style="background:#ef4444;"></span>
+          <span class="pga-mcp-config__dot" style="background:#f59e0b;"></span>
+          <span class="pga-mcp-config__dot" style="background:#10b981;"></span>
+          mcp-config.json
+        </div>
+        <pre class="pga-mcp-config__code">{
+  "command": "npx",
+  "args": ["-y", "poly-glot-mcp"],
+  "env": {
+    "PG_PROMPT_SESSION_TOKEN": "pgp_...",
+    "PG_PROMPT_PROVIDER":      "openai",
+    "PG_PROMPT_API_KEY":       "sk-...",
+    "PG_PROMPT_MODEL":         "gpt-4o-mini"
+  }
+}</pre>
+      </div>
+
+      <!-- Token hint -->
+      <div style="margin:8px auto 20px;max-width:560px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-muted);text-align:left;">
+        🔑 Get your <code style="color:var(--accent);font-family:'Fira Code',monospace;">PG_PROMPT_SESSION_TOKEN</code> from <a href="https://poly-glot.ai/dashboard" style="color:var(--accent);">poly-glot.ai/dashboard</a> → Account → API Token. Requires Pro or above.
+      </div>
+
+      <!-- MCP tools grid -->
+      <div class="pga-mcp-tools-grid" style="text-align:left;">
+        <div class="pga-mcp-tool">prompt_list_templates</div>
+        <div class="pga-mcp-tool">prompt_get_template</div>
+        <div class="pga-mcp-tool">prompt_render</div>
+        <div class="pga-mcp-tool">prompt_run</div>
+        <div class="pga-mcp-tool">prompt_save_version</div>
+        <div class="pga-mcp-tool">prompt_share</div>
+      </div>
+
+      <!-- CTAs -->
+      <div style="margin-top:24px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+        <a href="https://www.npmjs.com/package/poly-glot-mcp#-prompt-studio-mcp" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-muted);transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='var(--text)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--text-muted)'">📦 Prompt Studio MCP docs →</a>
+        <a href="#pga-pricing" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;font-size:13px;font-weight:700;color:#000;cursor:pointer;transition:all .2s;text-decoration:none;" onmouseover="this.style.boxShadow='0 4px 14px rgba(245,158,11,.4)'" onmouseout="this.style.boxShadow='none'">💎 Get Pro — Unlock MCP</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ TEAM CUSTOM TEMPLATE BUILDER ════════════════════════ -->
+  <section class="pg2-section" id="pga-team-builder" aria-labelledby="pga-team-builder-heading">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;">
+
+      <!-- Left: copy -->
+      <div>
+        <span class="pg2-eyebrow">👥 Team Plan</span>
+        <h2 class="pg2-section__h2" id="pga-team-builder-heading">Your whole team. One shared prompt playbook.</h2>
+        <p class="pg2-section__sub">Build custom templates for your team, lock in your brand voice, and publish to everyone — so every AI output sounds consistent, not random.</p>
+
+        <ul class="pga-feature-list" style="margin-top:0;">
+          <li>
+            <span class="pga-feature-list__icon">🔧</span>
+            <div><strong>Custom template builder</strong> — build prompts with drag-and-drop blocks: who the AI is, what it should do, how to format the output. No technical skills needed.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔒</span>
+            <div><strong>Lock in your brand voice</strong> — set tone, style, and output format once. Every prompt your team runs will follow the same rules automatically.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">📂</span>
+            <div><strong>Shared team library</strong> — publish templates to your workspace. Editors build new ones, everyone else just runs them — no training needed.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">📊</span>
+            <div><strong>See what's working</strong> — usage analytics show which templates your team uses most, who's running them, and where results are falling short.</div>
+          </li>
+          <li>
+            <span class="pga-feature-list__icon">🔁</span>
+            <div><strong>Always up to date</strong> — update a template once and everyone gets the new version instantly. No more stale copies in Notion or Slack.</div>
+          </li>
+        </ul>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;">
+          <a href="mailto:support@poly-glot.ai?subject=Team Custom Template Builder" class="btn-primary" style="font-size:14px;padding:12px 24px;">
+            👥 Talk to us about Team →
+          </a>
+          <a href="#pga-pricing" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;" class="btn-secondary" style="font-size:13px;padding:11px 20px;">
+            See Team pricing
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: custom builder mockup -->
+      <div>
+        <div style="background:var(--bg-card);border:1px solid rgba(167,139,250,.25);border-radius:14px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.4);">
+
+          <!-- Bar -->
+          <div class="pga-mockup__bar">
+            <span class="pga-mockup__dot pga-mockup__dot--red"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--yellow"></span>
+            <span class="pga-mockup__dot pga-mockup__dot--green"></span>
+            <span class="pga-mockup__bar-title">template-builder — Acme Corp</span>
+            <span class="pga-mockup__bar-badge">👥 Team</span>
+          </div>
+
+          <!-- Builder blocks -->
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);">Template Blocks</div>
+
+            <!-- Role block -->
+            <div class="pga-builder-block" id="pbb-role">
+              <div class="pga-builder-block__label">🎭 Role</div>
+              <div class="pga-builder-block__val">You are a <span class="pga-mockup__var">{{role}}</span> at <span class="pga-mockup__var">{{company}}</span>.</div>
+              <span class="pga-builder-block__lock" title="Locked by admin">🔒</span>
+            </div>
+
+            <!-- Context block -->
+            <div class="pga-builder-block pga-builder-block--active" id="pbb-ctx">
+              <div class="pga-builder-block__label">📋 Context</div>
+              <div class="pga-builder-block__val"><span class="pga-mockup__var">{{context}}</span></div>
+            </div>
+
+            <!-- Instructions block -->
+            <div class="pga-builder-block" id="pbb-inst">
+              <div class="pga-builder-block__label">📝 Instructions</div>
+              <div class="pga-builder-block__val"><span class="pga-mockup__var">{{task}}</span></div>
+            </div>
+
+            <!-- Format block -->
+            <div class="pga-builder-block" id="pbb-fmt">
+              <div class="pga-builder-block__label">📐 Format</div>
+              <div class="pga-builder-block__val">Respond in <span class="pga-mockup__var">{{format}}</span>. Tone: <span style="color:#34d399;font-weight:600;">professional</span> <span class="pga-builder-block__lock pga-builder-block__lock--locked" title="Locked">🔒</span></div>
+            </div>
+
+            <!-- Constraints block -->
+            <div class="pga-builder-block" id="pbb-con">
+              <div class="pga-builder-block__label">⚠️ Constraints</div>
+              <div class="pga-builder-block__val">Max <span class="pga-mockup__var">{{max_words}}</span> words. No disclaimers.</div>
+            </div>
+
+            <div style="height:1px;background:var(--border);margin:2px 0;"></div>
+
+            <!-- Add block button -->
+            <button style="background:rgba(167,139,250,.08);border:1px dashed rgba(167,139,250,.3);border-radius:8px;padding:9px;font-size:12px;color:var(--accent-prompt2);cursor:pointer;width:100%;transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.14)'" onmouseout="this.style.background='rgba(167,139,250,.08)'">
+              + Add block
+            </button>
+
+            <!-- Variable defaults -->
+            <div style="background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:8px;">🔒 Locked Defaults (team-wide)</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{company}}</span><span style="color:#34d399;">Acme Corp</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{format}}</span><span style="color:#34d399;">markdown</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'Fira Code',monospace;">
+                  <span style="color:var(--accent-prompt);">{{max_words}}</span><span style="color:#34d399;">300</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action bar -->
+          <div class="pga-mockup__actions-bar">
+            <button class="pga-mockup__action-btn">👁 Preview</button>
+            <button class="pga-mockup__action-btn">📋 Variables</button>
+            <button class="pga-mockup__action-btn" style="margin-left:auto;">📤 Publish to Team</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <style>
+    /* ── Team Builder blocks ─────────────────────────────────── */
+    .pga-builder-block {
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: grab;
+      transition: border-color .2s, background .2s, transform .15s;
+      position: relative;
+    }
+    .pga-builder-block:hover {
+      border-color: rgba(167,139,250,.35);
+      background: rgba(167,139,250,.05);
+      transform: translateX(3px);
+    }
+    .pga-builder-block--active {
+      border-color: rgba(167,139,250,.5);
+      background: rgba(167,139,250,.08);
+      box-shadow: 0 0 0 1px rgba(167,139,250,.15);
+    }
+    .pga-builder-block__label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+    }
+    .pga-builder-block__val {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .pga-builder-block__lock {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 11px;
+      opacity: .6;
+    }
+    @keyframes pga-block-pulse {
+      0%,100% { border-color: rgba(167,139,250,.5); }
+      50%      { border-color: rgba(167,139,250,.9); box-shadow: 0 0 12px rgba(167,139,250,.2); }
+    }
+    .pga-builder-block--active { animation: pga-block-pulse 2.5s ease-in-out infinite; }
+    @media (max-width: 800px) {
+      #pga-team-builder > div { grid-template-columns: 1fr !important; }
+    }
+  </style>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ FAQ ═══════════════════════════════════════════════════ -->
+  <section class="pg2-section" id="pga-faq" aria-labelledby="pga-faq-heading">
+    <span class="pg2-eyebrow">❓ FAQ</span>
+    <h2 class="pg2-section__h2" id="pga-faq-heading">Common questions, answered.</h2>
+    <p class="pg2-section__sub">Everything you need to know before you start.</p>
+
+    <div style="max-width:720px;margin:40px auto 0;display:flex;flex-direction:column;gap:12px;" id="pgaFaqList">
+
+      <details class="pga-faq__item" open>
+        <summary class="pga-faq__q">Do I need to know how to write prompts?</summary>
+        <div class="pga-faq__a">No. That's exactly why Prompt Studio exists. Pick a template, fill in the blanks, and you have a complete, well-structured prompt — no experience required.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What AI models does it work with?</summary>
+        <div class="pga-faq__a">Prompt Studio generates prompts you can copy and paste into <strong>ChatGPT, Claude, and Gemini</strong>. Pro users can also test prompts directly against GPT-4o, Claude 3, and Gemini inside the studio — without leaving the page.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What's the difference between Free and Pro?</summary>
+        <div class="pga-faq__a">The <strong>Free plan</strong> gives you 1 template (you pick which one), the editor, variables, and copy-to-clipboard export. <strong>Pro ($9/mo)</strong> unlocks all 21 templates, voice input, AI model testing, unlimited version history, share via URL, and MCP server access.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Do I need a credit card to start?</summary>
+        <div class="pga-faq__a">No. The free plan requires only an email address — no credit card, no trial period, no expiry. Upgrade to Pro or Team whenever you're ready.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is a prompt template?</summary>
+        <div class="pga-faq__a">A template is a pre-written prompt with <strong>fill-in-the-blank fields</strong> (called variables). For example, a Code Review template has fields for language, code, and issue type. You fill them in, and the studio assembles a complete, ready-to-use prompt automatically.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is voice input and how does it work?</summary>
+        <div class="pga-faq__a">Voice input lets you <strong>dictate your prompt out loud</strong> instead of typing. Click the 🎙️ mic button, speak naturally, and your words appear in real time — transcribed by your browser's built-in speech recognition. No plugins, no setup. Works in 40+ languages. Voice input is a Pro feature.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is MCP and do I need it?</summary>
+        <div class="pga-faq__a">MCP (Model Context Protocol) lets <strong>developers</strong> connect Prompt Studio to AI coding tools like Goose, Claude Desktop, and Cursor — so your saved templates become callable tools inside your workflow. If you're not a developer, you don't need MCP. It's a Pro+ feature.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Can I share prompts with my team?</summary>
+        <div class="pga-faq__a">Yes. Pro users can share any prompt as a URL — teammates open the link and see the full template, variables, and preview instantly, with no account required to view. The <strong>Team plan ($29/mo)</strong> adds a shared library, custom template builder, locked variable defaults, and team version history.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Is my data private?</summary>
+        <div class="pga-faq__a">Yes. Your prompts are <strong>private by default</strong> — only you can see them. Sharing is always opt-in. Voice input is processed entirely in your browser and never sent to our servers. Read the full <a href="/prompt/privacy/" style="color:var(--accent-prompt2);text-decoration:underline;">Privacy Policy</a>.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Can I cancel anytime?</summary>
+        <div class="pga-faq__a">Yes — cancel anytime from your account settings. No questions asked. Your free plan remains active after cancellation with your 1 selected template intact.</div>
+      </details>
+
+    </div>
+  </section>
+
+  <style>
+    .pga-faq__item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .pga-faq__item[open] {
+      border-color: rgba(167,139,250,.35);
+    }
+    .pga-faq__item:hover {
+      border-color: rgba(167,139,250,.25);
+    }
+    .pga-faq__q {
+      list-style: none;
+      padding: 18px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      user-select: none;
+      transition: color .2s;
+    }
+    .pga-faq__q::-webkit-details-marker { display: none; }
+    .pga-faq__q::after {
+      content: '+';
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--accent-prompt2);
+      flex-shrink: 0;
+      transition: transform .25s;
+    }
+    .pga-faq__item[open] .pga-faq__q::after {
+      transform: rotate(45deg);
+    }
+    .pga-faq__item[open] .pga-faq__q {
+      color: var(--accent-prompt2);
+    }
+    .pga-faq__a {
+      padding: 0 20px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+    .pga-faq__a strong { color: var(--text); }
+  </style>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ CTA ═══════════════════════════════════════════════════ -->
+  <section class="pga-cta-section" id="pga-cta" aria-labelledby="pga-cta-heading">
+
+    <div style="font-size:48px;margin-bottom:16px;">🚀</div>
+
+    <h2 class="pga-cta-section__h2" id="pga-cta-heading">
+      Your first great AI prompt<br>is 60 seconds away.
+    </h2>
+    <p class="pga-cta-section__sub">
+      Pick a free template, fill in the blanks, and copy a finished prompt — no experience needed, no credit card, no time limit.
+    </p>
+
+    <div class="pga-cta-section__actions">
+      <button class="btn-primary" style="font-size:15px;padding:14px 28px;" onclick="pgPromptSignIn('cta_section')">
+        🎯 Pick My Free Template →
+      </button>
+      <a href="https://poly-glot.ai/" class="btn-secondary" style="font-size:14px;padding:13px 22px;">
+        🦜 View Poly-Glot AI
+      </a>
+    </div>
+
+    <p class="pga-cta-section__note">
+      Free forever · Works with ChatGPT, Claude &amp; Gemini · <a href="mailto:support@poly-glot.ai">support@poly-glot.ai</a> · No credit card required
+    </p>
+
+  </section>
+
+  <!-- ══ PRICING SECTION ══════════════════════════════════════ -->
+  <div class="pg2-divider"></div>
+  <section class="pg2-section" id="pga-pricing" aria-labelledby="pga-pricing-heading">
+    <span class="pg2-eyebrow">💎 Pricing</span>
+    <h2 class="pg2-section__h2" id="pga-pricing-heading">Start free. Upgrade when you're ready.</h2>
+    <p class="pg2-section__sub">Try 1 template for free — no credit card, no time limit. Upgrade to Pro or Team when you want more templates, voice input, and AI model testing.</p>
+
+    <div class="pga-pricing-grid">
+
+      <!-- FREE -->
+      <div class="pga-plan-card">
+        <div class="pga-plan-card__tier">Free</div>
+        <div class="pga-plan-card__price">$0<span class="pga-plan-card__period">/mo</span></div>
+        <div class="pga-plan-card__note">No credit card required · taste before you buy</div>
+        <hr class="pga-plan-card__divider">
+        <ul class="pga-plan-card__features">
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">1 template <span style="font-size:11px;color:var(--text-dim);">(you pick)</span></li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Template editor + variables</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Copy-to-clipboard export only</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Version history (3 versions)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">AI model testing (Pro)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">Share via URL (Pro)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">Voice input (Pro)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">Pro templates — 20 locked</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">MCP server (Pro)</li>
+        </ul>
+        <button class="pga-plan-card__btn pga-plan-card__btn--free" onclick="pgPromptSignIn('pricing_free')">Try 1 Template Free</button>
+      </div>
+
+      <!-- PRO -->
+      <div class="pga-plan-card pga-plan-card--pro">
+        <div class="pga-plan-card__popular">MOST POPULAR</div>
+        <div class="pga-plan-card__tier" style="color:#f59e0b;">Pro</div>
+        <!-- Billing toggle -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 4px;">
+          <span id="pgaBillingLabelMonth" style="font-size:12px;font-weight:600;color:var(--text);">Monthly</span>
+          <button id="pgaBillingToggle" onclick="pgaToggleBilling()" aria-label="Toggle billing period"
+            style="position:relative;width:40px;height:22px;border-radius:99px;border:none;cursor:pointer;background:rgba(245,158,11,.3);padding:0;flex-shrink:0;transition:background .2s;">
+            <span id="pgaBillingKnob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#f59e0b;transition:transform .2s;display:block;"></span>
+          </button>
+          <span id="pgaBillingLabelYear" style="font-size:12px;color:var(--text-muted);">Yearly <span style="color:#34d399;font-weight:700;">save 27%</span></span>
+        </div>
+        <div class="pga-plan-card__price" id="pgaProPrice">$9<span class="pga-plan-card__period">/mo</span></div>
+        <div class="pga-plan-card__note" id="pgaProNote">billed monthly — or switch to yearly</div>
+        <hr class="pga-plan-card__divider" style="border-color:rgba(245,158,11,.2);">
+        <ul class="pga-plan-card__features">
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Everything in Free</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">All 21 templates (8 Pro unlocked)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">AI model testing — GPT-4o, Claude, Gemini</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Voice input (40+ languages)</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Share via URL</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">MCP server — 200 calls/mo</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--pro">Unlimited version history</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--no">Team workspace (Team plan)</li>
+        </ul>
+        <a id="pgaProBtn" href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--pro">Upgrade to Pro →</a>
+      </div>
+
+      <!-- TEAM -->
+      <div class="pga-plan-card pga-plan-card--team">
+        <div class="pga-plan-card__tier" style="color:#a78bfa;">Team</div>
+        <div class="pga-plan-card__price">$29<span class="pga-plan-card__period">/mo</span></div>
+        <div class="pga-plan-card__note">Up to 5 seats · or $249/yr</div>
+        <hr class="pga-plan-card__divider" style="border-color:rgba(124,58,237,.2);">
+        <ul class="pga-plan-card__features">
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Everything in Pro</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Custom template builder</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Shared team template library</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Locked variable defaults</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">MCP server — 1,000 calls/mo</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--team">Team version history</li>
+          <li class="pga-plan-card__feat pga-plan-card__feat--yes">Priority support</li>
+        </ul>
+        <a href="https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--team">Upgrade to Team →</a>
+      </div>
+
+    </div>
+    <p style="text-align:center;font-size:13px;color:var(--text-dim);margin-top:24px;">
+      Enterprise (SSO, private deployment, unlimited MCP)? <a href="mailto:support@poly-glot.ai?subject=Prompt Studio Enterprise" style="color:var(--text-muted);text-decoration:underline;">Email support@poly-glot.ai</a>
+    </p>
+
+    <script>
+      // ── Pro billing toggle (monthly ↔ yearly) ─────────────────────────
+      var _pgaBillingYearly = false;
+      function pgaToggleBilling() {
+        _pgaBillingYearly = !_pgaBillingYearly;
+        var knob    = document.getElementById('pgaBillingKnob');
+        var toggle  = document.getElementById('pgaBillingToggle');
+        var price   = document.getElementById('pgaProPrice');
+        var note    = document.getElementById('pgaProNote');
+        var btn     = document.getElementById('pgaProBtn');
+        var lMonth  = document.getElementById('pgaBillingLabelMonth');
+        var lYear   = document.getElementById('pgaBillingLabelYear');
+        if (_pgaBillingYearly) {
+          knob.style.transform   = 'translateX(18px)';
+          toggle.style.background = 'rgba(245,158,11,.6)';
+          price.innerHTML  = '$79<span class="pga-plan-card__period">/yr</span>';
+          note.textContent = 'billed yearly — save $29 vs monthly';
+          btn.href         = 'https://buy.stripe.com/8x214p54M9fCaMmdw814404';
+          btn.textContent  = 'Upgrade to Pro (Yearly) →';
+          lMonth.style.color = 'var(--text-muted)';
+          lYear.style.color  = 'var(--text)';
+        } else {
+          knob.style.transform   = 'translateX(0)';
+          toggle.style.background = 'rgba(245,158,11,.3)';
+          price.innerHTML  = '$9<span class="pga-plan-card__period">/mo</span>';
+          note.textContent = 'billed monthly — or switch to yearly';
+          btn.href         = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
+          btn.textContent  = 'Upgrade to Pro →';
+          lMonth.style.color = 'var(--text)';
+          lYear.style.color  = 'var(--text-muted)';
+        }
+      }
+
+      // Pre-fill Stripe checkout email if user is already signed in
+      document.addEventListener('DOMContentLoaded', function() {
+        var email = '';
+        try { email = localStorage.getItem('pg_email') || ''; } catch(e) {}
+        if (email) {
+          var encoded = encodeURIComponent(email);
+          var proBtn  = document.getElementById('pgaProBtn');
+          var teamBtn = document.querySelector('.pga-plan-card__btn--team[href*="buy.stripe"]');
+          if (proBtn)  proBtn.href  += '?prefilled_email=' + encoded;
+          if (teamBtn) teamBtn.href += '?prefilled_email=' + encoded;
+        }
+      });
+    </script>
+  </section>
+
+  <!-- ══ FOOTER ════════════════════════════════════════════════ -->
+  <div class="pg2-divider"></div>
+  <footer class="pga-footer" role="contentinfo">
+    <div style="width:100%;text-align:center;">
+
+      <!-- Brand -->
+      <div class="pga-footer__brand" style="justify-content:center;margin-bottom:20px;">
+        <picture>
+          <source srcset="../parrot-logo.webp" type="image/webp">
+          <img src="../parrot-logo.png" alt="Poly-Glot" style="width:22px;height:22px;border-radius:5px;vertical-align:middle;margin-right:8px;">
+        </picture>
+        <span>poly-glot-prompt.ai</span> — part of the <a href="https://poly-glot.ai/" style="color:var(--accent);text-decoration:none;">Poly-Glot AI</a> suite
+      </div>
+
+      <!-- Product links grid -->
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 4px;margin-bottom:20px;">
+        <a href="https://poly-glot.ai/" class="pga-footer__link pga-footer__pill">🦜 Poly-Glot AI</a>
+        <a href="https://poly-glot.ai/#pg-generator-section" class="pga-footer__link pga-footer__pill">✨ Doc Generator</a>
+        <a href="https://poly-glot.ai/#pg-cli-section" class="pga-footer__link pga-footer__pill">⌨️ CLI Tool</a>
+        <a href="https://poly-glot.ai/#pg-vscode-section" class="pga-footer__link pga-footer__pill">💻 VS Code Extension</a>
+        <a href="https://poly-glot.ai/#pg-copilot-section" class="pga-footer__link pga-footer__pill">🤖 Copilot Chat</a>
+        <a href="https://poly-glot.ai/#pg-github-app-section" class="pga-footer__link pga-footer__pill">🐙 GitHub App</a>
+        <a href="https://chromewebstore.google.com/detail/poly-glot-ai/hjpdgilolgcanemmngagpobdgdhpplai" target="_blank" rel="noopener" class="pga-footer__link pga-footer__pill">🌐 Chrome Extension</a>
+        <a href="https://poly-glot.ai/prompt/" class="pga-footer__link pga-footer__pill" style="color:var(--accent-prompt2);border-color:rgba(167,139,250,.25);">✏️ Prompt Studio</a>
+        <a href="/prompt/#pga-pricing" class="pga-footer__link pga-footer__pill">💎 Pricing</a>
+        <a href="/prompt/privacy/" class="pga-footer__link pga-footer__pill">🔒 Privacy</a>
+        <a href="mailto:support@poly-glot.ai" class="pga-footer__link pga-footer__pill">✉️ Support</a>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:var(--border);margin:0 auto 16px;max-width:600px;"></div>
+
+      <!-- Copyright -->
+      <p style="font-size:11px;color:var(--text-dim);line-height:1.7;">
+        © 2026 <strong style="color:var(--text-muted);">Harold Moses</strong> · <span style="color:var(--accent-prompt);">poly-glot.ai</span> is a registered domain owned by Harold Moses · Built with 🪿 Goose · <a href="/prompt/privacy/" style="color:var(--text-dim);text-decoration:underline;text-decoration-color:rgba(100,116,139,0.4);">Privacy Policy</a>
+      </p>
+
+    </div>
+  </footer>
+
+  <!-- ══ TEMPLATE LIBRARY MODAL ════════════════════════════════ -->
+  <div class="pga-modal-overlay" id="templateLibraryModal" role="dialog" aria-modal="true" aria-label="Template Library">
+    <div class="pga-modal">
+      <div class="pga-modal__header">
+        <h2 class="pga-modal__title">📚 Template Library</h2>
+        <button class="pga-modal__close" id="closeTemplateLibrary" aria-label="Close">&times;</button>
+      </div>
+      <div class="pga-modal__body">
+        <div class="pga-tpl-grid" id="templateLibraryGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* ── Pricing grid ───────────────────────────────────────── */
+    .pga-pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+    @media (max-width: 860px) { .pga-pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin-inline: auto; } }
+
+    .pga-plan-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+    .pga-plan-card--pro {
+      background: linear-gradient(135deg, rgba(245,158,11,.1), rgba(217,119,6,.06));
+      border: 2px solid rgba(245,158,11,.5);
+    }
+    .pga-plan-card--team {
+      background: rgba(124,58,237,.07);
+      border-color: rgba(124,58,237,.3);
+    }
+    .pga-plan-card__popular {
+      position: absolute;
+      top: -13px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000; font-size: 10px; font-weight: 800;
+      padding: 3px 16px; border-radius: 20px;
+      letter-spacing: .08em; white-space: nowrap;
+    }
+    .pga-plan-card__tier {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--text-dim);
+    }
+    .pga-plan-card__price {
+      font-size: 42px; font-weight: 900; color: var(--text); line-height: 1;
+    }
+    .pga-plan-card__period { font-size: 15px; font-weight: 400; color: var(--text-dim); }
+    .pga-plan-card__note { font-size: 12px; color: var(--text-dim); }
+    .pga-plan-card__divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+    .pga-plan-card__features { list-style: none; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .pga-plan-card__feat { font-size: 13px; display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+    .pga-plan-card__feat::before { flex-shrink: 0; margin-top: 1px; }
+    .pga-plan-card__feat--yes  { color: var(--text-muted); }
+    .pga-plan-card__feat--yes::before  { content: '✅'; }
+    .pga-plan-card__feat--no   { color: var(--text-dim); }
+    .pga-plan-card__feat--no::before   { content: '❌'; }
+    .pga-plan-card__feat--pro  { color: #fbbf24; font-weight: 600; }
+    .pga-plan-card__feat--pro::before  { content: '⭐'; }
+    .pga-plan-card__feat--team { color: #c4b5fd; font-weight: 600; }
+    .pga-plan-card__feat--team::before { content: '👥'; }
+    .pga-plan-card__btn {
+      display: block; text-align: center; width: 100%;
+      padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+      border: none; cursor: pointer; text-decoration: none; margin-top: auto;
+      transition: all 0.2s;
+    }
+    .pga-plan-card__btn--free {
+      background: rgba(255,255,255,.08); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .pga-plan-card__btn--free:hover { background: rgba(255,255,255,.13); }
+    .pga-plan-card__btn--pro {
+      background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;
+    }
+    .pga-plan-card__btn--pro:hover { box-shadow: 0 4px 16px rgba(245,158,11,.4); transform: translateY(-1px); }
+    .pga-plan-card__btn--team {
+      background: rgba(124,58,237,.7); color: #fff;
+    }
+    .pga-plan-card__btn--team:hover { background: rgba(124,58,237,.9); transform: translateY(-1px); }
+
+    /* ── Template Library Modal ─────────────────────────────── */
+    .pga-modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.75);
+      backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .pga-modal-overlay.active { display: flex; }
+    .pga-modal {
+      background: #12131e;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      width: 100%; max-width: 760px;
+      max-height: 85vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,.7);
+      animation: pga-modal-in .2s ease;
+    }
+    @keyframes pga-modal-in {
+      from { opacity: 0; transform: scale(.96) translateY(8px); }
+      to   { opacity: 1; transform: scale(1)  translateY(0);    }
+    }
+    .pga-modal__header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .pga-modal__title { font-size: 20px; font-weight: 800; color: var(--text); }
+    .pga-modal__close {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 26px; cursor: pointer; line-height: 1;
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; transition: all .15s;
+    }
+    .pga-modal__close:hover { background: rgba(255,255,255,.08); color: var(--text); }
+    .pga-modal__body {
+      overflow-y: auto; padding: 20px 24px 24px;
+    }
+
+    /* ── Template grid (matches screenshot) ─────────────────── */
+    .pga-tpl-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 560px) { .pga-tpl-grid { grid-template-columns: 1fr; } }
+
+    .pga-tpl-section {
+      grid-column: 1 / -1;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; padding: 6px 0 4px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      margin-top: 6px;
+    }
+    .pga-tpl-section--free { color: #34d399; }
+    .pga-tpl-section--pro  { color: #f59e0b; }
+
+    .pga-tpl-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .pga-tpl-card:hover {
+      background: rgba(255,255,255,.09);
+      border-color: rgba(255,255,255,.22);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    }
+    .pga-tpl-card--pro { border-color: rgba(245,158,11,.2); }
+    .pga-tpl-card--pro:hover { border-color: rgba(245,158,11,.45); background: rgba(245,158,11,.05); }
+    .pga-tpl-card--locked { cursor: default; opacity: .7; }
+    .pga-tpl-card--picked { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.04); }
+
+    .pga-tpl-card__name {
+      font-size: 15px; font-weight: 700; color: #7dd3fc;
+      display: flex; align-items: center; gap: 6px; margin: 0;
+    }
+    .pga-tpl-card__desc {
+      font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.5; margin: 0;
+    }
+    .pga-tpl-badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; color: #fff;
+      background: #bd00ff; width: fit-content; margin-top: 2px;
+    }
+    .pga-tpl-badge--pro {
+      background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;
+    }
+
+    .pga-tpl-upgrade {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: linear-gradient(135deg, rgba(245,158,11,.1), rgba(217,119,6,.07));
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: 12px; padding: 16px 20px; margin-top: 6px;
+    }
+    .pga-tpl-upgrade__text { font-size: 13px; color: rgba(255,255,255,.75); }
+    .pga-tpl-upgrade__text strong { color: #fbbf24; }
+    .pga-tpl-upgrade__btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000; border: none; padding: 9px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* ── Voice mockup ───────────────────────────────────────── */
+    .pga-voice-mockup {
+      background: var(--bg-card);
+      border: 1px solid var(--border-prompt);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.4);
+    }
+    @keyframes mic-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,.5); }
+      50%      { box-shadow: 0 0 0 10px rgba(124,58,237,0); }
+    }
+    .pga-mic-recording { animation: mic-pulse 1.2s ease-out infinite !important; }
+
+    /* ── MCP styles (match poly-glot.ai exactly) ────────────── */
+    .pga-mcp-config {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 24px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .pga-mcp-config__bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: rgba(0,0,0,.3);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px; color: var(--text-dim);
+      font-family: 'Fira Code', monospace;
+    }
+    .pga-mcp-config__dot { width: 8px; height: 8px; border-radius: 50%; }
+    .pga-mcp-config__code {
+      padding: 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px; line-height: 1.7;
+      color: #a5f3fc; margin: 0; overflow-x: auto;
+    }
+    .pga-mcp-tools-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto; margin-right: auto;
+    }
+    @media (max-width: 700px) { .pga-mcp-tools-grid { grid-template-columns: repeat(2,1fr); } }
+    .pga-mcp-tool {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-family: 'Fira Code', monospace;
+      color: var(--accent);
+      transition: border-color .2s, background .2s;
+    }
+    .pga-mcp-tool.pga-mcp-tool--ping {
+      border-color: rgba(125,211,252,.5);
+      background: rgba(125,211,252,.07);
+      color: #7dd3fc;
+    }
+
+    /* ── Template creation animation container ──────────────── */
+    #pgaTplAnimBox {
+      background: var(--bg-card);
+      border: 1px solid var(--border-prompt);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.4);
+      margin-top: 32px;
+    }
+    #pgaTplAnimBox .pga-mockup__bar { background: rgba(255,255,255,.03); }
+    #pgaTplAnimText {
+      font-family: 'Fira Code', monospace;
+      font-size: 12.5px;
+      line-height: 1.8;
+      color: #cbd5e1;
+      padding: 16px;
+      min-height: 140px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .pgaTplVar { color: #c4b5fd; background: rgba(167,139,250,.15); border-radius: 3px; padding: 0 3px; }
+    #pgaTplProgress {
+      height: 3px;
+      background: linear-gradient(90deg,#7c3aed,#38bdf8);
+      width: 0%;
+      transition: width .1s linear;
+    }
+  </style>
+
+  <!-- ── Prompt Studio auth shim ──────────────────────────────────────────
+       Runs BEFORE auth.v13.js loads.  Handles two things:
+
+       A) Stamp pg_source = 'prompt_page' in sessionStorage immediately so
+          that when the user submits their email, auth.v12 sends source=prompt_page
+          to the Worker → Worker routes the magic link back to /prompt/ not /.
+          auth.v12 also reads this source at token-verify time to skip the
+          VS Code / CLI token panel entirely on this page.
+
+       B) Show a clean branded welcome toast when auth completes, by listening
+          for the pg:plan-loaded event dispatched by auth.v12.
+  ──────────────────────────────────────────────────────────────────────── -->
+  <script>
+  (function () {
+    /* ── A. Stamp source immediately ────────────────────────────────── */
+    try { sessionStorage.setItem('pg_source', 'prompt_page'); } catch(e) {}
+
+    var _nativeSetTimeout = window.setTimeout;
+
+    // 4. Override location.href setter via Object.defineProperty
+    try {
+      var _loc = window.location;
+      var _origHref = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+      Object.defineProperty(_loc, 'href', {
+        get: function () { return _origHref.get.call(_loc); },
+        set: function (url) {
+          if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
+          _origHref.set.call(_loc, url);
+        },
+        configurable: true,
+      });
+    } catch(e) {}
+
+    // 5. Wrap setTimeout to catch delayed vscode:// navigations
+    window.setTimeout = function (fn, delay) {
+      var rest = Array.prototype.slice.call(arguments, 2);
+      var wrapped = function () {
+        try { fn.apply(this, rest); } catch(e) {}
+      };
+      return _nativeSetTimeout.call(window, wrapped, delay);
+    };
+
+    /* ── C. Welcome toast (replaces dev token panel) ────────────────── */
+    function pgaWelcomeToast(email, plan) {
+      // Don't show twice
+      if (document.getElementById('pga-welcome-toast')) return;
+
+      var isPaid = plan && plan !== 'free';
+      var emoji  = isPaid ? '🎉' : '✅';
+      var msg    = isPaid
+        ? emoji + ' <strong>' + plan.charAt(0).toUpperCase() + plan.slice(1)
+          + ' plan active</strong>' + (email ? ' · ' + email : '')
+          + ' — you\'re all set!'
+        : emoji + ' <strong>Signed in</strong>'
+          + (email ? ' as ' + email : '')
+          + ' — start building prompts below.';
+
+      if (!document.getElementById('pga-toast-kf')) {
+        var kf = document.createElement('style');
+        kf.id  = 'pga-toast-kf';
+        kf.textContent = [
+          '@keyframes pga-toast-in{',
+            'from{opacity:0;transform:translateX(-50%) translateY(14px)}',
+            'to  {opacity:1;transform:translateX(-50%) translateY(0)}',
+          '}'
+        ].join('');
+        document.head.appendChild(kf);
+      }
+
+      var t = document.createElement('div');
+      t.id = 'pga-welcome-toast';
+      t.style.cssText = [
+        'position:fixed','bottom:28px','left:50%',
+        'transform:translateX(-50%) translateY(0)',
+        'z-index:10000',
+        'background:#13141f',
+        'border:1px solid rgba(167,139,250,.4)',
+        'border-radius:12px',
+        'padding:13px 18px',
+        'display:flex','align-items:center','gap:10px',
+        'box-shadow:0 8px 36px rgba(0,0,0,.6)',
+        'font-family:Inter,system-ui,sans-serif',
+        'font-size:14px','color:#f1f5f9',
+        'max-width:min(480px,calc(100vw - 32px))',
+        'animation:pga-toast-in .3s ease',
+        'line-height:1.45',
+      ].join(';');
+      t.innerHTML = '<span style="flex:1;">' + msg + '</span>'
+        + '<button onclick="this.parentNode.remove()" aria-label="Dismiss" '
+        + 'style="background:none;border:none;color:#64748b;font-size:20px;'
+        + 'cursor:pointer;padding:0;line-height:1;flex-shrink:0;margin-left:4px;">×</button>';
+
+      document.body.appendChild(t);
+
+      // Auto-dismiss after 6 s
+      _nativeSetTimeout(function () {
+        t.style.transition = 'opacity .35s ease, transform .35s ease';
+        t.style.opacity    = '0';
+        t.style.transform  = 'translateX(-50%) translateY(10px)';
+        _nativeSetTimeout(function () {
+          if (t.parentNode) t.parentNode.removeChild(t);
+        }, 360);
+      }, 6000);
+    }
+
+    /* ── D. Show welcome toast when auth completes ──────────────────── */
+    // auth.v12 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
+    // It also skips the VS Code token panel entirely when source=prompt_page.
+
+    var _toastShown = false;
+    function onAuthed() {
+      if (_toastShown) return;
+      _toastShown = true;
+
+      // Pull email + plan from localStorage (auth.v12 writes these)
+      var email = '';
+      var plan  = 'free';
+      try {
+        email = localStorage.getItem('pg_email') || '';
+        plan  = localStorage.getItem('pg_plan')  || 'free';
+      } catch(e) {}
+
+      // Dismiss auth gate banner
+      if (typeof pgaAuthGateDismiss === 'function') pgaAuthGateDismiss();
+
+      // Hide nav sign-in / CTA buttons in case CSS hasn't caught up yet
+      var navSignIn = document.getElementById('pgaNavSignIn');
+      if (navSignIn) navSignIn.style.display = 'none';
+      var navCta = document.getElementById('pgaNavCta');
+      if (navCta) navCta.style.display = 'none';
+
+      pgaWelcomeToast(email, plan);
+    }
+
+    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v12 onPlanLoaded)
+    window.addEventListener('pg:plan-loaded', function (e) {
+      // Only fire the toast if the user is genuinely authenticated
+      // (plan-loaded fires on every page load, even for anonymous free users)
+      if (document.body.classList.contains('pg-authed')) {
+        onAuthed();
+      }
+    });
+
+    // Hook 2: MutationObserver on body class — catches the exact moment
+    //         auth.v12 calls document.body.classList.add('pg-authed')
+    var _mo = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          if (document.body.classList.contains('pg-authed')) {
+            _mo.disconnect();
+            onAuthed();
+          }
+        }
+      });
+    });
+    // Start observing once DOM is ready
+    function startObserver() {
+      _mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startObserver);
+    } else {
+      startObserver();
+    }
+
+  }());
+  </script>
+
+  <!-- Auth: load poly-glot auth system -->
+  <script defer src="../auth.v13.js"></script>
+
+  <!-- Chat widget (same as poly-glot.ai) -->
+  <script defer src="../chat.v8.js"></script>
+
+  <!-- ══ AUTH GATE BANNER (matches poly-glot.ai pattern) ══════ -->
+  <div id="pgaAuthGate" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:500;width:min(560px,calc(100vw - 32px));">
+    <div style="background:#12131e;border:1px solid rgba(167,139,250,.35);border-radius:16px;padding:20px 24px;box-shadow:0 16px 48px rgba(0,0,0,.7);backdrop-filter:blur(12px);display:flex;gap:16px;align-items:flex-start;">
+      <div style="font-size:28px;flex-shrink:0;line-height:1;">🔑</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;">Sign in to use Prompt Studio</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">Free account — no credit card. Pick 1 template to start, version history included.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="pgaAuthGateDismiss(); pgPromptSignIn('auth_gate');" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.boxShadow='0 4px 14px rgba(124,58,237,.4)'" onmouseout="this.style.boxShadow='none'">🚀 Sign Up Free</button>
+          <button onclick="pgaAuthGateDismiss(); pgPromptSignIn('auth_gate_signin');" style="background:transparent;color:var(--accent);border:1px solid rgba(125,211,252,.25);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(125,211,252,.5)'" onmouseout="this.style.borderColor='rgba(125,211,252,.25)'">Sign In</button>
+        </div>
+      </div>
+      <button onclick="pgaAuthGateDismiss()" aria-label="Dismiss" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">×</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Auth sign-in helper ──────────────────────────────────
+    // Always stamp sessionStorage with a prompt-scoped source BEFORE opening
+    // the modal. auth.v13.js reads pg_source from sessionStorage and sends it
+    // to the Worker as `source`. The Worker uses this to route the magic link
+    // back to /prompt/ instead of the main poly-glot.ai homepage.
+    function pgPromptSignIn(source) {
+      var effectiveSource = source || 'prompt_page';
+      try { sessionStorage.setItem('pg_source', effectiveSource); } catch(e) {}
+
+      if (window.PolyGlotAuth && typeof window.PolyGlotAuth.openLoginModal === 'function') {
+        window.PolyGlotAuth.openLoginModal(effectiveSource);
+      } else if (typeof window.pgSignIn === 'function') {
+        window.pgSignIn(effectiveSource);
+      } else {
+        // Fallback: navigate to main site sign-in with explicit return destination
+        window.location.href = 'https://poly-glot.ai/?signin=1&source=prompt_page&from=prompt';
+      }
+    }
+
+    // ── Auth gate banner ─────────────────────────────────────
+    // Show unless user is already authed (body.pg-authed added by auth.v13.js)
+    let _gateDismissed = false;
+    function pgaAuthGateShow() {
+      if (_gateDismissed) return;
+      if (document.body.classList.contains('pg-authed')) return;
+      document.getElementById('pgaAuthGate').style.display = 'block';
+    }
+    function pgaAuthGateDismiss() {
+      _gateDismissed = true;
+      const gate = document.getElementById('pgaAuthGate');
+      gate.style.opacity = '0';
+      gate.style.transform = 'translateX(-50%) translateY(12px)';
+      gate.style.transition = 'opacity .25s, transform .25s';
+      setTimeout(() => { gate.style.display = 'none'; gate.style.opacity=''; gate.style.transform='translateX(-50%)'; gate.style.transition=''; }, 260);
+    }
+    // Dismiss on Escape
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') pgaAuthGateDismiss(); });
+    // Show gate after 8 seconds if not authed — gives user time to read first
+    setTimeout(pgaAuthGateShow, 8000);
+    // Also show gate when any gated action button is clicked and user is NOT authed
+    // (intercept the existing onclick= buttons by wrapping pgPromptSignIn)
+    const _origPgPromptSignIn = pgPromptSignIn;
+    window.pgPromptSignIn = function(source) {
+      pgaAuthGateDismiss();
+      _origPgPromptSignIn(source);
+    };
+    // Hide gate permanently once auth.v12 marks body as authed
+    const _bodyObserver = new MutationObserver(() => {
+      if (document.body.classList.contains('pg-authed')) {
+        pgaAuthGateDismiss();
+        _bodyObserver.disconnect();
+      }
+    });
+    _bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // ── Templates data ───────────────────────────────────────
+    const TEMPLATES = [
+      // FREE
+      { plan:'free', name:'💻 Code Review Assistant', desc:'Review code for bugs, style, and best practices',
+        vars:{ language:'Python', format:'markdown', code:'' },
+        tpl:`You are an experienced {{language}} developer conducting a thorough code review.\n\nReview the following code for:\n- Bugs and errors\n- Code style and conventions\n- Performance issues\n- Security vulnerabilities\n\nCode to review:\n{{code}}\n\nProvide your review in {{format}} format with specific line references.` },
+
+      { plan:'free', name:'✍️ Content Writer', desc:'Generate engaging content for various purposes',
+        vars:{ niche:'technology', content_type:'blog post', topic:'', audience:'general public', tone:'professional', length:'500', keywords:'', instructions:'' },
+        tpl:`You are a professional content writer specializing in {{niche}} content.\n\nWrite a {{content_type}} about: {{topic}}\n\nRequirements:\n- Target audience: {{audience}}\n- Tone: {{tone}}\n- Length: {{length}} words\n- Include keywords: {{keywords}}\n\nAdditional instructions:\n{{instructions}}` },
+
+      { plan:'free', name:'📊 Data Analyst', desc:'Analyze data and provide insights',
+        vars:{ domain:'business', data:'', focus_area_1:'trends', focus_area_2:'anomalies', focus_area_3:'correlations', format:'structured report' },
+        tpl:`You are a data analyst with expertise in {{domain}} data analysis.\n\nAnalyze the following data and provide insights:\n{{data}}\n\nFocus areas:\n- {{focus_area_1}}\n- {{focus_area_2}}\n- {{focus_area_3}}\n\nProvide your analysis in {{format}} with visualization suggestions and actionable recommendations.` },
+
+      { plan:'free', name:'🌐 Translation Expert', desc:'Translate text with context and nuance',
+        vars:{ source_lang:'English', target_lang:'Spanish', text:'', context:'', format:'plain text' },
+        tpl:`You are a professional translator specializing in {{source_lang}} to {{target_lang}} translation.\n\nTranslate the following text while preserving:\n- Cultural nuances\n- Tone and style\n- Idiomatic expressions\n\nText to translate:\n{{text}}\n\nContext: {{context}}\n\nProvide the translation in {{format}} format.` },
+
+      { plan:'free', name:'📝 Summarization Tool', desc:'Create concise summaries of long content',
+        vars:{ content_type:'article', length:'3-5 bullet points', text:'', focus_1:'important facts', focus_2:'actionable insights', style:'concise and clear' },
+        tpl:`You are a professional summarizer specializing in {{content_type}} content.\n\nSummarize the following text in {{length}}:\n{{text}}\n\nFocus on:\n- Key points and main ideas\n- {{focus_1}}\n- {{focus_2}}\n\nStyle: {{style}}` },
+
+      { plan:'free', name:'🎨 Creative Storyteller', desc:'Generate creative stories and narratives',
+        vars:{ genre:'science fiction', story_type:'short story', setting:'', character:'', conflict:'', tone:'suspenseful', length:'500', additional:'' },
+        tpl:`You are a creative writer specializing in {{genre}} stories.\n\nWrite a {{story_type}} with the following elements:\n- Setting: {{setting}}\n- Main character: {{character}}\n- Conflict: {{conflict}}\n- Tone: {{tone}}\n- Length: {{length}} words\n\nAdditional elements:\n{{additional}}` },
+
+      { plan:'free', name:'📖 Technical Documentation', desc:'Create clear technical documentation',
+        vars:{ product_type:'software API', feature:'', section_1:'Usage instructions', section_2:'Parameters', section_3:'Return values', audience:'developers', format:'Markdown with code blocks' },
+        tpl:`You are a technical writer creating documentation for {{product_type}}.\n\nDocument the following feature/component:\n{{feature}}\n\nInclude:\n- Overview and purpose\n- {{section_1}}\n- {{section_2}}\n- {{section_3}}\n- Examples and code snippets\n\nAudience: {{audience}}\nFormat: {{format}}` },
+
+      { plan:'free', name:'🎧 Customer Support', desc:'Provide helpful customer support responses',
+        vars:{ company:'TechCorp', product:'software products', inquiry:'', tone:'friendly and professional', policy:'' },
+        tpl:`You are a customer support representative for {{company}} with expertise in {{product}}.\n\nCustomer inquiry:\n{{inquiry}}\n\nRespond with:\n- Empathy and understanding\n- Clear solution or next steps\n- {{tone}} tone\n- Offer additional help\n\nCompany policy to consider:\n{{policy}}` },
+
+      { plan:'free', name:'🐛 Bug Report Writer', desc:'Write clear, reproducible bug reports',
+        vars:{ product:'', environment:'Production', description:'', steps:'', expected:'', actual:'', severity:'Medium' },
+        tpl:`You are a QA engineer. Write a detailed bug report.\n\nProduct: {{product}}\nEnvironment: {{environment}}\n\nIssue:\n{{description}}\n\nSteps to reproduce:\n{{steps}}\n\nExpected: {{expected}}\nActual: {{actual}}\n\nSeverity: {{severity}}` },
+
+      { plan:'free', name:'📧 Cold Email Outreach', desc:'Write personalized cold emails that get replies',
+        vars:{ sender_role:'Founder', sender_company:'', recipient_name:'', recipient_title:'CTO', recipient_company:'', value_prop:'', cta:'15-minute call', tone:'direct and friendly' },
+        tpl:`You are an expert sales copywriter. Write a concise cold email.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}} at {{recipient_company}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\nTone: {{tone}}\n\nWrite a subject line and body under 150 words.` },
+
+      { plan:'free', name:'🎓 Study Guide Creator', desc:'Turn any topic into a structured study guide',
+        vars:{ subject:'Computer Science', topic:'', level:'Intermediate', time:'2 hours', num_questions:'5' },
+        tpl:`You are an expert educator in {{subject}}.\n\nCreate a study guide for: {{topic}}\nLevel: {{level}}\nStudy time: {{time}}\n\nInclude:\n- Key concepts and definitions\n- Core principles with examples\n- Common misconceptions\n- {{num_questions}} practice questions\n- Memory aids and mnemonics` },
+
+      { plan:'free', name:'📣 Social Media Caption', desc:'Generate scroll-stopping captions for any platform',
+        vars:{ platform:'Instagram', topic:'', brand_voice:'friendly and professional', audience:'', goal:'drive engagement', num_variants:'3', num_hashtags:'5', char_limit:'2200' },
+        tpl:`You are a social media strategist for {{platform}}.\n\nTopic: {{topic}}\nBrand voice: {{brand_voice}}\nAudience: {{audience}}\nGoal: {{goal}}\n\nWrite {{num_variants}} caption variants with:\n- Hook in first line\n- Relevant emojis\n- CTA\n- {{num_hashtags}} hashtags\n\nChar limit: {{char_limit}}` },
+
+      { plan:'free', name:'🧠 Meeting Summary', desc:'Turn raw notes into clean action items',
+        vars:{ meeting_name:'', date:'', attendees:'', notes:'' },
+        tpl:`You are an executive assistant. Convert meeting notes into a clean summary.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nFormat:\n- Objective\n- Key decisions\n- Action items (owner + deadline)\n- Open questions / blockers\n- Next meeting date` },
+
+      // PRO
+      { plan:'pro', name:'⚖️ Legal Contract Reviewer', desc:'Identify risks and clauses in contracts',
+        vars:{ contract_type:'SaaS', contract_text:'', jurisdiction:'United States', party:'Buyer' },
+        tpl:`You are a senior contract attorney for {{contract_type}} agreements.\n\nReview:\n{{contract_text}}\n\nJurisdiction: {{jurisdiction}}\nParty: {{party}}\n\nIdentify:\n1. High-risk clauses ⚠️\n2. Missing protections\n3. Ambiguous language\n4. Recommended amendments\n5. Risk rating: Low/Medium/High` },
+
+      { plan:'pro', name:'💰 Financial Analysis Report', desc:'Generate investor-grade financial analysis',
+        vars:{ company:'', analysis_type:'Equity Research', period:'FY 2024', financial_data:'', audience:'Institutional investors' },
+        tpl:`You are a senior financial analyst.\n\nCompany: {{company}}\nAnalysis: {{analysis_type}}\nPeriod: {{period}}\n\nData:\n{{financial_data}}\n\nProduce:\n- Executive summary\n- Revenue and margin trends\n- Key ratios (P/E, EV/EBITDA, ROE)\n- Bull/base/bear scenarios\n- Top 5 risks\n\nAudience: {{audience}}` },
+
+      { plan:'pro', name:'🏥 Medical Case Summary', desc:'Structure clinical notes into professional summaries',
+        vars:{ specialty:'Internal Medicine', notes:'', num_dx:'3' },
+        tpl:`You are a board-certified physician in {{specialty}}.\n\nCase notes:\n{{notes}}\n\nGenerate:\n- Chief complaint\n- History of present illness\n- Top {{num_dx}} differential diagnoses\n- Management plan\n- Follow-up recommendations\n\nFlag red flags with ⚠️` },
+
+      { plan:'pro', name:'🔐 Security Threat Model', desc:'Generate STRIDE-based security threat models',
+        vars:{ system_name:'', architecture:'Web Application', tech_stack:'', data_sensitivity:'PII', compliance_frameworks:'SOC 2, GDPR' },
+        tpl:`You are a senior application security engineer.\n\nSystem: {{system_name}}\nArchitecture: {{architecture}}\nStack: {{tech_stack}}\nData: {{data_sensitivity}}\n\nGenerate STRIDE threat model:\n1. System boundaries\n2. Threat enumeration per category\n3. DREAD risk ratings\n4. Mitigations\n5. Compliance: {{compliance_frameworks}}` },
+
+      { plan:'pro', name:'🎬 Video Script Writer', desc:'Full YouTube/TikTok/ad scripts with hooks and CTAs',
+        vars:{ platform:'YouTube', topic:'', length:'10 minutes', format:'tutorial', audience:'', brand_voice:'educational', goal:'grow subscribers', hook_seconds:'5' },
+        tpl:`You are a video scriptwriter for {{platform}}.\n\nTopic: {{topic}}\nLength: {{length}}\nFormat: {{format}}\nAudience: {{audience}}\nVoice: {{brand_voice}}\nGoal: {{goal}}\n\nWrite:\n- Hook ({{hook_seconds}}s — must stop the scroll)\n- Introduction\n- Main sections with B-roll [in brackets]\n- CTA\n- End screen` },
+
+      { plan:'pro', name:'🏗️ System Design Document', desc:'Generate full engineering system design docs',
+        vars:{ system_name:'', scale:'1M DAU', sla:'99.9% uptime', tech_preferences:'' },
+        tpl:`You are a principal software engineer.\n\nSystem: {{system_name}}\nScale: {{scale}}\nSLA: {{sla}}\nTech: {{tech_preferences}}\n\nGenerate:\n1. Functional + non-functional requirements\n2. High-level architecture\n3. Component breakdown\n4. Data model + storage\n5. Scalability strategy\n6. Failure modes + mitigation\n7. Monitoring plan` },
+
+      { plan:'pro', name:'🎯 Ad Copy Generator', desc:'High-converting copy for Google, Meta, LinkedIn',
+        vars:{ product:'', platform:'Google Ads', goal:'conversions', audience:'', uvp:'', headline_chars:'30', desc_chars:'90', triggers:'urgency, social proof' },
+        tpl:`You are a performance marketing expert.\n\nProduct: {{product}}\nPlatform: {{platform}}\nGoal: {{goal}}\nAudience: {{audience}}\nUVP: {{uvp}}\n\nGenerate:\n1. 3x headlines (max {{headline_chars}} chars)\n2. 3x descriptions (max {{desc_chars}} chars)\n3. 2x CTA options\n4. A/B test hypothesis\n5. Expected CTR range\n\nTriggers: {{triggers}}` },
+
+      { plan:'pro', name:'🧬 Research Paper Abstract', desc:'Write structured academic abstracts',
+        vars:{ field:'', title:'', research_question:'', methodology:'', findings:'', word_limit:'250', citation_style:'APA 7th' },
+        tpl:`You are an academic researcher in {{field}}.\n\nTitle: {{title}}\nQuestion: {{research_question}}\nMethod: {{methodology}}\nFindings: {{findings}}\n\nWrite:\n1. Structured abstract (max {{word_limit}} words)\n2. 5 keywords\n3. Plain-language summary (3 sentences)\n4. Suggested journals\n\nCitation: {{citation_style}}` }
+    ];
+
+    // ── Render template library ──────────────────────────────
+    // ── Template viewer modal ─────────────────────────────────
+    // Shown when a signed-in free user picks a template.
+    // Renders variables as input fields, shows the rendered prompt live,
+    // and provides a copy-to-clipboard button.
+
+    function openTemplateViewer(tpl) {
+      // Build or reuse viewer modal
+      var existing = document.getElementById('pgaTplViewer');
+      if (existing) existing.remove();
+
+      var varNames = Object.keys(tpl.vars);
+      var varFields = varNames.map(k =>
+        `<div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">${k.replace(/_/g,' ')}</label>
+          <input id="pgaTplVar_${k}" type="text" value="${tpl.vars[k] || ''}" placeholder="${tpl.vars[k] || k}"
+            style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
+            oninput="pgaRenderPrompt()" onfocus="this.style.borderColor='rgba(167,139,250,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.07)'">
+        </div>`
+      ).join('');
+
+      var modal = document.createElement('div');
+      modal.id = 'pgaTplViewer';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML = `
+        <div style="background:#13141f;border:1px solid rgba(167,139,250,.25);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div>
+              <div style="font-size:18px;font-weight:800;color:var(--text);">${tpl.name}</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px;">${tpl.desc}</div>
+            </div>
+            <button onclick="document.getElementById('pgaTplViewer').remove()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px;line-height:1;">×</button>
+          </div>
+          <!-- Variables -->
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-prompt);margin-bottom:14px;">Fill in your variables</div>
+            ${varFields || '<p style="color:var(--text-muted);font-size:13px;">No variables — this template is ready to use.</p>'}
+          </div>
+          <!-- Rendered prompt -->
+          <div style="padding:20px 24px;flex:1;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#34d399;margin-bottom:10px;">✅ Your rendered prompt</div>
+            <div id="pgaTplRendered" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;font-family:'Fira Code',monospace;min-height:80px;">${tpl.tpl}</div>
+          </div>
+          <!-- Actions -->
+          <div style="padding:16px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;">
+            <button id="pgaTplCopyBtn" onclick="pgaCopyPrompt()" style="flex:1;min-width:140px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;padding:11px 20px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;">📋 Copy Prompt</button>
+            <button onclick="document.getElementById('pgaTplViewer').remove()" style="flex:1;min-width:100px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:11px 20px;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;">Close</button>
+          </div>
+        </div>`;
+
+      // Close on backdrop click
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.remove();
+      });
+
+      document.body.appendChild(modal);
+
+      // Store template for rendering
+      window._pgaActiveTpl = tpl;
+      pgaRenderPrompt();
+    }
+
+    window.pgaRenderPrompt = function() {
+      var tpl = window._pgaActiveTpl;
+      if (!tpl) return;
+      var rendered = tpl.tpl;
+      Object.keys(tpl.vars).forEach(function(k) {
+        var el = document.getElementById('pgaTplVar_' + k);
+        var val = el ? (el.value.trim() || tpl.vars[k] || '{{' + k + '}}') : ('{{' + k + '}}');
+        rendered = rendered.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), val);
+      });
+      var out = document.getElementById('pgaTplRendered');
+      if (out) out.textContent = rendered;
+    };
+
+    window.pgaCopyPrompt = function() {
+      var out = document.getElementById('pgaTplRendered');
+      if (!out) return;
+      navigator.clipboard.writeText(out.textContent).then(function() {
+        var btn = document.getElementById('pgaTplCopyBtn');
+        if (btn) {
+          btn.textContent = '✅ Copied!';
+          btn.style.background = 'linear-gradient(135deg,#059669,#047857)';
+          setTimeout(function() {
+            btn.textContent = '📋 Copy Prompt';
+            btn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+          }, 2000);
+        }
+      });
+    };
+
+    function renderTemplateLibrary() {
+      const grid = document.getElementById('templateLibraryGrid');
+      const free = TEMPLATES.filter(t => t.plan === 'free');
+      const pro  = TEMPLATES.filter(t => t.plan === 'pro');
+      const isAuthed = document.body.classList.contains('pg-authed');
+      // Track which free template this user has already picked (stored in localStorage)
+      let pickedTemplate = '';
+      try { pickedTemplate = localStorage.getItem('pg_prompt_picked_tpl') || ''; } catch(e) {}
+
+      function cardHTML(t) {
+        const isPro = t.plan === 'pro';
+        const varCount = Object.keys(t.vars).length;
+        const isPicked = !isPro && pickedTemplate === t.name;
+        return `<div class="pga-tpl-card${isPro ? ' pga-tpl-card--pro pga-tpl-card--locked' : ''}${isPicked ? ' pga-tpl-card--picked' : ''}" data-name="${t.name}" data-pro="${isPro}">
+          <div class="pga-tpl-card__name">${t.name}
+            ${isPro ? `<span style="font-size:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">PRO</span>` : ''}
+            ${isPicked ? `<span style="font-size:10px;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:2px 7px;border-radius:10px;font-weight:700;margin-left:4px;">YOUR PICK</span>` : ''}
+          </div>
+          <p class="pga-tpl-card__desc">${t.desc}</p>
+          <span class="pga-tpl-badge${isPro ? ' pga-tpl-badge--pro' : ''}">${isPro ? '🔒 ' : '✅ '}${varCount} variable${varCount !== 1 ? 's' : ''}</span>
+        </div>`;
+      }
+
+      grid.innerHTML =
+        `<div class="pga-tpl-section pga-tpl-section--free">✅ Free Templates — pick any 1</div>` +
+        free.map(cardHTML).join('') +
+        `<div class="pga-tpl-section pga-tpl-section--pro">⭐ Pro Templates</div>` +
+        pro.map(cardHTML).join('') +
+        `<div class="pga-tpl-upgrade">
+          <div class="pga-tpl-upgrade__text"><strong>Unlock 8 Pro Templates</strong> — Legal, Finance, Medical, Security, Video Scripts, System Design &amp; more.</div>
+          <button class="pga-tpl-upgrade__btn" onclick="document.getElementById('templateLibraryModal').classList.remove('active');document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'})">See Plans →</button>
+        </div>`;
+
+      // Free cards
+      grid.querySelectorAll('.pga-tpl-card:not(.pga-tpl-card--locked)').forEach(card => {
+        card.addEventListener('click', () => {
+          const name = card.dataset.name;
+          const tpl  = TEMPLATES.find(t => t.name === name);
+          if (!tpl) return;
+
+          document.getElementById('templateLibraryModal').classList.remove('active');
+
+          if (!isAuthed) {
+            // Not signed in — prompt sign-in, remember their pick
+            try { sessionStorage.setItem('pg_pending_tpl', name); } catch(e) {}
+            pgPromptSignIn('template_pick');
+            return;
+          }
+
+          // Signed in — check if they already have a picked template
+          if (pickedTemplate && pickedTemplate !== name) {
+            // Already picked a different one — show it anyway (Pro would lock but free can use their 1)
+            if (confirm(`You already picked "${pickedTemplate}". Open that instead?\n\nClick Cancel to open "${name}".`)) {
+              const existingTpl = TEMPLATES.find(t => t.name === pickedTemplate);
+              if (existingTpl) openTemplateViewer(existingTpl);
+              return;
+            }
+          }
+
+          // Save their pick and open
+          try { localStorage.setItem('pg_prompt_picked_tpl', name); } catch(e) {}
+          openTemplateViewer(tpl);
+        });
+      });
+
+      // Pro cards — scroll to pricing
+      grid.querySelectorAll('.pga-tpl-card--locked').forEach(card => {
+        card.addEventListener('click', () => {
+          document.getElementById('templateLibraryModal').classList.remove('active');
+          document.getElementById('pga-pricing').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }
+
+    // After sign-in, open any pending template the user had clicked
+    window.addEventListener('pg:plan-loaded', function() {
+      if (!document.body.classList.contains('pg-authed')) return;
+      var pending = '';
+      try { pending = sessionStorage.getItem('pg_pending_tpl') || ''; } catch(e) {}
+      if (pending) {
+        try { sessionStorage.removeItem('pg_pending_tpl'); } catch(e) {}
+        var tpl = TEMPLATES.find(function(t) { return t.name === pending; });
+        if (tpl && tpl.plan === 'free') {
+          try { localStorage.setItem('pg_prompt_picked_tpl', pending); } catch(e) {}
+          setTimeout(function() { openTemplateViewer(tpl); }, 400);
+        }
+      }
+    });
+
+    // ── Modal open/close ─────────────────────────────────────
+    document.getElementById('openTemplateLibrary').addEventListener('click', () => {
+      renderTemplateLibrary();
+      document.getElementById('templateLibraryModal').classList.add('active');
+    });
+    document.getElementById('closeTemplateLibrary').addEventListener('click', () => {
+      document.getElementById('templateLibraryModal').classList.remove('active');
+    });
+    document.getElementById('templateLibraryModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('templateLibraryModal'))
+        document.getElementById('templateLibraryModal').classList.remove('active');
+    });
+
+    // ── Smooth scroll ────────────────────────────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const el = document.getElementById(a.getAttribute('href').slice(1));
+        if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }); }
+      });
+    });
+
+    // ── Mockup variable highlight animation ──────────────────
+    const varChips = document.querySelectorAll('.pga-mockup__var-chip');
+    let currentChip = 0;
+    setInterval(() => {
+      varChips.forEach(c => { c.style.borderColor = ''; c.style.background = ''; });
+      if (varChips[currentChip]) {
+        varChips[currentChip].style.borderColor = 'rgba(167,139,250,0.6)';
+        varChips[currentChip].style.background   = 'rgba(167,139,250,0.12)';
+      }
+      setTimeout(() => {
+        if (varChips[currentChip]) { varChips[currentChip].style.borderColor = ''; varChips[currentChip].style.background = ''; }
+        currentChip = (currentChip + 1) % varChips.length;
+      }, 900);
+    }, 1400);
+
+    // ── Fade-in feature cards ─────────────────────────────────
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.pga-feature-card, .pga-plan-card').forEach(el => {
+      el.style.opacity = '0'; el.style.transform = 'translateY(20px)';
+      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+
+    // ══════════════════════════════════════════════════════════
+    // ANIMATION 1: Template creation typewriter
+    // ══════════════════════════════════════════════════════════
+    (function() {
+      const sequences = [
+        {
+          label: '💻 Code Review',
+          raw: 'You are an experienced {{language}} developer.\n\nReview the following code for:\n- Bugs and errors\n- Performance issues\n- Security vulnerabilities\n\nCode:\n{{code}}\n\nFormat: {{format}}',
+        },
+        {
+          label: '📧 Cold Email',
+          raw: 'You are an expert sales copywriter.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\n\nWrite subject + body under 150 words.',
+        },
+        {
+          label: '🧠 Meeting Summary',
+          raw: 'You are an executive assistant.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nOutput:\n- Key decisions\n- Action items (owner + deadline)\n- Open questions',
+        },
+      ];
+
+      const el    = document.getElementById('pgaTplAnimText');
+      const bar   = document.getElementById('pgaTplProgress');
+      const lbl   = document.getElementById('pgaTplAnimLabel');
+      if (!el) return;
+
+      // highlight {{vars}} in rendered string
+      function highlight(s) {
+        return s.replace(/\{\{([^}]+)\}\}/g, '<span class="pgaTplVar">{{$1}}</span>');
+      }
+
+      let seqIdx = 0;
+      function runSeq() {
+        const seq = sequences[seqIdx % sequences.length];
+        lbl.textContent = seq.label;
+        const chars = seq.raw.split('');
+        let i = 0;
+        let built = '';
+        bar.style.width = '0%';
+
+        const interval = setInterval(() => {
+          if (i >= chars.length) {
+            clearInterval(interval);
+            lbl.textContent = '✅ done';
+            bar.style.width = '100%';
+            // pause then restart with next template
+            setTimeout(() => {
+              lbl.textContent = '✍️ typing';
+              el.textContent = '';
+              bar.style.width = '0%';
+              seqIdx++;
+              runSeq();
+            }, 2800);
+            return;
+          }
+          // type 2–4 chars per tick for natural feel
+          const chunk = Math.floor(Math.random() * 3) + 1;
+          for (let c = 0; c < chunk && i < chars.length; c++, i++) {
+            built += chars[i];
+          }
+          el.innerHTML = highlight(built) + '<span class="cursor">|</span>';
+          bar.style.width = ((i / chars.length) * 100) + '%';
+        }, 28);
+      }
+
+      // Start when the element scrolls into view
+      const tplObserver = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { tplObserver.disconnect(); runSeq(); }
+      }, { threshold: 0.3 });
+      tplObserver.observe(document.getElementById('pgaTplAnimBox'));
+    })();
+
+    // ══════════════════════════════════════════════════════════
+    // ANIMATION 2: Voice waveform canvas
+    // ══════════════════════════════════════════════════════════
+    (function() {
+      const canvas = document.getElementById('voiceWaveCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let recording = false;
+      let phase = 0;
+      let rafId = null;
+      const W = canvas.width, H = canvas.height;
+      const barCount = 48;
+      const barW = 4, barGap = 3;
+
+      function drawIdle() {
+        ctx.clearRect(0,0,W,H);
+        ctx.fillStyle = 'rgba(167,139,250,0.2)';
+        const mid = H / 2;
+        for (let i = 0; i < barCount; i++) {
+          const x = i * (barW + barGap);
+          ctx.fillRect(x, mid - 2, barW, 4);
+        }
+      }
+
+      function drawWave() {
+        ctx.clearRect(0,0,W,H);
+        phase += 0.08;
+        const mid = H / 2;
+        for (let i = 0; i < barCount; i++) {
+          const t = (i / barCount) * Math.PI * 4 + phase;
+          const amp = (Math.sin(t) * 0.5 + Math.sin(t * 1.7 + 1) * 0.3 + Math.sin(t * 0.4) * 0.2);
+          const h = Math.max(4, Math.abs(amp) * (H * 0.82));
+          const x = i * (barW + barGap);
+          // gradient: purple → cyan
+          const ratio = i / barCount;
+          const r = Math.round(124 + (56 - 124) * ratio);
+          const g = Math.round(58  + (189 - 58) * ratio);
+          const b = Math.round(237 + (248 - 237) * ratio);
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(x, mid - h/2, barW, h, 2)
+                        : ctx.rect(x, mid - h/2, barW, h);
+          ctx.fill();
+        }
+        rafId = requestAnimationFrame(drawWave);
+      }
+
+      // Auto-start wave when section scrolls into view, pause when out
+      const voiceSection = document.getElementById('pga-voice');
+      if (voiceSection) {
+        const voiceObs = new IntersectionObserver(entries => {
+          if (entries[0].isIntersecting) {
+            recording = true;
+            if (rafId) cancelAnimationFrame(rafId);
+            drawWave();
+          } else {
+            recording = false;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+            drawIdle();
+          }
+        }, { threshold: 0.3 });
+        voiceObs.observe(voiceSection);
+      }
+      drawIdle();
+
+      // ── Mockup mic button: drives the visual demo in the right panel ──
+      window.toggleVoiceMockup = function() {
+        recording = !recording;
+        const btn   = document.getElementById('voiceMicBtn');
+        const dot   = document.getElementById('voiceStatusDot');
+        const txt   = document.getElementById('voiceStatusText');
+        const timer = document.getElementById('voiceTimer');
+        if (recording) {
+          btn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
+          btn.classList.add('pga-mic-recording');
+          dot.style.background = '#ef4444';
+          txt.textContent = 'Recording… speak naturally';
+          if (rafId) cancelAnimationFrame(rafId);
+          drawWave();
+          let secs = 0;
+          btn._timerInterval = setInterval(() => {
+            secs++;
+            const m = Math.floor(secs/60), s = secs % 60;
+            timer.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+          }, 1000);
+        } else {
+          btn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+          btn.classList.remove('pga-mic-recording');
+          dot.style.background = '#34d399';
+          txt.textContent = 'Transcription complete';
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          drawIdle();
+          clearInterval(btn._timerInterval);
+        }
+      };
+
+      // ── Real Web Speech API — wired to "Try it now" button in left panel ──
+      let _recognition = null;
+      let _recognizing = false;
+
+      window.pgaStartVoice = function() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const liveBtn    = document.getElementById('voiceLiveMicBtn');
+        const liveOutput = document.getElementById('voiceLiveOutput');
+        const liveText   = document.getElementById('voiceLiveText');
+        const liveStatus = document.getElementById('voiceLiveStatus');
+
+        // Browser not supported
+        if (!SR) {
+          liveOutput.style.display = 'block';
+          liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+          liveOutput.style.background  = 'rgba(239,68,68,.06)';
+          liveText.textContent   = '';
+          liveStatus.innerHTML   = '⚠️ Your browser doesn\'t support the Web Speech API. '
+            + 'Try <strong>Chrome</strong> or <strong>Edge</strong> for live voice input.';
+          return;
+        }
+
+        // Stop if already running
+        if (_recognizing && _recognition) {
+          _recognition.stop();
+          return;
+        }
+
+        _recognition = new SR();
+        _recognition.continuous      = true;   // keep listening until stop()
+        _recognition.interimResults  = true;   // show words as they come
+        _recognition.maxAlternatives = 1;
+        // Use browser language — falls back to en-US
+        _recognition.lang = navigator.language || 'en-US';
+
+        _recognition.onstart = function() {
+          _recognizing = true;
+          liveOutput.style.display      = 'block';
+          liveOutput.style.borderColor  = 'rgba(16,185,129,.25)';
+          liveOutput.style.background   = 'rgba(16,185,129,.06)';
+          liveText.textContent          = '';
+          liveStatus.innerHTML          = '<span style="color:#34d399;">● Recording</span> — speak now. Click the button again to stop.';
+          liveBtn.innerHTML             = '⏹ Stop recording';
+          liveBtn.style.background      = 'linear-gradient(135deg,#ef4444,#dc2626)';
+          // Also animate the mockup waveform in sync
+          recording = true;
+          if (rafId) cancelAnimationFrame(rafId);
+          drawWave();
+        };
+
+        _recognition.onresult = function(event) {
+          let interim = '', final = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const t = event.results[i][0].transcript;
+            if (event.results[i].isFinal) { final += t; }
+            else { interim += t; }
+          }
+          // Accumulate finals, show interim in lighter colour
+          if (final) { liveText.dataset.final = (liveText.dataset.final || '') + final + ' '; }
+          liveText.innerHTML = '<span style="color:var(--text);">'
+            + (liveText.dataset.final || '')
+            + '</span><span style="color:var(--text-muted);">' + interim + '</span>';
+        };
+
+        _recognition.onerror = function(event) {
+          const friendly = {
+            'not-allowed':   '🔒 Microphone access denied. Allow mic access in your browser settings and try again.',
+            'no-speech':     '🤫 No speech detected — try speaking closer to the mic.',
+            'network':       '🌐 Network error — speech recognition needs an internet connection.',
+            'audio-capture': '🎤 No microphone found. Please connect a mic and try again.',
+          };
+          liveStatus.innerHTML = friendly[event.error]
+            || ('⚠️ Error: ' + event.error + ' — please try again.');
+          _recognizing = false;
+          recording = false;
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          drawIdle();
+          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+          liveBtn.style.background = '';
+        };
+
+        _recognition.onend = function() {
+          _recognizing = false;
+          recording = false;
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          drawIdle();
+          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+          liveBtn.style.background = '';
+          // Show final status
+          const finalText = (liveText.dataset.final || '').trim();
+          if (finalText) {
+            liveStatus.innerHTML = '✅ Done — transcript ready. Copy it into your prompt above.';
+            // Also populate the mockup's transcript panel
+            const mockupTranscript = document.getElementById('voiceTranscript');
+            if (mockupTranscript) mockupTranscript.textContent = finalText.slice(0, 80);
+            const mockupText = document.getElementById('voiceMockupText');
+            if (mockupText) mockupText.innerHTML = finalText.slice(0, 40) + '<span class="cursor">|</span>';
+          } else {
+            liveStatus.innerHTML = 'Recording stopped.';
+          }
+          liveText.dataset.final = '';
+        };
+
+        _recognition.start();
+      };
+
+      // Transcript typewriter when section visible
+      const transcriptEl = document.getElementById('voiceTranscript');
+      const phrases = ['senior software engineer', 'Python and machine learning', 'performance and security issues', 'markdown with code blocks'];
+      let phraseIdx = 0;
+      function typePhrase() {
+        if (!transcriptEl) return;
+        const phrase = phrases[phraseIdx % phrases.length];
+        transcriptEl.textContent = '';
+        let i = 0;
+        const iv = setInterval(() => {
+          if (i >= phrase.length) { clearInterval(iv); phraseIdx++; setTimeout(typePhrase, 2200); return; }
+          transcriptEl.textContent += phrase[i++];
+        }, 55);
+      }
+      const transObs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { transObs.disconnect(); setTimeout(typePhrase, 800); }
+      }, { threshold: 0.4 });
+      if (voiceSection) transObs.observe(voiceSection);
+    })();
+
+    // ══════════════════════════════════════════════════════════
+    // ANIMATION 4: Team builder block cycle highlight
+    // ══════════════════════════════════════════════════════════
+    (function() {
+      const builderSection = document.getElementById('pga-team-builder');
+      if (!builderSection) return;
+      const blockIds = ['pbb-role','pbb-ctx','pbb-inst','pbb-fmt','pbb-con'];
+      let bIdx = 1; // start on ctx (already active in HTML)
+      function cycleBlock() {
+        blockIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('pga-builder-block--active');
+        });
+        const next = document.getElementById(blockIds[bIdx % blockIds.length]);
+        if (next) next.classList.add('pga-builder-block--active');
+        bIdx++;
+      }
+      const blkObs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) { blkObs.disconnect(); setInterval(cycleBlock, 1800); }
+      }, { threshold: 0.3 });
+      blkObs.observe(builderSection);
+    })();
+
+    // ══════════════════════════════════════════════════════════
+    // ANIMATION 3: MCP tool ping — cycles highlight across tools
+    // ══════════════════════════════════════════════════════════
+    (function() {
+      const mcpSection = document.getElementById('pga-mcp');
+      if (!mcpSection) return;
+
+      function pingTools() {
+        const tools = mcpSection.querySelectorAll('.pga-mcp-tool');
+        if (!tools.length) return;
+        let idx = 0;
+        const iv = setInterval(() => {
+          tools.forEach(t => t.classList.remove('pga-mcp-tool--ping'));
+          tools[idx].classList.add('pga-mcp-tool--ping');
+          idx = (idx + 1) % tools.length;
+        }, 620);
+        // store so we can clear if needed
+        mcpSection._pingInterval = iv;
+      }
+
+      const mcpObs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          mcpObs.disconnect();
+          setTimeout(pingTools, 400);
+        }
+      }, { threshold: 0.3 });
+      mcpObs.observe(mcpSection);
+    })();
+
+  </script>
+
+</body>
+</html>
+
