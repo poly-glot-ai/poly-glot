@@ -984,6 +984,7 @@
         <a href="#pga-voice" class="pga-nav__link" onclick="document.getElementById('pga-voice').scrollIntoView({behavior:'smooth'});return false;">🎙️ Voice</a>
         <a href="#pga-mcp" class="pga-nav__link" onclick="document.getElementById('pga-mcp').scrollIntoView({behavior:'smooth'});return false;">🔌 MCP</a>
         <a href="#pga-pricing" class="pga-nav__link" onclick="document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;">Pricing</a>
+        <a href="#pga-faq" class="pga-nav__link" onclick="document.getElementById('pga-faq').scrollIntoView({behavior:'smooth'});return false;">FAQ</a>
         <button id="openTemplateLibrary" class="pga-nav__link">📚 Templates</button>
         <a href="https://poly-glot.ai/" class="pga-nav__link" style="border:1px solid rgba(125,211,252,.25);color:var(--accent);border-radius:6px;padding:5px 10px;font-weight:600;">🦜 Poly-Glot AI</a>
       </div>
@@ -1981,6 +1982,123 @@
     @media (max-width: 800px) {
       #pga-team-builder > div { grid-template-columns: 1fr !important; }
     }
+  </style>
+
+  <div class="pg2-divider"></div>
+
+  <!-- ══ FAQ ═══════════════════════════════════════════════════ -->
+  <section class="pg2-section" id="pga-faq" aria-labelledby="pga-faq-heading">
+    <span class="pg2-eyebrow">❓ FAQ</span>
+    <h2 class="pg2-section__h2" id="pga-faq-heading">Common questions, answered.</h2>
+    <p class="pg2-section__sub">Everything you need to know before you start.</p>
+
+    <div style="max-width:720px;margin:40px auto 0;display:flex;flex-direction:column;gap:12px;" id="pgaFaqList">
+
+      <details class="pga-faq__item" open>
+        <summary class="pga-faq__q">Do I need to know how to write prompts?</summary>
+        <div class="pga-faq__a">No. That's exactly why Prompt Studio exists. Pick a template, fill in the blanks, and you have a complete, well-structured prompt — no experience required.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What AI models does it work with?</summary>
+        <div class="pga-faq__a">Prompt Studio generates prompts you can copy and paste into <strong>ChatGPT, Claude, and Gemini</strong>. Pro users can also test prompts directly against GPT-4o, Claude 3, and Gemini inside the studio — without leaving the page.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What's the difference between Free and Pro?</summary>
+        <div class="pga-faq__a">The <strong>Free plan</strong> gives you 1 template (you pick which one), the editor, variables, and copy-to-clipboard export. <strong>Pro ($9/mo)</strong> unlocks all 21 templates, voice input, AI model testing, unlimited version history, share via URL, and MCP server access.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Do I need a credit card to start?</summary>
+        <div class="pga-faq__a">No. The free plan requires only an email address — no credit card, no trial period, no expiry. Upgrade to Pro or Team whenever you're ready.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is a prompt template?</summary>
+        <div class="pga-faq__a">A template is a pre-written prompt with <strong>fill-in-the-blank fields</strong> (called variables). For example, a Code Review template has fields for language, code, and issue type. You fill them in, and the studio assembles a complete, ready-to-use prompt automatically.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is voice input and how does it work?</summary>
+        <div class="pga-faq__a">Voice input lets you <strong>dictate your prompt out loud</strong> instead of typing. Click the 🎙️ mic button, speak naturally, and your words appear in real time — transcribed by your browser's built-in speech recognition. No plugins, no setup. Works in 40+ languages. Voice input is a Pro feature.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">What is MCP and do I need it?</summary>
+        <div class="pga-faq__a">MCP (Model Context Protocol) lets <strong>developers</strong> connect Prompt Studio to AI coding tools like Goose, Claude Desktop, and Cursor — so your saved templates become callable tools inside your workflow. If you're not a developer, you don't need MCP. It's a Pro+ feature.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Can I share prompts with my team?</summary>
+        <div class="pga-faq__a">Yes. Pro users can share any prompt as a URL — teammates open the link and see the full template, variables, and preview instantly, with no account required to view. The <strong>Team plan ($29/mo)</strong> adds a shared library, custom template builder, locked variable defaults, and team version history.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Is my data private?</summary>
+        <div class="pga-faq__a">Yes. Your prompts are <strong>private by default</strong> — only you can see them. Sharing is always opt-in. Voice input is processed entirely in your browser and never sent to our servers. Read the full <a href="/prompt/privacy/" style="color:var(--accent-prompt2);text-decoration:underline;">Privacy Policy</a>.</div>
+      </details>
+
+      <details class="pga-faq__item">
+        <summary class="pga-faq__q">Can I cancel anytime?</summary>
+        <div class="pga-faq__a">Yes — cancel anytime from your account settings. No questions asked. Your free plan remains active after cancellation with your 1 selected template intact.</div>
+      </details>
+
+    </div>
+  </section>
+
+  <style>
+    .pga-faq__item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .pga-faq__item[open] {
+      border-color: rgba(167,139,250,.35);
+    }
+    .pga-faq__item:hover {
+      border-color: rgba(167,139,250,.25);
+    }
+    .pga-faq__q {
+      list-style: none;
+      padding: 18px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      user-select: none;
+      transition: color .2s;
+    }
+    .pga-faq__q::-webkit-details-marker { display: none; }
+    .pga-faq__q::after {
+      content: '+';
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--accent-prompt2);
+      flex-shrink: 0;
+      transition: transform .25s;
+    }
+    .pga-faq__item[open] .pga-faq__q::after {
+      transform: rotate(45deg);
+    }
+    .pga-faq__item[open] .pga-faq__q {
+      color: var(--accent-prompt2);
+    }
+    .pga-faq__a {
+      padding: 0 20px 18px;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+    .pga-faq__a strong { color: var(--text); }
   </style>
 
   <div class="pg2-divider"></div>
