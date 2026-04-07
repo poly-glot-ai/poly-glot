@@ -65,6 +65,37 @@ function withCors(response) {
 }
 
 /** Build a JSON Response with CORS headers already attached. */
+// ── CLI version gate ──────────────────────────────────────────────────────────
+// Any request carrying X-CLI-Version that is older than MINIMUM_CLI_VERSION
+// gets a hard 410 Gone with an upgrade message.  Requests with no
+// X-CLI-Version header (browser, VS Code extension, curl) pass through.
+const MINIMUM_CLI_VERSION = '2.1.36';
+
+function parseSemver(v) {
+  const parts = String(v || '').replace(/^v/, '').split('.').map(Number);
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+}
+
+function cliVersionTooOld(request) {
+  const sent = request.headers.get('X-CLI-Version');
+  if (!sent) return false; // not a CLI request — let it through
+  const [ma, mi, pa] = parseSemver(sent);
+  const [ra, ri, rp] = parseSemver(MINIMUM_CLI_VERSION);
+  if (ma !== ra) return ma < ra;
+  if (mi !== ri) return mi < ri;
+  return pa < rp;
+}
+
+function cliOutdatedResponse(request) {
+  const sent = request.headers.get('X-CLI-Version') || 'unknown';
+  return jsonResponse({
+    error: `poly-glot v${sent} is no longer supported. ` +
+           `Run: npm install -g poly-glot-ai-cli   (minimum: v${MINIMUM_CLI_VERSION})`,
+    upgrade_url: 'https://www.npmjs.com/package/poly-glot-ai-cli',
+    minimum_version: MINIMUM_CLI_VERSION,
+  }, 410);
+}
+
 function jsonResponse(data, status = 200) {
   return withCors(
     new Response(JSON.stringify(data), {
@@ -356,6 +387,7 @@ async function sendMagicLinkEmail(env, toEmail, magicLink) {
  * 6. Return { ok: true } or appropriate error
  */
 async function handleLogin(request, env) {
+  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   // ── Parse body ──────────────────────────────────────────────
   let body;
   try {
@@ -452,6 +484,7 @@ async function handleLogin(request, env) {
  * Returns: { email, plan }
  */
 async function handleVerify(request, env) {
+  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   return resolveToken(request, env, /* deleteAfter= */ true);
 }
 
@@ -609,6 +642,7 @@ async function handleRefresh(request, env) {
 // Never deletes the token — safe to call on every command.
 // ─────────────────────────────────────────────────────────────
 async function handleCheckPlan(request, env) {
+  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   let body;
   try { body = await request.json(); } catch {
     return jsonResponse({ valid: false, error: 'token is required' }, 401);
@@ -1248,6 +1282,7 @@ async function handleFreeSignup(request, env) {
 // Returns 401 (not 404) for invalid/missing tokens.
 // ─────────────────────────────────────────────────────────────
 async function handleCliGetUsage(request, env) {
+  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   let token = new URL(request.url).searchParams.get('token') ?? '';
   if (!token && request.method === 'POST') {
     try {
@@ -1374,6 +1409,7 @@ async function handleGithubAppTrackUsage(request, env) {
 // Body: { token, count }
 // ─────────────────────────────────────────────────────────────
 async function handleCliTrackUsage(request, env) {
+  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   let body;
   try { body = await request.json(); } catch {
     return jsonResponse({ error: 'token is required' }, 401);
