@@ -2764,6 +2764,47 @@
       startObserver();
     }
 
+    // ── E. BroadcastChannel tab-handoff ──────────────────────────────────
+    // When the user clicks the magic link in their email, it opens a NEW tab
+    // at /prompt/?token=... That tab verifies the token, broadcasts auth state
+    // here, and closes itself. This tab receives the broadcast and signs the
+    // user in — so they end up back in their ORIGINAL tab, fully signed in.
+    try {
+      var _bc = new BroadcastChannel('pg_prompt_auth');
+      _bc.onmessage = function (evt) {
+        var msg = evt.data;
+        if (!msg || msg.type !== 'PROMPT_AUTH_SUCCESS') return;
+
+        var token = msg.token;
+        var email = msg.email;
+        var plan  = msg.plan || 'prompt_free';
+
+        // Write to prompt-specific localStorage keys (same as auth.v13 would)
+        try {
+          localStorage.setItem('pg_prompt_token', token);
+          localStorage.setItem('pg_prompt_plan',  plan);
+          if (email) localStorage.setItem('pg_prompt_email', email);
+        } catch(e) {}
+
+        // Hand off to auth.v13 if loaded, otherwise trigger onAuthed directly
+        if (window.PolyGlotAuth && typeof window.PolyGlotAuth.onPlanLoaded === 'function') {
+          window.PolyGlotAuth.onPlanLoaded(plan);
+        }
+        if (window.PolyGlotAuth && typeof window.PolyGlotAuth.updateHeaderForUser === 'function') {
+          window.PolyGlotAuth.updateHeaderForUser(email, plan);
+        } else {
+          // auth.v13 not ready yet — dispatch pg:plan-loaded so shim catches it
+          // after auth loads. Also add pg-authed class directly.
+          document.body.classList.add('pg-authed');
+          try {
+            window.dispatchEvent(new CustomEvent('pg:plan-loaded', { detail: { plan: plan } }));
+          } catch(e) {}
+        }
+
+        _bc.close();
+      };
+    } catch(e) { /* BroadcastChannel not supported — magic link tab stays open */ }
+
   }());
   </script>
 
