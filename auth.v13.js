@@ -844,36 +844,26 @@
       .then(function (result) {
         // Success only if HTTP 2xx AND data.ok === true
         if (result.httpOk && result.data && result.data.ok === true) {
-          // Show email confirmation
+          // Show email confirmation — single clear CTA: check your inbox.
+          // Previously showed a Free/Pro plan picker here which caused users
+          // to click "Start Free" and never click the magic link — zero signups.
           if (form) form.style.display = 'none';
           if (success) {
             success.style.display = 'block';
-            success.innerHTML = '✅ Magic link sent to <strong>' + email + '</strong>'
-              + '<br><span style="font-size:12px;color:#64748b;display:block;margin-top:4px;">'
-              + 'Check your inbox &amp; spam folder — link expires in 15 min.</span>';
+            success.innerHTML = ''
+              + '<div style="font-size:32px;margin-bottom:10px;">📬</div>'
+              + '<div style="font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">Check your inbox!</div>'
+              + '<div style="font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:12px;">'
+              + 'We sent a magic link to <strong style="color:#f1f5f9;">' + email + '</strong>.<br>'
+              + 'Click it to sign in — no password needed.'
+              + '</div>'
+              + '<div style="font-size:11px;color:#475569;background:#0d1117;border-radius:6px;padding:8px 12px;">'
+              + '⏱ Link expires in 15 min &nbsp;·&nbsp; Check spam if you don\'t see it'
+              + '</div>';
           }
+          // Hide plan picker — don't let users skip the magic link click
           var freeCta = document.getElementById('pgAuthModalFreeCta');
-          if (freeCta) {
-            freeCta.style.display = 'block';
-            var startFreeBtn = document.getElementById('pgAuthModalStartFree');
-            if (startFreeBtn) {
-              startFreeBtn.addEventListener('click', function () {
-                closeModal();
-                applyPlanGating('free');
-                scrollToTool();
-                showToast('👋 Using Poly-Glot free — Python, JS & Java unlocked. Click your email link anytime to restore your session.');
-              });
-            }
-            var seePlansBtn = document.getElementById('pgAuthModalSeePlans');
-            if (seePlansBtn) {
-              seePlansBtn.addEventListener('click', function () {
-                closeModal();
-                var el = document.getElementById('pg-pricing-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-                if (typeof gtag === 'function') gtag('event', 'modal_see_plans_click');
-              });
-            }
-          }
+          if (freeCta) freeCta.style.display = 'none';
           if (typeof gtag === 'function') gtag('event', 'magic_link_sent', { method: 'email' });
         } else {
           // Worker returned an error — surface the real message
