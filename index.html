@@ -1176,6 +1176,10 @@
       0%,60%,100% { transform: translateY(0); opacity: .4; }
       30% { transform: translateY(-4px); opacity: 1; }
     }
+    @keyframes pg2-parrot-pulse {
+      0%,100% { box-shadow: 0 0 0 3px rgba(124,58,237,.25), 0 4px 18px rgba(124,58,237,.4); transform: scale(1); }
+      50%      { box-shadow: 0 0 0 6px rgba(124,58,237,.15), 0 6px 28px rgba(124,58,237,.6); transform: scale(1.08); }
+    }
     /* Suggestion strip */
     .pg2-chat-suggestion-strip {
       display: flex;
@@ -2925,7 +2929,18 @@
     <!-- ── Left: feature list ─────────────────────────────── -->
     <div>
       <div class="pg2-eyebrow">✦ Poly-Glot Assistant</div>
-      <h2 class="pg2-section__h2">Ask anything about your code — in plain English</h2>
+      <h2 class="pg2-section__h2" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        Ask anything about your code — in plain English
+        <span style="
+          display:inline-flex;align-items:center;justify-content:center;
+          width:48px;height:48px;border-radius:50%;
+          background:radial-gradient(circle at 40% 40%,#7c3aed,#4c1d95);
+          box-shadow:0 0 0 3px rgba(124,58,237,.25),0 4px 18px rgba(124,58,237,.4);
+          font-size:26px;flex-shrink:0;cursor:pointer;
+          animation:pg2-parrot-pulse 3s ease-in-out infinite;
+          title='Open chat assistant'
+        " onclick="document.querySelector('.pg2-chat-fab')?.click()" title="Open chat assistant">🦜</span>
+      </h2>
       <p class="pg2-section__sub" style="margin-bottom:0;">Context-aware AI chat built right into the tool. Explain functions, find bugs, suggest refactors, write tests — paste any code and get instant answers.</p>
 
       <div class="pg2-assistant-features">
