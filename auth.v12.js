@@ -697,12 +697,17 @@
     document.getElementById('pgAuthModalForm').addEventListener('submit', handleMagicLinkSubmit);
   }
 
-  function openModal() {
+  function openModal(source) {
     var modal = document.getElementById(MODAL_ID);
     if (!modal) {
       buildModal();
       modal = document.getElementById(MODAL_ID);
     }
+
+    // Detect prompt-page context — suppress plan picker upsell
+    var _source = source || '';
+    try { _source = _source || sessionStorage.getItem('pg_source') || ''; } catch(e) {}
+    var isPromptPage = _source.indexOf('prompt') !== -1;
 
     // Reset state
     var form     = document.getElementById('pgAuthModalForm');
@@ -728,12 +733,36 @@
         if (btn)      btn.textContent = 'Send Magic Link';
       } else {
         if (input)   input.value = '';
-        if (title)    title.textContent = 'Sign in to Poly-Glot';
-        if (subtitle) subtitle.textContent = 'Enter your email — we\'ll send you a magic link';
+        if (isPromptPage) {
+          if (title)    title.textContent = 'Sign in to Prompt Studio';
+          if (subtitle) subtitle.textContent = 'Free account — no credit card. We\'ll send you a magic link.';
+        } else {
+          if (title)    title.textContent = 'Sign in to Poly-Glot';
+          if (subtitle) subtitle.textContent = 'Enter your email — we\'ll send you a magic link';
+        }
         if (btn)      btn.textContent = 'Send Magic Link';
       }
     } catch(e) {
       if (input) input.value = '';
+    }
+
+    // Hide plan-picker for prompt-page sign-ups — it's a distraction there
+    var planCards = document.getElementById('pgModalPlanCards');
+    var freeCta   = document.getElementById('pgAuthModalFreeCta');
+    var seePlans  = document.getElementById('pgAuthModalSeePlans');
+    var freeDivider = freeCta ? freeCta.querySelector('.pg-modal-free-cta__divider') : null;
+    if (isPromptPage) {
+      if (planCards)   planCards.style.display   = 'none';
+      if (seePlans)    seePlans.style.display     = 'none';
+      if (freeDivider) freeDivider.style.display  = 'none';
+      var freeCtaTitle = freeCta ? freeCta.querySelector('.pg-modal-free-cta__title') : null;
+      var freeCtaBody  = freeCta ? freeCta.querySelector('.pg-modal-free-cta__body')  : null;
+      if (freeCtaTitle) freeCtaTitle.textContent = '✅ Magic link sent!';
+      if (freeCtaBody)  freeCtaBody.innerHTML    = 'Check your inbox — click the link to sign in to Prompt Studio.<br><span style="font-size:11px;color:#64748b;">No credit card needed. Free forever.</span>';
+    } else {
+      if (planCards)   planCards.style.display   = '';
+      if (seePlans)    seePlans.style.display     = '';
+      if (freeDivider) freeDivider.style.display  = '';
     }
 
     modal.classList.add('pg-open');
@@ -1038,8 +1067,17 @@
             });
           }
 
+          // ── Prompt page: clean welcome, no token panel ──────────────────
+          // The prompt/index.html shim listens for pg:plan-loaded and shows
+          // its own branded welcome toast. We must not show the dev token panel
+          // (VS Code / CLI widget) on a consumer-facing landing page.
+          var isPromptSource = source.indexOf('prompt') !== -1;
+
           // Welcome toast — different message per surface
-          if (PAID_PLANS.indexOf(plan) !== -1) {
+          if (isPromptSource) {
+            // Prompt page handles its own toast via pg:plan-loaded listener
+            // just clean the URL and let the shim take over
+          } else if (PAID_PLANS.indexOf(plan) !== -1) {
             var planDisplay = plan.charAt(0).toUpperCase() + plan.slice(1);
             showToast('🎉 ' + planDisplay + ' plan active! Copy your token below to activate VS Code or CLI.', 6000);
           } else if (isCliSource) {
@@ -1050,9 +1088,10 @@
             showToast('👋 Signed in! Copy your token below to use VS Code or CLI.', 6000);
           }
 
-          // Show session token panel — fallback for web users and CLI timeout/fallback
-          // VS Code and CLI (auto-callback) users can ignore it
-          showSessionTokenPanel(magicToken, email, plan, isVscodeSource);
+          // Show session token panel — only for VS Code / CLI users, never on prompt page
+          if (!isPromptSource) {
+            showSessionTokenPanel(magicToken, email, plan, isVscodeSource);
+          }
 
           if (typeof gtag === 'function') gtag('event', 'magic_link_verify_success', { plan: plan, source: source });
         })
@@ -1752,7 +1791,7 @@
      * @param {string} source — analytics source label
      */
     openLoginModal: function (source) {
-      openModal();
+      openModal(source);
       if (typeof gtag === 'function') {
         gtag('event', 'auth_modal_opened', { source: source || 'unknown' });
       }
