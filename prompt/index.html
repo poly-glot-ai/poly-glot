@@ -2598,13 +2598,13 @@
        Runs BEFORE auth.v13.js loads.  Handles two things:
 
        A) Stamp pg_source = 'prompt_page' in sessionStorage immediately so
-          that when the user submits their email, auth.v12 sends source=prompt_page
+          that when the user submits their email, auth.v13 sends source=prompt_page
           to the Worker → Worker routes the magic link back to /prompt/ not /.
-          auth.v12 also reads this source at token-verify time to skip the
+          auth.v13 also reads this source at token-verify time to skip the
           VS Code / CLI token panel entirely on this page.
 
        B) Show a clean branded welcome toast when auth completes, by listening
-          for the pg:plan-loaded event dispatched by auth.v12.
+          for the pg:plan-loaded event dispatched by auth.v13.
   ──────────────────────────────────────────────────────────────────────── -->
   <script>
   (function () {
@@ -2641,13 +2641,16 @@
       // Don't show twice
       if (document.getElementById('pga-welcome-toast')) return;
 
-      var isPaid = plan && plan !== 'free';
+      // prompt_free / prompt_pro are the Prompt Studio plan names
+      var isPaid = plan && plan !== 'free' && plan !== 'prompt_free';
       var emoji  = isPaid ? '🎉' : '✅';
+      var planDisplay = plan === 'prompt_pro' ? 'Pro'
+                      : plan === 'prompt_free' ? 'Free'
+                      : (plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Free');
       var msg    = isPaid
-        ? emoji + ' <strong>' + plan.charAt(0).toUpperCase() + plan.slice(1)
-          + ' plan active</strong>' + (email ? ' · ' + email : '')
-          + ' — you\'re all set!'
-        : emoji + ' <strong>Signed in</strong>'
+        ? emoji + ' <strong>Prompt Studio ' + planDisplay + ' active</strong>'
+          + (email ? ' · ' + email : '') + ' — you\'re all set!'
+        : emoji + ' <strong>Signed in to Prompt Studio</strong>'
           + (email ? ' as ' + email : '')
           + ' — start building prompts below.';
 
@@ -2700,7 +2703,7 @@
     }
 
     /* ── D. Show welcome toast when auth completes ──────────────────── */
-    // auth.v12 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
+    // auth.v13 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
     // It also skips the VS Code token panel entirely when source=prompt_page.
 
     var _toastShown = false;
@@ -2708,12 +2711,14 @@
       if (_toastShown) return;
       _toastShown = true;
 
-      // Pull email + plan from localStorage (auth.v12 writes these)
+      // Pull email + plan from prompt-specific localStorage keys.
+      // auth.v13 writes pg_prompt_email / pg_prompt_plan on /prompt/
+      // so main-site Pro status never bleeds in here.
       var email = '';
-      var plan  = 'free';
+      var plan  = 'prompt_free';
       try {
-        email = localStorage.getItem('pg_email') || '';
-        plan  = localStorage.getItem('pg_plan')  || 'free';
+        email = localStorage.getItem('pg_prompt_email') || '';
+        plan  = localStorage.getItem('pg_prompt_plan')  || 'prompt_free';
       } catch(e) {}
 
       // Dismiss auth gate banner
@@ -2728,7 +2733,7 @@
       pgaWelcomeToast(email, plan);
     }
 
-    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v12 onPlanLoaded)
+    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v13 onPlanLoaded)
     window.addEventListener('pg:plan-loaded', function (e) {
       // Only fire the toast if the user is genuinely authenticated
       // (plan-loaded fires on every page load, even for anonymous free users)
@@ -2738,7 +2743,7 @@
     });
 
     // Hook 2: MutationObserver on body class — catches the exact moment
-    //         auth.v12 calls document.body.classList.add('pg-authed')
+    //         auth.v13 calls document.body.classList.add('pg-authed')
     var _mo = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
         if (m.type === 'attributes' && m.attributeName === 'class') {
@@ -2831,7 +2836,7 @@
       pgaAuthGateDismiss();
       _origPgPromptSignIn(source);
     };
-    // Hide gate permanently once auth.v12 marks body as authed
+    // Hide gate permanently once auth.v13 marks body as authed
     const _bodyObserver = new MutationObserver(() => {
       if (document.body.classList.contains('pg-authed')) {
         pgaAuthGateDismiss();
