@@ -1,12 +1,22 @@
 # 🔌 poly-glot-mcp
 
-> MCP server for Poly-Glot AI — generate professional code comments & documentation in 12 languages directly from Claude, Goose, Cursor, Windsurf, or any MCP-compatible AI client.
+> MCP server for Poly-Glot AI — two tools in one package:
+> - **Code Documentation** — generate JSDoc, Javadoc, PyDoc, WHY-comments & more in 12 languages
+> - **Prompt Studio** — use your saved prompt templates from any MCP client
+
+**Jump to:** [Code Documentation MCP](#-code-documentation-mcp) · [Prompt Studio MCP](#-prompt-studio-mcp)
 
 [![npm version](https://img.shields.io/npm/v/poly-glot-mcp?color=CB3837&logo=npm&style=flat-square)](https://www.npmjs.com/package/poly-glot-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/poly-glot-mcp?color=CB3837&logo=npm&style=flat-square)](https://www.npmjs.com/package/poly-glot-mcp)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-green?style=flat-square)](LICENSE)
 
 ---
+
+---
+
+## 📝 Code Documentation MCP
+
+Generate professional code comments in 12 languages directly from any MCP client.
 
 ## ⚠️ Pro Plan Required
 
@@ -182,6 +192,128 @@ JavaScript · TypeScript · Python · Java · C++ · C · C# · Go · Rust · Ru
 - ⌨️ CLI: [`poly-glot-ai-cli`](https://www.npmjs.com/package/poly-glot-ai-cli)
 - 🐙 GitHub App: [github.com/apps/poly-glot-ai](https://github.com/apps/poly-glot-ai)
 - 🐛 Issues: [GitHub](https://github.com/poly-glot-ai/poly-glot/issues)
+
+---
+
+---
+
+## ✨ Prompt Studio MCP
+
+Use your saved **Poly-Glot Prompt Studio** templates as tools directly from Claude Desktop, Goose, Cursor, Windsurf, or any MCP client.
+
+**Prompt Studio** is a browser-based prompt engineering tool at [poly-glot.ai/prompt/](https://poly-glot.ai/prompt/) — create templates with `{{variables}}`, test against real AI models, version and share them.
+
+### ⚠️ Pro Plan Required
+
+| Plan | MCP calls/month | Price |
+|------|:--------------:|-------|
+| Free | 🔒 Not available | $0 |
+| **Pro** | **200** | **$9/mo** |
+| **Team** | **1,000** | **$29/mo** |
+| **Enterprise** | **Unlimited** | Custom |
+
+👉 [Get Pro at poly-glot.ai/prompt/ →](https://poly-glot.ai/prompt/#pga-pricing)
+
+### Tools
+
+| Tool | Description |
+|------|-------------|
+| `prompt_list_templates` | List all your saved prompt templates (name, description, variable names) |
+| `prompt_get_template` | Fetch a template by name — returns body + variable schema |
+| `prompt_render` | Render a template with filled variable values — returns the final prompt string |
+| `prompt_run` | Render + run a template against an AI model — returns the model response |
+| `prompt_save_version` | Save a new version of a template to your Prompt Studio library |
+| `prompt_share` | Generate a shareable URL for a template |
+
+### Setup
+
+#### 1. Get your session token
+1. Sign up / log in at [poly-glot.ai/prompt/](https://poly-glot.ai/prompt/)
+2. Upgrade to Pro or Team
+3. Copy your `PG_PROMPT_SESSION_TOKEN` from the account dashboard
+
+#### 2. Configure your MCP client
+
+**Goose**
+```yaml
+# ~/.config/goose/config.yaml
+extensions:
+  poly-glot-prompt:
+    type: stdio
+    cmd: npx
+    args: ["-y", "poly-glot-mcp"]
+    env:
+      PG_PROMPT_SESSION_TOKEN: pgp_your-token-here
+      PG_PROMPT_PROVIDER: openai
+      PG_PROMPT_API_KEY: sk-your-key-here
+      PG_PROMPT_MODEL: gpt-4o-mini
+    name: poly-glot-prompt
+    description: Poly-Glot Prompt Studio — use saved prompt templates as tools
+```
+
+**Claude Desktop**
+```json
+{
+  "mcpServers": {
+    "poly-glot-prompt": {
+      "command": "npx",
+      "args": ["-y", "poly-glot-mcp"],
+      "env": {
+        "PG_PROMPT_SESSION_TOKEN": "pgp_your-token-here",
+        "PG_PROMPT_PROVIDER": "openai",
+        "PG_PROMPT_API_KEY": "sk-your-key-here",
+        "PG_PROMPT_MODEL": "gpt-4o-mini"
+      }
+    }
+  }
+}
+```
+
+Add to: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Cursor / Windsurf**
+```json
+{
+  "mcpServers": {
+    "poly-glot-prompt": {
+      "command": "npx",
+      "args": ["-y", "poly-glot-mcp"],
+      "env": {
+        "PG_PROMPT_SESSION_TOKEN": "pgp_your-token-here",
+        "PG_PROMPT_PROVIDER": "anthropic",
+        "PG_PROMPT_API_KEY": "sk-ant-your-key-here",
+        "PG_PROMPT_MODEL": "claude-haiku-4-5"
+      }
+    }
+  }
+}
+```
+
+#### 3. Use it
+
+```
+"List my saved prompt templates"
+"Run my 'Code Review Assistant' template on this file"
+"Render my 'Blog Post Writer' template with topic='AI trends'"
+"Save a new version of my 'Email Drafter' template"
+"Share my 'Meeting Summary' template"
+```
+
+### Configuration
+
+| Variable | Required | Description |
+|----------|:--------:|-------------|
+| `PG_PROMPT_SESSION_TOKEN` | ✅ Yes | Session token from poly-glot.ai/prompt/ (Pro+ required) |
+| `PG_PROMPT_API_KEY` | ✅ Yes | Your OpenAI, Anthropic, or Google AI API key |
+| `PG_PROMPT_PROVIDER` | No | `openai` \| `anthropic` \| `google` (default: `openai`) |
+| `PG_PROMPT_MODEL` | No | Any valid model ID (default: `gpt-4o-mini`) |
+
+### Privacy
+
+- Your **prompt templates** are fetched from Poly-Glot servers using your session token
+- Your **API key** is an environment variable — never logged or stored by Poly-Glot
+- **Model responses** go directly from the AI provider to your MCP client — not through Poly-Glot
+- Full privacy policy: [poly-glot.ai/prompt/privacy/](https://poly-glot.ai/prompt/privacy/)
 
 ---
 

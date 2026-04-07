@@ -1,0 +1,136 @@
+{
+  "name": "poly-glot-prompt-studio",
+  "displayName": "Poly-Glot Prompt Studio",
+  "description": "AI prompt engineering inside VS Code. Create, edit, test, and reuse prompt templates with {{variables}}. Free to start — 21 templates included.",
+  "version": "1.0.0",
+  "publisher": "poly-glot-ai",
+  "license": "MIT",
+  "homepage": "https://poly-glot.ai/prompt/",
+  "bugs": {
+    "url": "https://github.com/poly-glot-ai/poly-glot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/poly-glot-ai/poly-glot"
+  },
+  "galleryBanner": {
+    "color": "#0a0b14",
+    "theme": "dark"
+  },
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "prompt engineering",
+    "ai prompts",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "prompt templates",
+    "one-shot prompting",
+    "prompt studio",
+    "poly-glot"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "promptStudio.open",
+        "title": "Prompt Studio: Open",
+        "icon": "$(notebook-open-as-text)"
+      },
+      {
+        "command": "promptStudio.insertPrompt",
+        "title": "Prompt Studio: Insert Prompt at Cursor"
+      },
+      {
+        "command": "promptStudio.newTemplate",
+        "title": "Prompt Studio: New Template"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "promptStudio",
+          "title": "Prompt Studio",
+          "icon": "$(notebook-open-as-text)"
+        }
+      ]
+    },
+    "views": {
+      "promptStudio": [
+        {
+          "type": "webview",
+          "id": "promptStudio.sidebar",
+          "name": "Templates"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "promptStudio.insertPrompt",
+          "group": "polyglot@1",
+          "when": "editorTextFocus"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "promptStudio.open"
+        },
+        {
+          "command": "promptStudio.insertPrompt"
+        },
+        {
+          "command": "promptStudio.newTemplate"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "promptStudio.open",
+        "key": "ctrl+shift+p ctrl+shift+p",
+        "mac": "cmd+shift+p cmd+shift+p"
+      }
+    ],
+    "configuration": {
+      "title": "Poly-Glot Prompt Studio",
+      "properties": {
+        "promptStudio.sessionToken": {
+          "type": "string",
+          "default": "",
+          "description": "Your Poly-Glot session token (from poly-glot.ai/prompt/ after signing in)"
+        },
+        "promptStudio.defaultProvider": {
+          "type": "string",
+          "default": "openai",
+          "enum": [
+            "openai",
+            "anthropic",
+            "google"
+          ],
+          "description": "Default AI provider for testing prompts"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "@types/vscode": "^1.110.0",
+    "@vscode/vsce": "^3.7.1",
+    "typescript": "^5.9.3"
+  }
+}

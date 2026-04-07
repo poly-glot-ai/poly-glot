@@ -1091,7 +1091,7 @@ The core philosophy of Prompt Studio: write a great prompt once, get the right a
 
 == MCP SERVER ==
 - Pro and Team plans only
-- Install: npx poly-glot-mcp
+- Install: npx poly-glot-mcp · Full docs: npmjs.com/package/poly-glot-mcp#-prompt-studio-mcp
 - Tools: prompt_list_templates, prompt_get_template, prompt_render, prompt_run,
          prompt_save_version, prompt_share
 - Works with: Claude Desktop, Cursor, Windsurf, Goose, any MCP client
