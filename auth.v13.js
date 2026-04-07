@@ -827,8 +827,13 @@
     btn.disabled    = true;
     btn.textContent = 'Sending…';
 
-    var loginSource = '';
-    try { loginSource = sessionStorage.getItem('pg_source') || ''; } catch(e) {}
+    // On /prompt/ always force source=prompt_page so the Worker routes the
+    // magic link back to /prompt/?token=... — never to the main site.
+    // SessionStorage is a best-effort attribution tag; IS_PROMPT_PAGE is ground truth.
+    var loginSource = IS_PROMPT_PAGE ? 'prompt_page' : '';
+    if (!IS_PROMPT_PAGE) {
+      try { loginSource = sessionStorage.getItem('pg_source') || ''; } catch(e) {}
+    }
 
     fetch(AUTH_API + '/login', {
       method:  'POST',
