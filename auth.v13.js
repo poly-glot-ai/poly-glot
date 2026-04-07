@@ -10,9 +10,31 @@
      Constants
   ───────────────────────────────────────────── */
   const AUTH_API        = 'https://poly-glot.ai/api/auth';
+  const MODAL_ID        = 'pgAuthModal';
+
+  // ── Surface detection ─────────────────────────────────────
+  // Prompt Studio (/prompt/) is a separate consumer product.
+  // It uses its own localStorage keys and auth namespace so that
+  // signing in as Pro on the main site never bleeds into /prompt/.
+  const IS_PROMPT_PAGE  = window.location.pathname.indexOf('/prompt') !== -1;
+
+  // Main site keys
   const LS_TOKEN_KEY    = 'pg_session_token';
   const LS_PLAN_KEY     = 'pg_plan';
-  const MODAL_ID        = 'pgAuthModal';
+  const LS_EMAIL_KEY    = 'pg_email';
+
+  // Prompt Studio keys — completely isolated from main site
+  const LS_PROMPT_TOKEN_KEY = 'pg_prompt_token';
+  const LS_PROMPT_PLAN_KEY  = 'pg_prompt_plan';
+  const LS_PROMPT_EMAIL_KEY = 'pg_prompt_email';
+
+  // Active keys for this page — resolved once at load
+  const _LS_TOKEN = IS_PROMPT_PAGE ? LS_PROMPT_TOKEN_KEY : LS_TOKEN_KEY;
+  const _LS_PLAN  = IS_PROMPT_PAGE ? LS_PROMPT_PLAN_KEY  : LS_PLAN_KEY;
+  const _LS_EMAIL = IS_PROMPT_PAGE ? LS_PROMPT_EMAIL_KEY : LS_EMAIL_KEY;
+
+  // Surface header sent with every API call so Worker uses correct plan namespace
+  const _SURFACE_HEADER = IS_PROMPT_PAGE ? { 'X-PG-Surface': 'prompt' } : {};
 
   /* ─────────────────────────────────────────────
      In-memory state
@@ -724,8 +746,8 @@
 
     // Welcome-back state — pre-fill email and update copy for returning users
     try {
-      var storedEmail = localStorage.getItem('pg_email') || '';
-      var storedPlan  = (localStorage.getItem('pg_plan') || 'free').toLowerCase();
+      var storedEmail = localStorage.getItem(_LS_EMAIL) || '';
+      var storedPlan  = (localStorage.getItem(_LS_PLAN) || 'free').toLowerCase();
       if (storedEmail && input) {
         input.value = storedEmail;
         if (title)    title.textContent = 'Welcome back 👋';
@@ -772,7 +794,7 @@
     var upgradeLink = document.getElementById('pgAuthModalUpgradePro');
     if (upgradeLink) {
       try {
-        var em   = localStorage.getItem('pg_email') || '';
+        var em   = localStorage.getItem(_LS_EMAIL) || '';
         var base = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
         var earlybird = (new Date() < new Date('2026-05-01T00:00:00Z'));
         var params = earlybird ? 'prefilled_promo_code=EARLYBIRD3&' : '';
@@ -810,7 +832,7 @@
 
     fetch(AUTH_API + '/login', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
       body:    JSON.stringify({ email: email, source: loginSource || 'website' })
     })
       .then(function (res) { return res.json().then(function(d){ return { httpOk: res.ok, status: res.status, data: d }; }); })
@@ -894,7 +916,7 @@
     // destroy the token on every page load, wiping the session on first refresh.
     fetch(AUTH_API + '/refresh', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
       body: JSON.stringify({ token: token })
     })
       .then(function (res) {
@@ -903,11 +925,11 @@
       })
       .then(function (data) {
         var plan  = (data.plan  || 'free').toLowerCase();
-        var email = data.email || localStorage.getItem('pg_email') || '';
+        var email = data.email || localStorage.getItem(_LS_EMAIL) || '';
         _token = token;
         _plan  = plan;
-        localStorage.setItem(LS_PLAN_KEY, plan);
-        if (email) localStorage.setItem('pg_email', email);
+        localStorage.setItem(_LS_PLAN, plan);
+        if (email) localStorage.setItem(_LS_EMAIL, email);
         PolyGlotAuth.onPlanLoaded(plan);
         updateHeaderForUser(email, plan);
       })
@@ -915,9 +937,9 @@
         // Token truly invalid/expired — purge all auth state and restore
         // the sign-in button so the user can't bypass the auth gate via
         // a stale pg-user-chip that was rendered from cached localStorage.
-        localStorage.removeItem(LS_TOKEN_KEY);
-        localStorage.removeItem(LS_PLAN_KEY);
-        localStorage.removeItem('pg_email');
+        localStorage.removeItem(_LS_TOKEN);
+        localStorage.removeItem(_LS_PLAN);
+        localStorage.removeItem(_LS_EMAIL);
         _token = null;
         _plan  = null;
 
@@ -963,7 +985,7 @@
         // Auto-send magic link so user lands signed in with their new plan
         fetch(AUTH_API + '/login', {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
           body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success' }),
         })
           .then(function (res) { return res.json(); })
@@ -1019,7 +1041,7 @@
       // Call /verify to confirm the token is valid (one-time use)
       fetch(AUTH_API + '/verify', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
         body:    JSON.stringify({ token: magicToken }),
       })
         .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
@@ -1036,9 +1058,9 @@
           // Persist session
           _token = magicToken;
           _plan  = plan;
-          localStorage.setItem(LS_TOKEN_KEY, magicToken);
-          localStorage.setItem(LS_PLAN_KEY,  plan);
-          if (email) localStorage.setItem('pg_email', email);
+          localStorage.setItem(_LS_TOKEN, magicToken);
+          localStorage.setItem(_LS_PLAN,  plan);
+          if (email) localStorage.setItem(_LS_EMAIL, email);
 
           // Apply plan gating + update header chip
           PolyGlotAuth.onPlanLoaded(plan);
@@ -1118,13 +1140,13 @@
       _token = sessionToken;
       _plan  = planParam || 'free';
       var emailParam = params.get('email') || '';
-      localStorage.setItem(LS_TOKEN_KEY, _token);
-      localStorage.setItem(LS_PLAN_KEY,  _plan);
-      if (emailParam) localStorage.setItem('pg_email', emailParam);
+      localStorage.setItem(_LS_TOKEN, _token);
+      localStorage.setItem(_LS_PLAN,  _plan);
+      if (emailParam) localStorage.setItem(_LS_EMAIL, emailParam);
       cleanUrl();
       PolyGlotAuth.onPlanLoaded(_plan);
 
-      var storedEmail = emailParam || localStorage.getItem('pg_email') || '';
+      var storedEmail = emailParam || localStorage.getItem(_LS_EMAIL) || '';
       updateHeaderForUser(storedEmail, _plan);
 
       if (PAID_PLANS.indexOf(_plan) !== -1) {
@@ -1144,7 +1166,7 @@
   /* ─────────────────────────────────────────────
      Plan gating
   ───────────────────────────────────────────── */
-  var PAID_PLANS     = ['pro', 'team', 'enterprise'];
+  var PAID_PLANS     = ['pro', 'team', 'enterprise', 'prompt_pro'];
   var FREE_LANGUAGES = ['python', 'javascript', 'java'];
 
   function applyPlanGating(plan) {
@@ -1338,9 +1360,10 @@
     var promptSignInBtn = document.getElementById('pgaNavSignIn');
     var promptCtaBtn    = document.getElementById('pgaNavCta');
     if (promptSignInBtn || promptCtaBtn) {
-      var planLabel = isPaid
-        ? (plan.charAt(0).toUpperCase() + plan.slice(1))
-        : 'Free';
+      var planLabel = plan === 'prompt_pro'  ? 'Pro'
+                    : plan === 'prompt_free' ? 'Free'
+                    : isPaid ? (plan.charAt(0).toUpperCase() + plan.slice(1))
+                    : 'Free';
       var chip = document.createElement('span');
       chip.id        = 'pg-user-chip';
       chip.className = 'pg-user-chip';
@@ -1378,7 +1401,7 @@
 
     var initial   = (email || '?').charAt(0).toUpperCase();
     // Plan label: uppercase for paid plans, title-case for free
-    var PLAN_LABELS = { free: 'Free', pro: 'PRO', team: 'TEAM', enterprise: 'ENTERPRISE' };
+    var PLAN_LABELS = { free: 'Free', pro: 'PRO', team: 'TEAM', enterprise: 'ENTERPRISE', prompt_free: 'Free', prompt_pro: 'PRO' };
     var planLabel = PLAN_LABELS[plan] || (plan.charAt(0).toUpperCase() + plan.slice(1));
     var planClass = 'pg-user-chip__plan--' + plan;
 
@@ -1479,9 +1502,9 @@
     document.getElementById('pg-chip-signout').addEventListener('click', function (e) {
       e.stopPropagation();
       closeMenu();
-      localStorage.removeItem(LS_TOKEN_KEY);
-      localStorage.removeItem(LS_PLAN_KEY);
-      localStorage.removeItem('pg_email');
+      localStorage.removeItem(_LS_TOKEN);
+      localStorage.removeItem(_LS_PLAN);
+      localStorage.removeItem(_LS_EMAIL);
       _token = null;
       _plan  = null;
       showToast('👋 Signed out successfully.');
@@ -1863,7 +1886,7 @@
      * checkUsageFromServer() → generation is blocked server-side regardless.
      */
     getToken: function () {
-      return _token || localStorage.getItem(LS_TOKEN_KEY) || null;
+      return _token || localStorage.getItem(_LS_TOKEN) || null;
     },
 
     /** Returns the current plan string, or 'free'.
@@ -1879,14 +1902,14 @@
       // Safe fallback: only return a non-free plan from localStorage if the
       // pg-user-chip is in the DOM (meaning auth has already verified once).
       var chip = document.getElementById('pg-user-chip');
-      if (chip) return localStorage.getItem(LS_PLAN_KEY) || 'free';
+      if (chip) return localStorage.getItem(_LS_PLAN) || 'free';
       return 'free';
     },
 
     /** Clear auth state and reload. */
     logout: function () {
-      localStorage.removeItem(LS_TOKEN_KEY);
-      localStorage.removeItem(LS_PLAN_KEY);
+      localStorage.removeItem(_LS_TOKEN);
+      localStorage.removeItem(_LS_PLAN);
       _token = null;
       _plan  = null;
       window.location.reload();
@@ -1924,9 +1947,11 @@
   }
 
   function showPlanToast(plan, email) {
-    var planLabel = plan === 'pro'        ? '✨ Pro'
-                  : plan === 'team'       ? '🚀 Team'
-                  : plan === 'enterprise' ? '🏢 Enterprise'
+    var planLabel = plan === 'pro'          ? '✨ Pro'
+                  : plan === 'team'         ? '🚀 Team'
+                  : plan === 'enterprise'   ? '🏢 Enterprise'
+                  : plan === 'prompt_pro'   ? '✨ Prompt Studio Pro'
+                  : plan === 'prompt_free'  ? '🆓 Prompt Studio'
                   : '🆓 Free';
     var msg = planLabel + ' plan active';
     if (email) msg += ' · ' + email;
@@ -1949,13 +1974,13 @@
     // 1. Apply the stored plan immediately (before any network call) so the
     //    UI is correct on every page load — not just the first magic-link click.
     //    Falls back to 'free' for brand-new visitors with no localStorage entry.
-    var cachedPlan  = (localStorage.getItem(LS_PLAN_KEY)  || 'free').toLowerCase();
-    var cachedEmail = localStorage.getItem('pg_email') || '';
+    var cachedPlan  = (localStorage.getItem(_LS_PLAN)  || 'free').toLowerCase();
+    var cachedEmail = localStorage.getItem(_LS_EMAIL) || '';
     applyPlanGating(cachedPlan);
     if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
 
     // Show plan toast for returning signed-in users on this device
-    if (cachedEmail && localStorage.getItem(LS_TOKEN_KEY)) {
+    if (cachedEmail && localStorage.getItem(_LS_TOKEN)) {
       showPlanToast(cachedPlan, cachedEmail);
     }
 
@@ -1975,7 +2000,7 @@
     //    /refresh (non-destructive) to confirm it's still live and get
     //    the latest plan from the Worker (e.g. after a plan upgrade).
     if (!_token) {
-      var storedToken = localStorage.getItem(LS_TOKEN_KEY);
+      var storedToken = localStorage.getItem(_LS_TOKEN);
       if (storedToken) {
         verifyStoredToken(storedToken);
       }
