@@ -1650,11 +1650,11 @@
     var panelBg     = isPaid ? 'linear-gradient(135deg,#052e16 0%,#0f2027 100%)' : 'linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%)';
     var accentColor = isPaid ? '#34d399' : '#7dd3fc';
 
-    // VS Code users: show a prominent "Switch back to VS Code" banner at top
+    // VS Code users: prompt them to copy and paste their token
     var vscodeBanner = isVscodeSource
       ? '<div style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(79,70,229,.2));border:1px solid rgba(124,58,237,.5);border-radius:8px;padding:10px 14px;margin-bottom:12px;text-align:center;">'
-        + '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px;">🖥 Switch back to VS Code now</div>'
-        + '<div style="font-size:11px;color:#94a3b8;line-height:1.5;">VS Code is being signed in automatically.<br>Click the VS Code icon in your taskbar/dock.</div>'
+        + '<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:4px;">🖥 Switch back to VS Code</div>'
+        + '<div style="font-size:11px;color:#94a3b8;line-height:1.5;">Copy your token below and paste it into VS Code to activate.</div>'
         + '</div>'
       : '';
 
