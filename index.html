@@ -1909,31 +1909,133 @@
   <h2 class="pg2-section__h2" id="why-comments-heading" style="text-align:center;">Comments are instructions for AI</h2>
   <p class="pg2-section__sub" style="text-align:center;margin-left:auto;margin-right:auto;">Copilot, ChatGPT, and Cursor read your comments to understand developer intent. <em>What</em> comments describe code. <em>Why</em> comments explain the decision — trade-offs, edge cases, reasoning.</p>
   <div class="pg2-why">
-    <div class="pg2-why__panel pg2-why__panel--bad">
+    <!-- ❌ Bad panel — static -->
+    <div class="pg2-why__panel pg2-why__panel--bad" id="whyBadPanel">
       <div class="pg2-why__panel-header">❌ What comment — useless to AI</div>
-      <pre class="pg2-why__code">// Loop through users
+      <pre class="pg2-why__code" id="whyBadCode">// Loop through users
 for (const user of users) {
   if (user.active) {
     sendEmail(user);
   }
 }</pre>
+      <!-- RAG/GEO grade badge — bad -->
+      <div id="whyBadGrade" style="display:none;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;opacity:0;transition:opacity .5s;">
+        <span style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Fira Code',monospace;">RAG score: <span id="whyBadRag">0</span>/100</span>
+        <span style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Fira Code',monospace;">GEO grade: F</span>
+        <span style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:4px 10px;border-radius:6px;font-size:11px;">No intent · No context · AI blind</span>
+      </div>
     </div>
-    <div class="pg2-why__panel pg2-why__panel--good">
+    <!-- ✅ Good panel — animated typewriter -->
+    <div class="pg2-why__panel pg2-why__panel--good" id="whyGoodPanel">
       <div class="pg2-why__panel-header">✅ Why comment — AI gold</div>
-      <pre class="pg2-why__code">// Skip inactive users — marketing flagged
-// them as opted-out in Q3 compliance audit.
-// Sending to inactive = GDPR violation risk.
-for (const user of users) {
-  if (user.active) {
-    sendEmail(user);
-  }
-}</pre>
+      <pre class="pg2-why__code" id="whyGoodCode" style="min-height:140px;"><span id="whyTyped"></span><span id="whyCursor" style="display:inline-block;width:2px;height:1em;background:#34d399;margin-left:1px;vertical-align:text-bottom;animation:whyCursorBlink 0.7s step-end infinite;opacity:0;"></span></pre>
+      <!-- RAG/GEO grade badge — good -->
+      <div id="whyGoodGrade" style="display:none;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;opacity:0;transition:opacity .5s;">
+        <span style="background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Fira Code',monospace;">RAG score: <span id="whyGoodRag">0</span>/100</span>
+        <span style="background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#34d399;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:'Fira Code',monospace;">GEO grade: A+</span>
+        <span style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);color:#6ee7b7;padding:4px 10px;border-radius:6px;font-size:11px;">Intent ✓ · Context ✓ · Compliance ✓</span>
+      </div>
     </div>
   </div>
-  <div class="pg2-why__note">
+  <div class="pg2-why__note" id="whyNote" style="opacity:0;transition:opacity .6s;">
     Why comments give AI coding assistants <strong>intent, trade-offs, and context</strong> — the exact signal needed for better autocomplete, smarter PR reviews, and accurate RAG retrieval.
   </div>
 </div>
+
+<style>
+@keyframes whyCursorBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+</style>
+
+<script>
+(function() {
+  const WHY_TEXT =
+    '// Skip inactive users — marketing flagged\n' +
+    '// them as opted-out in Q3 compliance audit.\n' +
+    '// Sending to inactive = GDPR violation risk.\n' +
+    'for (const user of users) {\n' +
+    '  if (user.active) {\n' +
+    '    sendEmail(user);\n' +
+    '  }\n' +
+    '}';
+
+  let started = false;
+
+  function animateCounter(el, target, duration) {
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      el.textContent = Math.round(p * target);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function showGrades() {
+    // Bad grade
+    const badGrade = document.getElementById('whyBadGrade');
+    if (badGrade) {
+      badGrade.style.display = 'flex';
+      requestAnimationFrame(() => { badGrade.style.opacity = '1'; });
+      animateCounter(document.getElementById('whyBadRag'), 12, 800);
+    }
+    // Good grade
+    const goodGrade = document.getElementById('whyGoodGrade');
+    if (goodGrade) {
+      goodGrade.style.display = 'flex';
+      requestAnimationFrame(() => { goodGrade.style.opacity = '1'; });
+      animateCounter(document.getElementById('whyGoodRag'), 97, 1200);
+    }
+    // Note
+    const note = document.getElementById('whyNote');
+    if (note) note.style.opacity = '1';
+  }
+
+  function typeWriter() {
+    const typed  = document.getElementById('whyTyped');
+    const cursor = document.getElementById('whyCursor');
+    if (!typed || !cursor) return;
+
+    cursor.style.opacity = '1';
+    let i = 0;
+    const speed = 18; // ms per char
+
+    function nextChar() {
+      if (i < WHY_TEXT.length) {
+        typed.textContent += WHY_TEXT[i++];
+        setTimeout(nextChar, speed);
+      } else {
+        // Done typing — hide cursor, show grades
+        setTimeout(() => {
+          cursor.style.animation = 'none';
+          cursor.style.opacity   = '0';
+          showGrades();
+        }, 400);
+      }
+    }
+    nextChar();
+  }
+
+  function startAnimation() {
+    if (started) return;
+    started = true;
+    // Small delay so user sees both panels before typing starts
+    setTimeout(typeWriter, 600);
+  }
+
+  // Trigger when section scrolls into view
+  const panel = document.getElementById('whyGoodPanel');
+  if (panel && 'IntersectionObserver' in window) {
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) { startAnimation(); obs.disconnect(); }
+    }, { threshold: 0.3 });
+    obs.observe(panel);
+  } else {
+    // Fallback — start on load
+    startAnimation();
+  }
+})();
+</script>
 
 <!-- ════════════════════════════════════════════════════════════
      HOW IT WORKS
