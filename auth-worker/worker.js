@@ -422,28 +422,34 @@ async function handleLogin(request, env) {
   // Reserve rate-limit slot immediately
   await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: RATE_LIMIT_TTL });
 
+  // ── Detect surface (prompt vs main app) ─────────────────────
+  // Prompt Studio has its own isolated plan namespace so that a Pro
+  // subscription on poly-glot.ai never bleeds into /prompt/ and vice-versa.
+  const source      = body?.source ?? 'email';
+  const isPromptSurface = /prompt/i.test(source);
+
   // ── Plan lookup + new-user registration ─────────────────────
-  // If no plan: key exists, this is a first-time signup — write 'free' immediately.
-  // This ensures admin/users counts ALL signups, not just paid upgrades.
-  const existingPlan = await env.AUTH_KV.get(`plan:${email}`);
+  // Prompt Studio uses prompt_plan:{email} — entirely separate from plan:{email}.
+  // This prevents auth-bleed: signing in as Pro on the main site never
+  // makes you appear as Pro on Prompt Studio.
+  const planKvKey     = isPromptSurface ? `prompt_plan:${email}` : `plan:${email}`;
+  const defaultPlan   = isPromptSurface ? 'prompt_free' : 'free';
+  const existingPlan  = await env.AUTH_KV.get(planKvKey);
   if (!existingPlan) {
-    await env.AUTH_KV.put(`plan:${email}`, 'free');
+    await env.AUTH_KV.put(planKvKey, defaultPlan);
   }
-  const plan = existingPlan ?? 'free';
+  const plan = existingPlan ?? defaultPlan;
 
   // ── Token generation + storage ──────────────────────────────
-  const token     = generateToken();
-  const tokenData = JSON.stringify({ email, plan, source: body?.source ?? 'unknown', created: Date.now() });
-  await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
+  // Prompt tokens use prompt_token: prefix so resolveToken can detect surface.
+  const tokenPrefix = isPromptSurface ? 'prompt_token:' : 'token:';
+  const token       = generateToken();
+  const tokenData   = JSON.stringify({ email, plan, source, surface: isPromptSurface ? 'prompt' : 'app', created: Date.now() });
+  await env.AUTH_KV.put(`${tokenPrefix}${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
-  // The web page at /?token=... fires a vscode:// deep link for VS Code users.
-  // CLI users pass callbackUrl=http://127.0.0.1:PORT/callback — the page POSTs
-  // the token there automatically, so the terminal signs in with zero copy-paste.
-  const source      = body?.source ?? 'email';
-
   const rootBase  = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const baseUrl   = `${rootBase}/prompt`;
+  const baseUrl   = isPromptSurface ? `${rootBase}/prompt` : rootBase;
   const rawCallback = body?.callbackUrl ?? '';
 
   // Validate callbackUrl — only allow localhost/127.0.0.1 to prevent open redirect
@@ -680,15 +686,27 @@ async function resolveSession(request, env) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   if (!token) return null;
 
-  // Accept both session: keys (30-day) and legacy token: keys
-  for (const prefix of ['session:', 'token:']) {
+  // Detect surface from header — prompt page sends X-PG-Surface: prompt
+  const surface = (request.headers.get('X-PG-Surface') || '').toLowerCase();
+  const isPromptSurface = surface === 'prompt';
+
+  // Check surface-specific session keys first, then fall back to legacy
+  const prefixes = isPromptSurface
+    ? ['prompt_session:', 'prompt_token:', 'session:', 'token:']
+    : ['session:', 'token:'];
+
+  for (const prefix of prefixes) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
-        // Look up current plan (may have changed since token was issued)
-        const planRaw = await env.AUTH_KV.get(`plan:${data.email}`);
-        return { email: data.email, plan: planRaw || data.plan || 'free' };
+        // Use surface-specific plan key — prevents cross-bleed
+        const planKvKey = (isPromptSurface || prefix.startsWith('prompt_'))
+          ? `prompt_plan:${data.email}`
+          : `plan:${data.email}`;
+        const planRaw = await env.AUTH_KV.get(planKvKey);
+        const defaultPlan = (isPromptSurface || prefix.startsWith('prompt_')) ? 'prompt_free' : 'free';
+        return { email: data.email, plan: planRaw || data.plan || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
       } catch { return null; }
     }
   }
@@ -820,10 +838,28 @@ async function resolveToken(request, env, deleteAfter) {
     return jsonResponse({ error: 'token is required' }, 401);
   }
 
-  const kvKey = `token:${token.trim()}`;
+  // ── KV lookup — try prompt_token: first, then token: ────────
+  // prompt_token: prefix means this is a Prompt Studio magic link.
+  // token: prefix means this is a main-site (VS Code / CLI) magic link.
+  let kvKey  = null;
+  let raw    = null;
+  let isPromptToken = false;
 
-  // ── KV lookup ───────────────────────────────────────────────
-  const raw = await env.AUTH_KV.get(kvKey);
+  const promptKvKey = `prompt_token:${token.trim()}`;
+  const appKvKey    = `token:${token.trim()}`;
+
+  const promptRaw = await env.AUTH_KV.get(promptKvKey);
+  if (promptRaw !== null) {
+    kvKey = promptKvKey;
+    raw   = promptRaw;
+    isPromptToken = true;
+  } else {
+    const appRaw = await env.AUTH_KV.get(appKvKey);
+    if (appRaw !== null) {
+      kvKey = appKvKey;
+      raw   = appRaw;
+    }
+  }
 
   if (raw === null) {
     return jsonResponse({ error: 'Invalid or expired token' }, 401);
@@ -834,39 +870,30 @@ async function resolveToken(request, env, deleteAfter) {
   try {
     data = JSON.parse(raw);
   } catch {
-    // Corrupted entry — clean up and reject
     await env.AUTH_KV.delete(kvKey).catch(() => {});
     return jsonResponse({ error: 'Invalid or expired token' }, 401);
   }
 
   // ── Consume one-time token + create long-lived session ───────
   if (deleteAfter) {
-    // Delete the one-time magic-link token
     await env.AUTH_KV.delete(kvKey);
 
-    // Create a 30-day session: key so the same token value keeps working
-    // for /check-plan, /get-usage, /track-usage, etc.
-    // TTL: 30 days in seconds
-    const SESSION_TTL = 30 * 24 * 60 * 60;
+    // Session key also namespaced by surface to prevent cross-bleed
+    const sessionPrefix = isPromptToken ? 'prompt_session:' : 'session:';
+    const SESSION_TTL   = 30 * 24 * 60 * 60;
     await env.AUTH_KV.put(
-      `session:${token.trim()}`,
-      JSON.stringify({ email: data.email, plan: data.plan, created: Date.now() }),
+      `${sessionPrefix}${token.trim()}`,
+      JSON.stringify({ email: data.email, plan: data.plan, surface: data.surface ?? (isPromptToken ? 'prompt' : 'app'), created: Date.now() }),
       { expirationTtl: SESSION_TTL },
     );
 
-    // ── Record confirmed signup (magic link clicked) ──────────
-    // signup:{email} is written ONLY when the user actually clicks
-    // the magic link — not at request time. This is the source of
-    // truth for "real signups" in the admin dashboard.
-    // source: prompt_page / nav_cta / hero_cta etc → "prompt"
-    //         website / vscode / cli etc            → "app"
-    const rawSource  = data.source ?? '';
-    const isPrompt   = /prompt/i.test(rawSource);
-    const surface    = isPrompt ? 'prompt' : 'app';
-    const signupKey  = `signup:${data.email}`;
-    const existing   = await env.AUTH_KV.get(signupKey, 'json');
+    // ── Record confirmed signup ───────────────────────────────
+    const rawSource = data.source ?? '';
+    const surface   = isPromptToken ? 'prompt' : 'app';
+    // Use surface-specific signup key so prompt and app signups are tracked separately
+    const signupKey = isPromptToken ? `prompt_signup:${data.email}` : `signup:${data.email}`;
+    const existing  = await env.AUTH_KV.get(signupKey, 'json');
     if (!existing) {
-      // First-time click — record source + timestamp
       await env.AUTH_KV.put(signupKey, JSON.stringify({
         email:   data.email,
         source:  rawSource || 'unknown',
@@ -876,10 +903,13 @@ async function resolveToken(request, env, deleteAfter) {
     }
   }
 
-  // Always read live plan from KV — catches upgrades since token was issued
-  const livePlan = (await env.AUTH_KV.get(`plan:${data.email}`)) || data.plan || 'free';
+  // ── Read live plan from surface-specific KV key ──────────────
+  // Prompt Studio: prompt_plan:{email}  — never bleeds into main site
+  // Main site:     plan:{email}         — never bleeds into /prompt/
+  const planKvKey = isPromptToken ? `prompt_plan:${data.email}` : `plan:${data.email}`;
+  const livePlan  = (await env.AUTH_KV.get(planKvKey)) || data.plan || (isPromptToken ? 'prompt_free' : 'free');
 
-  return jsonResponse({ email: data.email, plan: livePlan });
+  return jsonResponse({ email: data.email, plan: livePlan, surface: isPromptToken ? 'prompt' : 'app' });
 }
 
 // ─────────────────────────────────────────────────────────────
