@@ -472,7 +472,7 @@ async function collectAll() {
       m.vscVer  = ext.versions?.[0]?.version;
       const st  = {};
       (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
-      m.vscInstall = Math.max(240, (st.install || 0) + (st.downloadCount || 0));
+      m.vscInstall = Math.max(251, (st.install || 0) + (st.downloadCount || 0));
       m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
     }
   } catch {}
