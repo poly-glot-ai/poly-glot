@@ -2482,22 +2482,50 @@
     try { sessionStorage.setItem('pg_source', 'prompt_page'); } catch(e) {}
 
     /* ── B. Block vscode:// navigation ─────────────────────────────── */
-    // auth.v11 calls window.location.href = 'vscode://...' inside a setTimeout.
-    // We wrap setTimeout to intercept callbacks that try to navigate to vscode://.
+    // auth.v11 navigates to vscode:// via window.location.href, window.open,
+    // and window.location.assign — all three must be blocked on this page.
     var _nativeSetTimeout = window.setTimeout;
+
+    // 1. Block window.location.assign
+    var _origAssign = window.location.assign.bind(window.location);
+    window.location.assign = function (url) {
+      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
+      _origAssign(url);
+    };
+
+    // 2. Block window.location.replace
+    var _origReplace = window.location.replace.bind(window.location);
+    window.location.replace = function (url) {
+      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
+      _origReplace(url);
+    };
+
+    // 3. Block window.open for vscode:// URIs
+    var _origOpen = window.open.bind(window);
+    window.open = function (url) {
+      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return null;
+      return _origOpen.apply(window, arguments);
+    };
+
+    // 4. Override location.href setter via Object.defineProperty
+    try {
+      var _loc = window.location;
+      var _origHref = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+      Object.defineProperty(_loc, 'href', {
+        get: function () { return _origHref.get.call(_loc); },
+        set: function (url) {
+          if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
+          _origHref.set.call(_loc, url);
+        },
+        configurable: true,
+      });
+    } catch(e) {}
+
+    // 5. Wrap setTimeout to catch delayed vscode:// navigations
     window.setTimeout = function (fn, delay) {
       var rest = Array.prototype.slice.call(arguments, 2);
       var wrapped = function () {
-        // Temporarily make location.href assignment a no-op for vscode:// URIs
-        var _origAssign = window.location.assign.bind(window.location);
-        window.location.assign = function (url) {
-          if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
-          _origAssign(url);
-        };
-        try {
-          fn.apply(this, rest);
-        } catch(e) {}
-        window.location.assign = _origAssign;
+        try { fn.apply(this, rest); } catch(e) {}
       };
       return _nativeSetTimeout.call(window, wrapped, delay);
     };
