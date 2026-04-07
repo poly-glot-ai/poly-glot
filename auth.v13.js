@@ -1109,6 +1109,34 @@
             || _sessionSource.indexOf('prompt') !== -1
             || window.location.pathname.indexOf('/prompt') !== -1;
 
+          // ── BroadcastChannel tab-handoff for Prompt Studio ───────────────
+          // When the user clicks the magic link from their email, it opens in
+          // a new tab. We broadcast the auth state to any existing /prompt/
+          // tab so it signs in immediately, then close this tab after a short
+          // delay so the user ends up back in their original tab — signed in.
+          if (isPromptSource) {
+            try {
+              var bc = new BroadcastChannel('pg_prompt_auth');
+              bc.postMessage({ type: 'PROMPT_AUTH_SUCCESS', token: magicToken, email: email, plan: plan });
+              bc.close();
+            } catch(e) { /* BroadcastChannel not supported — degrade gracefully */ }
+
+            // Show a brief "you're signed in" message then close this tab.
+            // If no other tab was open (user opened link directly), stay on page.
+            var hadOpener = !!window.opener;
+            cleanUrl();
+
+            // Give the broadcast 400ms to reach the other tab, then close.
+            // If this tab IS the only tab (no opener, no referrer from email
+            // client), don't close — just let the page finish loading normally.
+            var _tryClose = setTimeout(function () {
+              try { window.close(); } catch(e) {}
+              // window.close() only works if this tab was opened by script.
+              // If it's still open after 200ms, the user opened it directly —
+              // leave them here and the page will sign them in normally.
+            }, 600);
+          }
+
           // Welcome toast — different message per surface
           if (isPromptSource) {
             // Prompt page handles its own toast via pg:plan-loaded listener
@@ -1879,6 +1907,7 @@
 
     /** Apply plan gating manually (useful if plan arrives asynchronously). */
     applyPlanGating: applyPlanGating,
+    updateHeaderForUser: updateHeaderForUser,
 
     /**
      * Returns the current session token.
@@ -2020,5 +2049,75 @@
 
   // Expose globally
   window.PolyGlotAuth = PolyGlotAuth;
+
+  // ── BroadcastChannel tab-handoff ─────────────────────────────────────────
+  // Listens on BOTH surfaces:
+  //   pg_prompt_auth  — Prompt Studio magic link → existing /prompt/ tab
+  //   pg_app_auth     — Main site magic link     → existing poly-glot.ai/ tab
+  //
+  // Flow:
+  //   1. User submits email in tab A (original tab)
+  //   2. User clicks magic link in email → opens tab B
+  //   3. Tab B verifies token, broadcasts auth, closes itself
+  //   4. Tab A receives broadcast, signs in, user never leaves their original tab
+  (function () {
+    var channelName = IS_PROMPT_PAGE ? 'pg_prompt_auth' : 'pg_app_auth';
+
+    // ── SENDER (tab B — the magic link tab) ─────────────────────────────
+    // After token verify succeeds (isPromptSource block in handleUrlParams),
+    // auth.v13 already posts to pg_prompt_auth. For the main site we post here.
+    // We hook into the pg:plan-loaded event which fires after successful verify.
+    if (!IS_PROMPT_PAGE) {
+      window.addEventListener('pg:plan-loaded', function onFirstLoad(e) {
+        // Only broadcast if we just verified a magic link (?token= in URL)
+        var params = new URLSearchParams(window.location.search);
+        if (!params.get('token')) return;
+        window.removeEventListener('pg:plan-loaded', onFirstLoad);
+        try {
+          var bc = new BroadcastChannel('pg_app_auth');
+          bc.postMessage({
+            type:  'APP_AUTH_SUCCESS',
+            token: localStorage.getItem(_LS_TOKEN) || '',
+            email: localStorage.getItem(_LS_EMAIL) || '',
+            plan:  localStorage.getItem(_LS_PLAN)  || 'free'
+          });
+          bc.close();
+        } catch(e) {}
+        // Close this tab after broadcast — return user to original tab
+        setTimeout(function () { try { window.close(); } catch(e) {} }, 600);
+      });
+    }
+
+    // ── RECEIVER (tab A — the original tab) ─────────────────────────────
+    try {
+      var _bcReceiver = new BroadcastChannel(channelName);
+      _bcReceiver.onmessage = function (evt) {
+        var msg = evt.data;
+        var expectedType = IS_PROMPT_PAGE ? 'PROMPT_AUTH_SUCCESS' : 'APP_AUTH_SUCCESS';
+        if (!msg || msg.type !== expectedType) return;
+
+        var token = msg.token;
+        var email = msg.email;
+        var plan  = (msg.plan || (IS_PROMPT_PAGE ? 'prompt_free' : 'free')).toLowerCase();
+
+        // Write to the correct localStorage namespace for this surface
+        try {
+          localStorage.setItem(_LS_TOKEN, token);
+          localStorage.setItem(_LS_PLAN,  plan);
+          if (email) localStorage.setItem(_LS_EMAIL, email);
+        } catch(e) {}
+
+        // Update in-memory state
+        _token = token;
+        _plan  = plan;
+
+        // Apply plan gating + update nav chip
+        PolyGlotAuth.onPlanLoaded(plan);
+        updateHeaderForUser(email, plan);
+
+        _bcReceiver.close();
+      };
+    } catch(e) { /* BroadcastChannel not supported — degrade gracefully */ }
+  }());
 
 }());
