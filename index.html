@@ -123,7 +123,10 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <!-- Emoji favicon fallback for browsers that support it -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>#</text></svg>">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.v221.b202604011856.css">
@@ -762,7 +765,7 @@
     /* ── WHY COMMENTS ───────────────────────────────────────── */
     .pg2-why {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr);
       gap: 20px;
     }
     @media (max-width: 700px) { .pg2-why { grid-template-columns: 1fr; } }
@@ -771,6 +774,8 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
+      min-width: 0;
+      box-sizing: border-box;
     }
     .pg2-why__panel-header {
       display: flex;
@@ -1931,20 +1936,20 @@
         </div>
       </div>
       <!-- RAG/GEO score bars -->
-      <div id="whyBadGrade" style="margin-top:12px;opacity:0;transition:opacity .5s;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div id="whyBadGrade" style="margin-top:12px;opacity:0;transition:opacity .5s;overflow:hidden;padding:0 12px 12px;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;min-width:0;">
           <span style="font-size:11px;color:#f87171;font-family:'Fira Code',monospace;font-weight:700;width:80px;flex-shrink:0;">RAG <span id="whyBadRagNum">0</span>/100</span>
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
+          <div style="flex:1;min-width:0;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
             <div id="whyBadRagBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:4px;transition:width 1s ease;"></div>
           </div>
-          <span style="font-size:11px;font-weight:700;color:#ef4444;width:24px;text-align:right;">F</span>
+          <span style="font-size:11px;font-weight:700;color:#ef4444;width:24px;flex-shrink:0;text-align:right;">F</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;min-width:0;">
           <span style="font-size:11px;color:#f87171;font-family:'Fira Code',monospace;font-weight:700;width:80px;flex-shrink:0;">GEO <span id="whyBadGeoNum">0</span>/100</span>
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
+          <div style="flex:1;min-width:0;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
             <div id="whyBadGeoBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:4px;transition:width 1.1s ease;"></div>
           </div>
-          <span style="font-size:11px;font-weight:700;color:#ef4444;width:24px;text-align:right;">F</span>
+          <span style="font-size:11px;font-weight:700;color:#ef4444;width:24px;flex-shrink:0;text-align:right;">F</span>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;padding:3px 8px;border-radius:5px;font-size:10px;">No intent</span>
@@ -1969,20 +1974,20 @@
         </div>
       </div>
       <!-- RAG/GEO score bars -->
-      <div id="whyGoodGrade" style="margin-top:12px;opacity:0;transition:opacity .5s;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div id="whyGoodGrade" style="margin-top:12px;opacity:0;transition:opacity .5s;overflow:hidden;padding:0 12px 12px;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;min-width:0;">
           <span style="font-size:11px;color:#34d399;font-family:'Fira Code',monospace;font-weight:700;width:80px;flex-shrink:0;">RAG <span id="whyGoodRagNum">0</span>/100</span>
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
+          <div style="flex:1;min-width:0;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
             <div id="whyGoodRagBar" style="height:100%;width:0%;background:linear-gradient(90deg,#34d399,#6ee7b7);border-radius:4px;transition:width 1.2s ease;"></div>
           </div>
-          <span style="font-size:11px;font-weight:700;color:#34d399;width:24px;text-align:right;">A+</span>
+          <span style="font-size:11px;font-weight:700;color:#34d399;width:24px;flex-shrink:0;text-align:right;">A+</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;min-width:0;">
           <span style="font-size:11px;color:#34d399;font-family:'Fira Code',monospace;font-weight:700;width:80px;flex-shrink:0;">GEO <span id="whyGoodGeoNum">0</span>/100</span>
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
+          <div style="flex:1;min-width:0;height:6px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden;">
             <div id="whyGoodGeoBar" style="height:100%;width:0%;background:linear-gradient(90deg,#34d399,#6ee7b7);border-radius:4px;transition:width 1.3s ease;"></div>
           </div>
-          <span style="font-size:11px;font-weight:700;color:#34d399;width:24px;text-align:right;">A+</span>
+          <span style="font-size:11px;font-weight:700;color:#34d399;width:24px;flex-shrink:0;text-align:right;">A+</span>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <span style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#6ee7b7;padding:3px 8px;border-radius:5px;font-size:10px;">Intent ✓</span>
