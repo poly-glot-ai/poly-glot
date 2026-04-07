@@ -2595,49 +2595,23 @@
   </style>
 
   <!-- ── Prompt Studio auth shim ──────────────────────────────────────────
-       Runs BEFORE auth.v12.js loads.  Handles three things:
+       Runs BEFORE auth.v12.js loads.  Handles two things:
 
        A) Stamp pg_source = 'prompt_page' in sessionStorage immediately so
-          that when the user submits their email, auth.v11 sends source=prompt_page
+          that when the user submits their email, auth.v12 sends source=prompt_page
           to the Worker → Worker routes the magic link back to /prompt/ not /.
+          auth.v12 also reads this source at token-verify time to skip the
+          VS Code / CLI token panel entirely on this page.
 
-       B) (vscode:// deep-link removed — no longer fired)
-          verifying a ?token= in the URL.  That redirect makes sense on the
-          main site (developer tool) but is jarring on a landing page.
-
-       C) Replace the "session token panel" (a copy-paste widget for VS Code
-          / CLI users) with a clean, branded welcome toast.
+       B) Show a clean branded welcome toast when auth completes, by listening
+          for the pg:plan-loaded event dispatched by auth.v12.
   ──────────────────────────────────────────────────────────────────────── -->
   <script>
   (function () {
     /* ── A. Stamp source immediately ────────────────────────────────── */
     try { sessionStorage.setItem('pg_source', 'prompt_page'); } catch(e) {}
 
-    /* ── B. Block vscode:// navigation ─────────────────────────────── */
-    // auth.v12 no longer fires vscode:// deep links.
-    // and window.location.assign — all three must be blocked on this page.
     var _nativeSetTimeout = window.setTimeout;
-
-    // 1. Block window.location.assign
-    var _origAssign = window.location.assign.bind(window.location);
-    window.location.assign = function (url) {
-      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
-      _origAssign(url);
-    };
-
-    // 2. Block window.location.replace
-    var _origReplace = window.location.replace.bind(window.location);
-    window.location.replace = function (url) {
-      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return;
-      _origReplace(url);
-    };
-
-    // 3. Block window.open for vscode:// URIs
-    var _origOpen = window.open.bind(window);
-    window.open = function (url) {
-      if (typeof url === 'string' && /^vscode(-insiders)?:\/\//i.test(url)) return null;
-      return _origOpen.apply(window, arguments);
-    };
 
     // 4. Override location.href setter via Object.defineProperty
     try {
@@ -2725,16 +2699,16 @@
       }, 6000);
     }
 
-    /* ── D. Remove token panel + show toast when auth completes ─────── */
-    // auth.v11 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
-    // We watch for both and also poll briefly for the token panel to nuke it.
+    /* ── D. Show welcome toast when auth completes ──────────────────── */
+    // auth.v12 adds class 'pg-authed' to <body> and dispatches pg:plan-loaded.
+    // It also skips the VS Code token panel entirely when source=prompt_page.
 
     var _toastShown = false;
     function onAuthed() {
       if (_toastShown) return;
       _toastShown = true;
 
-      // Pull email + plan from localStorage (auth.v11 writes these)
+      // Pull email + plan from localStorage (auth.v12 writes these)
       var email = '';
       var plan  = 'free';
       try {
@@ -2742,23 +2716,10 @@
         plan  = localStorage.getItem('pg_plan')  || 'free';
       } catch(e) {}
 
-      // Nuke the developer token panel if it appeared
-      var nukePanel = function () {
-        var p = document.getElementById('pg-token-panel');
-        if (p && p.parentNode) { p.parentNode.removeChild(p); }
-      };
-      nukePanel();
-      // Poll briefly in case it appears a moment later
-      var _nukeCount = 0;
-      var _nukeTimer = _nativeSetTimeout(function poll() {
-        nukePanel();
-        if (++_nukeCount < 8) _nativeSetTimeout(poll, 200);
-      }, 100);
-
       pgaWelcomeToast(email, plan);
     }
 
-    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v11 onPlanLoaded)
+    // Hook 1: pg:plan-loaded custom event (dispatched by auth.v12 onPlanLoaded)
     window.addEventListener('pg:plan-loaded', function (e) {
       // Only fire the toast if the user is genuinely authenticated
       // (plan-loaded fires on every page load, even for anonymous free users)
@@ -2768,7 +2729,7 @@
     });
 
     // Hook 2: MutationObserver on body class — catches the exact moment
-    //         auth.v11 calls document.body.classList.add('pg-authed')
+    //         auth.v12 calls document.body.classList.add('pg-authed')
     var _mo = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
         if (m.type === 'attributes' && m.attributeName === 'class') {
@@ -2861,7 +2822,7 @@
       pgaAuthGateDismiss();
       _origPgPromptSignIn(source);
     };
-    // Hide gate permanently once auth.v11 marks body as authed
+    // Hide gate permanently once auth.v12 marks body as authed
     const _bodyObserver = new MutationObserver(() => {
       if (document.body.classList.contains('pg-authed')) {
         pgaAuthGateDismiss();
