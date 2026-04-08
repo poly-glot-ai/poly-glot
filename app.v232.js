@@ -4591,7 +4591,28 @@ function initCommentGenerator() {
         if (plan === 'free') {
             syncUsageFromServer();
         }
+        // Show key row now that user is signed in
+        updateKeyRowVisibility();
     });
+
+    // ── Key row visibility — hide input+save when not signed in ───────────
+    function updateKeyRowVisibility() {
+        var authed  = isAuthed();
+        var keyRow  = document.getElementById('cgKeyRowAuthed');
+        var guestRow = document.getElementById('cgKeyRowGuest');
+        if (keyRow)   keyRow.style.display   = authed ? ''     : 'none';
+        if (guestRow) guestRow.style.display = authed ? 'none' : '';
+    }
+
+    // Run on DOM ready + on auth state changes
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(updateKeyRowVisibility, 300); });
+    window.addEventListener('pg:plan-loaded',     function() { updateKeyRowVisibility(); });
+    window.addEventListener('pg:signed-out',      function() { updateKeyRowVisibility(); });
+    // Poll for DOM chip appearing (handles page-load race)
+    var _keyRowPoll = setInterval(function() {
+        updateKeyRowVisibility();
+        if (isAuthed()) clearInterval(_keyRowPoll);
+    }, 500);
     // Fallback: also try after DOM ready in case the event already fired
     document.addEventListener('DOMContentLoaded', function() {
         var plan = '';
