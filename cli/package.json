@@ -1,6 +1,6 @@
 {
     "name": "poly-glot-ai-cli",
-    "version": "2.1.41",
+    "version": "2.1.43",
     "description": "AI-powered code comments, bug finding, refactoring & test generation — Poly-Glot CLI",
     "author": "Harold Moses",
     "license": "AGPL-3.0-or-later",
