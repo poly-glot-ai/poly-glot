@@ -4,7 +4,7 @@
  * Server storage: Cloudflare KV  usage:{email}:{YYYY-MM}  (authoritative)
  * Local storage:  ~/.config/polyglot/usage.json           (fast fallback)
  *
- *  - Free plan: 50 files per calendar month (UTC).
+ *  - Free plan: 10 files per calendar month (UTC).
  *  - Pro/Team/Enterprise: unlimited (limit === null from server).
  *  - Server is authoritative — local is a fast fallback for offline use.
  *  - CI bypass: login gate is skipped in CI but usage is still tracked
@@ -16,7 +16,7 @@ import * as path from 'path';
 import * as os   from 'os';
 import { loadConfig } from './config';
 
-export const FREE_MONTHLY_LIMIT = 50;
+export const FREE_MONTHLY_LIMIT = 10;
 
 const AUTH_API   = 'https://poly-glot.ai/api';
 const USAGE_DIR  = path.join(os.homedir(), '.config', 'polyglot');
@@ -250,18 +250,37 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
 }
 
 function getFreeMonthlyLimit(): number {
-    const MAY1 = new Date('2025-05-01T00:00:00Z').getTime();
-    return Date.now() >= MAY1 ? 10 : 50;
+    return 10;
+}
+
+// Returns e.g. "23 days" or "6 days" or null if EARLYBIRD3 has expired
+function earlyBirdCountdown(): string | null {
+    const EXPIRY = new Date('2026-05-01T00:00:00Z').getTime();
+    const msLeft = EXPIRY - Date.now();
+    if (msLeft <= 0) return null;
+    const days = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+    return `${days} day${days === 1 ? '' : 's'}`;
+}
+
+// Returns the EARLYBIRD3 line: dynamic countdown, red when ≤7 days, null when expired
+export function earlyBirdLine(): string | null {
+    const countdown = earlyBirdCountdown();
+    if (!countdown) return null;
+    const days = parseInt(countdown);
+    const color = days <= 7 ? '\x1b[31m' : '\x1b[33m';
+    const urgency = days <= 7 ? `🚨 Only ${countdown} left!` : `⏳ ${countdown} left`;
+    return `\n  ${color}🏷  EARLYBIRD3 — ${urgency}\x1b[0m\x1b[33m  Lock Pro at $9/mo forever\x1b[0m`;
 }
 
 // ─── Upgrade messages ────────────────────────────────────────────────────────
 
 function printHardStop(used: number, limit: number): void {
+    const eb = earlyBirdLine();
     console.error(
         `\n  \x1b[31m✗  Free plan limit reached — ${limit} files this month\x1b[0m\n` +
         `\n  \x1b[2mYou've used \x1b[0m\x1b[1m${used}/${limit}\x1b[0m\x1b[2m files on the Free plan for ${currentMonthLabel()}.\x1b[0m` +
         `\n  \x1b[2mResets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\x1b[2m · Upgrade for unlimited files.\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
+        (eb ? eb + '\n' : '') +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n` +
         `\n  \x1b[2mAlready subscribed? Run: \x1b[0m\x1b[36mpoly-glot login\x1b[0m\n`
@@ -269,11 +288,12 @@ function printHardStop(used: number, limit: number): void {
 }
 
 function printBatchExceeds(filesNeeded: number, remaining: number, used: number, limit: number): void {
+    const eb = earlyBirdLine();
     console.error(
         `\n  \x1b[31m✗  Not enough quota for this batch\x1b[0m\n` +
         `\n  \x1b[2mThis batch needs \x1b[0m\x1b[1m${filesNeeded} files\x1b[0m\x1b[2m but you only have \x1b[0m\x1b[1m${remaining} remaining\x1b[0m\x1b[2m this month.\x1b[0m` +
         `\n  \x1b[2mUsed: \x1b[0m\x1b[1m${used}/${limit}\x1b[0m\x1b[2m · Resets \x1b[0m\x1b[36m${nextResetDate()}\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
+        (eb ? eb + '\n' : '') +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n` +
         `\n  \x1b[2mAlready subscribed? Run: \x1b[0m\x1b[36mpoly-glot login\x1b[0m\n`
@@ -281,12 +301,13 @@ function printBatchExceeds(filesNeeded: number, remaining: number, used: number,
 }
 
 function printSoftWarning(remaining: number, urgent = false): void {
+    const eb    = earlyBirdLine();
     const color = urgent ? '\x1b[31m' : '\x1b[33m';
     const icon  = urgent ? '🚨' : '⚠️ ';
     console.warn(
         `\n  ${color}${icon}  Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m${color} this month\x1b[0m` +
         `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
-        `\n  \x1b[33m🏷  Use code \x1b[1mEARLYBIRD3\x1b[0m\x1b[33m to lock Pro at $9/mo forever (expires May 1, 2026)\x1b[0m\n` +
+        (eb ? eb + '\n' : '') +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n`
     );
