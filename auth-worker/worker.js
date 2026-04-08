@@ -17,6 +17,9 @@
  *  POST /api/auth/track-usage        — CLI alias: increment usage (body: {token, count})
  *  POST /api/auth/free-signup        — "Start for Free" signup (email → magic link, plan=free)
  *  POST /api/stripe/webhook          — Stripe webhook: subscription lifecycle events
+ *  POST /api/prompt/get-template     — server-gated: return tpl string after auth+plan check
+ *  POST /api/prompt/sync-pick        — server-side: persist free user's picked template to KV
+ *  POST /api/prompt/get-pick         — server-side: return the free user's persisted picked template
  *  OPTIONS *                         — CORS preflight → 204
  *
  *  KV bindings   : AUTH_KV
@@ -24,12 +27,13 @@
  *
  *  KV key schema
  *  -------------
- *  ratelimit:{email}           → "1"                (TTL = 60 s)
- *  token:{token}               → JSON payload       (TTL = 900 s)
- *  session:{token}             → JSON payload       (TTL = 30 days)
- *  plan:{email}                → plan string        (no TTL — permanent)
- *  usage:{email}:{YYYY-MM}     → integer string     (TTL = 35 days)
- *  stripe:{customerId}         → email              (no TTL — permanent)
+ *  ratelimit:{email}               → "1"                (TTL = 60 s)
+ *  token:{token}                   → JSON payload       (TTL = 900 s)
+ *  session:{token}                 → JSON payload       (TTL = 30 days)
+ *  plan:{email}                    → plan string        (no TTL — permanent)
+ *  usage:{email}:{YYYY-MM}         → integer string     (TTL = 35 days)
+ *  stripe:{customerId}             → email              (no TTL — permanent)
+ *  prompt_picked:{email}           → template name      (no TTL — permanent)
  * ============================================================
  */
 
@@ -635,6 +639,249 @@ async function handleSetPlan(request, env) {
  */
 async function handleRefresh(request, env) {
   return resolveToken(request, env, /* deleteAfter= */ false);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Template content — server-side source of truth.
+// tpl strings live HERE only — never sent to the client until
+// auth + plan are verified.  Matches the client TEMPLATES array
+// by name so the client can hold metadata (vars, desc) safely.
+// ─────────────────────────────────────────────────────────────
+const TEMPLATE_CONTENT = {
+  '💻 Code Review Assistant':
+    `You are an experienced {{language}} developer conducting a thorough code review.\n\nReview the following code for:\n- Bugs and errors\n- Code style and conventions\n- Performance issues\n- Security vulnerabilities\n\nCode to review:\n{{code}}\n\nProvide your review in {{format}} format with specific line references.`,
+  '✍️ Content Writer':
+    `You are a professional content writer specializing in {{niche}} content.\n\nWrite a {{content_type}} about: {{topic}}\n\nRequirements:\n- Target audience: {{audience}}\n- Tone: {{tone}}\n- Length: {{length}} words\n- Include keywords: {{keywords}}\n\nAdditional instructions:\n{{instructions}}`,
+  '📊 Data Analyst':
+    `You are a data analyst with expertise in {{domain}} data analysis.\n\nAnalyze the following data and provide insights:\n{{data}}\n\nFocus areas:\n- {{focus_area_1}}\n- {{focus_area_2}}\n- {{focus_area_3}}\n\nProvide your analysis in {{format}} with visualization suggestions and actionable recommendations.`,
+  '🌐 Translation Expert':
+    `You are a professional translator specializing in {{source_lang}} to {{target_lang}} translation.\n\nTranslate the following text while preserving:\n- Cultural nuances\n- Tone and style\n- Idiomatic expressions\n\nText to translate:\n{{text}}\n\nContext: {{context}}\n\nProvide the translation in {{format}} format.`,
+  '📝 Summarization Tool':
+    `You are a professional summarizer specializing in {{content_type}} content.\n\nSummarize the following text in {{length}}:\n{{text}}\n\nFocus on:\n- Key points and main ideas\n- {{focus_1}}\n- {{focus_2}}\n\nStyle: {{style}}`,
+  '🎨 Creative Storyteller':
+    `You are a creative writer specializing in {{genre}} stories.\n\nWrite a {{story_type}} with the following elements:\n- Setting: {{setting}}\n- Main character: {{character}}\n- Conflict: {{conflict}}\n- Tone: {{tone}}\n- Length: {{length}} words\n\nAdditional elements:\n{{additional}}`,
+  '📖 Technical Documentation':
+    `You are a technical writer creating documentation for {{product_type}}.\n\nDocument the following feature/component:\n{{feature}}\n\nInclude:\n- Overview and purpose\n- {{section_1}}\n- {{section_2}}\n- {{section_3}}\n- Examples and code snippets\n\nAudience: {{audience}}\nFormat: {{format}}`,
+  '🎧 Customer Support':
+    `You are a customer support representative for {{company}} with expertise in {{product}}.\n\nCustomer inquiry:\n{{inquiry}}\n\nRespond with:\n- Empathy and understanding\n- Clear solution or next steps\n- {{tone}} tone\n- Offer additional help\n\nCompany policy to consider:\n{{policy}}`,
+  '🐛 Bug Report Writer':
+    `You are a QA engineer. Write a detailed bug report.\n\nProduct: {{product}}\nEnvironment: {{environment}}\n\nIssue:\n{{description}}\n\nSteps to reproduce:\n{{steps}}\n\nExpected: {{expected}}\nActual: {{actual}}\n\nSeverity: {{severity}}`,
+  '📧 Cold Email Outreach':
+    `You are an expert sales copywriter. Write a concise cold email.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}} at {{recipient_company}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\nTone: {{tone}}\n\nWrite a subject line and body under 150 words.`,
+  '🎓 Study Guide Creator':
+    `You are an expert educator in {{subject}}.\n\nCreate a study guide for: {{topic}}\nLevel: {{level}}\nStudy time: {{time}}\n\nInclude:\n- Key concepts and definitions\n- Core principles with examples\n- Common misconceptions\n- {{num_questions}} practice questions\n- Memory aids and mnemonics`,
+  '📣 Social Media Caption':
+    `You are a social media strategist for {{platform}}.\n\nTopic: {{topic}}\nBrand voice: {{brand_voice}}\nAudience: {{audience}}\nGoal: {{goal}}\n\nWrite {{num_variants}} caption variants with:\n- Hook in first line\n- Relevant emojis\n- CTA\n- {{num_hashtags}} hashtags\n\nChar limit: {{char_limit}}`,
+  '🧠 Meeting Summary':
+    `You are an executive assistant. Convert meeting notes into a clean summary.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nFormat:\n- Objective\n- Key decisions\n- Action items (owner + deadline)\n- Open questions / blockers\n- Next meeting date`,
+  // PRO
+  '⚖️ Legal Contract Reviewer':
+    `You are a senior contract attorney for {{contract_type}} agreements.\n\nReview:\n{{contract_text}}\n\nJurisdiction: {{jurisdiction}}\nParty: {{party}}\n\nIdentify:\n1. High-risk clauses ⚠️\n2. Missing protections\n3. Ambiguous language\n4. Recommended amendments\n5. Risk rating: Low/Medium/High`,
+  '💰 Financial Analysis Report':
+    `You are a senior financial analyst.\n\nCompany: {{company}}\nAnalysis: {{analysis_type}}\nPeriod: {{period}}\n\nData:\n{{financial_data}}\n\nProduce:\n- Executive summary\n- Revenue and margin trends\n- Key ratios (P/E, EV/EBITDA, ROE)\n- Bull/base/bear scenarios\n- Top 5 risks\n\nAudience: {{audience}}`,
+  '🏥 Medical Case Summary':
+    `You are a board-certified physician in {{specialty}}.\n\nCase notes:\n{{notes}}\n\nGenerate:\n- Chief complaint\n- History of present illness\n- Top {{num_dx}} differential diagnoses\n- Management plan\n- Follow-up recommendations\n\nFlag red flags with ⚠️`,
+  '🔐 Security Threat Model':
+    `You are a senior application security engineer.\n\nSystem: {{system_name}}\nArchitecture: {{architecture}}\nStack: {{tech_stack}}\nData: {{data_sensitivity}}\n\nGenerate STRIDE threat model:\n1. System boundaries\n2. Threat enumeration per category\n3. DREAD risk ratings\n4. Mitigations\n5. Compliance: {{compliance_frameworks}}`,
+  '🎬 Video Script Writer':
+    `You are a video scriptwriter for {{platform}}.\n\nTopic: {{topic}}\nLength: {{length}}\nFormat: {{format}}\nAudience: {{audience}}\nVoice: {{brand_voice}}\nGoal: {{goal}}\n\nWrite:\n- Hook ({{hook_seconds}}s — must stop the scroll)\n- Introduction\n- Main sections with B-roll [in brackets]\n- CTA\n- End screen`,
+  '🏗️ System Design Document':
+    `You are a principal software engineer.\n\nSystem: {{system_name}}\nScale: {{scale}}\nSLA: {{sla}}\nTech: {{tech_preferences}}\n\nGenerate:\n1. Functional + non-functional requirements\n2. High-level architecture\n3. Component breakdown\n4. Data model + storage\n5. Scalability strategy\n6. Failure modes + mitigation\n7. Monitoring plan`,
+  '🎯 Ad Copy Generator':
+    `You are a performance marketing expert.\n\nProduct: {{product}}\nPlatform: {{platform}}\nGoal: {{goal}}\nAudience: {{audience}}\nUVP: {{uvp}}\n\nGenerate:\n1. 3x headlines (max {{headline_chars}} chars)\n2. 3x descriptions (max {{desc_chars}} chars)\n3. 2x CTA options\n4. A/B test hypothesis\n5. Expected CTR range\n\nTriggers: {{triggers}}`,
+};
+
+// Plan membership — controls which templates require Pro
+const PRO_TEMPLATE_NAMES = new Set([
+  '⚖️ Legal Contract Reviewer',
+  '💰 Financial Analysis Report',
+  '🏥 Medical Case Summary',
+  '🔐 Security Threat Model',
+  '🎬 Video Script Writer',
+  '🏗️ System Design Document',
+  '🎯 Ad Copy Generator',
+]);
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/get-template
+//
+// Resolves session token → verifies plan → returns tpl string.
+// Pro templates require a pro/team/enterprise plan.
+// Free templates require only a valid session (any plan).
+// Free users are also limited to their one persisted pick.
+//
+// Body:    { token: string, name: string }
+// Returns: { tpl: string } or 401/403
+// ─────────────────────────────────────────────────────────────
+async function handleGetTemplate(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Invalid request body' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  const name  = (body?.name  ?? '').trim();
+
+  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
+  if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
+
+  // Resolve session — check prompt-namespaced keys first, then legacy
+  let email = null;
+  let plan  = 'prompt_free';
+
+  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        email = data.email ?? null;
+        // Always read live plan — catches legacy users who signed up before
+        // prompt_plan: keys existed. Falls back to plan: (main site plan) then
+        // data.plan then prompt_free.
+        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
+        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
+        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+      } catch { email = null; }
+      break;
+    }
+  }
+
+  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  // Look up the template content
+  const tpl = TEMPLATE_CONTENT[name];
+  if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
+
+  // Pro gate
+  const isPro = PRO_TEMPLATE_NAMES.has(name);
+  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  if (isPro && !userHasPro) {
+    return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
+  }
+
+  // Free-pick gate — free users can only access their one persisted pick
+  if (!isPro && !userHasPro) {
+    const pick = await env.AUTH_KV.get(`prompt_picked:${email}`);
+    // If they have a stored pick and this isn't it → deny
+    if (pick && pick !== name) {
+      return jsonResponse({ error: 'Free plan allows 1 template. Upgrade for all templates.', currentPick: pick, upgrade: true }, 403);
+    }
+    // If no pick stored yet — allow and persist it now (first-time access)
+    if (!pick) {
+      await env.AUTH_KV.put(`prompt_picked:${email}`, name);
+    }
+  }
+
+  return jsonResponse({ tpl });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/sync-pick
+//
+// Persists a free user's template pick to KV server-side.
+// Idempotent — if a pick already exists it is returned unchanged
+// (first pick wins). Pro users always get { ok: true, pro: true }.
+//
+// Body:    { token: string, name: string }
+// Returns: { ok: true, pick: string } or 401/403
+// ─────────────────────────────────────────────────────────────
+async function handleSyncPick(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Invalid request body' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  const name  = (body?.name  ?? '').trim();
+
+  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
+  if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
+
+  // Resolve session
+  let email = null;
+  let plan  = 'prompt_free';
+
+  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        email = data.email ?? null;
+        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
+        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
+        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+      } catch { email = null; }
+      break;
+    }
+  }
+
+  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
+
+  // Check existing pick — first pick wins, never overwrite
+  const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
+  if (existing) {
+    return jsonResponse({ ok: true, pick: existing, alreadySet: true });
+  }
+
+  // Persist the pick permanently
+  if (!TEMPLATE_CONTENT[name]) return jsonResponse({ error: 'Template not found' }, 404);
+  await env.AUTH_KV.put(`prompt_picked:${email}`, name);
+  return jsonResponse({ ok: true, pick: name });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/get-pick
+//
+// Returns the server-persisted free template pick for this user.
+// Used on page load to sync UI with KV truth (covers legacy users
+// who had localStorage picks before server-side sync existed).
+//
+// Body:    { token: string }
+// Returns: { pick: string|null, pro: bool }
+// ─────────────────────────────────────────────────────────────
+async function handleGetPick(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Invalid request body' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  let email = null;
+  let plan  = 'prompt_free';
+
+  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try {
+        const data = JSON.parse(raw);
+        email = data.email ?? null;
+        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
+        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
+        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+      } catch { email = null; }
+      break;
+    }
+  }
+
+  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  if (userHasPro) return jsonResponse({ pick: null, pro: true, plan });
+
+  // Legacy migration: if no KV pick exists but localStorage pick was already
+  // sent in the request body, persist it now so old users don't lose their pick
+  const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
+  if (!existing && body?.legacyPick && TEMPLATE_CONTENT[body.legacyPick]) {
+    await env.AUTH_KV.put(`prompt_picked:${email}`, body.legacyPick);
+    return jsonResponse({ pick: body.legacyPick, pro: false, plan, migrated: true });
+  }
+
+  return jsonResponse({ pick: existing || null, pro: false, plan });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1561,6 +1808,12 @@ export default {
     // ── POST route dispatch ───────────────────────────────────
     try {
       switch (pathname) {
+        case '/api/prompt/get-template':
+          return await handleGetTemplate(request, env);
+        case '/api/prompt/sync-pick':
+          return await handleSyncPick(request, env);
+        case '/api/prompt/get-pick':
+          return await handleGetPick(request, env);
         case '/api/auth/check-plan':
           return await handleCheckPlan(request, env);
 

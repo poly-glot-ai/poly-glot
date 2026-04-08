@@ -2900,89 +2900,52 @@
     });
     _bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-    // ── Templates data ───────────────────────────────────────
+    // ── Templates metadata (NO tpl content — fetched securely from Worker) ──
+    // tpl strings live server-side only in auth-worker/worker.js TEMPLATE_CONTENT.
+    // The client holds only name/desc/vars/plan for UI rendering.
     const TEMPLATES = [
       // FREE
       { plan:'free', name:'💻 Code Review Assistant', desc:'Review code for bugs, style, and best practices',
-        vars:{ language:'Python', format:'markdown', code:'' },
-        tpl:`You are an experienced {{language}} developer conducting a thorough code review.\n\nReview the following code for:\n- Bugs and errors\n- Code style and conventions\n- Performance issues\n- Security vulnerabilities\n\nCode to review:\n{{code}}\n\nProvide your review in {{format}} format with specific line references.` },
-
+        vars:{ language:'Python', format:'markdown', code:'' } },
       { plan:'free', name:'✍️ Content Writer', desc:'Generate engaging content for various purposes',
-        vars:{ niche:'technology', content_type:'blog post', topic:'', audience:'general public', tone:'professional', length:'500', keywords:'', instructions:'' },
-        tpl:`You are a professional content writer specializing in {{niche}} content.\n\nWrite a {{content_type}} about: {{topic}}\n\nRequirements:\n- Target audience: {{audience}}\n- Tone: {{tone}}\n- Length: {{length}} words\n- Include keywords: {{keywords}}\n\nAdditional instructions:\n{{instructions}}` },
-
+        vars:{ niche:'technology', content_type:'blog post', topic:'', audience:'general public', tone:'professional', length:'500', keywords:'', instructions:'' } },
       { plan:'free', name:'📊 Data Analyst', desc:'Analyze data and provide insights',
-        vars:{ domain:'business', data:'', focus_area_1:'trends', focus_area_2:'anomalies', focus_area_3:'correlations', format:'structured report' },
-        tpl:`You are a data analyst with expertise in {{domain}} data analysis.\n\nAnalyze the following data and provide insights:\n{{data}}\n\nFocus areas:\n- {{focus_area_1}}\n- {{focus_area_2}}\n- {{focus_area_3}}\n\nProvide your analysis in {{format}} with visualization suggestions and actionable recommendations.` },
-
+        vars:{ domain:'business', data:'', focus_area_1:'trends', focus_area_2:'anomalies', focus_area_3:'correlations', format:'structured report' } },
       { plan:'free', name:'🌐 Translation Expert', desc:'Translate text with context and nuance',
-        vars:{ source_lang:'English', target_lang:'Spanish', text:'', context:'', format:'plain text' },
-        tpl:`You are a professional translator specializing in {{source_lang}} to {{target_lang}} translation.\n\nTranslate the following text while preserving:\n- Cultural nuances\n- Tone and style\n- Idiomatic expressions\n\nText to translate:\n{{text}}\n\nContext: {{context}}\n\nProvide the translation in {{format}} format.` },
-
+        vars:{ source_lang:'English', target_lang:'Spanish', text:'', context:'', format:'plain text' } },
       { plan:'free', name:'📝 Summarization Tool', desc:'Create concise summaries of long content',
-        vars:{ content_type:'article', length:'3-5 bullet points', text:'', focus_1:'important facts', focus_2:'actionable insights', style:'concise and clear' },
-        tpl:`You are a professional summarizer specializing in {{content_type}} content.\n\nSummarize the following text in {{length}}:\n{{text}}\n\nFocus on:\n- Key points and main ideas\n- {{focus_1}}\n- {{focus_2}}\n\nStyle: {{style}}` },
-
+        vars:{ content_type:'article', length:'3-5 bullet points', text:'', focus_1:'important facts', focus_2:'actionable insights', style:'concise and clear' } },
       { plan:'free', name:'🎨 Creative Storyteller', desc:'Generate creative stories and narratives',
-        vars:{ genre:'science fiction', story_type:'short story', setting:'', character:'', conflict:'', tone:'suspenseful', length:'500', additional:'' },
-        tpl:`You are a creative writer specializing in {{genre}} stories.\n\nWrite a {{story_type}} with the following elements:\n- Setting: {{setting}}\n- Main character: {{character}}\n- Conflict: {{conflict}}\n- Tone: {{tone}}\n- Length: {{length}} words\n\nAdditional elements:\n{{additional}}` },
-
+        vars:{ genre:'science fiction', story_type:'short story', setting:'', character:'', conflict:'', tone:'suspenseful', length:'500', additional:'' } },
       { plan:'free', name:'📖 Technical Documentation', desc:'Create clear technical documentation',
-        vars:{ product_type:'software API', feature:'', section_1:'Usage instructions', section_2:'Parameters', section_3:'Return values', audience:'developers', format:'Markdown with code blocks' },
-        tpl:`You are a technical writer creating documentation for {{product_type}}.\n\nDocument the following feature/component:\n{{feature}}\n\nInclude:\n- Overview and purpose\n- {{section_1}}\n- {{section_2}}\n- {{section_3}}\n- Examples and code snippets\n\nAudience: {{audience}}\nFormat: {{format}}` },
-
+        vars:{ product_type:'software API', feature:'', section_1:'Usage instructions', section_2:'Parameters', section_3:'Return values', audience:'developers', format:'Markdown with code blocks' } },
       { plan:'free', name:'🎧 Customer Support', desc:'Provide helpful customer support responses',
-        vars:{ company:'TechCorp', product:'software products', inquiry:'', tone:'friendly and professional', policy:'' },
-        tpl:`You are a customer support representative for {{company}} with expertise in {{product}}.\n\nCustomer inquiry:\n{{inquiry}}\n\nRespond with:\n- Empathy and understanding\n- Clear solution or next steps\n- {{tone}} tone\n- Offer additional help\n\nCompany policy to consider:\n{{policy}}` },
-
+        vars:{ company:'TechCorp', product:'software products', inquiry:'', tone:'friendly and professional', policy:'' } },
       { plan:'free', name:'🐛 Bug Report Writer', desc:'Write clear, reproducible bug reports',
-        vars:{ product:'', environment:'Production', description:'', steps:'', expected:'', actual:'', severity:'Medium' },
-        tpl:`You are a QA engineer. Write a detailed bug report.\n\nProduct: {{product}}\nEnvironment: {{environment}}\n\nIssue:\n{{description}}\n\nSteps to reproduce:\n{{steps}}\n\nExpected: {{expected}}\nActual: {{actual}}\n\nSeverity: {{severity}}` },
-
+        vars:{ product:'', environment:'Production', description:'', steps:'', expected:'', actual:'', severity:'Medium' } },
       { plan:'free', name:'📧 Cold Email Outreach', desc:'Write personalized cold emails that get replies',
-        vars:{ sender_role:'Founder', sender_company:'', recipient_name:'', recipient_title:'CTO', recipient_company:'', value_prop:'', cta:'15-minute call', tone:'direct and friendly' },
-        tpl:`You are an expert sales copywriter. Write a concise cold email.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}} at {{recipient_company}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\nTone: {{tone}}\n\nWrite a subject line and body under 150 words.` },
-
+        vars:{ sender_role:'Founder', sender_company:'', recipient_name:'', recipient_title:'CTO', recipient_company:'', value_prop:'', cta:'15-minute call', tone:'direct and friendly' } },
       { plan:'free', name:'🎓 Study Guide Creator', desc:'Turn any topic into a structured study guide',
-        vars:{ subject:'Computer Science', topic:'', level:'Intermediate', time:'2 hours', num_questions:'5' },
-        tpl:`You are an expert educator in {{subject}}.\n\nCreate a study guide for: {{topic}}\nLevel: {{level}}\nStudy time: {{time}}\n\nInclude:\n- Key concepts and definitions\n- Core principles with examples\n- Common misconceptions\n- {{num_questions}} practice questions\n- Memory aids and mnemonics` },
-
+        vars:{ subject:'Computer Science', topic:'', level:'Intermediate', time:'2 hours', num_questions:'5' } },
       { plan:'free', name:'📣 Social Media Caption', desc:'Generate scroll-stopping captions for any platform',
-        vars:{ platform:'Instagram', topic:'', brand_voice:'friendly and professional', audience:'', goal:'drive engagement', num_variants:'3', num_hashtags:'5', char_limit:'2200' },
-        tpl:`You are a social media strategist for {{platform}}.\n\nTopic: {{topic}}\nBrand voice: {{brand_voice}}\nAudience: {{audience}}\nGoal: {{goal}}\n\nWrite {{num_variants}} caption variants with:\n- Hook in first line\n- Relevant emojis\n- CTA\n- {{num_hashtags}} hashtags\n\nChar limit: {{char_limit}}` },
-
+        vars:{ platform:'Instagram', topic:'', brand_voice:'friendly and professional', audience:'', goal:'drive engagement', num_variants:'3', num_hashtags:'5', char_limit:'2200' } },
       { plan:'free', name:'🧠 Meeting Summary', desc:'Turn raw notes into clean action items',
-        vars:{ meeting_name:'', date:'', attendees:'', notes:'' },
-        tpl:`You are an executive assistant. Convert meeting notes into a clean summary.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nFormat:\n- Objective\n- Key decisions\n- Action items (owner + deadline)\n- Open questions / blockers\n- Next meeting date` },
-
+        vars:{ meeting_name:'', date:'', attendees:'', notes:'' } },
       // PRO
       { plan:'pro', name:'⚖️ Legal Contract Reviewer', desc:'Identify risks and clauses in contracts',
-        vars:{ contract_type:'SaaS', contract_text:'', jurisdiction:'United States', party:'Buyer' },
-        tpl:`You are a senior contract attorney for {{contract_type}} agreements.\n\nReview:\n{{contract_text}}\n\nJurisdiction: {{jurisdiction}}\nParty: {{party}}\n\nIdentify:\n1. High-risk clauses ⚠️\n2. Missing protections\n3. Ambiguous language\n4. Recommended amendments\n5. Risk rating: Low/Medium/High` },
-
+        vars:{ contract_type:'SaaS', contract_text:'', jurisdiction:'United States', party:'Buyer' } },
       { plan:'pro', name:'💰 Financial Analysis Report', desc:'Generate investor-grade financial analysis',
-        vars:{ company:'', analysis_type:'Equity Research', period:'FY 2024', financial_data:'', audience:'Institutional investors' },
-        tpl:`You are a senior financial analyst.\n\nCompany: {{company}}\nAnalysis: {{analysis_type}}\nPeriod: {{period}}\n\nData:\n{{financial_data}}\n\nProduce:\n- Executive summary\n- Revenue and margin trends\n- Key ratios (P/E, EV/EBITDA, ROE)\n- Bull/base/bear scenarios\n- Top 5 risks\n\nAudience: {{audience}}` },
-
+        vars:{ company:'', analysis_type:'Equity Research', period:'FY 2024', financial_data:'', audience:'Institutional investors' } },
       { plan:'pro', name:'🏥 Medical Case Summary', desc:'Structure clinical notes into professional summaries',
-        vars:{ specialty:'Internal Medicine', notes:'', num_dx:'3' },
-        tpl:`You are a board-certified physician in {{specialty}}.\n\nCase notes:\n{{notes}}\n\nGenerate:\n- Chief complaint\n- History of present illness\n- Top {{num_dx}} differential diagnoses\n- Management plan\n- Follow-up recommendations\n\nFlag red flags with ⚠️` },
-
+        vars:{ specialty:'Internal Medicine', notes:'', num_dx:'3' } },
       { plan:'pro', name:'🔐 Security Threat Model', desc:'Generate STRIDE-based security threat models',
-        vars:{ system_name:'', architecture:'Web Application', tech_stack:'', data_sensitivity:'PII', compliance_frameworks:'SOC 2, GDPR' },
-        tpl:`You are a senior application security engineer.\n\nSystem: {{system_name}}\nArchitecture: {{architecture}}\nStack: {{tech_stack}}\nData: {{data_sensitivity}}\n\nGenerate STRIDE threat model:\n1. System boundaries\n2. Threat enumeration per category\n3. DREAD risk ratings\n4. Mitigations\n5. Compliance: {{compliance_frameworks}}` },
-
+        vars:{ system_name:'', architecture:'Web Application', tech_stack:'', data_sensitivity:'PII', compliance_frameworks:'SOC 2, GDPR' } },
       { plan:'pro', name:'🎬 Video Script Writer', desc:'Full YouTube/TikTok/ad scripts with hooks and CTAs',
-        vars:{ platform:'YouTube', topic:'', length:'10 minutes', format:'tutorial', audience:'', brand_voice:'educational', goal:'grow subscribers', hook_seconds:'5' },
-        tpl:`You are a video scriptwriter for {{platform}}.\n\nTopic: {{topic}}\nLength: {{length}}\nFormat: {{format}}\nAudience: {{audience}}\nVoice: {{brand_voice}}\nGoal: {{goal}}\n\nWrite:\n- Hook ({{hook_seconds}}s — must stop the scroll)\n- Introduction\n- Main sections with B-roll [in brackets]\n- CTA\n- End screen` },
-
+        vars:{ platform:'YouTube', topic:'', length:'10 minutes', format:'tutorial', audience:'', brand_voice:'educational', goal:'grow subscribers', hook_seconds:'5' } },
       { plan:'pro', name:'🏗️ System Design Document', desc:'Generate full engineering system design docs',
-        vars:{ system_name:'', scale:'1M DAU', sla:'99.9% uptime', tech_preferences:'' },
-        tpl:`You are a principal software engineer.\n\nSystem: {{system_name}}\nScale: {{scale}}\nSLA: {{sla}}\nTech: {{tech_preferences}}\n\nGenerate:\n1. Functional + non-functional requirements\n2. High-level architecture\n3. Component breakdown\n4. Data model + storage\n5. Scalability strategy\n6. Failure modes + mitigation\n7. Monitoring plan` },
-
+        vars:{ system_name:'', scale:'1M DAU', sla:'99.9% uptime', tech_preferences:'' } },
       { plan:'pro', name:'🎯 Ad Copy Generator', desc:'High-converting copy for Google, Meta, LinkedIn',
-        vars:{ product:'', platform:'Google Ads', goal:'conversions', audience:'', uvp:'', headline_chars:'30', desc_chars:'90', triggers:'urgency, social proof' },
-        tpl:`You are a performance marketing expert.\n\nProduct: {{product}}\nPlatform: {{platform}}\nGoal: {{goal}}\nAudience: {{audience}}\nUVP: {{uvp}}\n\nGenerate:\n1. 3x headlines (max {{headline_chars}} chars)\n2. 3x descriptions (max {{desc_chars}} chars)\n3. 2x CTA options\n4. A/B test hypothesis\n5. Expected CTR range\n\nTriggers: {{triggers}}` },
+        vars:{ product:'', platform:'Google Ads', goal:'conversions', audience:'', uvp:'', headline_chars:'30', desc_chars:'90', triggers:'urgency, social proof' } },
 
       { plan:'pro', name:'🧬 Research Paper Abstract', desc:'Write structured academic abstracts',
         vars:{ field:'', title:'', research_question:'', methodology:'', findings:'', word_limit:'250', citation_style:'APA 7th' },
@@ -2995,8 +2958,81 @@
     // Renders variables as input fields, shows the rendered prompt live,
     // and provides a copy-to-clipboard button.
 
-    function openTemplateViewer(tpl) {
-      // Build or reuse viewer modal
+    // ── Secure template fetch ────────────────────────────────
+    // tpl content lives server-side only. This fetches it from
+    // the Worker after auth + plan are verified server-side.
+    async function fetchTemplateTpl(name) {
+      const token = (function() {
+        try { return localStorage.getItem('pg_prompt_token') || localStorage.getItem('pg_token') || ''; } catch(e) { return ''; }
+      })();
+      if (!token) return { error: 'not_authed' };
+      try {
+        const res = await fetch('https://poly-glot.ai/api/prompt/get-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          body: JSON.stringify({ token, name })
+        });
+        const data = await res.json();
+        if (!res.ok) return { error: data.upgrade ? 'upgrade_required' : (data.error || 'denied'), currentPick: data.currentPick };
+        return { tpl: data.tpl };
+      } catch(e) {
+        return { error: 'network_error' };
+      }
+    }
+
+    // ── Server-side pick sync ────────────────────────────────
+    // Syncs a free user's template pick to KV. Also handles
+    // legacy users who previously stored their pick in localStorage
+    // only — migrates it to KV on first auth'd page load.
+    async function syncPickToServer(name) {
+      const token = (function() {
+        try { return localStorage.getItem('pg_prompt_token') || localStorage.getItem('pg_token') || ''; } catch(e) { return ''; }
+      })();
+      if (!token) return;
+      try {
+        await fetch('https://poly-glot.ai/api/prompt/sync-pick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          body: JSON.stringify({ token, name })
+        });
+      } catch(e) { /* non-critical — localStorage still works as fallback display */ }
+    }
+
+    // ── On auth: load server pick + migrate legacy localStorage pick ──
+    // Runs whenever a user signs in or returns to a signed-in session.
+    // Migrates any existing localStorage pick to KV so legacy users
+    // don't lose their selection when the new gating takes effect.
+    async function loadAndMigrateServerPick() {
+      const token = (function() {
+        try { return localStorage.getItem('pg_prompt_token') || localStorage.getItem('pg_token') || ''; } catch(e) { return ''; }
+      })();
+      if (!token) return;
+      let legacyPick = '';
+      try { legacyPick = localStorage.getItem('pg_prompt_picked_tpl') || ''; } catch(e) {}
+      try {
+        const res = await fetch('https://poly-glot.ai/api/prompt/get-pick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          body: JSON.stringify({ token, legacyPick: legacyPick || undefined })
+        });
+        const data = await res.json();
+        if (res.ok && data.pick) {
+          // Always trust server pick over localStorage
+          try { localStorage.setItem('pg_prompt_picked_tpl', data.pick); } catch(e) {}
+        }
+      } catch(e) { /* non-critical */ }
+    }
+
+    // ── Template viewer (server-fetches tpl on open) ─────────
+    async function openTemplateViewer(tpl) {
+      // Hard guard: must be signed in
+      if (!document.body.classList.contains('pg-authed')) {
+        try { sessionStorage.setItem('pg_pending_tpl', tpl.name); } catch(e) {}
+        pgPromptSignIn('template_view');
+        return;
+      }
+
+      // Build modal with loading state immediately
       var existing = document.getElementById('pgaTplViewer');
       if (existing) existing.remove();
 
@@ -3015,7 +3051,6 @@
       modal.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;';
       modal.innerHTML = `
         <div style="background:#13141f;border:1px solid rgba(167,139,250,.25);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;">
-          <!-- Header -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
             <div>
               <div style="font-size:18px;font-weight:800;color:var(--text);">${tpl.name}</div>
@@ -3023,38 +3058,82 @@
             </div>
             <button onclick="document.getElementById('pgaTplViewer').remove()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px;line-height:1;">×</button>
           </div>
-          <!-- Variables -->
           <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
             <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-prompt);margin-bottom:14px;">Fill in your variables</div>
             ${varFields || '<p style="color:var(--text-muted);font-size:13px;">No variables — this template is ready to use.</p>'}
           </div>
-          <!-- Rendered prompt -->
           <div style="padding:20px 24px;flex:1;">
             <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#34d399;margin-bottom:10px;">✅ Your rendered prompt</div>
-            <div id="pgaTplRendered" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;font-family:'Fira Code',monospace;min-height:80px;">${tpl.tpl}</div>
+            <div id="pgaTplRendered" style="background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;font-family:'Fira Code',monospace;min-height:80px;display:flex;align-items:center;justify-content:center;">
+              <span style="color:var(--text-muted);font-family:inherit;">Loading template…</span>
+            </div>
           </div>
-          <!-- Actions -->
           <div style="padding:16px 24px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;">
-            <button id="pgaTplCopyBtn" onclick="pgaCopyPrompt()" style="flex:1;min-width:140px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:8px;padding:11px 20px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;">📋 Copy Prompt</button>
+            <button id="pgaTplCopyBtn" onclick="pgaCopyPrompt()" disabled style="flex:1;min-width:140px;background:rgba(124,58,237,.4);border:none;border-radius:8px;padding:11px 20px;color:rgba(255,255,255,.5);font-size:13px;font-weight:700;cursor:not-allowed;transition:all .15s;">📋 Copy Prompt</button>
             <button onclick="document.getElementById('pgaTplViewer').remove()" style="flex:1;min-width:100px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:11px 20px;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;">Close</button>
           </div>
         </div>`;
 
-      // Close on backdrop click
-      modal.addEventListener('click', function(e) {
-        if (e.target === modal) modal.remove();
-      });
-
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
       document.body.appendChild(modal);
 
-      // Store template for rendering
-      window._pgaActiveTpl = tpl;
+      // Fetch tpl securely from server
+      const result = await fetchTemplateTpl(tpl.name);
+
+      const renderedEl = document.getElementById('pgaTplRendered');
+      const copyBtn    = document.getElementById('pgaTplCopyBtn');
+
+      if (result.error) {
+        if (result.error === 'upgrade_required') {
+          if (renderedEl) {
+            renderedEl.innerHTML = `<div style="text-align:center;padding:12px;">
+              <div style="font-size:15px;font-weight:700;color:#f59e0b;margin-bottom:8px;">⭐ Pro Template</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Upgrade to Pro to unlock this template and 7 others.</div>
+              <button onclick="document.getElementById('pgaTplViewer').remove();document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'})" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;padding:10px 22px;color:#000;font-size:13px;font-weight:700;cursor:pointer;">See Plans →</button>
+            </div>`;
+          }
+        } else if (result.error === 'not_authed') {
+          modal.remove();
+          try { sessionStorage.setItem('pg_pending_tpl', tpl.name); } catch(e) {}
+          pgPromptSignIn('template_view');
+        } else if (result.currentPick) {
+          // Free user tried to open a second template — show their existing pick
+          modal.remove();
+          const existingTpl = TEMPLATES.find(function(t) { return t.name === result.currentPick; });
+          if (existingTpl) {
+            if (confirm(`Your free pick is "${result.currentPick}".\n\nOpen that instead? Click Cancel to upgrade for all templates.`)) {
+              openTemplateViewer(existingTpl);
+            } else {
+              document.getElementById('pga-pricing').scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        } else {
+          if (renderedEl) renderedEl.textContent = 'Could not load template. Please try again.';
+        }
+        return;
+      }
+
+      // Success — store and render
+      window._pgaActiveTpl = { ...tpl, tpl: result.tpl };
+      // Persist pick server-side (idempotent — first pick wins on server)
+      if (tpl.plan === 'free') {
+        try { localStorage.setItem('pg_prompt_picked_tpl', tpl.name); } catch(e) {}
+        syncPickToServer(tpl.name);
+      }
       pgaRenderPrompt();
+
+      // Enable copy button
+      if (copyBtn) {
+        copyBtn.disabled = false;
+        copyBtn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+        copyBtn.style.color = '#fff';
+        copyBtn.style.cursor = 'pointer';
+      }
     }
 
     window.pgaRenderPrompt = function() {
       var tpl = window._pgaActiveTpl;
-      if (!tpl) return;
+      if (!tpl || !tpl.tpl) return;
       var rendered = tpl.tpl;
       Object.keys(tpl.vars).forEach(function(k) {
         var el = document.getElementById('pgaTplVar_' + k);
@@ -3086,7 +3165,13 @@
       const free = TEMPLATES.filter(t => t.plan === 'free');
       const pro  = TEMPLATES.filter(t => t.plan === 'pro');
       const isAuthed = document.body.classList.contains('pg-authed');
-      // Track which free template this user has already picked (stored in localStorage)
+      // Plan — read from auth chip if available, fallback to localStorage cache
+      const planRaw = (function() {
+        try { return (localStorage.getItem('pg_prompt_plan') || localStorage.getItem('pg_plan') || 'free').toLowerCase(); } catch(e) { return 'free'; }
+      })();
+      const userHasPro = ['pro','team','enterprise','prompt_pro','prompt_team'].includes(planRaw);
+      // Track which free template this user has already picked — server is source of truth,
+      // localStorage used only for display optimism
       let pickedTemplate = '';
       try { pickedTemplate = localStorage.getItem('pg_prompt_picked_tpl') || ''; } catch(e) {}
 
@@ -3114,57 +3199,52 @@
           <button class="pga-tpl-upgrade__btn" onclick="document.getElementById('templateLibraryModal').classList.remove('active');document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'})">See Plans →</button>
         </div>`;
 
-      // Free cards
-      grid.querySelectorAll('.pga-tpl-card:not(.pga-tpl-card--locked)').forEach(card => {
+      // All cards — auth + plan gating handled server-side in openTemplateViewer
+      grid.querySelectorAll('.pga-tpl-card').forEach(card => {
         card.addEventListener('click', () => {
-          const name = card.dataset.name;
-          const tpl  = TEMPLATES.find(t => t.name === name);
+          const name  = card.dataset.name;
+          const isPro = card.dataset.pro === 'true';
+          const tpl   = TEMPLATES.find(t => t.name === name);
           if (!tpl) return;
 
           document.getElementById('templateLibraryModal').classList.remove('active');
 
+          // Not signed in — gate before even opening viewer
           if (!isAuthed) {
-            // Not signed in — prompt sign-in, remember their pick
             try { sessionStorage.setItem('pg_pending_tpl', name); } catch(e) {}
             pgPromptSignIn('template_pick');
             return;
           }
 
-          // Signed in — check if they already have a picked template
-          if (pickedTemplate && pickedTemplate !== name) {
-            // Already picked a different one — show it anyway (Pro would lock but free can use their 1)
-            if (confirm(`You already picked "${pickedTemplate}". Open that instead?\n\nClick Cancel to open "${name}".`)) {
-              const existingTpl = TEMPLATES.find(t => t.name === pickedTemplate);
-              if (existingTpl) openTemplateViewer(existingTpl);
-              return;
-            }
+          // Pro card clicked by non-pro user — scroll to pricing immediately
+          // (server will also enforce this, but save the round-trip)
+          if (isPro && !userHasPro) {
+            document.getElementById('pga-pricing').scrollIntoView({ behavior: 'smooth' });
+            return;
           }
 
-          // Save their pick and open
-          try { localStorage.setItem('pg_prompt_picked_tpl', name); } catch(e) {}
+          // Open viewer — server verifies auth + plan + pick enforcement
           openTemplateViewer(tpl);
-        });
-      });
-
-      // Pro cards — scroll to pricing
-      grid.querySelectorAll('.pga-tpl-card--locked').forEach(card => {
-        card.addEventListener('click', () => {
-          document.getElementById('templateLibraryModal').classList.remove('active');
-          document.getElementById('pga-pricing').scrollIntoView({ behavior: 'smooth' });
         });
       });
     }
 
-    // After sign-in, open any pending template the user had clicked
+    // After sign-in: migrate legacy pick + open any pending template
     window.addEventListener('pg:plan-loaded', function() {
       if (!document.body.classList.contains('pg-authed')) return;
+
+      // Migrate legacy localStorage pick to KV server-side (covers all
+      // existing users who signed up before server-side picks existed)
+      loadAndMigrateServerPick();
+
+      // Open any template the user clicked before signing in
       var pending = '';
       try { pending = sessionStorage.getItem('pg_pending_tpl') || ''; } catch(e) {}
       if (pending) {
         try { sessionStorage.removeItem('pg_pending_tpl'); } catch(e) {}
         var tpl = TEMPLATES.find(function(t) { return t.name === pending; });
-        if (tpl && tpl.plan === 'free') {
-          try { localStorage.setItem('pg_prompt_picked_tpl', pending); } catch(e) {}
+        if (tpl) {
+          // openTemplateViewer handles all plan/pick gating server-side
           setTimeout(function() { openTemplateViewer(tpl); }, 400);
         }
       }
