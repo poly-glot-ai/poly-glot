@@ -56,6 +56,7 @@
 const RATE_LIMIT_TTL  = 60;          // 1 request per email per 60 seconds
 const TOKEN_TTL       = 900;         // 15 minutes (magic link)
 const SESSION_TTL     = 7 * 24 * 60 * 60;  // 7 days (reduced from 30 — limits token leakage window)
+const DEVICE_TTL      = 365 * 24 * 60 * 60; // 1 year — device→email binding
 
 // ── Usage / quota constants ───────────────────────────────────────────────
 const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
@@ -426,6 +427,35 @@ async function handleLogin(request, env) {
     return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
   }
 
+  // ── Device deduplication ────────────────────────────────────
+  // Prevent multiple accounts being created from the same device.
+  // device:{deviceId} stores the first email that signed up on this device.
+  // If a different email tries to sign up (not log in) from the same device, block it.
+  const rawDeviceId = (body?.deviceId ?? '').trim();
+  const deviceId    = /^[0-9a-f]{32}$/i.test(rawDeviceId) ? rawDeviceId : null;
+  if (deviceId) {
+    const deviceKey      = `device:${deviceId}`;
+    const boundEmail     = await env.AUTH_KV.get(deviceKey);
+    const isNewEmail     = !boundEmail;
+    const isDifferentEmail = boundEmail && boundEmail !== email;
+    // If this device is already bound to a different email and that email
+    // has a confirmed signup key — block the new signup attempt.
+    // Allow the original email to log in again from the same device freely.
+    if (isDifferentEmail) {
+      const existingSignup = await env.AUTH_KV.get(`signup:${email}`) ?? await env.AUTH_KV.get(`prompt_signup:${email}`);
+      if (!existingSignup) {
+        // New email on a device that already has an account — block it
+        return jsonResponse(
+          { error: 'An account already exists for this device. Please sign in with your original email.' },
+          409
+        );
+      }
+      // The new email already has a confirmed signup (returning user on a shared device) — allow login
+    }
+    // If device is unbound (isNewEmail), we bind it later in resolveToken after magic link click
+    // Store deviceId on body for use downstream in resolveToken via the token payload
+  }
+
   // ── Rate limiting ───────────────────────────────────────────
   const rateLimitKey = `ratelimit:${email}`;
   const rateLimitHit = await env.AUTH_KV.get(rateLimitKey);
@@ -462,7 +492,7 @@ async function handleLogin(request, env) {
   // Prompt tokens use prompt_token: prefix so resolveToken can detect surface.
   const tokenPrefix = isPromptSurface ? 'prompt_token:' : 'token:';
   const token       = generateToken();
-  const tokenData   = JSON.stringify({ email, plan, source, surface: isPromptSurface ? 'prompt' : 'app', created: Date.now() });
+  const tokenData   = JSON.stringify({ email, plan, source, surface: isPromptSurface ? 'prompt' : 'app', created: Date.now(), deviceId: deviceId ?? null });
   await env.AUTH_KV.put(`${tokenPrefix}${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
@@ -562,9 +592,17 @@ async function handleAdminUsers(request, env) {
   // prompt_signup: written when a Prompt Studio magic link is clicked (surface=prompt)
   // Each reads its own plan namespace: plan: vs prompt_plan:
   // This prevents cross-surface bleed in plan breakdowns.
-  const signupKeys       = allKeys.filter(k => k.name.startsWith('signup:'));
-  const promptSignupKeys = allKeys.filter(k => k.name.startsWith('prompt_signup:'));
-  const sessionKeys      = allKeys.filter(k => k.name.startsWith('session:'));
+  const signupKeys        = allKeys.filter(k => k.name.startsWith('signup:'));
+  const promptSignupKeys  = allKeys.filter(k => k.name.startsWith('prompt_signup:'));
+  const sessionKeys       = allKeys.filter(k => k.name.startsWith('session:'));
+  const promptSessionKeys = allKeys.filter(k => k.name.startsWith('prompt_session:'));
+
+  // Unique active users = distinct emails across both session namespaces
+  // (raw key count is inflated by multi-device / test sessions on same account)
+  const sessionEmails = new Set();
+  sessionKeys.forEach(k => sessionEmails.add(k.name.slice('session:'.length)));
+  promptSessionKeys.forEach(k => sessionEmails.add(k.name.slice('prompt_session:'.length)));
+  const activeUniqueUsers = sessionEmails.size;
 
   const YYYY_MM = new Date().toISOString().slice(0, 7);
 
@@ -629,7 +667,8 @@ async function handleAdminUsers(request, env) {
   return jsonResponse({
     ok:                    true,
     unique_users:          users.length,
-    active_sessions:       sessionKeys.length,
+    active_sessions:       sessionKeys.length + promptSessionKeys.length, // raw token count
+    active_unique_users:   activeUniqueUsers,                              // deduplicated by email
     plan_breakdown:        breakdown,
     prompt_plan_breakdown: promptBreakdown,  // accurate Prompt Studio plan counts
     prompt_unique_users:   promptUsers.length,
@@ -1419,6 +1458,18 @@ async function resolveToken(request, env, deleteAfter) {
         ts:      Date.now(),
       }));
     }
+
+    // ── Bind device → email on first confirmed signup ─────────
+    // Written here (not at /login) so we only bind after the user
+    // actually clicks the magic link — prevents binding from abandoned signups.
+    const confirmedDeviceId = data.deviceId ?? null;
+    if (confirmedDeviceId && /^[0-9a-f]{32}$/i.test(confirmedDeviceId)) {
+      const deviceKey    = `device:${confirmedDeviceId}`;
+      const alreadyBound = await env.AUTH_KV.get(deviceKey);
+      if (!alreadyBound) {
+        await env.AUTH_KV.put(deviceKey, data.email, { expirationTtl: DEVICE_TTL });
+      }
+    }
   }
 
   // ── Read live plan from surface-specific KV key ──────────────
@@ -1788,6 +1839,7 @@ async function handleVscProxy(request, env) {
 // ─────────────────────────────────────────────────────────────
 async function handleFreeSignup(request, env) {
   let email;
+  let freeSignupDeviceId = null;
   if (request.method === 'GET') {
     email = new URL(request.url).searchParams.get('email') ?? '';
   } else {
@@ -1796,6 +1848,8 @@ async function handleFreeSignup(request, env) {
       return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
     }
     email = (body?.email ?? '').trim().toLowerCase();
+    const rawDid = (body?.deviceId ?? '').trim();
+    freeSignupDeviceId = /^[0-9a-f]{32}$/i.test(rawDid) ? rawDid : null;
   }
 
   if (!email || !isValidEmail(email)) {
@@ -1805,6 +1859,21 @@ async function handleFreeSignup(request, env) {
   // ── Disposable / test email block ──────────────────────────
   if (isDisposableEmail(email) || isTestEmail(email)) {
     return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
+  }
+
+  // ── Device deduplication ────────────────────────────────────
+  if (freeSignupDeviceId) {
+    const deviceKey    = `device:${freeSignupDeviceId}`;
+    const boundEmail   = await env.AUTH_KV.get(deviceKey);
+    if (boundEmail && boundEmail !== email) {
+      const existingSignup = await env.AUTH_KV.get(`signup:${email}`);
+      if (!existingSignup) {
+        return jsonResponse(
+          { error: 'An account already exists for this device. Please sign in with your original email.' },
+          409
+        );
+      }
+    }
   }
 
   // Rate-limit (shared with /api/auth/login — same 60 s window)
@@ -1826,7 +1895,7 @@ async function handleFreeSignup(request, env) {
   // Generate magic-link token
   const token     = generateToken();
   const plan      = existingPlan ?? 'free';
-  const tokenData = JSON.stringify({ email, plan, source: 'vscode-free-signup', created: Date.now() });
+  const tokenData = JSON.stringify({ email, plan, source: 'vscode-free-signup', created: Date.now(), deviceId: freeSignupDeviceId ?? null });
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
