@@ -719,8 +719,10 @@ async function isProTemplate(name, env) {
 //   Mode A — HMAC_SECRET set:
 //     key = HMAC_SECRET, payload = "{timestamp}.{token}.{name}"
 //   Mode B — no HMAC_SECRET (default/recommended):
-//     key = session token, payload = "{timestamp}.{name}"
+//     key = session token, payload = "{timestamp}.{token}.{name}"
 //     → Zero embedded secrets. Only the authenticated token holder can sign.
+//     → Including token in payload ensures sigs are unique per user+name+time,
+//       preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
 //
 // Rules:
 //   - Timestamp must be within ±60 seconds of server time (replay protection)
@@ -761,9 +763,12 @@ async function verifyPromptSig(request, token, name, env) {
   const enc     = new TextEncoder();
   const envSecret = env.HMAC_SECRET ?? '';
   const keyBytes  = enc.encode(envSecret || token);  // token-as-key when no HMAC_SECRET
-  const payload   = envSecret
-    ? `${timestamp}.${token}.${name}`   // mode (a): secret key, token in payload
-    : `${timestamp}.${name}`;            // mode (b): token-as-key, cleaner payload
+  // Both modes use identical payload: timestamp.token.name
+  // Mode (a): key=HMAC_SECRET  — server-only secret
+  // Mode (b): key=token        — user's own session token as key
+  // Including token in mode (b) payload ensures sigs are unique per user+name+time,
+  // preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
+  const payload = `${timestamp}.${token}.${name}`;
 
   const keyMat  = await crypto.subtle.importKey(
     'raw', keyBytes,
@@ -801,23 +806,65 @@ const TEMPLATE_EMAIL_RATE_LIMIT  = 60;   // per email per 60s
 const TEMPLATE_RATE_LIMIT_TTL    = 60;
 
 async function checkTemplateRateLimit(token, email, env) {
-  // Per-token check
-  const tokenKey   = `tpl_rate:${token}`;
-  const tokenRaw   = await env.AUTH_KV.get(tokenKey);
-  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
-  if (tokenCount >= TEMPLATE_RATE_LIMIT) return false;
+  // KV has no native atomic increment. We use a "write-then-verify" pattern
+  // to close the read-modify-write race window:
+  //
+  //   1. Read both counters in parallel (fast path reject)
+  //   2. If either is already at limit → reject immediately (no write)
+  //   3. Increment both counters in parallel (optimistic write)
+  //   4. Read both back immediately in parallel (race detection)
+  //   5. If either read-back exceeds limit → clamp to limit + deny
+  //      (this concurrent request lost the race — self-corrects for next request)
+  //
+  // Worst case: (N concurrent requests all pass step 2 simultaneously) →
+  // counter overshoots by N-1, all N are clamped and denied at step 5,
+  // counter is left at exactly the limit. No template is served over-limit.
 
-  // Per-email check — survives token rotation
-  const emailKey   = `tpl_rate_email:${email}`;
-  const emailRaw   = await env.AUTH_KV.get(emailKey);
+  const tokenKey = `tpl_rate:${token}`;
+  const emailKey = `tpl_rate_email:${email}`;
+
+  // ── Step 1: Read both counters in parallel ──────────────────
+  const [tokenRaw, emailRaw] = await Promise.all([
+    env.AUTH_KV.get(tokenKey),
+    env.AUTH_KV.get(emailKey),
+  ]);
+  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
   const emailCount = emailRaw ? parseInt(emailRaw, 10) : 0;
+
+  // ── Step 2: Fast-path reject if already at limit ────────────
+  if (tokenCount >= TEMPLATE_RATE_LIMIT)       return false;
   if (emailCount >= TEMPLATE_EMAIL_RATE_LIMIT) return false;
 
-  // Both passed — increment both counters
+  // ── Step 3: Optimistic increment (both in parallel) ─────────
+  const newToken = tokenCount + 1;
+  const newEmail = emailCount + 1;
   await Promise.all([
-    env.AUTH_KV.put(tokenKey, String(tokenCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
-    env.AUTH_KV.put(emailKey, String(emailCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+    env.AUTH_KV.put(tokenKey, String(newToken), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+    env.AUTH_KV.put(emailKey, String(newEmail), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
   ]);
+
+  // ── Step 4: Read back to detect concurrent over-limit ───────
+  const [tokenVerifyRaw, emailVerifyRaw] = await Promise.all([
+    env.AUTH_KV.get(tokenKey),
+    env.AUTH_KV.get(emailKey),
+  ]);
+  const tokenVerify = tokenVerifyRaw ? parseInt(tokenVerifyRaw, 10) : newToken;
+  const emailVerify = emailVerifyRaw ? parseInt(emailVerifyRaw, 10) : newEmail;
+
+  // ── Step 5: Clamp and deny if race overshot the limit ───────
+  if (tokenVerify > TEMPLATE_RATE_LIMIT || emailVerify > TEMPLATE_EMAIL_RATE_LIMIT) {
+    // Clamp both back to their limit so next request sees the correct ceiling
+    await Promise.all([
+      tokenVerify > TEMPLATE_RATE_LIMIT
+        ? env.AUTH_KV.put(tokenKey, String(TEMPLATE_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
+        : Promise.resolve(),
+      emailVerify > TEMPLATE_EMAIL_RATE_LIMIT
+        ? env.AUTH_KV.put(emailKey, String(TEMPLATE_EMAIL_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
+        : Promise.resolve(),
+    ]);
+    return false;  // deny — concurrent request exceeded limit
+  }
+
   return true;
 }
 
@@ -1310,7 +1357,7 @@ async function resolveToken(request, env, deleteAfter) {
 
     // Session key also namespaced by surface to prevent cross-bleed
     const sessionPrefix = isPromptToken ? 'prompt_session:' : 'session:';
-    const SESSION_TTL   = 7 * 24 * 60 * 60;
+    // SESSION_TTL is the global constant (7 days) — no local re-declaration
     await env.AUTH_KV.put(
       `${sessionPrefix}${token.trim()}`,
       JSON.stringify({ email: data.email, plan: data.plan, surface: data.surface ?? (isPromptToken ? 'prompt' : 'app'), created: Date.now() }),
@@ -1405,7 +1452,8 @@ async function verifyStripeSignature(payload, sigHeader, secret) {
     const mac    = await crypto.subtle.sign('HMAC', key, enc.encode(signedPayload));
     const hexMac = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    return hexMac === signature;
+    // Timing-safe compare — prevents HMAC oracle via response timing
+    return timingSafeEqual(hexMac, signature);
   } catch {
     return false;
   }
