@@ -2,7 +2,7 @@
  * ============================================================
  *  Poly-Glot AI — Auth + Usage Worker
  *  Cloudflare Worker — production-ready
- *  v2 — prompt surface isolation (prompt_token:, prompt_plan:, X-PG-Surface)
+ *  v3 — all 5 security fixes: session TTL, KV templates, per-email rate limits, HMAC signing
  * ============================================================
  *
  *  Endpoints
@@ -30,7 +30,7 @@
  *  Fix 1: SESSION_TTL 7 days (was 30) — limits token leakage window
  *  Fix 2: PRO_TEMPLATE_NAMES in KV (config:pro_template_names) — not in source
  *  Fix 3: Per-email rate limit on template fetches — survives token rotation
- *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — client must sign
+ *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — always enforced
  *  Fix 5: Dual-layer rate limiting (token + email) — blocks rotation abuse
  *
  *  KV key schema
@@ -715,14 +715,17 @@ async function isProTemplate(name, env) {
 // Client must send header:
 //   X-PG-Sig: t={unixSeconds}.{hmac}
 //
-// HMAC is SHA-256 over:
-//   "{timestamp}.{token}.{name}"
-// keyed with env secret HMAC_SECRET.
+// Two modes (auto-selected by presence of HMAC_SECRET):
+//   Mode A — HMAC_SECRET set:
+//     key = HMAC_SECRET, payload = "{timestamp}.{token}.{name}"
+//   Mode B — no HMAC_SECRET (default/recommended):
+//     key = session token, payload = "{timestamp}.{name}"
+//     → Zero embedded secrets. Only the authenticated token holder can sign.
 //
 // Rules:
 //   - Timestamp must be within ±60 seconds of server time (replay protection)
-//   - If HMAC_SECRET is not configured, verification is skipped (dev/staging)
-//   - Wrong/missing sig → 401 before any KV reads occur
+//   - Missing/invalid/expired sig → 401 before any KV reads occur
+//   - Always enforced in production (no bypass mode)
 //
 // KV key schema (no new keys needed — pure header check)
 // ─────────────────────────────────────────────────────────────
@@ -734,9 +737,12 @@ const HMAC_SIG_WINDOW_SECS = 60;
  * Returns false if signature is wrong, expired, or malformed.
  */
 async function verifyPromptSig(request, token, name, env) {
-  const secret = env.HMAC_SECRET ?? '';
-  if (!secret) return true; // dev/staging: skip if secret not configured
-
+  // Fix 4: HMAC request signing — always active.
+  // Two modes:
+  //   a) HMAC_SECRET configured → use env secret as key, payload = `${ts}.${token}.${name}`
+  //      (legacy: set via `wrangler secret put HMAC_SECRET`)
+  //   b) No HMAC_SECRET → use SESSION TOKEN as key, payload = `${ts}.${name}`
+  //      (default: zero embedded secrets — only the authenticated token holder can sign)
   const sigHeader = (request.headers.get('X-PG-Sig') ?? '').trim();
   if (!sigHeader) return false;
 
@@ -747,21 +753,26 @@ async function verifyPromptSig(request, token, name, env) {
   const timestamp = parseInt(match[1], 10);
   const clientSig = match[2].toLowerCase();
 
-  // Replay window check
+  // Replay window check (±60s)
   const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
   if (age > HMAC_SIG_WINDOW_SECS) return false;
 
   // Recompute expected HMAC
   const enc     = new TextEncoder();
+  const envSecret = env.HMAC_SECRET ?? '';
+  const keyBytes  = enc.encode(envSecret || token);  // token-as-key when no HMAC_SECRET
+  const payload   = envSecret
+    ? `${timestamp}.${token}.${name}`   // mode (a): secret key, token in payload
+    : `${timestamp}.${name}`;            // mode (b): token-as-key, cleaner payload
+
   const keyMat  = await crypto.subtle.importKey(
-    'raw', enc.encode(secret),
+    'raw', keyBytes,
     { name: 'HMAC', hash: 'SHA-256' },
     false, ['sign']
   );
-  const payload = `${timestamp}.${token}.${name}`;
-  const mac     = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
-  const hexMac  = Array.from(new Uint8Array(mac))
-                       .map(b => b.toString(16).padStart(2, '0')).join('');
+  const mac    = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
+  const hexMac = Array.from(new Uint8Array(mac))
+                      .map(b => b.toString(16).padStart(2, '0')).join('');
 
   // Constant-time string compare (prevent timing attacks)
   return timingSafeEqual(hexMac, clientSig);
@@ -1006,6 +1017,13 @@ async function handleGetPick(request, env) {
 
   const token = (body?.token ?? '').trim();
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  // ── HMAC request signature (Fix 4) ─────────────────────────
+  // get-pick has no template name — client signs with name='' (empty string)
+  const sigOk = await verifyPromptSig(request, token, '', env);
+  if (!sigOk) {
+    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
+  }
 
   let email = null;
   let plan  = 'prompt_free';
