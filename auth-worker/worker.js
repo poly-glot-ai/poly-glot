@@ -23,17 +23,29 @@
  *  OPTIONS *                         — CORS preflight → 204
  *
  *  KV bindings   : AUTH_KV
- *  Env secrets   : RESEND_API_KEY, BASE_URL, ADMIN_SECRET
+ *  Env secrets   : RESEND_API_KEY, BASE_URL, ADMIN_SECRET, HMAC_SECRET
+ *
+ *  Security model (all 5 fixes applied)
+ *  -------------------------------------
+ *  Fix 1: SESSION_TTL 7 days (was 30) — limits token leakage window
+ *  Fix 2: PRO_TEMPLATE_NAMES in KV (config:pro_template_names) — not in source
+ *  Fix 3: Per-email rate limit on template fetches — survives token rotation
+ *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — client must sign
+ *  Fix 5: Dual-layer rate limiting (token + email) — blocks rotation abuse
  *
  *  KV key schema
  *  -------------
  *  ratelimit:{email}               → "1"                (TTL = 60 s)
  *  token:{token}                   → JSON payload       (TTL = 900 s)
- *  session:{token}                 → JSON payload       (TTL = 30 days)
+ *  session:{token}                 → JSON payload       (TTL = 7 days)
  *  plan:{email}                    → plan string        (no TTL — permanent)
  *  usage:{email}:{YYYY-MM}         → integer string     (TTL = 35 days)
  *  stripe:{customerId}             → email              (no TTL — permanent)
  *  prompt_picked:{email}           → template name      (no TTL — permanent)
+ *  tpl:{name}                      → template string    (no TTL — managed via wrangler)
+ *  config:pro_template_names       → JSON array         (no TTL — managed via wrangler)
+ *  tpl_rate:{token}                → integer string     (TTL = 60 s)
+ *  tpl_rate_email:{email}          → integer string     (TTL = 60 s)
  * ============================================================
  */
 
@@ -43,7 +55,7 @@
 
 const RATE_LIMIT_TTL  = 60;          // 1 request per email per 60 seconds
 const TOKEN_TTL       = 900;         // 15 minutes (magic link)
-const SESSION_TTL     = 30 * 24 * 60 * 60; // 30 days
+const SESSION_TTL     = 7 * 24 * 60 * 60;  // 7 days (reduced from 30 — limits token leakage window)
 
 // ── Usage / quota constants ───────────────────────────────────────────────
 const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
@@ -661,16 +673,30 @@ async function templateExists(name, env) {
 }
 
 // Plan membership — controls which templates require Pro
-const PRO_TEMPLATE_NAMES = new Set([
-  '⚖️ Legal Contract Reviewer',
-  '💰 Financial Analysis Report',
-  '🏥 Medical Case Summary',
-  '🔐 Security Threat Model',
-  '🎬 Video Script Writer',
-  '🏗️ System Design Document',
-  '🎯 Ad Copy Generator',
-  '🧬 Research Paper Abstract',
-]);
+// PRO_TEMPLATE_NAMES is stored in KV under key "config:pro_template_names"
+// as a JSON array — never hardcoded in source so names aren't enumerable
+// from the public repo. Use isProTemplate(name, env) for all checks.
+// To update: npx wrangler kv key put --namespace-id 4686b5dd158944e5856f7a402c6c6d2f \
+//   "config:pro_template_names" '["⚖️ Legal Contract Reviewer",...]'
+
+// In-memory cache per Worker isolate — avoids KV read on every request
+let _proNamesCache = null;
+let _proNamesCacheTs = 0;
+const PRO_NAMES_CACHE_TTL = 60 * 1000; // 60 seconds
+
+async function isProTemplate(name, env) {
+  const now = Date.now();
+  if (!_proNamesCache || (now - _proNamesCacheTs) > PRO_NAMES_CACHE_TTL) {
+    try {
+      const raw = await env.AUTH_KV.get('config:pro_template_names');
+      _proNamesCache = new Set(raw ? JSON.parse(raw) : []);
+      _proNamesCacheTs = now;
+    } catch {
+      _proNamesCache = new Set();
+    }
+  }
+  return _proNamesCache.has(name);
+}
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/prompt/get-template
@@ -684,22 +710,103 @@ const PRO_TEMPLATE_NAMES = new Set([
 // Returns: { tpl: string } or 401/403
 // ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
-// Rate limit helper for template fetches — per-token, per-minute.
-// Prevents enumeration of all free templates with a valid token.
-// Limit: 20 fetches per token per 60 seconds.
+// Fix 4: HMAC request signing for /api/prompt/* endpoints
+//
+// Client must send header:
+//   X-PG-Sig: t={unixSeconds}.{hmac}
+//
+// HMAC is SHA-256 over:
+//   "{timestamp}.{token}.{name}"
+// keyed with env secret HMAC_SECRET.
+//
+// Rules:
+//   - Timestamp must be within ±60 seconds of server time (replay protection)
+//   - If HMAC_SECRET is not configured, verification is skipped (dev/staging)
+//   - Wrong/missing sig → 401 before any KV reads occur
+//
+// KV key schema (no new keys needed — pure header check)
 // ─────────────────────────────────────────────────────────────
-const TEMPLATE_RATE_LIMIT     = 20;
-const TEMPLATE_RATE_LIMIT_TTL = 60;
+const HMAC_SIG_WINDOW_SECS = 60;
 
-async function checkTemplateRateLimit(token, env) {
-  const key = `tpl_rate:${token}`;
-  const raw = await env.AUTH_KV.get(key);
-  const count = raw ? parseInt(raw, 10) : 0;
-  if (count >= TEMPLATE_RATE_LIMIT) return false;
-  // Increment — preserve TTL by using expirationTtl only on first write
-  await env.AUTH_KV.put(key, String(count + 1), {
-    expirationTtl: TEMPLATE_RATE_LIMIT_TTL,
-  });
+/**
+ * Verify X-PG-Sig header.
+ * Returns true if valid (or if HMAC_SECRET not set — dev mode).
+ * Returns false if signature is wrong, expired, or malformed.
+ */
+async function verifyPromptSig(request, token, name, env) {
+  const secret = env.HMAC_SECRET ?? '';
+  if (!secret) return true; // dev/staging: skip if secret not configured
+
+  const sigHeader = (request.headers.get('X-PG-Sig') ?? '').trim();
+  if (!sigHeader) return false;
+
+  // Expected format: "t={timestamp}.{hmac}"
+  const match = sigHeader.match(/^t=(\d+)\.([0-9a-f]{64})$/i);
+  if (!match) return false;
+
+  const timestamp = parseInt(match[1], 10);
+  const clientSig = match[2].toLowerCase();
+
+  // Replay window check
+  const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
+  if (age > HMAC_SIG_WINDOW_SECS) return false;
+
+  // Recompute expected HMAC
+  const enc     = new TextEncoder();
+  const keyMat  = await crypto.subtle.importKey(
+    'raw', enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false, ['sign']
+  );
+  const payload = `${timestamp}.${token}.${name}`;
+  const mac     = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
+  const hexMac  = Array.from(new Uint8Array(mac))
+                       .map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // Constant-time string compare (prevent timing attacks)
+  return timingSafeEqual(hexMac, clientSig);
+}
+
+/** Constant-time string comparison — same length required. */
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rate limit helpers for template fetches.
+// Two layers:
+//   1. Per-token  — 20 fetches / 60s  (blocks single-session abuse)
+//   2. Per-email  — 60 fetches / 60s  (blocks token rotation abuse)
+// Both must pass. Limits only consume quota on legitimate requests
+// (after auth/plan/pick checks pass).
+// ─────────────────────────────────────────────────────────────
+const TEMPLATE_RATE_LIMIT        = 20;   // per token per 60s
+const TEMPLATE_EMAIL_RATE_LIMIT  = 60;   // per email per 60s
+const TEMPLATE_RATE_LIMIT_TTL    = 60;
+
+async function checkTemplateRateLimit(token, email, env) {
+  // Per-token check
+  const tokenKey   = `tpl_rate:${token}`;
+  const tokenRaw   = await env.AUTH_KV.get(tokenKey);
+  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
+  if (tokenCount >= TEMPLATE_RATE_LIMIT) return false;
+
+  // Per-email check — survives token rotation
+  const emailKey   = `tpl_rate_email:${email}`;
+  const emailRaw   = await env.AUTH_KV.get(emailKey);
+  const emailCount = emailRaw ? parseInt(emailRaw, 10) : 0;
+  if (emailCount >= TEMPLATE_EMAIL_RATE_LIMIT) return false;
+
+  // Both passed — increment both counters
+  await Promise.all([
+    env.AUTH_KV.put(tokenKey, String(tokenCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+    env.AUTH_KV.put(emailKey, String(emailCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+  ]);
   return true;
 }
 
@@ -714,6 +821,14 @@ async function handleGetTemplate(request, env) {
 
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
   if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
+
+  // ── 0. HMAC request signature (Fix 4) ──────────────────────
+  // Verified before any KV reads — invalid/expired/missing sig
+  // is rejected immediately with zero information leakage.
+  const sigOk = await verifyPromptSig(request, token, name, env);
+  if (!sigOk) {
+    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
+  }
 
   // ── 1. Resolve session ──────────────────────────────────────
   // Check prompt-namespaced keys first, then legacy session/token
@@ -739,7 +854,7 @@ async function handleGetTemplate(request, env) {
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   // ── 2. Pro gate ─────────────────────────────────────────────
-  const isPro = PRO_TEMPLATE_NAMES.has(name);
+  const isPro = await isProTemplate(name, env);
   const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
   if (isPro && !userHasPro) {
     return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
@@ -789,7 +904,7 @@ async function handleGetTemplate(request, env) {
   // prevents high-volume programmatic extraction of served content.
   // Free users effectively never hit this (locked to 1 template anyway).
   // Pro users: 20 fetches per token per 60s — generous for normal use.
-  const allowed = await checkTemplateRateLimit(token, env);
+  const allowed = await checkTemplateRateLimit(token, email, env);
   if (!allowed) {
     return jsonResponse({ error: 'Too many requests. Please slow down.' }, 429);
   }
@@ -823,6 +938,12 @@ async function handleSyncPick(request, env) {
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
   if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
 
+  // ── HMAC request signature (Fix 4) ─────────────────────────
+  const sigOk = await verifyPromptSig(request, token, name, env);
+  if (!sigOk) {
+    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
+  }
+
   // Resolve session
   let email = null;
   let plan  = 'prompt_free';
@@ -847,7 +968,7 @@ async function handleSyncPick(request, env) {
   if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
 
   // Reject Pro template names — free users cannot claim a Pro template as their pick
-  if (PRO_TEMPLATE_NAMES.has(name)) {
+  if (await isProTemplate(name, env)) {
     return jsonResponse({ error: 'Pro plan required to use this template', upgrade: true }, 403);
   }
 
@@ -915,7 +1036,7 @@ async function handleGetPick(request, env) {
   const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
   if (!existing && body?.legacyPick) {
     const legacy = String(body.legacyPick).trim();
-    const isValidFreePick = await templateExists(legacy, env) && !PRO_TEMPLATE_NAMES.has(legacy);
+    const isValidFreePick = await templateExists(legacy, env) && !(await isProTemplate(legacy, env));
     if (isValidFreePick) {
       await env.AUTH_KV.put(`prompt_picked:${email}`, legacy, {
         metadata: { source: 'legacy_migration', email, setAt: Date.now() },
@@ -1171,7 +1292,7 @@ async function resolveToken(request, env, deleteAfter) {
 
     // Session key also namespaced by surface to prevent cross-bleed
     const sessionPrefix = isPromptToken ? 'prompt_session:' : 'session:';
-    const SESSION_TTL   = 30 * 24 * 60 * 60;
+    const SESSION_TTL   = 7 * 24 * 60 * 60;
     await env.AUTH_KV.put(
       `${sessionPrefix}${token.trim()}`,
       JSON.stringify({ email: data.email, plan: data.plan, surface: data.surface ?? (isPromptToken ? 'prompt' : 'app'), created: Date.now() }),
