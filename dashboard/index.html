@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260408-1323 -->
+<!-- build: 20260408-1410 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -361,13 +361,43 @@ const ENDPOINTS = [
   { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',
     probe: JSON.stringify({ installationId: 'dashboard-probe', owner: 'probe', repo: 'probe', secret: ADMIN_SECRET }),
     probeOk: r => r.ok || r.status === 429,                                                                          label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
+  // ── Auth Worker — all POST routes (probe with bad/empty body → 400 or 401 = endpoint is live) ──
+  { method:'POST', key:'epLogin',       url:'https://poly-glot.ai/api/auth/login',
+    probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Auth /login',          desc:'POST /api/auth/login · email → magic link' },
+  { method:'POST', key:'epVerify',      url:'https://poly-glot.ai/api/auth/verify',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Auth /verify',         desc:'POST /api/auth/verify · token → session' },
+  { method:'POST', key:'epRefresh',     url:'https://poly-glot.ai/api/auth/refresh',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Auth /refresh',        desc:'POST /api/auth/refresh · extend session' },
+  { method:'GET',  key:'epCheckPlan',   url:'https://poly-glot.ai/api/auth/check-plan',
+    probeOk: r => r.status === 401 || r.status === 429,                                          label:'Auth /check-plan',     desc:'GET /api/auth/check-plan · verify token + return plan' },
+  { method:'POST', key:'epSetPlan',     url:'https://poly-glot.ai/api/auth/set-plan',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Auth /set-plan',       desc:'POST /api/auth/set-plan · admin update user plan' },
+  { method:'POST', key:'epFreeSignup',  url:'https://poly-glot.ai/api/auth/free-signup',
+    probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Auth /free-signup',    desc:'POST /api/auth/free-signup · VS Code free tier signup' },
+  { method:'GET',  key:'epCwsProxy',    url:'https://poly-glot.ai/api/auth/cws-proxy',
+    probeOk: r => r.status === 200 || r.status === 502 || r.status === 429,                      label:'Auth /cws-proxy',      desc:'GET /api/auth/cws-proxy · Chrome Web Store install count' },
+  // ── Usage routes ──────────────────────────────────────────────────────────
+  { method:'POST', key:'epUsageGet',    url:'https://poly-glot.ai/api/usage/get',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Usage /get',           desc:'POST /api/usage/get · fetch usage for session token' },
+  { method:'POST', key:'epUsageInc',    url:'https://poly-glot.ai/api/usage/increment',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Usage /increment',     desc:'POST /api/usage/increment · bump usage counter' },
+  // ── Prompt API routes ─────────────────────────────────────────────────────
+  { method:'POST', key:'epGetTemplate', url:'https://poly-glot.ai/api/prompt/get-template',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 400 || r.status === 429, label:'Prompt /get-template', desc:'POST /api/prompt/get-template · fetch template from KV' },
+  { method:'POST', key:'epSyncPick',    url:'https://poly-glot.ai/api/prompt/sync-pick',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Prompt /sync-pick',    desc:'POST /api/prompt/sync-pick · save favourite template pick' },
+  { method:'POST', key:'epGetPick',     url:'https://poly-glot.ai/api/prompt/get-pick',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Prompt /get-pick',     desc:'POST /api/prompt/get-pick · retrieve saved template pick' },
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  { method:'POST', key:'epDeleteUser',  url:'https://poly-glot.ai/api/auth/admin/delete-user',
+    probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Admin /delete-user',   desc:'POST /api/auth/admin/delete-user · purge all KV keys for email' },
   // VS Code Marketplace is proxied through auth worker — browser CORS blocked by Microsoft
-  { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',                                  label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
+  { method:'POST', key:'vsc',       url:'https://poly-glot.ai/api/auth/vsc-proxy',               label:'VS Code Marketplace',  desc:'Total acquisition count · rating (via proxy)' },
 
   // ── Prompt Studio ──────────────────────────────────────────────────────────
-  { method:'GET',  key:'promptSite',    url:'https://poly-glot.ai/prompt/',                                          label:'Prompt Studio',        desc:'Landing page · poly-glot.ai/prompt/' },
-  { method:'GET',  key:'promptPrivacy', url:'https://poly-glot.ai/prompt/privacy/',                                  label:'Prompt Privacy Policy', desc:'Privacy page · /prompt/privacy/' },
-  { method:'GET',  key:'npmMcpPrompt',  url:'https://registry.npmjs.org/poly-glot-mcp/latest',                       label:'npm poly-glot-mcp',    desc:'MCP package used by Prompt Studio' },
+  { method:'GET',  key:'promptSite',    url:'https://poly-glot.ai/prompt/',                       label:'Prompt Studio',        desc:'Landing page · poly-glot.ai/prompt/' },
+  { method:'GET',  key:'promptPrivacy', url:'https://poly-glot.ai/prompt/privacy/',               label:'Prompt Privacy Policy', desc:'Privacy page · /prompt/privacy/' },
+  { method:'GET',  key:'npmMcpPrompt',  url:'https://registry.npmjs.org/poly-glot-mcp/latest',    label:'npm poly-glot-mcp',    desc:'MCP package used by Prompt Studio' },
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -961,9 +991,12 @@ async function renderPromptStudio(epStatus, m) {
 
   // ── Endpoint table ────────────────────────────────────────────────────────
   const PROMPT_EPS = [
-    { method:'GET',  key:'promptSite',    path:'/prompt/',         desc:'Landing page' },
-    { method:'GET',  key:'promptPrivacy', path:'/prompt/privacy/', desc:'Privacy policy' },
-    { method:'GET',  key:'authWorker',    path:'/api/auth/ping',   desc:'Auth Worker (shared with main site)' },
+    { method:'GET',  key:'promptSite',    path:'/prompt/',                       desc:'Landing page' },
+    { method:'GET',  key:'promptPrivacy', path:'/prompt/privacy/',               desc:'Privacy policy' },
+    { method:'GET',  key:'authWorker',    path:'/api/auth/ping',                 desc:'Auth Worker (shared with main site)' },
+    { method:'POST', key:'epGetTemplate', path:'/api/prompt/get-template',       desc:'Fetch template from KV · token + name required' },
+    { method:'POST', key:'epSyncPick',    path:'/api/prompt/sync-pick',          desc:'Save favourite template pick · token required' },
+    { method:'POST', key:'epGetPick',     path:'/api/prompt/get-pick',           desc:'Retrieve saved template pick · token required' },
   ];
   epTbody.innerHTML = PROMPT_EPS.map(ep => {
     const d  = epStatus[ep.key] || {};
