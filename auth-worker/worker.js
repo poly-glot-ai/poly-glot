@@ -924,16 +924,16 @@ async function handleGetTemplate(request, env) {
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        // Always read live plan — catches legacy users and post-payment upgrades.
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        // Two completely separate auth flows, two separate KV namespaces.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -943,7 +943,7 @@ async function handleGetTemplate(request, env) {
 
   // ── 2. Pro gate ─────────────────────────────────────────────
   const isPro = await isProTemplate(name, env);
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (isPro && !userHasPro) {
     return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
   }
@@ -1036,15 +1036,15 @@ async function handleSyncPick(request, env) {
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -1052,7 +1052,7 @@ async function handleSyncPick(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
 
   // Reject Pro template names — free users cannot claim a Pro template as their pick
@@ -1105,15 +1105,15 @@ async function handleGetPick(request, env) {
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -1121,7 +1121,7 @@ async function handleGetPick(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (userHasPro) return jsonResponse({ pick: null, pro: true, plan });
 
   // Legacy migration: if no KV pick exists but a localStorage pick was sent,
@@ -1197,23 +1197,24 @@ async function resolveSession(request, env) {
   const surface = (request.headers.get('X-PG-Surface') || '').toLowerCase();
   const isPromptSurface = surface === 'prompt';
 
-  // Check surface-specific session keys first, then fall back to legacy
+  // Strict surface isolation — no cross-namespace fallback.
+  // Prompt Studio tokens ONLY resolve against prompt_session:/prompt_token:.
+  // Main-site tokens ONLY resolve against session:/token:.
+  // A main-site session can never be used on /prompt/ and vice-versa.
   const prefixes = isPromptSurface
-    ? ['prompt_session:', 'prompt_token:', 'session:', 'token:']
-    : ['session:', 'token:'];
+    ? ['prompt_session:', 'prompt_token:']   // NO fallback to session:/token:
+    : ['session:', 'token:'];                 // NO fallback to prompt_session:
 
   for (const prefix of prefixes) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
-        // Use surface-specific plan key — prevents cross-bleed
-        const planKvKey = (isPromptSurface || prefix.startsWith('prompt_'))
-          ? `prompt_plan:${data.email}`
-          : `plan:${data.email}`;
-        const planRaw = await env.AUTH_KV.get(planKvKey);
-        const defaultPlan = (isPromptSurface || prefix.startsWith('prompt_')) ? 'prompt_free' : 'free';
-        return { email: data.email, plan: planRaw || data.plan || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
+        // Each surface reads its own plan namespace exclusively
+        const planKvKey   = isPromptSurface ? `prompt_plan:${data.email}` : `plan:${data.email}`;
+        const defaultPlan = isPromptSurface ? 'prompt_free' : 'free';
+        const planRaw     = await env.AUTH_KV.get(planKvKey);
+        return { email: data.email, plan: planRaw || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
       } catch { return null; }
     }
   }
