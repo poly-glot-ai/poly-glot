@@ -1,3 +1,12 @@
+## [2.1.38] — 2026-04-08
+- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
+- [feat] chat widget — Prompt Studio-specific knowledge base + rules
+
+---
+
 ## [2.1.36] — 2026-04-06
 - ✨ feat: CLI 1-click login — local callback server, zero token copy-paste (v2.1.35) [deploy]
 
