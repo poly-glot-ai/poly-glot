@@ -60,9 +60,12 @@ const DEVICE_TTL      = 365 * 24 * 60 * 60; // 1 year — device→email binding
 const APIKEY_TTL      = 365 * 24 * 60 * 60; // 1 year — apiKeyHash→primaryEmail binding
 
 // ── Usage / quota constants ───────────────────────────────────────────────
-const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
-const USAGE_TTL          = 35 * 24 * 60 * 60; // 35 days — outlasts the month
-const PRO_PLANS          = ['pro', 'team', 'enterprise'];
+const FREE_MONTHLY_LIMIT    = 10;    // files per calendar month (UTC)
+const FREE_LIFETIME_LIMIT   = 25;    // files total, ever (free tier hard cap)
+const USAGE_TTL             = 35 * 24 * 60 * 60; // 35 days — outlasts the month
+const IP_SIGNUP_TTL         = 35 * 24 * 60 * 60; // 35 days — IP signup counter
+const IP_SIGNUP_LIMIT       = 3;     // max free accounts per IP per month
+const PRO_PLANS             = ['pro', 'team', 'enterprise'];
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
@@ -455,6 +458,27 @@ async function handleLogin(request, env) {
     }
     // If device is unbound (isNewEmail), we bind it later in resolveToken after magic link click
     // Store deviceId on body for use downstream in resolveToken via the token payload
+  }
+
+  // ── IP signup rate limiting ─────────────────────────────────
+  // Max IP_SIGNUP_LIMIT new free accounts per IP per month.
+  // Only applies to first-time signups (no existing plan key).
+  // Returning users (already have plan:{email}) skip this check.
+  const existingPlanForIpCheck = await env.AUTH_KV.get(`plan:${email}`) ?? await env.AUTH_KV.get(`prompt_plan:${email}`);
+  const isNewUser = !existingPlanForIpCheck;
+  if (isNewUser) {
+    const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || 'unknown';
+    if (clientIp !== 'unknown') {
+      const ipKey   = `ip-signup:${clientIp}:${currentMonthKey()}`;
+      const ipCount = parseInt(await env.AUTH_KV.get(ipKey) ?? '0', 10);
+      if (ipCount >= IP_SIGNUP_LIMIT) {
+        return jsonResponse(
+          { error: 'Too many accounts created from this network this month. Please use an existing account or try again next month.' },
+          429
+        );
+      }
+      await env.AUTH_KV.put(ipKey, String(ipCount + 1), { expirationTtl: IP_SIGNUP_TTL });
+    }
   }
 
   // ── Rate limiting ───────────────────────────────────────────
@@ -1297,6 +1321,44 @@ async function incrementUsageCount(email, n, env) {
   return next;
 }
 
+/** Get lifetime usage for an email (never resets). Returns integer. */
+async function getLifetimeUsage(email, env) {
+  const raw = await env.AUTH_KV.get(`usage-lifetime:${email}`);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+/** Increment lifetime usage for an email by n. Returns new lifetime count. */
+async function incrementLifetimeUsage(email, n, env) {
+  const current = await getLifetimeUsage(email, env);
+  const next    = current + n;
+  // No TTL — lifetime counter never expires
+  await env.AUTH_KV.put(`usage-lifetime:${email}`, String(next));
+  return next;
+}
+
+/**
+ * Full quota check for free users: monthly AND lifetime.
+ * Returns { blocked: true, reason, used, limit } or { blocked: false }.
+ * Pro users always pass (limit === null).
+ */
+async function checkAllQuotas(email, plan, count, env) {
+  if (PRO_PLANS.includes(plan)) return { blocked: false };
+
+  // ── Lifetime cap ─────────────────────────────────────────────
+  const lifetimeUsed = await getLifetimeUsage(email, env);
+  if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
+    return { blocked: true, reason: 'lifetime_limit', used: lifetimeUsed, limit: FREE_LIFETIME_LIMIT };
+  }
+
+  // ── Monthly cap ──────────────────────────────────────────────
+  const monthlyUsed = await getUsageCount(email, env);
+  if (monthlyUsed >= FREE_MONTHLY_LIMIT) {
+    return { blocked: true, reason: 'monthly_limit', used: monthlyUsed, limit: FREE_MONTHLY_LIMIT };
+  }
+
+  return { blocked: false, monthlyUsed, lifetimeUsed };
+}
+
 /** Returns monthly limit for a given plan */
 function planLimit(plan) {
   return PRO_PLANS.includes(plan) ? null : FREE_MONTHLY_LIMIT; // null = unlimited
@@ -1312,16 +1374,37 @@ async function handleUsageGet(request, env) {
   if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const { email, plan } = session;
+  const isPro           = PRO_PLANS.includes(plan);
   const used            = await getUsageCount(email, env);
   const limit           = planLimit(plan);
   const remaining       = limit === null ? null : Math.max(0, limit - used);
+  const lifetimeUsed    = isPro ? null : await getLifetimeUsage(email, env);
+  const lifetimeLimit   = isPro ? null : FREE_LIFETIME_LIMIT;
+  const lifetimeRemaining = isPro ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0));
+  const lifetimeLimitHit  = !isPro && (lifetimeUsed ?? 0) >= FREE_LIFETIME_LIMIT;
+
+  // If lifetime limit is hit, signal it as 429 so the client gates immediately
+  if (lifetimeLimitHit) {
+    return jsonResponse({
+      email, plan,
+      used, limit, remaining: 0,
+      lifetimeUsed, lifetimeLimit, lifetimeRemaining: 0,
+      lifetimeLimitHit: true,
+      month: currentMonthKey(),
+      reset: null,  // monthly reset doesn't help — lifetime cap
+    }, 429);
+  }
 
   return jsonResponse({
     email,
     plan,
     used,
-    limit,        // null = unlimited (pro/team/enterprise)
-    remaining,    // null = unlimited
+    limit,
+    remaining,
+    lifetimeUsed,
+    lifetimeLimit,
+    lifetimeRemaining,
+    lifetimeLimitHit: false,
     month: currentMonthKey(),
     reset: (() => {
       const d = new Date();
@@ -1349,8 +1432,24 @@ async function handleUsageIncrement(request, env) {
   const { email, plan } = session;
   const limit           = planLimit(plan);
 
-  // ── Pre-check: would this increment exceed the limit? ────────
+  // ── Pre-check: monthly AND lifetime quotas ───────────────────
   if (limit !== null) {
+    // Lifetime cap
+    const lifetimeUsed = await getLifetimeUsage(email, env);
+    if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
+      return jsonResponse({
+        error:            'Lifetime free limit reached',
+        used:             await getUsageCount(email, env),
+        limit,
+        remaining:        0,
+        lifetimeUsed,
+        lifetimeLimit:    FREE_LIFETIME_LIMIT,
+        lifetimeLimitHit: true,
+        allowed:          false,
+        month:            currentMonthKey(),
+      }, 429);
+    }
+    // Monthly cap
     const current = await getUsageCount(email, env);
     if (current >= limit) {
       return jsonResponse({
@@ -1364,18 +1463,22 @@ async function handleUsageIncrement(request, env) {
     }
   }
 
-  // ── Increment ─────────────────────────────────────────────────
-  const used      = await incrementUsageCount(email, files, env);
-  const remaining = limit === null ? null : Math.max(0, limit - used);
+  // ── Increment both monthly and lifetime ──────────────────────
+  const used         = await incrementUsageCount(email, files, env);
+  const lifetimeUsed = PRO_PLANS.includes(plan) ? null : await incrementLifetimeUsage(email, files, env);
+  const remaining    = limit === null ? null : Math.max(0, limit - used);
 
-  console.log(`[usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
+  console.log(`[usage] ${email} → monthly:${used}/${limit ?? '∞'} lifetime:${lifetimeUsed ?? '∞'}/${FREE_LIFETIME_LIMIT} (${currentMonthKey()})`);
 
   return jsonResponse({
     used,
     limit,
     remaining,
-    allowed: true,
-    month:   currentMonthKey(),
+    lifetimeUsed,
+    lifetimeLimit:    PRO_PLANS.includes(plan) ? null : FREE_LIFETIME_LIMIT,
+    lifetimeRemaining: PRO_PLANS.includes(plan) ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0)),
+    allowed:          true,
+    month:            currentMonthKey(),
   });
 }
 
@@ -1940,22 +2043,34 @@ async function handleCliGetUsage(request, env) {
     const raw = await env.AUTH_KV.get(`${prefix}${token.trim()}`);
     if (raw) {
       try {
-        const data  = JSON.parse(raw);
-        const email = data.email;
+        const data    = JSON.parse(raw);
+        const email   = data.email;
         const planRaw = await env.AUTH_KV.get(`plan:${email}`);
         const plan    = planRaw || data.plan || 'free';
+        const isPro   = PRO_PLANS.includes(plan);
         const used    = await getUsageCount(email, env);
         const limit   = planLimit(plan);
-        const remaining = limit === null ? null : Math.max(0, limit - used);
+        const remaining      = limit === null ? null : Math.max(0, limit - used);
+        const lifetimeUsed   = isPro ? null : await getLifetimeUsage(email, env);
+        const lifetimeLimit  = isPro ? null : FREE_LIFETIME_LIMIT;
+        const lifetimeRemaining = isPro ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0));
+        const lifetimeLimitHit  = !isPro && (lifetimeUsed ?? 0) >= FREE_LIFETIME_LIMIT;
+
+        // Signal lifetime hit as 429 so app.v233 gates immediately
+        const status = lifetimeLimitHit ? 429 : 200;
         return jsonResponse({
-          ok: true,
+          ok: !lifetimeLimitHit,
           email,
           plan,
           used,
           limit,
-          remaining,
-          month: currentMonthKey(),
-        });
+          remaining:          lifetimeLimitHit ? 0 : remaining,
+          lifetimeUsed,
+          lifetimeLimit,
+          lifetimeRemaining,
+          lifetimeLimitHit,
+          month:              currentMonthKey(),
+        }, status);
       } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
     }
   }
@@ -2174,13 +2289,32 @@ async function handleCliTrackUsage(request, env) {
           await incrementApiKeyUsage(apiKeyHash, count, env);
         }
 
-        // ── Email quota check (per-account fallback) ─────────────────────
+        // ── Lifetime + monthly quota check ───────────────────────────────
         if (limit !== null) {
+          // Lifetime cap — never resets, blocks month-cycling abuse
+          const lifetimeUsed = await getLifetimeUsage(email, env);
+          if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
+            console.log(`[track-usage] BLOCKED lifetime ${email} → ${lifetimeUsed}/${FREE_LIFETIME_LIMIT}`);
+            return jsonResponse({
+              ok:               false,
+              error:            'Lifetime free limit reached. Upgrade to Pro for unlimited usage.',
+              used:             await getUsageCount(email, env),
+              limit,
+              remaining:        0,
+              lifetimeUsed,
+              lifetimeLimit:    FREE_LIFETIME_LIMIT,
+              lifetimeLimitHit: true,
+              allowed:          false,
+              month:            currentMonthKey(),
+            }, 429);
+          }
+          // Monthly cap
           const current = await getUsageCount(email, env);
           if (current >= limit) {
+            console.log(`[track-usage] BLOCKED monthly ${email} → ${current}/${limit}`);
             return jsonResponse({
               ok:        false,
-              error:     'Monthly limit reached',
+              error:     'Monthly limit reached. Resets next month, or upgrade to Pro for unlimited usage.',
               used:      current,
               limit,
               remaining: 0,
@@ -2190,10 +2324,18 @@ async function handleCliTrackUsage(request, env) {
           }
         }
 
-        const used      = await incrementUsageCount(email, count, env);
-        const remaining = limit === null ? null : Math.max(0, limit - used);
-        console.log(`[track-usage] ${email} → ${used}/${limit ?? '∞'} key:${apiKeyHash ? apiKeyHash.slice(0,8)+'…' : 'none'} (${currentMonthKey()})`);
-        return jsonResponse({ ok: true, used, limit, remaining, allowed: true, month: currentMonthKey() });
+        // ── Increment monthly + lifetime ─────────────────────────────────
+        const used         = await incrementUsageCount(email, count, env);
+        const lifetimeNew  = PRO_PLANS.includes(plan) ? null : await incrementLifetimeUsage(email, count, env);
+        const remaining    = limit === null ? null : Math.max(0, limit - used);
+        console.log(`[track-usage] ${email} → monthly:${used}/${limit ?? '∞'} lifetime:${lifetimeNew ?? '∞'}/${FREE_LIFETIME_LIMIT} key:${apiKeyHash ? apiKeyHash.slice(0,8)+'…' : 'none'} (${currentMonthKey()})`);
+        return jsonResponse({
+          ok: true, used, limit, remaining,
+          lifetimeUsed:      lifetimeNew,
+          lifetimeLimit:     PRO_PLANS.includes(plan) ? null : FREE_LIFETIME_LIMIT,
+          lifetimeRemaining: PRO_PLANS.includes(plan) ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeNew ?? 0)),
+          allowed: true, month: currentMonthKey(),
+        });
       } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
     }
   }
