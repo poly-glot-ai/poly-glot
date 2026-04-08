@@ -2427,6 +2427,10 @@
       from { opacity: 0; transform: scale(.96) translateY(8px); }
       to   { opacity: 1; transform: scale(1)  translateY(0);    }
     }
+    @keyframes pgaFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
     .pga-modal__header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 22px 24px 18px;
@@ -3169,19 +3173,143 @@
       if (out) out.textContent = rendered;
     };
 
+    /* ── Prompt Studio free-tier copy cap ───────────────────────────────────
+       Free users: 5 copies/month. Pro: unlimited.
+       Tracked in localStorage (pg_prompt_copies:{YYYY-MM}).
+       On hitting the cap: paywall overlay funnels to pricing.
+    ──────────────────────────────────────────────────────────────────────── */
+    var PROMPT_FREE_COPY_LIMIT = 5;
+
+    function promptMonthKey() {
+      var d = new Date();
+      return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+    }
+
+    function getPromptCopyCount() {
+      try {
+        var key  = 'pg_prompt_copies:' + promptMonthKey();
+        return parseInt(localStorage.getItem(key) || '0', 10);
+      } catch(e) { return 0; }
+    }
+
+    function incrementPromptCopyCount() {
+      try {
+        var key = 'pg_prompt_copies:' + promptMonthKey();
+        var n   = getPromptCopyCount() + 1;
+        localStorage.setItem(key, String(n));
+        return n;
+      } catch(e) { return 1; }
+    }
+
+    function isPaidPromptUser() {
+      try {
+        var p = (localStorage.getItem('pg_prompt_plan') || localStorage.getItem('pg_plan') || 'free').toLowerCase();
+        return ['pro','team','enterprise','prompt_pro','prompt_team'].includes(p);
+      } catch(e) { return false; }
+    }
+
+    function showPromptPaywall(used, limit) {
+      // Remove any existing paywall
+      var existing = document.getElementById('pgaPaywallOverlay');
+      if (existing) existing.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'pgaPaywallOverlay';
+      overlay.style.cssText = [
+        'position:fixed;inset:0;z-index:99999;',
+        'background:rgba(0,0,0,.85);backdrop-filter:blur(8px);',
+        'display:flex;align-items:center;justify-content:center;',
+        'animation:pgaFadeIn .2s ease;'
+      ].join('');
+
+      overlay.innerHTML = `
+        <div style="background:linear-gradient(145deg,#0f172a,#1e1b4b);border:1px solid rgba(167,139,250,.3);border-radius:20px;padding:36px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6);">
+          <div style="font-size:42px;margin-bottom:12px;">🔒</div>
+          <div style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Free limit reached</div>
+          <div style="font-size:14px;color:#94a3b8;line-height:1.6;margin-bottom:6px;">
+            You've used <strong style="color:#f1f5f9;">${used}/${limit}</strong> free prompt copies this month.
+          </div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:24px;">
+            Resets ${(function(){ var d=new Date(); var next=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1)); return next.toLocaleDateString('en-US',{month:'long',day:'numeric'}); })()}.
+          </div>
+          <a href="#pga-pricing" onclick="document.getElementById('pgaPaywallOverlay').remove();document.getElementById('pga-pricing').scrollIntoView({behavior:'smooth'});return false;"
+            style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border-radius:10px;padding:13px 24px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:12px;transition:opacity .15s;"
+            onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+            ⭐ Upgrade to Pro — $9/mo
+          </a>
+          <div style="font-size:12px;color:#475569;margin-bottom:16px;">Unlimited copies · All 21 templates · Share via URL · MCP access</div>
+          <button onclick="document.getElementById('pgaPaywallOverlay').remove()"
+            style="background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 20px;color:#64748b;font-size:13px;cursor:pointer;">
+            Maybe later
+          </button>
+        </div>`;
+
+      // Close on backdrop click
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+      });
+
+      document.body.appendChild(overlay);
+    }
+
     window.pgaCopyPrompt = function() {
       var out = document.getElementById('pgaTplRendered');
       if (!out) return;
+
+      // ── Free-tier gate ────────────────────────────────────────
+      if (!isPaidPromptUser()) {
+        var used = getPromptCopyCount();
+        if (used >= PROMPT_FREE_COPY_LIMIT) {
+          showPromptPaywall(used, PROMPT_FREE_COPY_LIMIT);
+          return;
+        }
+      }
+
       navigator.clipboard.writeText(out.textContent).then(function() {
+        // Increment AFTER successful copy
+        var newCount = isPaidPromptUser() ? null : incrementPromptCopyCount();
+        var remaining = newCount === null ? null : Math.max(0, PROMPT_FREE_COPY_LIMIT - newCount);
+
         var btn = document.getElementById('pgaTplCopyBtn');
         if (btn) {
           btn.textContent = '✅ Copied!';
           btn.style.background = 'linear-gradient(135deg,#059669,#047857)';
           setTimeout(function() {
-            btn.textContent = '📋 Copy Prompt';
+            // Show remaining count on button for free users
+            var label = '📋 Copy Prompt';
+            if (remaining !== null && remaining <= 2 && remaining > 0) {
+              label = '📋 Copy (' + remaining + ' left this month)';
+            } else if (remaining === 0) {
+              label = '🔒 Copy limit reached';
+              btn.style.background = 'rgba(100,116,139,.3)';
+              btn.style.color = '#64748b';
+              btn.style.cursor = 'not-allowed';
+              btn.onclick = function() { showPromptPaywall(PROMPT_FREE_COPY_LIMIT, PROMPT_FREE_COPY_LIMIT); };
+              return;
+            }
+            btn.textContent = label;
             btn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
           }, 2000);
         }
+
+        // Soft warning at 3/5 — inline toast under the button
+        if (remaining !== null && remaining === 2) {
+          var viewer = document.getElementById('pgaTplViewer');
+          if (viewer) {
+            var warn = viewer.querySelector('#pgaCopyWarn');
+            if (!warn) {
+              warn = document.createElement('div');
+              warn.id = 'pgaCopyWarn';
+              warn.style.cssText = 'font-size:12px;color:#f59e0b;text-align:center;padding:6px 0 0;';
+              var footer = viewer.querySelector('[id="pgaTplCopyBtn"]');
+              if (footer && footer.parentNode) footer.parentNode.appendChild(warn);
+            }
+            warn.textContent = '⚠️ ' + remaining + ' free copies left this month — upgrade for unlimited.';
+          }
+        }
+      }).catch(function() {
+        var btn = document.getElementById('pgaTplCopyBtn');
+        if (btn) btn.textContent = '❌ Copy failed — try again';
       });
     };
 
