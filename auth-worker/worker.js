@@ -57,6 +57,7 @@ const RATE_LIMIT_TTL  = 60;          // 1 request per email per 60 seconds
 const TOKEN_TTL       = 900;         // 15 minutes (magic link)
 const SESSION_TTL     = 7 * 24 * 60 * 60;  // 7 days (reduced from 30 — limits token leakage window)
 const DEVICE_TTL      = 365 * 24 * 60 * 60; // 1 year — device→email binding
+const APIKEY_TTL      = 365 * 24 * 60 * 60; // 1 year — apiKeyHash→primaryEmail binding
 
 // ── Usage / quota constants ───────────────────────────────────────────────
 const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
@@ -2063,6 +2064,67 @@ async function handleGithubAppTrackUsage(request, env) {
 // POST /api/auth/track-usage  (CLI alias for /api/usage/increment)
 // Body: { token, count }
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// API-key level quota enforcement
+//
+// KV schema:
+//   apikey:{hash}        → primaryEmail (string, first email that used this key)
+//   apikey-usage:{hash}:{YYYY-MM} → count (string, shared counter across all emails)
+//
+// Logic:
+//   1. On every track-usage call that includes apiKeyHash:
+//      - Bind hash → primaryEmail if not already bound
+//      - Increment apikey-usage:{hash}:{month} counter
+//      - If that counter exceeds FREE_LIMIT and account is free → block regardless of email
+//
+// This means: spinning up email2, email3… with the same API key hits the
+// same monthly counter. Pro users are exempt (limit === null).
+// ─────────────────────────────────────────────────────────────
+const APIKEY_FREE_LIMIT = 10; // must match CLI FREE_MONTHLY_LIMIT
+
+async function getApiKeyUsage(hash, env) {
+  const month = currentMonthKey();
+  const raw   = await env.AUTH_KV.get(`apikey-usage:${hash}:${month}`);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+async function incrementApiKeyUsage(hash, count, env) {
+  const month  = currentMonthKey();
+  const kvKey  = `apikey-usage:${hash}:${month}`;
+  const raw    = await env.AUTH_KV.get(kvKey);
+  const current = raw ? parseInt(raw, 10) : 0;
+  const next    = current + count;
+  // TTL: expire at end of month + 7 days buffer
+  await env.AUTH_KV.put(kvKey, String(next), { expirationTtl: 38 * 24 * 60 * 60 });
+  return next;
+}
+
+// Validates API key hash and enforces cross-account quota for free tier.
+// Returns { blocked: true, used, limit } if the key pool is exhausted.
+// Returns { blocked: false } if ok to proceed (or no hash supplied / Pro user).
+async function checkApiKeyQuota(apiKeyHash, plan, count, env) {
+  if (!apiKeyHash || typeof apiKeyHash !== 'string' || !/^[0-9a-f]{32}$/i.test(apiKeyHash)) {
+    return { blocked: false }; // no hash sent — legacy CLI, let email quota handle it
+  }
+  const limit = planLimit(plan);
+  if (limit === null) return { blocked: false }; // Pro/Team/Enterprise — unlimited
+
+  const kvKey      = `apikey:${apiKeyHash}`;
+  const existing   = await env.AUTH_KV.get(kvKey);
+  // Bind hash → primaryEmail on first use (informational — for admin visibility)
+  // Already bound = just read; not bound = bind lazily on first increment
+  const keyUsed    = await getApiKeyUsage(apiKeyHash, env);
+  const remaining  = Math.max(0, APIKEY_FREE_LIMIT - keyUsed);
+
+  if (remaining <= 0) {
+    return { blocked: true, used: keyUsed, limit: APIKEY_FREE_LIMIT, remaining: 0 };
+  }
+  if (count > remaining) {
+    return { blocked: true, used: keyUsed, limit: APIKEY_FREE_LIMIT, remaining, batchTooLarge: true };
+  }
+  return { blocked: false, keyUsed, remaining };
+}
+
 async function handleCliTrackUsage(request, env) {
   if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   let body;
@@ -2070,8 +2132,9 @@ async function handleCliTrackUsage(request, env) {
     return jsonResponse({ error: 'token is required' }, 401);
   }
 
-  const token = (body?.token ?? '').trim();
-  const count = Math.max(1, parseInt(body?.count ?? 1, 10));
+  const token      = (body?.token ?? '').trim();
+  const count      = Math.max(1, parseInt(body?.count ?? 1, 10));
+  const apiKeyHash = (body?.apiKeyHash ?? '').trim() || null;
   if (!token) return jsonResponse({ error: 'token is required' }, 401);
 
   for (const prefix of ['session:', 'token:']) {
@@ -2084,7 +2147,34 @@ async function handleCliTrackUsage(request, env) {
         const plan    = planRaw || data.plan || 'free';
         const limit   = planLimit(plan);
 
-        // Pre-check quota
+        // ── API key quota check (cross-account enforcement) ──────────────
+        if (apiKeyHash) {
+          const keyCheck = await checkApiKeyQuota(apiKeyHash, plan, count, env);
+          if (keyCheck.blocked) {
+            const used = keyCheck.used ?? 0;
+            const lim  = keyCheck.limit ?? APIKEY_FREE_LIMIT;
+            console.log(`[track-usage] BLOCKED by apiKeyHash ${apiKeyHash.slice(0,8)}… ${email} → ${used}/${lim}`);
+            return jsonResponse({
+              ok:        false,
+              error:     'Monthly limit reached',
+              used,
+              limit:     lim,
+              remaining: 0,
+              allowed:   false,
+              month:     currentMonthKey(),
+            }, 429);
+          }
+          // Bind hash → primaryEmail on first use
+          const kvKey = `apikey:${apiKeyHash}`;
+          const bound = await env.AUTH_KV.get(kvKey);
+          if (!bound) {
+            await env.AUTH_KV.put(kvKey, email, { expirationTtl: APIKEY_TTL });
+          }
+          // Increment key-level counter
+          await incrementApiKeyUsage(apiKeyHash, count, env);
+        }
+
+        // ── Email quota check (per-account fallback) ─────────────────────
         if (limit !== null) {
           const current = await getUsageCount(email, env);
           if (current >= limit) {
@@ -2102,7 +2192,7 @@ async function handleCliTrackUsage(request, env) {
 
         const used      = await incrementUsageCount(email, count, env);
         const remaining = limit === null ? null : Math.max(0, limit - used);
-        console.log(`[track-usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
+        console.log(`[track-usage] ${email} → ${used}/${limit ?? '∞'} key:${apiKeyHash ? apiKeyHash.slice(0,8)+'…' : 'none'} (${currentMonthKey()})`);
         return jsonResponse({ ok: true, used, limit, remaining, allowed: true, month: currentMonthKey() });
       } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
     }
