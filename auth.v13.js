@@ -866,18 +866,53 @@
           if (freeCta) freeCta.style.display = 'none';
           if (typeof gtag === 'function') gtag('event', 'magic_link_sent', { method: 'email' });
         } else {
-          // Worker returned an error — surface the real message
-          var msg = (result.data && result.data.error)
-            ? result.data.error
-            : result.status === 429
-              ? 'A link was already sent. Please wait 60 seconds and try again.'
-              : result.status === 502
-                ? 'Email delivery failed — please try again in a moment.'
-                : 'Something went wrong. Please try again.';
-          btn.disabled    = false;
-          btn.textContent = 'Send Magic Link';
-          input.style.borderColor = '#f87171';
-          showAuthError(btn, msg);
+          // Worker returned an error — classify and surface clearly
+          var msg;
+          if (result.status === 409) {
+            // Device conflict — already signed up with a different email on this device
+            msg = (result.data && result.data.error)
+              ? result.data.error
+              : 'An account already exists for this device. Please sign in with your original email.';
+            btn.disabled    = false;
+            btn.textContent = 'Send Magic Link';
+            input.style.borderColor = '#f87171';
+            // Show richer inline error with sign-in CTA
+            var errEl = document.getElementById('pgAuthModalError');
+            if (!errEl) {
+              errEl = document.createElement('div');
+              errEl.id = 'pgAuthModalError';
+              errEl.style.cssText = 'font-size:13px;margin:10px 0 0;text-align:center;line-height:1.6;';
+              if (btn && btn.parentNode) btn.parentNode.insertBefore(errEl, btn.nextSibling);
+              else document.body.appendChild(errEl);
+            }
+            errEl.innerHTML =
+              '<span style="color:#f87171;">🚫 ' + msg + '</span><br>' +
+              '<span style="color:#64748b;font-size:12px;">Enter the email you originally used to sign up.</span>';
+          } else if (result.status === 429) {
+            msg = 'A link was already sent. Please wait 60 seconds and try again.';
+            btn.disabled    = false;
+            btn.textContent = 'Send Magic Link';
+            input.style.borderColor = '#f59e0b';
+            showAuthError(btn, '⏱ ' + msg);
+          } else if (result.status === 502) {
+            msg = 'Email delivery failed — please try again in a moment.';
+            btn.disabled    = false;
+            btn.textContent = 'Send Magic Link';
+            input.style.borderColor = '#f87171';
+            showAuthError(btn, '📧 ' + msg);
+          } else if (result.status === 400) {
+            msg = (result.data && result.data.error) ? result.data.error : 'Please enter a valid email address.';
+            btn.disabled    = false;
+            btn.textContent = 'Send Magic Link';
+            input.style.borderColor = '#f87171';
+            showAuthError(btn, '✉️ ' + msg);
+          } else {
+            msg = (result.data && result.data.error) ? result.data.error : 'Something went wrong. Please try again.';
+            btn.disabled    = false;
+            btn.textContent = 'Send Magic Link';
+            input.style.borderColor = '#f87171';
+            showAuthError(btn, msg);
+          }
           if (typeof gtag === 'function') gtag('event', 'magic_link_error', { status: result.status });
         }
       })
