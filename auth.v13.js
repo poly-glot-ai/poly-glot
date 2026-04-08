@@ -11,6 +11,41 @@
   ───────────────────────────────────────────── */
   const AUTH_API        = 'https://poly-glot.ai/api/auth';
   const MODAL_ID        = 'pgAuthModal';
+  const TURNSTILE_SITE_KEY = '0x4AAAAAAC2WpM55-ZqyuyCn';
+
+  /* ─────────────────────────────────────────────
+     Turnstile — get an invisible challenge token
+     Returns a Promise<string> (resolves to token or '' on failure)
+  ───────────────────────────────────────────── */
+  function getTurnstileToken() {
+    return new Promise(function (resolve) {
+      try {
+        if (typeof window.turnstile === 'undefined') { resolve(''); return; }
+        // Create a hidden container
+        var container = document.createElement('div');
+        container.style.display = 'none';
+        document.body.appendChild(container);
+        window.turnstile.render(container, {
+          sitekey:  TURNSTILE_SITE_KEY,
+          size:     'invisible',
+          callback: function (token) {
+            document.body.removeChild(container);
+            resolve(token);
+          },
+          'error-callback': function () {
+            try { document.body.removeChild(container); } catch(e) {}
+            resolve(''); // fail open — worker will reject if secret set
+          },
+          'expired-callback': function () {
+            try { document.body.removeChild(container); } catch(e) {}
+            resolve('');
+          },
+        });
+      } catch (e) {
+        resolve('');
+      }
+    });
+  }
 
   // ── Surface detection ─────────────────────────────────────
   // Prompt Studio (/prompt/) is a separate consumer product.
@@ -835,10 +870,11 @@
       try { loginSource = sessionStorage.getItem('pg_source') || ''; } catch(e) {}
     }
 
+    getTurnstileToken().then(function (turnstileToken) {
     fetch(AUTH_API + '/login', {
       method:  'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
-      body:    JSON.stringify({ email: email, source: loginSource || 'website', deviceId: getOrCreateDeviceId() })
+      body:    JSON.stringify({ email: email, source: loginSource || 'website', deviceId: getOrCreateDeviceId(), turnstileToken: turnstileToken })
     })
       .then(function (res) { return res.json().then(function(d){ return { httpOk: res.ok, status: res.status, data: d }; }); })
       .then(function (result) {
@@ -922,6 +958,7 @@
         showAuthError(btn, 'Network error — please check your connection and try again.');
         console.error('Auth login fetch error:', err);
       });
+    }); // end getTurnstileToken
   }
 
   /** Show an error message below the Send button, creating the element if needed */
@@ -1013,10 +1050,11 @@
       if (checkoutEmail) {
         showToast('🎉 Payment received! Sending your sign-in link to ' + checkoutEmail + '…', 6000);
         // Auto-send magic link so user lands signed in with their new plan
+        getTurnstileToken().then(function (turnstileToken) {
         fetch(AUTH_API + '/login', {
           method:  'POST',
           headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
-          body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success', deviceId: getOrCreateDeviceId() }),
+          body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success', deviceId: getOrCreateDeviceId(), turnstileToken: turnstileToken }),
         })
           .then(function (res) { return res.json(); })
           .then(function (data) {
@@ -1030,6 +1068,7 @@
             }
           })
           .catch(function () { openModal(); });
+        }); // end getTurnstileToken
 
         // Show "activation" panel on the page
         showCheckoutSuccessBanner(checkoutEmail);
