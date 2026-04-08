@@ -2957,6 +2957,27 @@
     // Renders variables as input fields, shows the rendered prompt live,
     // and provides a copy-to-clipboard button.
 
+    // ── Fix 4: HMAC request signing (X-PG-Sig) ─────────────
+    // Signs each /api/prompt/* request with a 60-second timestamp + HMAC.
+    // Uses the user's session token as the HMAC key — no embedded secret needed.
+    // Payload: `{unixTs}.{name}`   Key: session token
+    // Header: X-PG-Sig: t={unixTs}.{hex64}
+    async function buildPromptSig(token, name) {
+      try {
+        const ts  = Math.floor(Date.now() / 1000);
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          'raw', enc.encode(token),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+        );
+        const mac = await crypto.subtle.sign('HMAC', key, enc.encode(`${ts}.${name}`));
+        const hex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2,'0')).join('');
+        return `t=${ts}.${hex}`;
+      } catch(e) {
+        return '';  // crypto unavailable — worker will reject (safer to fail closed)
+      }
+    }
+
     // ── Secure template fetch ────────────────────────────────
     // tpl content lives server-side only. This fetches it from
     // the Worker after auth + plan are verified server-side.
@@ -2966,9 +2987,10 @@
       })();
       if (!token) return { error: 'not_authed' };
       try {
+        const sig = await buildPromptSig(token, name);
         const res = await fetch('https://poly-glot.ai/api/prompt/get-template', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt', 'X-PG-Sig': sig },
           body: JSON.stringify({ token, name })
         });
         const data = await res.json();
@@ -2989,9 +3011,10 @@
       })();
       if (!token) return;
       try {
+        const sig = await buildPromptSig(token, name);
         await fetch('https://poly-glot.ai/api/prompt/sync-pick', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt', 'X-PG-Sig': sig },
           body: JSON.stringify({ token, name })
         });
       } catch(e) { /* non-critical — localStorage still works as fallback display */ }
@@ -3009,9 +3032,10 @@
       let legacyPick = '';
       try { legacyPick = localStorage.getItem('pg_prompt_picked_tpl') || ''; } catch(e) {}
       try {
+        const sig = await buildPromptSig(token, '');  // no template name for get-pick
         const res = await fetch('https://poly-glot.ai/api/prompt/get-pick', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt' },
+          headers: { 'Content-Type': 'application/json', 'X-PG-Surface': 'prompt', 'X-PG-Sig': sig },
           body: JSON.stringify({ token, legacyPick: legacyPick || undefined })
         });
         const data = await res.json();
