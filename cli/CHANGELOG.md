@@ -1,3 +1,8 @@
+## [2.1.44] — 2026-04-08
+- chore(cli): bump version to 2.1.43 (skip 2.1.42 already on npm) [publish]
+
+---
+
 ## [2.1.41] — 2026-04-08
 - chore(cli): bump version to 2.1.40 [publish]
 - ✨ feat(cli): --changed flag for --dir; Pro gate for full dir scan [publish]
