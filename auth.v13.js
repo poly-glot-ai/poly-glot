@@ -2003,9 +2003,14 @@
     applyPlanGating(cachedPlan);
     if (cachedEmail) updateHeaderForUser(cachedEmail, cachedPlan);
 
-    // Show plan toast for returning signed-in users on this device
-    if (cachedEmail && localStorage.getItem(_LS_TOKEN)) {
+    // Show plan toast for returning signed-in users — once per browser session only.
+    // sessionStorage clears when all tabs close, so the toast appears on first open
+    // but not on every refresh or every new tab.
+    var _toastShownThisSession = false;
+    try { _toastShownThisSession = !!sessionStorage.getItem('pg_toast_shown'); } catch(e) {}
+    if (cachedEmail && localStorage.getItem(_LS_TOKEN) && !_toastShownThisSession) {
       showPlanToast(cachedPlan, cachedEmail);
+      try { sessionStorage.setItem('pg_toast_shown', '1'); } catch(e) {}
     }
 
     // Parse URL params once — used by handleUrlParams and source tracking
