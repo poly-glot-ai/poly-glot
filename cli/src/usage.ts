@@ -24,7 +24,8 @@ function hashApiKey(apiKey: string): string | null {
     return crypto.createHash('sha256').update(apiKey.trim()).digest('hex').slice(0, 32);
 }
 
-export const FREE_MONTHLY_LIMIT = 10;
+export const FREE_MONTHLY_LIMIT   = 10;
+export const FREE_LIFETIME_LIMIT  = 25;
 
 const AUTH_API   = 'https://poly-glot.ai/api';
 const USAGE_DIR  = path.join(os.homedir(), '.config', 'polyglot');
@@ -39,12 +40,15 @@ const UPGRADE_TEAM_URL = 'https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefill
 type UsageStore = Record<string, number>; // { "2026-04": 12 }
 
 interface ServerUsageResponse {
-    ok?:       boolean;
-    used:      number;
-    limit:     number | null;  // null = unlimited (Pro/Team)
-    remaining: number | null;
-    plan?:     string;
-    error?:    string;
+    ok?:               boolean;
+    used:              number;
+    limit:             number | null;  // null = unlimited (Pro/Team)
+    remaining:         number | null;
+    plan?:             string;
+    error?:            string;
+    lifetimeUsed?:     number | null;
+    lifetimeLimit?:    number | null;
+    lifetimeLimitHit?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -146,12 +150,18 @@ async function incrementServerUsage(count = 1): Promise<ServerUsageResponse | nu
     } catch { return null; }
 }
 
-function syncLocalToServer(serverCount: number): void {
+function syncLocalToServer(serverCount: number, lifetimeCount?: number | null): void {
     try {
         const store = readStore();
         store[monthKey()] = serverCount;
+        if (typeof lifetimeCount === 'number') store['lifetime'] = lifetimeCount;
         writeStore(store);
     } catch { /* non-fatal */ }
+}
+
+export function getLifetimeUsage(): number {
+    const store = readStore();
+    return store['lifetime'] ?? 0;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -184,9 +194,15 @@ export async function incrementUsage(count = 1): Promise<void> {
         }
 
         // Server authoritative — sync local to match
-        syncLocalToServer(result.used);
+        syncLocalToServer(result.used, result.lifetimeUsed);
 
         if (result.limit === null) return; // Pro/Team — unlimited, no warnings
+
+        // Lifetime cap check — takes precedence over monthly
+        if (result.lifetimeLimitHit) {
+            printLifetimeStop(result.lifetimeUsed ?? FREE_LIFETIME_LIMIT, result.lifetimeLimit ?? FREE_LIFETIME_LIMIT);
+            process.exit(1);
+        }
 
         const remaining = Math.max(0, (result.limit ?? FREE_MONTHLY_LIMIT) - result.used);
 
@@ -198,7 +214,12 @@ export async function incrementUsage(count = 1): Promise<void> {
             printHardStop(result.used, result.limit ?? FREE_MONTHLY_LIMIT);
             process.exit(1);
         } else if (remaining <= 5) {
-            printSoftWarning(remaining, true);
+            // Also warn about lifetime if getting close
+            const ltUsed = result.lifetimeUsed ?? 0;
+            const ltLimit = result.lifetimeLimit ?? FREE_LIFETIME_LIMIT;
+            const ltRemaining = Math.max(0, ltLimit - ltUsed);
+            if (ltRemaining <= 5) printLifetimeWarning(ltRemaining);
+            else printSoftWarning(remaining, true);
         } else if (remaining <= 10) {
             printSoftWarning(remaining, false);
         }
@@ -231,9 +252,18 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
     if (server) {
         if (server.limit === null) return; // Pro/Team — unlimited
 
+        // Lifetime cap check — takes precedence over monthly
+        if (server.lifetimeLimitHit) {
+            printLifetimeStop(server.lifetimeUsed ?? FREE_LIFETIME_LIMIT, server.lifetimeLimit ?? FREE_LIFETIME_LIMIT);
+            process.exit(1);
+        }
+
         const used      = server.used;
         const limit     = server.limit;
         const remaining = Math.max(0, limit - used);
+        const ltUsed    = server.lifetimeUsed ?? 0;
+        const ltLimit   = server.lifetimeLimit ?? FREE_LIFETIME_LIMIT;
+        const ltRemaining = Math.max(0, ltLimit - ltUsed);
 
         if (remaining <= 0) {
             printHardStop(used, limit);
@@ -243,7 +273,10 @@ export async function assertQuota(filesNeeded = 1): Promise<void> {
             printBatchExceeds(filesNeeded, remaining, used, limit);
             process.exit(1);
         }
-        if (remaining <= 5)       { printSoftWarning(remaining, true);  }
+        // Warn if close to lifetime cap
+        if (ltRemaining <= 5 && ltRemaining > 0) {
+            printLifetimeWarning(ltRemaining);
+        } else if (remaining <= 5)       { printSoftWarning(remaining, true);  }
         else if (remaining <= 10) { printSoftWarning(remaining, false); }
         return;
     }
@@ -318,6 +351,30 @@ function printSoftWarning(remaining: number, urgent = false): void {
     console.warn(
         `\n  ${color}${icon}  Free plan: \x1b[1m${remaining} file${remaining === 1 ? '' : 's'} remaining\x1b[0m${color} this month\x1b[0m` +
         `  \x1b[2m(resets ${nextResetDate()})\x1b[0m\n` +
+        (eb ? eb + '\n' : '') +
+        `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
+        `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n`
+    );
+}
+
+function printLifetimeStop(used: number, limit: number): void {
+    const eb = earlyBirdLine();
+    console.error(
+        `\n  \x1b[31m✗  Free trial complete — ${used}/${limit} lifetime files used\x1b[0m\n` +
+        `\n  \x1b[2mThe free plan is a trial: \x1b[1m${limit} files total\x1b[0m\x1b[2m, across all months.\x1b[0m` +
+        `\n  \x1b[2mMonthly resets don't apply — this is a permanent cap for free accounts.\x1b[0m\n` +
+        (eb ? eb + '\n' : '') +
+        `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
+        `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n` +
+        `\n  \x1b[2mAlready subscribed? Run: \x1b[0m\x1b[36mpoly-glot login\x1b[0m\n`
+    );
+}
+
+function printLifetimeWarning(remaining: number): void {
+    const eb = earlyBirdLine();
+    console.warn(
+        `\n  \x1b[31m🚨  Free trial ending — \x1b[1m${remaining} lifetime file${remaining === 1 ? '' : 's'} remaining\x1b[0m\x1b[31m (ever)\x1b[0m\n` +
+        `\n  \x1b[2mAfter these are used, the free plan is complete. Upgrade to Pro for unlimited files.\x1b[0m\n` +
         (eb ? eb + '\n' : '') +
         `\n  \x1b[1m  Pro $9/mo   → \x1b[36m${UPGRADE_PRO_URL}\x1b[0m` +
         `\n  \x1b[1m  Team $29/mo → \x1b[36m${UPGRADE_TEAM_URL}\x1b[0m\n`
