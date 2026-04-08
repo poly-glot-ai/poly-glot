@@ -838,7 +838,7 @@
     fetch(AUTH_API + '/login', {
       method:  'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
-      body:    JSON.stringify({ email: email, source: loginSource || 'website' })
+      body:    JSON.stringify({ email: email, source: loginSource || 'website', deviceId: getOrCreateDeviceId() })
     })
       .then(function (res) { return res.json().then(function(d){ return { httpOk: res.ok, status: res.status, data: d }; }); })
       .then(function (result) {
@@ -981,7 +981,7 @@
         fetch(AUTH_API + '/login', {
           method:  'POST',
           headers: Object.assign({ 'Content-Type': 'application/json' }, _SURFACE_HEADER),
-          body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success' }),
+          body:    JSON.stringify({ email: checkoutEmail, source: 'stripe-success', deviceId: getOrCreateDeviceId() }),
         })
           .then(function (res) { return res.json(); })
           .then(function (data) {
