@@ -689,6 +689,8 @@ const TEMPLATE_CONTENT = {
     `You are a principal software engineer.\n\nSystem: {{system_name}}\nScale: {{scale}}\nSLA: {{sla}}\nTech: {{tech_preferences}}\n\nGenerate:\n1. Functional + non-functional requirements\n2. High-level architecture\n3. Component breakdown\n4. Data model + storage\n5. Scalability strategy\n6. Failure modes + mitigation\n7. Monitoring plan`,
   '🎯 Ad Copy Generator':
     `You are a performance marketing expert.\n\nProduct: {{product}}\nPlatform: {{platform}}\nGoal: {{goal}}\nAudience: {{audience}}\nUVP: {{uvp}}\n\nGenerate:\n1. 3x headlines (max {{headline_chars}} chars)\n2. 3x descriptions (max {{desc_chars}} chars)\n3. 2x CTA options\n4. A/B test hypothesis\n5. Expected CTR range\n\nTriggers: {{triggers}}`,
+  '🧬 Research Paper Abstract':
+    `You are an academic researcher in {{field}}.\n\nTitle: {{title}}\nQuestion: {{research_question}}\nMethod: {{methodology}}\nFindings: {{findings}}\n\nWrite:\n1. Structured abstract (max {{word_limit}} words)\n2. 5 keywords\n3. Plain-language summary (3 sentences)\n4. Suggested journals\n\nCitation: {{citation_style}}`,
 };
 
 // Plan membership — controls which templates require Pro
@@ -700,6 +702,7 @@ const PRO_TEMPLATE_NAMES = new Set([
   '🎬 Video Script Writer',
   '🏗️ System Design Document',
   '🎯 Ad Copy Generator',
+  '🧬 Research Paper Abstract',
 ]);
 
 // ─────────────────────────────────────────────────────────────

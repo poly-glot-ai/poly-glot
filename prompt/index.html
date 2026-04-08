@@ -2948,8 +2948,7 @@
         vars:{ product:'', platform:'Google Ads', goal:'conversions', audience:'', uvp:'', headline_chars:'30', desc_chars:'90', triggers:'urgency, social proof' } },
 
       { plan:'pro', name:'🧬 Research Paper Abstract', desc:'Write structured academic abstracts',
-        vars:{ field:'', title:'', research_question:'', methodology:'', findings:'', word_limit:'250', citation_style:'APA 7th' },
-        tpl:`You are an academic researcher in {{field}}.\n\nTitle: {{title}}\nQuestion: {{research_question}}\nMethod: {{methodology}}\nFindings: {{findings}}\n\nWrite:\n1. Structured abstract (max {{word_limit}} words)\n2. 5 keywords\n3. Plain-language summary (3 sentences)\n4. Suggested journals\n\nCitation: {{citation_style}}` }
+        vars:{ field:'', title:'', research_question:'', methodology:'', findings:'', word_limit:'250', citation_style:'APA 7th' } },
     ];
 
     // ── Render template library ──────────────────────────────
@@ -3305,15 +3304,15 @@
       const sequences = [
         {
           label: '💻 Code Review',
-          raw: 'You are an experienced {{language}} developer.\n\nReview the following code for:\n- Bugs and errors\n- Performance issues\n- Security vulnerabilities\n\nCode:\n{{code}}\n\nFormat: {{format}}',
+          raw: 'Act as a {{language}} expert and review my code.\n\nFocus on: {{focus_areas}}\n\nCode:\n{{code}}\n\nReturn feedback in {{format}} format.',
         },
         {
           label: '📧 Cold Email',
-          raw: 'You are an expert sales copywriter.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\n\nWrite subject + body under 150 words.',
+          raw: 'Write a cold outreach email from {{sender}} to {{recipient}}.\n\nOffer: {{value_prop}}\nGoal: {{cta}}\nTone: {{tone}}\n\nKeep it under {{word_limit}} words.',
         },
         {
           label: '🧠 Meeting Summary',
-          raw: 'You are an executive assistant.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nOutput:\n- Key decisions\n- Action items (owner + deadline)\n- Open questions',
+          raw: 'Summarize this {{meeting_type}} meeting.\n\nDate: {{date}}\nTeam: {{attendees}}\n\nNotes: {{notes}}\n\nOutput: decisions, actions, owners.',
         },
       ];
 
