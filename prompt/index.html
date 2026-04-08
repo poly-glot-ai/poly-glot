@@ -2970,7 +2970,9 @@
           'raw', enc.encode(token),
           { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
         );
-        const mac = await crypto.subtle.sign('HMAC', key, enc.encode(`${ts}.${name}`));
+        // Payload matches server: timestamp.token.name — unique per user+name+time.
+        // When name='' (get-pick), the token in the payload keeps sigs non-interchangeable.
+        const mac = await crypto.subtle.sign('HMAC', key, enc.encode(`${ts}.${token}.${name}`));
         const hex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2,'0')).join('');
         return `t=${ts}.${hex}`;
       } catch(e) {
