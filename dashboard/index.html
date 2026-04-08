@@ -490,6 +490,12 @@ async function collectAll() {
         m.signupPeriod       = d.period;
         m.surfaceBreakdown   = d.surface_breakdown ?? { prompt: 0, app: 0 };
         m.userList           = d.users ?? [];
+        // Prompt Studio — accurate plan counts from prompt_plan: namespace (not plan:)
+        m.promptUniqueUsers  = d.prompt_unique_users ?? null;
+        m.promptPlanFree     = d.prompt_plan_breakdown?.prompt_free  ?? null;
+        m.promptPlanPro      = d.prompt_plan_breakdown?.prompt_pro   ?? null;
+        m.promptPlanTeam     = d.prompt_plan_breakdown?.prompt_team  ?? null;
+        m.promptUserList     = d.prompt_users ?? [];
       }
     }
   } catch { m.totalSignups = null; m.userList = []; }
@@ -671,13 +677,17 @@ function renderSignups(m) {
   const period = m.signupPeriod || new Date().toISOString().slice(0,7);
 
   // Revenue estimate: Pro=$9, Team=$29
-  const mrr = ((m.planPro || 0) * 9) + ((m.planTeam || 0) * 29);
+  // Counts both main-site (plan:) and Prompt Studio (prompt_plan:) paying users
+  const mrr = ((m.planPro || 0) + (m.promptPlanPro || 0)) * 9
+            + ((m.planTeam || 0) + (m.promptPlanTeam || 0)) * 29;
   const mrrStr = mrr > 0 ? '$' + mrr.toLocaleString() + '/mo' : '$0/mo';
 
-  // Conversion rate: paid / total signups
-  const paidTotal = (m.planPro || 0) + (m.planTeam || 0);
-  const convRate  = m.totalSignups > 0
-    ? ((paidTotal / m.totalSignups) * 100).toFixed(1) + '%'
+  // Conversion rate: paid / total signups (across all surfaces)
+  const paidTotal  = (m.planPro || 0) + (m.planTeam || 0)
+                   + (m.promptPlanPro || 0) + (m.promptPlanTeam || 0);
+  const totalUsers = (m.totalSignups || 0) + (m.promptUniqueUsers || 0);
+  const convRate   = totalUsers > 0
+    ? ((paidTotal / totalUsers) * 100).toFixed(1) + '%'
     : '0%';
 
   // Surface breakdown
@@ -912,11 +922,13 @@ async function renderPromptStudio(epStatus, m) {
   // npm download counts for poly-glot-mcp (Prompt Studio uses this)
   let mcpDl30 = m.mcpDl30 ?? null;
 
-  // Prompt Studio signup breakdown — users who signed up via prompt_page source
-  // (approximated from plan breakdown; exact source tracking TBD)
-  const promptFree = m.planFree ?? null;
-  const promptPro  = m.planPro  ?? null;
-  const promptTeam = m.planTeam ?? null;
+  // Prompt Studio plan breakdown — sourced from prompt_plan: KV namespace.
+  // Uses prompt_signup: keys (confirmed clicks) + prompt_plan:{email} values.
+  // Never reads plan: (main site) — prevents cross-surface bleed.
+  const promptSignedUp = m.promptUniqueUsers ?? null;
+  const promptFree     = m.promptPlanFree    ?? null;
+  const promptPro      = m.promptPlanPro     ?? null;
+  const promptTeam     = m.promptPlanTeam    ?? null;
 
   // Landing page + privacy page status
   const siteOk    = epStatus['promptSite']?.ok;
@@ -939,9 +951,10 @@ async function renderPromptStudio(epStatus, m) {
     card('✨', 'Prompt Studio',        siteBadge,    'poly-glot.ai/prompt/ · landing page'),
     card('🔒', 'Privacy Page',         privacyBadge, 'poly-glot.ai/prompt/privacy/'),
     card('📦', 'poly-glot-mcp (npm)',  mcpBadge,     `MCP package · v${m.mcpVer || '—'} · ${mcpDl30 != null ? mcpDl30.toLocaleString() + ' dl/30d' : 'loading…'}`),
-    card('🆓', 'Free Users',           promptFree != null ? num(promptFree) : '—', 'accounts on free plan'),
-    card('💎', 'Pro Users',            promptPro  != null ? num(promptPro)  : '—', '$9/mo · Prompt Studio Pro'),
-    card('👥', 'Team Users',           promptTeam != null ? num(promptTeam) : '—', '$29/mo · Prompt Studio Team'),
+    card('👤', 'Signed Up',            promptSignedUp != null ? num(promptSignedUp) : '—', 'confirmed magic-link clicks on /prompt/'),
+    card('🆓', 'Free Users',           promptFree != null ? num(promptFree) : '—', 'prompt_plan: free · Prompt Studio only'),
+    card('💎', 'Pro Users',            promptPro  != null ? num(promptPro)  : '—', 'prompt_plan: pro · paying Prompt Studio users'),
+    card('👥', 'Team Users',           promptTeam != null ? num(promptTeam) : '—', 'prompt_plan: team · Prompt Studio Team'),
   ].join('');
 
   // ── Endpoint table ────────────────────────────────────────────────────────
