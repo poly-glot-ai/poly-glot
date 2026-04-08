@@ -54,7 +54,7 @@
       ctaAction: 'signup',
       popular:   false,
       features: [
-        { text: '50 files / month',                  check: true  },
+        { text: '10 files / month',                  check: true  },
         { text: '4 languages (JS, TS, Python, Java)', check: true  },
         { text: 'Web UI',                            check: true  },
         { text: 'JSDoc, PyDoc, Javadoc',             check: true  },
@@ -378,7 +378,7 @@
             .then(function(data) {
               if (data.ok) {
                 try { localStorage.setItem('pg_email', email); } catch(e) {}
-                alert('✅ Magic link sent to ' + email + '!\n\nCheck your inbox and click the link to sign in.\n\nFree plan: 50 files/month, no credit card required.');
+                alert('✅ Magic link sent to ' + email + '!\n\nCheck your inbox and click the link to sign in.\n\nFree plan: 10 files/month, no credit card required.');
                 if (typeof gtag === 'function') gtag('event', 'free_signup_success', { method: 'pricing_card' });
               } else {
                 alert('Something went wrong: ' + (data.error || 'Please try again.'));
