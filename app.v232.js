@@ -4362,8 +4362,7 @@ function initCommentGenerator() {
 
     // ── Generate Comments ──
     // ── Free plan limits ────────────────────────────────────────────────────
-    // Auto-switches to 10 on May 1, 2026 — no manual change needed
-    var FREE_MONTHLY_LIMIT = (new Date() >= new Date('2026-05-01T00:00:00Z')) ? 10 : 50;
+    var FREE_MONTHLY_LIMIT = 10;
     // EARLYBIRD3 promo — auto-expires May 1, 2026
     var EARLYBIRD_ACTIVE   = (new Date() < new Date('2026-05-01T00:00:00Z'));
     var PROMO_HTML         = EARLYBIRD_ACTIVE
@@ -4462,6 +4461,17 @@ function initCommentGenerator() {
         if (!tok) return { ok: false, reason: 'no_token' };
         try {
             var res = await fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok));
+            // 429 = poly-glot monthly limit hit (server-authoritative)
+            if (res.status === 429) {
+                var d429 = await res.json().catch(function(){ return {}; });
+                if (d429 && typeof d429.used === 'number') setMonthlyCountFromServer(d429.used);
+                renderUsageCounter();
+                return { ok: true, used: (d429 && d429.used) || FREE_MONTHLY_LIMIT, limit: FREE_MONTHLY_LIMIT, remaining: 0, limitHit: true, lifetimeLimitHit: !!(d429 && d429.lifetimeLimitHit) };
+            }
+            // 403 = key-cycling / account suspended
+            if (res.status === 403) {
+                return { ok: false, reason: 'key_cycling_blocked' };
+            }
             if (!res.ok) return { ok: false, reason: 'server_error', status: res.status };
             var d = await res.json();
             if (!d || typeof d.used !== 'number') return { ok: false, reason: 'bad_response' };
@@ -4469,12 +4479,15 @@ function initCommentGenerator() {
             setMonthlyCountFromServer(d.used);
             renderUsageCounter();
             return {
-                ok:        true,
-                used:      d.used,
-                limit:     d.limit,
-                remaining: d.remaining,
-                plan:      d.plan,
-                limitHit:  d.limit !== null && d.used >= d.limit,
+                ok:               true,
+                used:             d.used,
+                limit:            d.limit,
+                remaining:        d.remaining,
+                plan:             d.plan,
+                limitHit:         d.limit !== null && d.used >= d.limit,
+                lifetimeUsed:     d.lifetimeUsed ?? null,
+                lifetimeLimit:    d.lifetimeLimit ?? null,
+                lifetimeLimitHit: !!(d.lifetimeLimitHit),
             };
         } catch(e) {
             // Network failure — fail CLOSED. Do not fall back to cached count.
@@ -4489,6 +4502,9 @@ function initCommentGenerator() {
         var n = getMonthlyCount() + 1;
         localStorage.setItem(MONTHLY_COUNT_KEY, String(n));
         localStorage.setItem(MONTHLY_MONTH_KEY, currentMonthStr());
+        // Also increment local lifetime cache so counter updates immediately
+        var lt = parseInt(localStorage.getItem('pg_lifetime_count') || '0', 10);
+        localStorage.setItem('pg_lifetime_count', String(lt + 1));
 
         // ── Server-side tracking (fire-and-forget) ────────────────────────
         // Uses /api/auth/track-usage (body: {token, count}).
@@ -4513,6 +4529,14 @@ function initCommentGenerator() {
                                 setMonthlyCountFromServer(FREE_MONTHLY_LIMIT);
                             }
                             renderUsageCounter();
+                        }).catch(function(){});
+                    } else if (res.status === 403) {
+                        // Key-cycling / account blocked — surface toast immediately
+                        res.json().then(function(d) {
+                            var msg = (d && d.error) ? d.error : 'Your account has been flagged for API key cycling. Please upgrade to Pro or contact support.';
+                            if (window.PolyGlotAuth && typeof window.PolyGlotAuth.showToast === 'function') {
+                                window.PolyGlotAuth.showToast('🚫 ' + msg, 8000);
+                            }
                         }).catch(function(){});
                     } else if (res.ok) {
                         // Sync authoritative count back (catches multi-device drift)
@@ -4543,12 +4567,16 @@ function initCommentGenerator() {
             if (!tok) return;
             // Read-only: pull authoritative count without incrementing
             fetch('https://poly-glot.ai/api/auth/get-usage?token=' + encodeURIComponent(tok))
-                .then(function(res){ return res.ok ? res.json() : null; })
+                .then(function(res){ return res.json().catch(function(){ return null; }); })
                 .then(function(d){
-                    if (d && typeof d.used === 'number') {
+                    if (!d) return;
+                    if (typeof d.used === 'number') {
                         setMonthlyCountFromServer(d.used);
-                        renderUsageCounter();
                     }
+                    if (typeof d.lifetimeUsed === 'number') {
+                        localStorage.setItem('pg_lifetime_count', String(d.lifetimeUsed));
+                    }
+                    renderUsageCounter();
                 }).catch(function(){});
         } catch(e) {}
     }
@@ -4624,25 +4652,48 @@ function initCommentGenerator() {
         var color     = remaining <= 5  ? '#ef4444'
                       : remaining <= 10 ? '#f59e0b'
                       : '#22c55e';
-        var resetStr  = usageResetDateStr();
+        var resetStr     = usageResetDateStr();
+        // Pull lifetime data from server-synced storage
+        var _ltUsed      = parseInt(localStorage.getItem('pg_lifetime_count') || '0', 10);
+        var _ltLimit     = 25;
+        var _ltRemaining = Math.max(0, _ltLimit - _ltUsed);
+        var _ltPct       = Math.min(100, Math.round((_ltUsed / _ltLimit) * 100));
+        var _ltColor     = _ltRemaining <= 5  ? '#ef4444'
+                         : _ltRemaining <= 10 ? '#f59e0b'
+                         : '#22c55e';
+        var _ltHit       = _ltRemaining <= 0;
         var html = [
             '<div id="pg2UsageCounter" style="margin:8px 12px 10px;padding:10px 14px;',
             'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);',
             'border-radius:8px;font-size:12px;color:#94a3b8;">',
-            '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">',
-            '    <span>🗂 Free plan usage</span>',
-            '    <span style="color:' + color + ';font-weight:600;">' + used + ' / ' + FREE_MONTHLY_LIMIT + ' files this month</span>',
+            // Monthly row
+            '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">',
+            '    <span>📅 This month</span>',
+            '    <span style="color:' + color + ';font-weight:600;">' + used + ' / ' + FREE_MONTHLY_LIMIT + ' files</span>',
             '  </div>',
-            '  <div style="background:rgba(255,255,255,.08);border-radius:4px;height:4px;overflow:hidden;">',
+            '  <div style="background:rgba(255,255,255,.08);border-radius:4px;height:4px;overflow:hidden;margin-bottom:6px;">',
             '    <div style="height:4px;border-radius:4px;background:' + color + ';width:' + pct + '%;transition:width .4s;"></div>',
             '  </div>',
-            '  <div style="margin-top:5px;font-size:11px;color:#475569;">Resets ' + resetStr + '</div>',
-            remaining <= 10 && remaining > 0
-                ? '  <div style="margin-top:4px;color:' + color + ';">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' remaining — <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">upgrade for unlimited ↑</a></div>'
+            // Lifetime row
+            '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">',
+            '    <span>⏳ Lifetime (free trial)</span>',
+            '    <span style="color:' + _ltColor + ';font-weight:600;">' + _ltUsed + ' / ' + _ltLimit + ' files</span>',
+            '  </div>',
+            '  <div style="background:rgba(255,255,255,.08);border-radius:4px;height:4px;overflow:hidden;margin-bottom:6px;">',
+            '    <div style="height:4px;border-radius:4px;background:' + _ltColor + ';width:' + _ltPct + '%;transition:width .4s;"></div>',
+            '  </div>',
+            '  <div style="margin-top:2px;font-size:11px;color:#475569;">Monthly resets ' + resetStr + ' · Lifetime cap is permanent on free plan</div>',
+            remaining <= 3 && remaining > 0
+                ? '  <div style="margin-top:5px;color:#f59e0b;">⚠️ ' + remaining + ' file' + (remaining === 1 ? '' : 's') + ' left this month — <a href="#pg-pricing-section" style="color:#a78bfa;font-weight:600;">upgrade for unlimited ↑</a></div>'
                 : '',
-            remaining <= 0
-                ? '  <div style="margin-top:4px;color:#ef4444;">🔒 Monthly limit reached — <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro $9/mo ↗</a></div>'
+            remaining <= 0 && !_ltHit
+                ? '  <div style="margin-top:5px;color:#ef4444;">📅 Monthly limit reached — resets ' + resetStr + '. <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro ↗</a></div>'
                 : '',
+            _ltHit
+                ? '  <div style="margin-top:5px;color:#ef4444;">🔒 Free trial complete — <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro $9/mo ↗</a></div>'
+                : _ltRemaining <= 5
+                  ? '  <div style="margin-top:5px;color:' + _ltColor + ';">⚠️ ' + _ltRemaining + ' lifetime file' + (_ltRemaining === 1 ? '' : 's') + ' remaining — <a href="' + stripeProUrl() + '" target="_blank" style="color:#a78bfa;font-weight:600;">Upgrade to Pro ↗</a></div>'
+                  : '',
             '</div>'
         ].join('');
         if (existing) {
@@ -4734,17 +4785,40 @@ function initCommentGenerator() {
         const monthlyUsed = usageCheck.used || 0;
         const limitToUse  = usageCheck.limit !== null ? usageCheck.limit : FREE_MONTHLY_LIMIT;
 
-        if (usageCheck.ok && usageCheck.limitHit) {
+        if (usageCheck.ok && usageCheck.lifetimeLimitHit) {
+            // Lifetime cap — monthly reset won't help, must upgrade
+            var _lifetimeUsed  = usageCheck.lifetimeUsed || (usageCheck.lifetimeLimit || 25);
+            var _lifetimeLimit = usageCheck.lifetimeLimit || 25;
             showCgInlineError(
                 '<div style="padding:28px 24px;text-align:center;">' +
                 '  <div style="font-size:36px;margin-bottom:12px;">🔒</div>' +
-                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + monthlyUsed + ' / ' + limitToUse + ' files used</div>' +
-                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets ' + usageResetDateStr() + '</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:10px;">Free tier complete — ' + _lifetimeUsed + ' / ' + _lifetimeLimit + ' lifetime files used</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
+                '    You\'ve used all your free files. The free tier is a trial — <strong style="color:#a78bfa;">Pro is $9/mo</strong> for unlimited everything.' +
+                '  </div>' +
+                '  <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Monthly resets don\'t apply — this is a lifetime cap for the free plan.</div>' +
                 PROMO_HTML +
                 '  <a href="' + stripeProUrl() + '" target="_blank" ' +
-                '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">' +
-                '    Upgrade to Pro — $9/mo ↗' +
-                '  </a>' +
+                '     style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">Upgrade to Pro — $9/mo ↗</a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#475569;">No lock-in · cancel any time · instant access</div>' +
+                '</div>'
+            );
+            renderUsageCounter();
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_lifetime_limit_hit', { used: _lifetimeUsed });
+            return;
+        }
+
+        if (usageCheck.ok && usageCheck.limitHit) {
+            // Monthly cap — resets next month
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">📅</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached — ' + monthlyUsed + ' / ' + limitToUse + ' files used</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">Resets ' + usageResetDateStr() + ' · or upgrade now for unlimited generation.</div>' +
+                PROMO_HTML +
+                '  <a href="' + stripeProUrl() + '" target="_blank" ' +
+                '     style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">Upgrade to Pro — $9/mo ↗</a>' +
+                '  <div style="margin-top:12px;font-size:12px;color:#475569;">No lock-in · cancel any time · instant access</div>' +
                 '</div>'
             );
             renderUsageCounter();
@@ -4770,15 +4844,42 @@ function initCommentGenerator() {
             } else if (usageCheck.reason === 'network_error') {
                 // Network down — fail closed, do not generate
                 showCgInlineError(
-                    '<div style="padding:20px;text-align:center;">' +
-                    '  <div style="font-size:13px;color:#f87171;">⚠️ Network error — could not verify your account. Please check your connection and try again.</div>' +
+                    '<div style="padding:28px 24px;text-align:center;">' +
+                    '  <div style="font-size:32px;margin-bottom:10px;">📡</div>' +
+                    '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Network error</div>' +
+                    '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:14px;">Could not reach Poly-Glot servers. Check your connection and try again.</div>' +
+                    '  <button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '     style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;">↺ Retry</button>' +
+                    '</div>'
+                );
+            } else if (usageCheck.reason === 'key_cycling_blocked') {
+                // Model API key cycling detected — hard block
+                showCgInlineError(
+                    '<div style="padding:28px 24px;text-align:center;">' +
+                    '  <div style="font-size:32px;margin-bottom:10px;">🚫</div>' +
+                    '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Account flagged</div>' +
+                    '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    '    Multiple API keys detected on this account this month. This is not allowed on the free plan.<br><br>' +
+                    '    Upgrade to Pro for unlimited model key support, or contact us to resolve.' +
+                    '  </div>' +
+                    PROMO_HTML +
+                    '  <a href="' + stripeProUrl() + '" target="_blank" ' +
+                    '     style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;margin-right:8px;">Upgrade to Pro — $9/mo ↗</a>' +
+                    '  <a href="mailto:hello@poly-glot.ai?subject=Account%20flagged" ' +
+                    '     style="font-size:12px;color:#64748b;text-decoration:none;">Contact support →</a>' +
                     '</div>'
                 );
             } else {
                 // Any other server error — block to be safe
                 showCgInlineError(
-                    '<div style="padding:20px;text-align:center;">' +
-                    '  <div style="font-size:13px;color:#f87171;">⚠️ Could not verify your account. Please sign out and back in, then try again.</div>' +
+                    '<div style="padding:28px 24px;text-align:center;">' +
+                    '  <div style="font-size:32px;margin-bottom:10px;">⚠️</div>' +
+                    '  <div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Verification failed</div>' +
+                    '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:14px;">Could not verify your account. Please sign out and back in, then try again.</div>' +
+                    '  <button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '     style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;margin-right:8px;">↺ Retry</button>' +
+                    '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.signOut===\'function\'){window.PolyGlotAuth.signOut();}return false;" ' +
+                    '     style="font-size:12px;color:#64748b;text-decoration:none;">Sign out →</a>' +
                     '</div>'
                 );
             }
@@ -5097,12 +5198,106 @@ function initCommentGenerator() {
             }
 
         } catch (err) {
-            showCgInlineError(
-                '<div style="padding:24px;color:#f87171;font-size:14px;line-height:1.8;">' +
-                '❌ <strong>Generation failed.</strong><br>' +
-                '<span style="color:#9ca3af;">' + (err.message || 'Unknown error. Please try again.') + '</span>' +
-                '</div>'
-            );
+            var _errMsg  = (err && err.message) ? err.message.toLowerCase() : '';
+            var _prov    = (window.aiGenerator && window.aiGenerator.provider) || 'openai';
+            var _provLbl = _prov === 'anthropic' ? 'Anthropic' : _prov === 'google' ? 'Google' : 'OpenAI';
+            var _keyUrl  = _prov === 'anthropic' ? 'https://console.anthropic.com/settings/keys'
+                         : _prov === 'google'    ? 'https://aistudio.google.com/app/apikey'
+                         :                         'https://platform.openai.com/api-keys';
+
+            var _errHtml;
+
+            if (_errMsg.includes('fetch') || _errMsg.includes('network') || _errMsg.includes('failed to fetch') || _errMsg.includes('load failed')) {
+                // Network / CORS / offline
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">📡</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Network error</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    'Could not reach the ' + _provLbl + ' API. Check your internet connection and try again.' +
+                    '</div>' +
+                    '<button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '   style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;">↺ Retry</button>';
+
+            } else if (_errMsg.includes('invalid') && _errMsg.includes('api key') || _errMsg.includes('invalid_api_key') || _errMsg.includes('incorrect api key') || _errMsg.includes('401')) {
+                // Bad API key
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">🔑</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Invalid ' + _provLbl + ' key</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    'Double-check for typos or copy a fresh key from your provider.' +
+                    '</div>' +
+                    '<a href="' + _keyUrl + '" target="_blank" rel="noopener" ' +
+                    '   style="display:inline-block;padding:9px 22px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:700;border-radius:8px;text-decoration:none;">Get a new key ↗</a>';
+
+            } else if (_errMsg.includes('quota') || _errMsg.includes('insufficient_quota') || _errMsg.includes('billing') || _errMsg.includes('credit') || _errMsg.includes('402')) {
+                // Provider billing / quota exhausted
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">💳</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">' + _provLbl + ' account out of credits</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    'Your ' + _provLbl + ' account has no remaining credits. Add a payment method to continue.' +
+                    '</div>' +
+                    '<a href="' + _keyUrl + '" target="_blank" rel="noopener" ' +
+                    '   style="display:inline-block;padding:9px 22px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:700;border-radius:8px;text-decoration:none;">Add credits at ' + _provLbl + ' ↗</a>';
+
+            } else if (_errMsg.includes('rate limit') || _errMsg.includes('rate_limit') || _errMsg.includes('too many requests') || _errMsg.includes('429')) {
+                // Provider rate limit
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">⏱</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">' + _provLbl + ' rate limited</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    'Too many requests in a short window. Wait a few seconds and try again.' +
+                    '</div>' +
+                    '<button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '   style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;">↺ Retry</button>';
+
+            } else if (_errMsg.includes('overloaded') || _errMsg.includes('service unavailable') || _errMsg.includes('503') || _errMsg.includes('529')) {
+                // Provider overloaded
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">🔄</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">' + _provLbl + ' is overloaded</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    _provLbl + '\'s servers are under heavy load. Usually resolves in a few seconds.' +
+                    '</div>' +
+                    '<button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '   style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;">↺ Retry</button>';
+
+            } else if (_errMsg.includes('context length') || _errMsg.includes('token') && _errMsg.includes('limit') || _errMsg.includes('too long') || _errMsg.includes('max_tokens')) {
+                // Code too long for context window
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">📄</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Code too long</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    'This file exceeds the model\'s context window. Try pasting a smaller section, or switch to a model with a larger context (e.g. Gemini 2.5 Pro or GPT-4.1).' +
+                    '</div>';
+
+            } else if (_errMsg.includes('monthly limit') || _errMsg.includes('usage limit') || _errMsg.includes('files this month')) {
+                // Poly-Glot plan limit
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">🔒</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Monthly limit reached</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:6px;">' +
+                    'You\'ve used all ' + FREE_MONTHLY_LIMIT + ' free files this month. Upgrade to Pro for unlimited generation.' +
+                    '</div>' +
+                    PROMO_HTML +
+                    '<a href="' + stripeProUrl() + '" target="_blank" ' +
+                    '   style="display:inline-block;padding:11px 28px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;">Upgrade to Pro — $9/mo ↗</a>';
+
+            } else {
+                // Generic fallback — show raw message + retry
+                _errHtml =
+                    '<div style="font-size:32px;margin-bottom:10px;">❌</div>' +
+                    '<div style="font-size:15px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Generation failed</div>' +
+                    '<div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">' +
+                    (err.message || 'An unexpected error occurred. Please try again.') +
+                    '</div>' +
+                    '<button onclick="document.getElementById(\'cgGenerateBtn\').click();" ' +
+                    '   style="padding:9px 24px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#c4b5fd;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;margin-right:8px;">↺ Retry</button>' +
+                    '<a href="mailto:hello@poly-glot.ai?subject=Generation%20error&body=' + encodeURIComponent((err.message||'')) + '" ' +
+                    '   style="font-size:12px;color:#64748b;text-decoration:none;">Report issue →</a>';
+            }
+
+            showCgInlineError('<div style="padding:28px 24px;text-align:center;">' + _errHtml + '</div>');
             if (typeof gtag !== 'undefined') gtag('event', 'cg_generate_error', { error: err.message });
         } finally {
             // Restore original aiGenerator state
