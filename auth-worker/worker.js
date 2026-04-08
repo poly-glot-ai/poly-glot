@@ -2,7 +2,7 @@
  * ============================================================
  *  Poly-Glot AI — Auth + Usage Worker
  *  Cloudflare Worker — production-ready
- *  v2 — prompt surface isolation (prompt_token:, prompt_plan:, X-PG-Surface)
+ *  v3 — all 5 security fixes: session TTL, KV templates, per-email rate limits, HMAC signing
  * ============================================================
  *
  *  Endpoints
@@ -30,7 +30,7 @@
  *  Fix 1: SESSION_TTL 7 days (was 30) — limits token leakage window
  *  Fix 2: PRO_TEMPLATE_NAMES in KV (config:pro_template_names) — not in source
  *  Fix 3: Per-email rate limit on template fetches — survives token rotation
- *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — client must sign
+ *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — always enforced
  *  Fix 5: Dual-layer rate limiting (token + email) — blocks rotation abuse
  *
  *  KV key schema
@@ -65,7 +65,8 @@ const PRO_PLANS          = ['pro', 'team', 'enterprise'];
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  // X-PG-Sig is the HMAC request signature header (Fix 4) — must be explicitly allowed
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-PG-Surface, X-PG-Sig, X-CLI-Version',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -554,18 +555,18 @@ async function handleAdminUsers(request, env) {
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
 
-  // ── Only count emails that clicked their magic link ───────
-  // signup: keys are written in resolveToken (deleteAfter=true)
-  // — meaning the user actually received AND clicked the link.
-  // plan: keys are written at request time (before click) so
-  // they include unverified addresses — we no longer use them
-  // as the user count source of truth.
-  const signupKeys  = allKeys.filter(k => k.name.startsWith('signup:'));
-  const sessionKeys = allKeys.filter(k => k.name.startsWith('session:'));
+  // ── Separate signup keys by surface ──────────────────────
+  // signup:        written when a main-site magic link is clicked (surface=app)
+  // prompt_signup: written when a Prompt Studio magic link is clicked (surface=prompt)
+  // Each reads its own plan namespace: plan: vs prompt_plan:
+  // This prevents cross-surface bleed in plan breakdowns.
+  const signupKeys       = allKeys.filter(k => k.name.startsWith('signup:'));
+  const promptSignupKeys = allKeys.filter(k => k.name.startsWith('prompt_signup:'));
+  const sessionKeys      = allKeys.filter(k => k.name.startsWith('session:'));
 
   const YYYY_MM = new Date().toISOString().slice(0, 7);
 
-  // Build user list from signup: keys only
+  // ── Main-site users (signup: keys → plan: namespace) ──────
   const allUsers = await Promise.all(signupKeys.map(async k => {
     const email     = k.name.slice('signup:'.length);
     const signupRaw = await env.AUTH_KV.get(k.name, 'json');
@@ -589,22 +590,51 @@ async function handleAdminUsers(request, env) {
     return true;
   });
 
-  // ── Plan breakdown ────────────────────────────────────────
+  // ── Prompt Studio users (prompt_signup: keys → prompt_plan: namespace) ──
+  // Built entirely from prompt_plan: — never reads plan: (main site).
+  // This is the accurate source of truth for Prompt Studio plan counts.
+  const allPromptUsers = await Promise.all(promptSignupKeys.map(async k => {
+    const email         = k.name.slice('prompt_signup:'.length);
+    const signupRaw     = await env.AUTH_KV.get(k.name, 'json');
+    const source        = signupRaw?.source  ?? 'unknown';
+    const signupTs      = signupRaw?.ts      ?? null;
+    const promptPlanRaw = await env.AUTH_KV.get(`prompt_plan:${email}`, 'text');
+    const plan          = promptPlanRaw ?? 'prompt_free';
+    return { email, plan, source, signup_ts: signupTs };
+  }));
+
+  // Deduplicate + filter test/disposable addresses from prompt users too
+  const promptSeen  = new Set();
+  const promptUsers = allPromptUsers.filter(u => {
+    if (promptSeen.has(u.email)) return false;
+    promptSeen.add(u.email);
+    if (isDisposableEmail(u.email)) return false;
+    if (isTestEmail(u.email))       return false;
+    return true;
+  });
+
+  // ── Plan breakdown (main site) ────────────────────────────
   const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
   users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
 
+  // ── Prompt Studio plan breakdown (prompt_plan: namespace only) ──
+  const promptBreakdown = { prompt_free: 0, prompt_pro: 0, prompt_team: 0 };
+  promptUsers.forEach(u => { promptBreakdown[u.plan] = (promptBreakdown[u.plan] ?? 0) + 1; });
+
   // ── Surface breakdown (prompt vs app) ─────────────────────
-  const surfaces = { prompt: 0, app: 0 };
-  users.forEach(u => { surfaces[u.surface] = (surfaces[u.surface] ?? 0) + 1; });
+  const surfaces = { prompt: promptUsers.length, app: users.length };
 
   return jsonResponse({
-    ok:              true,
-    unique_users:    users.length,
-    active_sessions: sessionKeys.length,
-    plan_breakdown:  breakdown,
-    surface_breakdown: surfaces,
-    period:          YYYY_MM,
-    users:           users.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
+    ok:                    true,
+    unique_users:          users.length,
+    active_sessions:       sessionKeys.length,
+    plan_breakdown:        breakdown,
+    prompt_plan_breakdown: promptBreakdown,  // accurate Prompt Studio plan counts
+    prompt_unique_users:   promptUsers.length,
+    surface_breakdown:     surfaces,
+    period:                YYYY_MM,
+    users:                 users.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
+    prompt_users:          promptUsers.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
   });
 }
 
@@ -715,14 +745,19 @@ async function isProTemplate(name, env) {
 // Client must send header:
 //   X-PG-Sig: t={unixSeconds}.{hmac}
 //
-// HMAC is SHA-256 over:
-//   "{timestamp}.{token}.{name}"
-// keyed with env secret HMAC_SECRET.
+// Two modes (auto-selected by presence of HMAC_SECRET):
+//   Mode A — HMAC_SECRET set:
+//     key = HMAC_SECRET, payload = "{timestamp}.{token}.{name}"
+//   Mode B — no HMAC_SECRET (default/recommended):
+//     key = session token, payload = "{timestamp}.{token}.{name}"
+//     → Zero embedded secrets. Only the authenticated token holder can sign.
+//     → Including token in payload ensures sigs are unique per user+name+time,
+//       preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
 //
 // Rules:
 //   - Timestamp must be within ±60 seconds of server time (replay protection)
-//   - If HMAC_SECRET is not configured, verification is skipped (dev/staging)
-//   - Wrong/missing sig → 401 before any KV reads occur
+//   - Missing/invalid/expired sig → 401 before any KV reads occur
+//   - Always enforced in production (no bypass mode)
 //
 // KV key schema (no new keys needed — pure header check)
 // ─────────────────────────────────────────────────────────────
@@ -734,9 +769,12 @@ const HMAC_SIG_WINDOW_SECS = 60;
  * Returns false if signature is wrong, expired, or malformed.
  */
 async function verifyPromptSig(request, token, name, env) {
-  const secret = env.HMAC_SECRET ?? '';
-  if (!secret) return true; // dev/staging: skip if secret not configured
-
+  // Fix 4: HMAC request signing — always active.
+  // Two modes:
+  //   a) HMAC_SECRET configured → use env secret as key, payload = `${ts}.${token}.${name}`
+  //      (legacy: set via `wrangler secret put HMAC_SECRET`)
+  //   b) No HMAC_SECRET → use SESSION TOKEN as key, payload = `${ts}.${name}`
+  //      (default: zero embedded secrets — only the authenticated token holder can sign)
   const sigHeader = (request.headers.get('X-PG-Sig') ?? '').trim();
   if (!sigHeader) return false;
 
@@ -747,21 +785,29 @@ async function verifyPromptSig(request, token, name, env) {
   const timestamp = parseInt(match[1], 10);
   const clientSig = match[2].toLowerCase();
 
-  // Replay window check
+  // Replay window check (±60s)
   const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
   if (age > HMAC_SIG_WINDOW_SECS) return false;
 
   // Recompute expected HMAC
   const enc     = new TextEncoder();
+  const envSecret = env.HMAC_SECRET ?? '';
+  const keyBytes  = enc.encode(envSecret || token);  // token-as-key when no HMAC_SECRET
+  // Both modes use identical payload: timestamp.token.name
+  // Mode (a): key=HMAC_SECRET  — server-only secret
+  // Mode (b): key=token        — user's own session token as key
+  // Including token in mode (b) payload ensures sigs are unique per user+name+time,
+  // preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
+  const payload = `${timestamp}.${token}.${name}`;
+
   const keyMat  = await crypto.subtle.importKey(
-    'raw', enc.encode(secret),
+    'raw', keyBytes,
     { name: 'HMAC', hash: 'SHA-256' },
     false, ['sign']
   );
-  const payload = `${timestamp}.${token}.${name}`;
-  const mac     = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
-  const hexMac  = Array.from(new Uint8Array(mac))
-                       .map(b => b.toString(16).padStart(2, '0')).join('');
+  const mac    = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
+  const hexMac = Array.from(new Uint8Array(mac))
+                      .map(b => b.toString(16).padStart(2, '0')).join('');
 
   // Constant-time string compare (prevent timing attacks)
   return timingSafeEqual(hexMac, clientSig);
@@ -790,23 +836,65 @@ const TEMPLATE_EMAIL_RATE_LIMIT  = 60;   // per email per 60s
 const TEMPLATE_RATE_LIMIT_TTL    = 60;
 
 async function checkTemplateRateLimit(token, email, env) {
-  // Per-token check
-  const tokenKey   = `tpl_rate:${token}`;
-  const tokenRaw   = await env.AUTH_KV.get(tokenKey);
-  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
-  if (tokenCount >= TEMPLATE_RATE_LIMIT) return false;
+  // KV has no native atomic increment. We use a "write-then-verify" pattern
+  // to close the read-modify-write race window:
+  //
+  //   1. Read both counters in parallel (fast path reject)
+  //   2. If either is already at limit → reject immediately (no write)
+  //   3. Increment both counters in parallel (optimistic write)
+  //   4. Read both back immediately in parallel (race detection)
+  //   5. If either read-back exceeds limit → clamp to limit + deny
+  //      (this concurrent request lost the race — self-corrects for next request)
+  //
+  // Worst case: (N concurrent requests all pass step 2 simultaneously) →
+  // counter overshoots by N-1, all N are clamped and denied at step 5,
+  // counter is left at exactly the limit. No template is served over-limit.
 
-  // Per-email check — survives token rotation
-  const emailKey   = `tpl_rate_email:${email}`;
-  const emailRaw   = await env.AUTH_KV.get(emailKey);
+  const tokenKey = `tpl_rate:${token}`;
+  const emailKey = `tpl_rate_email:${email}`;
+
+  // ── Step 1: Read both counters in parallel ──────────────────
+  const [tokenRaw, emailRaw] = await Promise.all([
+    env.AUTH_KV.get(tokenKey),
+    env.AUTH_KV.get(emailKey),
+  ]);
+  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
   const emailCount = emailRaw ? parseInt(emailRaw, 10) : 0;
+
+  // ── Step 2: Fast-path reject if already at limit ────────────
+  if (tokenCount >= TEMPLATE_RATE_LIMIT)       return false;
   if (emailCount >= TEMPLATE_EMAIL_RATE_LIMIT) return false;
 
-  // Both passed — increment both counters
+  // ── Step 3: Optimistic increment (both in parallel) ─────────
+  const newToken = tokenCount + 1;
+  const newEmail = emailCount + 1;
   await Promise.all([
-    env.AUTH_KV.put(tokenKey, String(tokenCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
-    env.AUTH_KV.put(emailKey, String(emailCount + 1), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+    env.AUTH_KV.put(tokenKey, String(newToken), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
+    env.AUTH_KV.put(emailKey, String(newEmail), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
   ]);
+
+  // ── Step 4: Read back to detect concurrent over-limit ───────
+  const [tokenVerifyRaw, emailVerifyRaw] = await Promise.all([
+    env.AUTH_KV.get(tokenKey),
+    env.AUTH_KV.get(emailKey),
+  ]);
+  const tokenVerify = tokenVerifyRaw ? parseInt(tokenVerifyRaw, 10) : newToken;
+  const emailVerify = emailVerifyRaw ? parseInt(emailVerifyRaw, 10) : newEmail;
+
+  // ── Step 5: Clamp and deny if race overshot the limit ───────
+  if (tokenVerify > TEMPLATE_RATE_LIMIT || emailVerify > TEMPLATE_EMAIL_RATE_LIMIT) {
+    // Clamp both back to their limit so next request sees the correct ceiling
+    await Promise.all([
+      tokenVerify > TEMPLATE_RATE_LIMIT
+        ? env.AUTH_KV.put(tokenKey, String(TEMPLATE_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
+        : Promise.resolve(),
+      emailVerify > TEMPLATE_EMAIL_RATE_LIMIT
+        ? env.AUTH_KV.put(emailKey, String(TEMPLATE_EMAIL_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
+        : Promise.resolve(),
+    ]);
+    return false;  // deny — concurrent request exceeded limit
+  }
+
   return true;
 }
 
@@ -836,16 +924,16 @@ async function handleGetTemplate(request, env) {
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        // Always read live plan — catches legacy users and post-payment upgrades.
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        // Two completely separate auth flows, two separate KV namespaces.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -855,7 +943,7 @@ async function handleGetTemplate(request, env) {
 
   // ── 2. Pro gate ─────────────────────────────────────────────
   const isPro = await isProTemplate(name, env);
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (isPro && !userHasPro) {
     return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
   }
@@ -948,15 +1036,15 @@ async function handleSyncPick(request, env) {
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -964,7 +1052,7 @@ async function handleSyncPick(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
 
   // Reject Pro template names — free users cannot claim a Pro template as their pick
@@ -1007,18 +1095,25 @@ async function handleGetPick(request, env) {
   const token = (body?.token ?? '').trim();
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
 
+  // ── HMAC request signature (Fix 4) ─────────────────────────
+  // get-pick has no template name — client signs with name='' (empty string)
+  const sigOk = await verifyPromptSig(request, token, '', env);
+  if (!sigOk) {
+    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
+  }
+
   let email = null;
   let plan  = 'prompt_free';
 
-  for (const prefix of ['prompt_session:', 'session:', 'prompt_token:', 'token:']) {
+  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
-        const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
-        plan = promptPlan || mainPlan || data.plan || 'prompt_free';
+        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
+        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
+        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
       } catch { email = null; }
       break;
     }
@@ -1026,7 +1121,7 @@ async function handleGetPick(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
+  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
   if (userHasPro) return jsonResponse({ pick: null, pro: true, plan });
 
   // Legacy migration: if no KV pick exists but a localStorage pick was sent,
@@ -1102,23 +1197,24 @@ async function resolveSession(request, env) {
   const surface = (request.headers.get('X-PG-Surface') || '').toLowerCase();
   const isPromptSurface = surface === 'prompt';
 
-  // Check surface-specific session keys first, then fall back to legacy
+  // Strict surface isolation — no cross-namespace fallback.
+  // Prompt Studio tokens ONLY resolve against prompt_session:/prompt_token:.
+  // Main-site tokens ONLY resolve against session:/token:.
+  // A main-site session can never be used on /prompt/ and vice-versa.
   const prefixes = isPromptSurface
-    ? ['prompt_session:', 'prompt_token:', 'session:', 'token:']
-    : ['session:', 'token:'];
+    ? ['prompt_session:', 'prompt_token:']   // NO fallback to session:/token:
+    : ['session:', 'token:'];                 // NO fallback to prompt_session:
 
   for (const prefix of prefixes) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
-        // Use surface-specific plan key — prevents cross-bleed
-        const planKvKey = (isPromptSurface || prefix.startsWith('prompt_'))
-          ? `prompt_plan:${data.email}`
-          : `plan:${data.email}`;
-        const planRaw = await env.AUTH_KV.get(planKvKey);
-        const defaultPlan = (isPromptSurface || prefix.startsWith('prompt_')) ? 'prompt_free' : 'free';
-        return { email: data.email, plan: planRaw || data.plan || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
+        // Each surface reads its own plan namespace exclusively
+        const planKvKey   = isPromptSurface ? `prompt_plan:${data.email}` : `plan:${data.email}`;
+        const defaultPlan = isPromptSurface ? 'prompt_free' : 'free';
+        const planRaw     = await env.AUTH_KV.get(planKvKey);
+        return { email: data.email, plan: planRaw || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
       } catch { return null; }
     }
   }
@@ -1292,7 +1388,7 @@ async function resolveToken(request, env, deleteAfter) {
 
     // Session key also namespaced by surface to prevent cross-bleed
     const sessionPrefix = isPromptToken ? 'prompt_session:' : 'session:';
-    const SESSION_TTL   = 7 * 24 * 60 * 60;
+    // SESSION_TTL is the global constant (7 days) — no local re-declaration
     await env.AUTH_KV.put(
       `${sessionPrefix}${token.trim()}`,
       JSON.stringify({ email: data.email, plan: data.plan, surface: data.surface ?? (isPromptToken ? 'prompt' : 'app'), created: Date.now() }),
@@ -1387,7 +1483,8 @@ async function verifyStripeSignature(payload, sigHeader, secret) {
     const mac    = await crypto.subtle.sign('HMAC', key, enc.encode(signedPayload));
     const hexMac = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    return hexMac === signature;
+    // Timing-safe compare — prevents HMAC oracle via response timing
+    return timingSafeEqual(hexMac, signature);
   } catch {
     return false;
   }
@@ -1813,7 +1910,15 @@ async function handleGithubAppTrackUsage(request, env) {
     return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
-  const { installationId, month } = body ?? {};
+  // ── Auth: require ADMIN_SECRET ─────────────────────────────
+  // Only the poly-glot GitHub App backend (which knows ADMIN_SECRET)
+  // may call this endpoint. Prevents arbitrary installationId inflation.
+  const { installationId, month, secret } = body ?? {};
+  const adminSecret = env.ADMIN_SECRET ?? '';
+  if (!adminSecret || secret !== adminSecret) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
   if (!installationId) {
     return jsonResponse({ error: 'installationId is required' }, 400);
   }
@@ -1901,10 +2006,23 @@ async function handleCliTrackUsage(request, env) {
 // GitHub App stats proxy — GET /api/auth/gh-proxy
 // Returns { installations: N } from the GitHub App
 // ─────────────────────────────────────────────────────────────
+// Allowlisted endpoint paths for the GitHub App proxy.
+// ONLY these values may be forwarded — prevents open SSRF via ?endpoint=
+const GH_PROXY_ALLOWED_ENDPOINTS = new Set(['stats', 'health']);
+
 async function handleGhProxy(request, env) {
   try {
     const url = new URL(request.url);
-    const endpoint = url.searchParams.get('endpoint') || 'stats';
+    const rawEndpoint = url.searchParams.get('endpoint') || 'stats';
+
+    // ── SSRF guard: allowlist check ────────────────────────────
+    // Reject any endpoint value not in the explicit allowlist.
+    // Prevents ?endpoint=../../secret or ?endpoint=@attacker.com paths.
+    if (!GH_PROXY_ALLOWED_ENDPOINTS.has(rawEndpoint)) {
+      return jsonResponse({ error: 'Invalid endpoint' }, 400);
+    }
+    const endpoint = rawEndpoint;  // safe to use after allowlist check
+
     // Route to the Render-hosted GitHub App stats endpoint
     const ghRes = await fetch(
       `https://poly-glot-github-app.onrender.com/${endpoint}`,

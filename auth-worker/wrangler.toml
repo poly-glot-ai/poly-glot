@@ -1,26 +1,63 @@
-name       = "poly-glot-auth"
-main       = "worker.js"
-compatibility_date = "2024-01-01"
+# ============================================================
+#  Wrangler configuration — Poly-Glot Auth Worker
+#  https://developers.cloudflare.com/workers/wrangler/configuration/
+# ============================================================
 
+name            = "poly-glot-auth"
+main            = "worker.js"
+compatibility_date = "2024-09-23"
+
+# ES-module format (required for `export default { fetch }` syntax)
+# Wrangler v3 defaults to modules; explicit here for clarity.
+
+# ── Account ──────────────────────────────────────────────────
+# Replace with your real Cloudflare account ID
+# (Dashboard → right-hand sidebar on any Workers page)
+account_id = "2cabfc7790be3c1b60b990b6dec400a3"
+
+# ── Routes ───────────────────────────────────────────────────
+# Serves the Worker for all /api/auth/* paths on poly-glot.ai.
+# You must also add the route in the Cloudflare dashboard under
+# Workers & Pages → your Worker → Triggers → Routes.
+routes = [
+  { pattern = "poly-glot.ai/api/auth/*",   zone_name = "poly-glot.ai" },
+  { pattern = "poly-glot.ai/api/usage/*",  zone_name = "poly-glot.ai" },
+  { pattern = "poly-glot.ai/api/stripe/*", zone_name = "poly-glot.ai" },
+  { pattern = "poly-glot.ai/api/prompt/*", zone_name = "poly-glot.ai" }
+]
+
+# ── KV Namespaces ─────────────────────────────────────────────
+# AUTH_KV is used for:
+#   • rate-limit flags  (ratelimit:{email})
+#   • magic-link tokens (token:{token})
+#   • plan overrides    (plan:{email})       ← set by future Stripe webhook
+#
+# After running `wrangler kv:namespace create "AUTH_KV"` replace
+# the placeholder IDs below with the values printed by that command.
 [[kv_namespaces]]
-binding = "AUTH_KV"
-id      = "4686b5dd158944e5856f7a402c6c6d2f"
+binding    = "AUTH_KV"
+id         = "4686b5dd158944e5856f7a402c6c6d2f"
+preview_id = "70e1e3dcb22b476bb97b3900e861bed5"
 
+# ── Environment variables (non-secret) ───────────────────────
 [vars]
 BASE_URL = "https://poly-glot.ai"
 
-[[routes]]
-pattern = "poly-glot.ai/api/auth/*"
-zone_name = "poly-glot.ai"
+# ── Secrets (set via CLI — never commit real values here) ────
+# Run after deployment:
+#   wrangler secret put RESEND_API_KEY
+#
+# Secret name    | Source
+# ─────────────────────────────────────────────────────────────
+# RESEND_API_KEY | https://resend.com/api-keys
 
-[[routes]]
-pattern = "poly-glot.ai/api/prompt/*"
-zone_name = "poly-glot.ai"
+# ── Observability (optional, recommended for production) ─────
+[observability]
+enabled = true
 
-[[routes]]
-pattern = "poly-glot.ai/api/usage/*"
-zone_name = "poly-glot.ai"
-
-[[routes]]
-pattern = "poly-glot.ai/api/stripe/*"
-zone_name = "poly-glot.ai"
+# ── Local development ─────────────────────────────────────────
+# `wrangler dev` will serve the Worker at http://localhost:8787
+# Use `.dev.vars` file for local secrets (git-ignored):
+#
+#   RESEND_API_KEY=re_xxxxxxxxxxxx
+#   BASE_URL=http://localhost:8787
