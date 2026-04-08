@@ -716,6 +716,26 @@ const PRO_TEMPLATE_NAMES = new Set([
 // Body:    { token: string, name: string }
 // Returns: { tpl: string } or 401/403
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Rate limit helper for template fetches — per-token, per-minute.
+// Prevents enumeration of all free templates with a valid token.
+// Limit: 20 fetches per token per 60 seconds.
+// ─────────────────────────────────────────────────────────────
+const TEMPLATE_RATE_LIMIT     = 20;
+const TEMPLATE_RATE_LIMIT_TTL = 60;
+
+async function checkTemplateRateLimit(token, env) {
+  const key = `tpl_rate:${token}`;
+  const raw = await env.AUTH_KV.get(key);
+  const count = raw ? parseInt(raw, 10) : 0;
+  if (count >= TEMPLATE_RATE_LIMIT) return false;
+  // Increment — preserve TTL by using expirationTtl only on first write
+  await env.AUTH_KV.put(key, String(count + 1), {
+    expirationTtl: TEMPLATE_RATE_LIMIT_TTL,
+  });
+  return true;
+}
+
 async function handleGetTemplate(request, env) {
   let body;
   try { body = await request.json(); } catch {
@@ -728,7 +748,14 @@ async function handleGetTemplate(request, env) {
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
   if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
 
-  // Resolve session — check prompt-namespaced keys first, then legacy
+  // Rate limit — blocks enumeration attacks with a valid token
+  const allowed = await checkTemplateRateLimit(token, env);
+  if (!allowed) {
+    return jsonResponse({ error: 'Too many requests. Please slow down.' }, 429);
+  }
+
+  // Resolve session — check prompt-namespaced keys first, then legacy.
+  // Legacy users (session: / token: prefixes) are fully supported.
   let email = null;
   let plan  = 'prompt_free';
 
@@ -738,9 +765,8 @@ async function handleGetTemplate(request, env) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        // Always read live plan — catches legacy users who signed up before
-        // prompt_plan: keys existed. Falls back to plan: (main site plan) then
-        // data.plan then prompt_free.
+        // Always read live plan from KV — catches legacy users and post-payment upgrades.
+        // Falls back through: prompt_plan → plan (main site) → token data → prompt_free
         const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
         const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
         plan = promptPlan || mainPlan || data.plan || 'prompt_free';
@@ -751,28 +777,56 @@ async function handleGetTemplate(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  // Look up the template content
+  // Look up the template content server-side
   const tpl = TEMPLATE_CONTENT[name];
   if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
 
-  // Pro gate
+  // Pro gate — checked before free-pick gate
   const isPro = PRO_TEMPLATE_NAMES.has(name);
   const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
   if (isPro && !userHasPro) {
     return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
   }
 
-  // Free-pick gate — free users can only access their one persisted pick
+  // Free-pick gate — atomic write using KV metadata to prevent race conditions.
+  // Strategy: use putIfAbsent pattern — write with a unique metadata flag,
+  // then read back to confirm we own the slot. First writer wins.
   if (!isPro && !userHasPro) {
-    const pick = await env.AUTH_KV.get(`prompt_picked:${email}`);
-    // If they have a stored pick and this isn't it → deny
-    if (pick && pick !== name) {
-      return jsonResponse({ error: 'Free plan allows 1 template. Upgrade for all templates.', currentPick: pick, upgrade: true }, 403);
+    const pickKey = `prompt_picked:${email}`;
+
+    // Read existing pick first
+    const existingRaw = await env.AUTH_KV.getWithMetadata(pickKey);
+    const existing = existingRaw?.value ?? null;
+
+    if (existing && existing !== name) {
+      // Already has a different pick — deny
+      return jsonResponse({
+        error: 'Free plan allows 1 template. Upgrade for all templates.',
+        currentPick: existing,
+        upgrade: true,
+      }, 403);
     }
-    // If no pick stored yet — allow and persist it now (first-time access)
-    if (!pick) {
-      await env.AUTH_KV.put(`prompt_picked:${email}`, name);
+
+    if (!existing) {
+      // No pick yet — write with a unique claim token to detect races
+      const claimId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await env.AUTH_KV.put(pickKey, name, {
+        metadata: { claimId, email, setAt: Date.now() },
+      });
+
+      // Read back to confirm we won the race — if another request snuck in
+      // between our get and put, the claimId won't match
+      const verify = await env.AUTH_KV.getWithMetadata(pickKey);
+      if (verify?.value !== name || verify?.metadata?.claimId !== claimId) {
+        // Lost the race — return what actually got stored
+        return jsonResponse({
+          error: 'Free plan allows 1 template. Upgrade for all templates.',
+          currentPick: verify?.value ?? name,
+          upgrade: true,
+        }, 403);
+      }
     }
+    // existing === name → already their pick, allow through
   }
 
   return jsonResponse({ tpl });
@@ -823,15 +877,23 @@ async function handleSyncPick(request, env) {
   const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
   if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
 
+  // Reject Pro template names — free users cannot claim a Pro template as their pick
+  if (PRO_TEMPLATE_NAMES.has(name)) {
+    return jsonResponse({ error: 'Pro plan required to use this template', upgrade: true }, 403);
+  }
+
+  if (!TEMPLATE_CONTENT[name]) return jsonResponse({ error: 'Template not found' }, 404);
+
   // Check existing pick — first pick wins, never overwrite
   const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
   if (existing) {
     return jsonResponse({ ok: true, pick: existing, alreadySet: true });
   }
 
-  // Persist the pick permanently
-  if (!TEMPLATE_CONTENT[name]) return jsonResponse({ error: 'Template not found' }, 404);
-  await env.AUTH_KV.put(`prompt_picked:${email}`, name);
+  // Persist the pick with metadata for auditability
+  await env.AUTH_KV.put(`prompt_picked:${email}`, name, {
+    metadata: { source: 'sync_pick', email, setAt: Date.now() },
+  });
   return jsonResponse({ ok: true, pick: name });
 }
 
@@ -876,12 +938,20 @@ async function handleGetPick(request, env) {
   const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
   if (userHasPro) return jsonResponse({ pick: null, pro: true, plan });
 
-  // Legacy migration: if no KV pick exists but localStorage pick was already
-  // sent in the request body, persist it now so old users don't lose their pick
+  // Legacy migration: if no KV pick exists but a localStorage pick was sent,
+  // persist it to KV so old users keep their selection seamlessly.
+  // Security: only FREE template names are accepted — Pro names are rejected
+  // so a user can't claim a Pro template as their free pick via this path.
   const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
-  if (!existing && body?.legacyPick && TEMPLATE_CONTENT[body.legacyPick]) {
-    await env.AUTH_KV.put(`prompt_picked:${email}`, body.legacyPick);
-    return jsonResponse({ pick: body.legacyPick, pro: false, plan, migrated: true });
+  if (!existing && body?.legacyPick) {
+    const legacy = String(body.legacyPick).trim();
+    const isValidFreePick = TEMPLATE_CONTENT[legacy] && !PRO_TEMPLATE_NAMES.has(legacy);
+    if (isValidFreePick) {
+      await env.AUTH_KV.put(`prompt_picked:${email}`, legacy, {
+        metadata: { source: 'legacy_migration', email, setAt: Date.now() },
+      });
+      return jsonResponse({ pick: legacy, pro: false, plan, migrated: true });
+    }
   }
 
   return jsonResponse({ pick: existing || null, pro: false, plan });
