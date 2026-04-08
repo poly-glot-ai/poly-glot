@@ -1,3 +1,10 @@
+## [2.1.41] — 2026-04-08
+- chore(cli): bump version to 2.1.40 [publish]
+- ✨ feat(cli): --changed flag for --dir; Pro gate for full dir scan [publish]
+- ✨ feat(cli): --changed flag for --dir; Pro gate for full dir scan [publish]
+
+---
+
 ## [2.1.38] — 2026-04-08
 - ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
 - ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
