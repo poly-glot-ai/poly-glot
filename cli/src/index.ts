@@ -35,7 +35,7 @@ import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT, ear
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VERSION = '2.1.37';  // post-run signup CTA + dynamic EARLYBIRD3 countdown + free limit 10/mo
+const VERSION = '2.1.38';  // model key tracking — same API key = same quota pool across accounts
 
 const SUPPORTED_EXTENSIONS: Record<string, string> = {
     js:    'javascript', ts:   'typescript', jsx: 'javascript', tsx: 'typescript',
