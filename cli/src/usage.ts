@@ -11,10 +11,18 @@
  *    server-side when a sessionToken is present.
  */
 
-import * as fs   from 'fs';
-import * as path from 'path';
-import * as os   from 'os';
+import * as fs     from 'fs';
+import * as path   from 'path';
+import * as os     from 'os';
+import * as crypto from 'crypto';
 import { loadConfig } from './config';
+
+// Hash the API key so the server can detect same-key abuse across accounts
+// without ever storing the raw key. First 32 hex chars of SHA-256.
+function hashApiKey(apiKey: string): string | null {
+    if (!apiKey || apiKey.length < 8) return null;
+    return crypto.createHash('sha256').update(apiKey.trim()).digest('hex').slice(0, 32);
+}
 
 export const FREE_MONTHLY_LIMIT = 10;
 
@@ -98,12 +106,14 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null
 
 async function getServerUsage(): Promise<ServerUsageResponse | null> {
     try {
-        const cfg = loadConfig();
+        const cfg        = loadConfig();
         if (!cfg.sessionToken) return null;
+        const apiKeyHash = hashApiKey(cfg.apiKey ?? '');
         const res = await withTimeout(
-            fetch(`${AUTH_API}/auth/get-usage?token=${encodeURIComponent(cfg.sessionToken)}`, {
-                method:  'GET',
+            fetch(`${AUTH_API}/auth/get-usage`, {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ token: cfg.sessionToken, apiKeyHash }),
             }),
             4000
         );
@@ -114,12 +124,13 @@ async function getServerUsage(): Promise<ServerUsageResponse | null> {
 
 async function incrementServerUsage(count = 1): Promise<ServerUsageResponse | null> {
     try {
-        const cfg = loadConfig();
+        const cfg        = loadConfig();
         if (!cfg.sessionToken) return null;
+        const apiKeyHash = hashApiKey(cfg.apiKey ?? '');
         const res = await fetch(`${AUTH_API}/auth/track-usage`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ token: cfg.sessionToken, count }),
+            body:    JSON.stringify({ token: cfg.sessionToken, count, apiKeyHash }),
         });
         if (res.status === 403 || res.status === 429) {
             try {
