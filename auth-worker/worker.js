@@ -715,14 +715,9 @@ async function handleGetTemplate(request, env) {
   if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
   if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
 
-  // Rate limit — blocks enumeration attacks with a valid token
-  const allowed = await checkTemplateRateLimit(token, env);
-  if (!allowed) {
-    return jsonResponse({ error: 'Too many requests. Please slow down.' }, 429);
-  }
-
-  // Resolve session — check prompt-namespaced keys first, then legacy.
-  // Legacy users (session: / token: prefixes) are fully supported.
+  // ── 1. Resolve session ──────────────────────────────────────
+  // Check prompt-namespaced keys first, then legacy session/token
+  // prefixes so all existing users continue to work seamlessly.
   let email = null;
   let plan  = 'prompt_free';
 
@@ -732,8 +727,7 @@ async function handleGetTemplate(request, env) {
       try {
         const data = JSON.parse(raw);
         email = data.email ?? null;
-        // Always read live plan from KV — catches legacy users and post-payment upgrades.
-        // Falls back through: prompt_plan → plan (main site) → token data → prompt_free
+        // Always read live plan — catches legacy users and post-payment upgrades.
         const promptPlan = await env.AUTH_KV.get(`prompt_plan:${email}`);
         const mainPlan   = await env.AUTH_KV.get(`plan:${email}`);
         plan = promptPlan || mainPlan || data.plan || 'prompt_free';
@@ -744,29 +738,26 @@ async function handleGetTemplate(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  // Look up the template content from KV — never from source code
-  const tpl = await getTemplateContent(name, env);
-  if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
-
-  // Pro gate — checked before free-pick gate
+  // ── 2. Pro gate ─────────────────────────────────────────────
   const isPro = PRO_TEMPLATE_NAMES.has(name);
   const userHasPro = ['pro', 'team', 'enterprise', 'prompt_pro', 'prompt_team'].includes(plan.toLowerCase());
   if (isPro && !userHasPro) {
     return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
   }
 
-  // Free-pick gate — atomic write using KV metadata to prevent race conditions.
-  // Strategy: use putIfAbsent pattern — write with a unique metadata flag,
-  // then read back to confirm we own the slot. First writer wins.
+  // ── 3. Free-pick gate (BEFORE rate limiter) ─────────────────
+  // Free users are hard-locked to exactly one template stored in KV.
+  // Enumeration attempts are rejected here at the data layer —
+  // no rate limit quota is consumed on denied requests, so even
+  // hammering the endpoint with different names wastes nothing
+  // and reveals nothing. The rate limiter below is a backstop only.
   if (!isPro && !userHasPro) {
     const pickKey = `prompt_picked:${email}`;
-
-    // Read existing pick first
     const existingRaw = await env.AUTH_KV.getWithMetadata(pickKey);
     const existing = existingRaw?.value ?? null;
 
     if (existing && existing !== name) {
-      // Already has a different pick — deny
+      // Locked to a different template — hard deny, zero info leak
       return jsonResponse({
         error: 'Free plan allows 1 template. Upgrade for all templates.',
         currentPick: existing,
@@ -775,17 +766,14 @@ async function handleGetTemplate(request, env) {
     }
 
     if (!existing) {
-      // No pick yet — write with a unique claim token to detect races
+      // First access — claim atomically with claimId to win any race
       const claimId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       await env.AUTH_KV.put(pickKey, name, {
         metadata: { claimId, email, setAt: Date.now() },
       });
-
-      // Read back to confirm we won the race — if another request snuck in
-      // between our get and put, the claimId won't match
+      // Read back — if another parallel request won, reject this one
       const verify = await env.AUTH_KV.getWithMetadata(pickKey);
       if (verify?.value !== name || verify?.metadata?.claimId !== claimId) {
-        // Lost the race — return what actually got stored
         return jsonResponse({
           error: 'Free plan allows 1 template. Upgrade for all templates.',
           currentPick: verify?.value ?? name,
@@ -793,8 +781,22 @@ async function handleGetTemplate(request, env) {
         }, 403);
       }
     }
-    // existing === name → already their pick, allow through
+    // existing === name → already their pick, fall through
   }
+
+  // ── 4. Rate limiter (backstop — only reached by legitimate requests) ──
+  // At this point auth, plan, and pick are all verified. Rate limiting
+  // prevents high-volume programmatic extraction of served content.
+  // Free users effectively never hit this (locked to 1 template anyway).
+  // Pro users: 20 fetches per token per 60s — generous for normal use.
+  const allowed = await checkTemplateRateLimit(token, env);
+  if (!allowed) {
+    return jsonResponse({ error: 'Too many requests. Please slow down.' }, 429);
+  }
+
+  // ── 5. Fetch and serve template content from KV ─────────────
+  const tpl = await getTemplateContent(name, env);
+  if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
 
   return jsonResponse({ tpl });
 }
