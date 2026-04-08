@@ -642,56 +642,23 @@ async function handleRefresh(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Template content — server-side source of truth.
-// tpl strings live HERE only — never sent to the client until
-// auth + plan are verified.  Matches the client TEMPLATES array
-// by name so the client can hold metadata (vars, desc) safely.
+// Template content — stored exclusively in Cloudflare KV.
+// Keys: tpl:{name}  e.g. "tpl:💻 Code Review Assistant"
+// Never stored in source code — repo is public, KV is private.
+// To add/update a template: npx wrangler kv key put --namespace-id
+//   4686b5dd158944e5856f7a402c6c6d2f "tpl:Name" "content"
 // ─────────────────────────────────────────────────────────────
-const TEMPLATE_CONTENT = {
-  '💻 Code Review Assistant':
-    `You are an experienced {{language}} developer conducting a thorough code review.\n\nReview the following code for:\n- Bugs and errors\n- Code style and conventions\n- Performance issues\n- Security vulnerabilities\n\nCode to review:\n{{code}}\n\nProvide your review in {{format}} format with specific line references.`,
-  '✍️ Content Writer':
-    `You are a professional content writer specializing in {{niche}} content.\n\nWrite a {{content_type}} about: {{topic}}\n\nRequirements:\n- Target audience: {{audience}}\n- Tone: {{tone}}\n- Length: {{length}} words\n- Include keywords: {{keywords}}\n\nAdditional instructions:\n{{instructions}}`,
-  '📊 Data Analyst':
-    `You are a data analyst with expertise in {{domain}} data analysis.\n\nAnalyze the following data and provide insights:\n{{data}}\n\nFocus areas:\n- {{focus_area_1}}\n- {{focus_area_2}}\n- {{focus_area_3}}\n\nProvide your analysis in {{format}} with visualization suggestions and actionable recommendations.`,
-  '🌐 Translation Expert':
-    `You are a professional translator specializing in {{source_lang}} to {{target_lang}} translation.\n\nTranslate the following text while preserving:\n- Cultural nuances\n- Tone and style\n- Idiomatic expressions\n\nText to translate:\n{{text}}\n\nContext: {{context}}\n\nProvide the translation in {{format}} format.`,
-  '📝 Summarization Tool':
-    `You are a professional summarizer specializing in {{content_type}} content.\n\nSummarize the following text in {{length}}:\n{{text}}\n\nFocus on:\n- Key points and main ideas\n- {{focus_1}}\n- {{focus_2}}\n\nStyle: {{style}}`,
-  '🎨 Creative Storyteller':
-    `You are a creative writer specializing in {{genre}} stories.\n\nWrite a {{story_type}} with the following elements:\n- Setting: {{setting}}\n- Main character: {{character}}\n- Conflict: {{conflict}}\n- Tone: {{tone}}\n- Length: {{length}} words\n\nAdditional elements:\n{{additional}}`,
-  '📖 Technical Documentation':
-    `You are a technical writer creating documentation for {{product_type}}.\n\nDocument the following feature/component:\n{{feature}}\n\nInclude:\n- Overview and purpose\n- {{section_1}}\n- {{section_2}}\n- {{section_3}}\n- Examples and code snippets\n\nAudience: {{audience}}\nFormat: {{format}}`,
-  '🎧 Customer Support':
-    `You are a customer support representative for {{company}} with expertise in {{product}}.\n\nCustomer inquiry:\n{{inquiry}}\n\nRespond with:\n- Empathy and understanding\n- Clear solution or next steps\n- {{tone}} tone\n- Offer additional help\n\nCompany policy to consider:\n{{policy}}`,
-  '🐛 Bug Report Writer':
-    `You are a QA engineer. Write a detailed bug report.\n\nProduct: {{product}}\nEnvironment: {{environment}}\n\nIssue:\n{{description}}\n\nSteps to reproduce:\n{{steps}}\n\nExpected: {{expected}}\nActual: {{actual}}\n\nSeverity: {{severity}}`,
-  '📧 Cold Email Outreach':
-    `You are an expert sales copywriter. Write a concise cold email.\n\nSender: {{sender_role}} at {{sender_company}}\nRecipient: {{recipient_name}}, {{recipient_title}} at {{recipient_company}}\nValue prop: {{value_prop}}\nCTA: {{cta}}\nTone: {{tone}}\n\nWrite a subject line and body under 150 words.`,
-  '🎓 Study Guide Creator':
-    `You are an expert educator in {{subject}}.\n\nCreate a study guide for: {{topic}}\nLevel: {{level}}\nStudy time: {{time}}\n\nInclude:\n- Key concepts and definitions\n- Core principles with examples\n- Common misconceptions\n- {{num_questions}} practice questions\n- Memory aids and mnemonics`,
-  '📣 Social Media Caption':
-    `You are a social media strategist for {{platform}}.\n\nTopic: {{topic}}\nBrand voice: {{brand_voice}}\nAudience: {{audience}}\nGoal: {{goal}}\n\nWrite {{num_variants}} caption variants with:\n- Hook in first line\n- Relevant emojis\n- CTA\n- {{num_hashtags}} hashtags\n\nChar limit: {{char_limit}}`,
-  '🧠 Meeting Summary':
-    `You are an executive assistant. Convert meeting notes into a clean summary.\n\nMeeting: {{meeting_name}}\nDate: {{date}}\nAttendees: {{attendees}}\n\nNotes:\n{{notes}}\n\nFormat:\n- Objective\n- Key decisions\n- Action items (owner + deadline)\n- Open questions / blockers\n- Next meeting date`,
-  // PRO
-  '⚖️ Legal Contract Reviewer':
-    `You are a senior contract attorney for {{contract_type}} agreements.\n\nReview:\n{{contract_text}}\n\nJurisdiction: {{jurisdiction}}\nParty: {{party}}\n\nIdentify:\n1. High-risk clauses ⚠️\n2. Missing protections\n3. Ambiguous language\n4. Recommended amendments\n5. Risk rating: Low/Medium/High`,
-  '💰 Financial Analysis Report':
-    `You are a senior financial analyst.\n\nCompany: {{company}}\nAnalysis: {{analysis_type}}\nPeriod: {{period}}\n\nData:\n{{financial_data}}\n\nProduce:\n- Executive summary\n- Revenue and margin trends\n- Key ratios (P/E, EV/EBITDA, ROE)\n- Bull/base/bear scenarios\n- Top 5 risks\n\nAudience: {{audience}}`,
-  '🏥 Medical Case Summary':
-    `You are a board-certified physician in {{specialty}}.\n\nCase notes:\n{{notes}}\n\nGenerate:\n- Chief complaint\n- History of present illness\n- Top {{num_dx}} differential diagnoses\n- Management plan\n- Follow-up recommendations\n\nFlag red flags with ⚠️`,
-  '🔐 Security Threat Model':
-    `You are a senior application security engineer.\n\nSystem: {{system_name}}\nArchitecture: {{architecture}}\nStack: {{tech_stack}}\nData: {{data_sensitivity}}\n\nGenerate STRIDE threat model:\n1. System boundaries\n2. Threat enumeration per category\n3. DREAD risk ratings\n4. Mitigations\n5. Compliance: {{compliance_frameworks}}`,
-  '🎬 Video Script Writer':
-    `You are a video scriptwriter for {{platform}}.\n\nTopic: {{topic}}\nLength: {{length}}\nFormat: {{format}}\nAudience: {{audience}}\nVoice: {{brand_voice}}\nGoal: {{goal}}\n\nWrite:\n- Hook ({{hook_seconds}}s — must stop the scroll)\n- Introduction\n- Main sections with B-roll [in brackets]\n- CTA\n- End screen`,
-  '🏗️ System Design Document':
-    `You are a principal software engineer.\n\nSystem: {{system_name}}\nScale: {{scale}}\nSLA: {{sla}}\nTech: {{tech_preferences}}\n\nGenerate:\n1. Functional + non-functional requirements\n2. High-level architecture\n3. Component breakdown\n4. Data model + storage\n5. Scalability strategy\n6. Failure modes + mitigation\n7. Monitoring plan`,
-  '🎯 Ad Copy Generator':
-    `You are a performance marketing expert.\n\nProduct: {{product}}\nPlatform: {{platform}}\nGoal: {{goal}}\nAudience: {{audience}}\nUVP: {{uvp}}\n\nGenerate:\n1. 3x headlines (max {{headline_chars}} chars)\n2. 3x descriptions (max {{desc_chars}} chars)\n3. 2x CTA options\n4. A/B test hypothesis\n5. Expected CTR range\n\nTriggers: {{triggers}}`,
-  '🧬 Research Paper Abstract':
-    `You are an academic researcher in {{field}}.\n\nTitle: {{title}}\nQuestion: {{research_question}}\nMethod: {{methodology}}\nFindings: {{findings}}\n\nWrite:\n1. Structured abstract (max {{word_limit}} words)\n2. 5 keywords\n3. Plain-language summary (3 sentences)\n4. Suggested journals\n\nCitation: {{citation_style}}`,
-};
+
+/** Fetch template tpl string from KV. Returns null if not found. */
+async function getTemplateContent(name, env) {
+  return await env.AUTH_KV.get(`tpl:${name}`);
+}
+
+/** Check if a template name exists in KV (used for validation). */
+async function templateExists(name, env) {
+  const val = await env.AUTH_KV.get(`tpl:${name}`);
+  return val !== null;
+}
 
 // Plan membership — controls which templates require Pro
 const PRO_TEMPLATE_NAMES = new Set([
@@ -777,8 +744,8 @@ async function handleGetTemplate(request, env) {
 
   if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-  // Look up the template content server-side
-  const tpl = TEMPLATE_CONTENT[name];
+  // Look up the template content from KV — never from source code
+  const tpl = await getTemplateContent(name, env);
   if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
 
   // Pro gate — checked before free-pick gate
@@ -882,7 +849,8 @@ async function handleSyncPick(request, env) {
     return jsonResponse({ error: 'Pro plan required to use this template', upgrade: true }, 403);
   }
 
-  if (!TEMPLATE_CONTENT[name]) return jsonResponse({ error: 'Template not found' }, 404);
+  // Validate template exists in KV
+  if (!await templateExists(name, env)) return jsonResponse({ error: 'Template not found' }, 404);
 
   // Check existing pick — first pick wins, never overwrite
   const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
@@ -945,7 +913,7 @@ async function handleGetPick(request, env) {
   const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
   if (!existing && body?.legacyPick) {
     const legacy = String(body.legacyPick).trim();
-    const isValidFreePick = TEMPLATE_CONTENT[legacy] && !PRO_TEMPLATE_NAMES.has(legacy);
+    const isValidFreePick = await templateExists(legacy, env) && !PRO_TEMPLATE_NAMES.has(legacy);
     if (isValidFreePick) {
       await env.AUTH_KV.put(`prompt_picked:${email}`, legacy, {
         metadata: { source: 'legacy_migration', email, setAt: Date.now() },
