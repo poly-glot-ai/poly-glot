@@ -823,6 +823,9 @@ function renderSignups(m) {
 function renderUserTable(users) {
   const tbody = document.getElementById('userTableBody');
   if (!tbody) return;
+  // ── Filter out owner accounts ─────────────────────────────────
+  const HIDDEN_EMAILS = ['hwmoses2@icloud.com', 'haroldwebstermoses2@gmail.com'];
+  users = (users || []).filter(u => !HIDDEN_EMAILS.includes((u.email || '').toLowerCase()));
   if (!users || !users.length) {
     tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No users yet</td></tr>';
     return;
