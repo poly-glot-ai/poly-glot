@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260409-1600 -->
+<!-- build: 20260408-1410 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -7,81 +7,6 @@
 <title>Poly-Glot Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
 <meta name="robots" content="noindex,nofollow">
-
-<!-- ═══════════════════════════════════════════════════════════════
-     AUTH GUARD — owner-only access via magic link.
-     Allowed: hwmoses2@icloud.com only.
-     No token → show login form. Wrong email → show 403.
-     Valid session → reveal dashboard.
-     ═══════════════════════════════════════════════════════════════ -->
-<style id="pg-auth-hide">body { visibility: hidden; }</style>
-<script>
-(function () {
-  'use strict';
-
-  var REFRESH_URL  = 'https://poly-glot.ai/api/auth/refresh';
-  var LS_TOKEN_KEY = 'pg_session_token';
-  var ALLOWED      = ['hwmoses2@icloud.com'];
-
-  function revealPage() {
-    var el = document.getElementById('pg-auth-hide');
-    if (el) el.parentNode.removeChild(el);
-  }
-
-  function showLoginScreen(msg) {
-    revealPage();
-    document.getElementById('pg-auth-screen').style.display = 'flex';
-    if (msg) document.getElementById('pg-auth-msg').textContent = msg;
-  }
-
-  function hideSplash() {
-    var s = document.getElementById('pg-auth-splash');
-    if (s) s.style.display = 'none';
-  }
-
-  var token = localStorage.getItem(LS_TOKEN_KEY);
-
-  if (!token) {
-    revealPage();
-    document.addEventListener('DOMContentLoaded', function () {
-      showLoginScreen('');
-      hideSplash();
-    });
-    return;
-  }
-
-  fetch(REFRESH_URL, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ token: token }),
-  })
-  .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
-  .then(function (data) {
-    var email = (data.email || '').toLowerCase();
-    if (ALLOWED.indexOf(email) !== -1) {
-      /* ✅ Authorised owner — show dashboard */
-      revealPage();
-      document.addEventListener('DOMContentLoaded', hideSplash);
-    } else {
-      /* ❌ Wrong account — show 403 */
-      revealPage();
-      document.addEventListener('DOMContentLoaded', function () {
-        hideSplash();
-        showLoginScreen('⛔ Access denied. This dashboard is private.');
-      });
-    }
-  })
-  .catch(function () {
-    /* Token expired or invalid — clear and show login */
-    localStorage.removeItem(LS_TOKEN_KEY);
-    revealPage();
-    document.addEventListener('DOMContentLoaded', function () {
-      hideSplash();
-      showLoginScreen('Session expired. Please sign in.');
-    });
-  });
-}());
-</script>
 <style>
   :root {
     --bg:      #0a0a12;
@@ -270,74 +195,6 @@
 </style>
 </head>
 <body>
-
-<!-- ── Auth splash — shown while session check is in flight ── -->
-<div id="pg-auth-splash" style="
-  position:fixed;inset:0;z-index:9999;
-  background:#0a0a12;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
-  <span style="font-size:48px;line-height:1;">🦜</span>
-  <div style="font-size:15px;font-weight:700;color:#e2e8f0;">Poly-Glot Dashboard</div>
-  <div style="font-size:12px;color:#64748b;">Verifying session…</div>
-  <div style="width:160px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden;">
-    <div style="height:3px;border-radius:2px;background:linear-gradient(90deg,#7c3aed,#06b6d4);animation:pg-slide 1.4s ease-in-out infinite;"></div>
-  </div>
-  <style>@keyframes pg-slide{0%{width:0%;margin-left:0}50%{width:70%;margin-left:15%}100%{width:0%;margin-left:100%}}</style>
-</div>
-
-<!-- ── Auth login screen — shown when no valid session ── -->
-<div id="pg-auth-screen" style="
-  display:none;position:fixed;inset:0;z-index:9998;
-  background:#0a0a12;
-  flex-direction:column;align-items:center;justify-content:center;
-  gap:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
-  <span style="font-size:48px;">🦜</span>
-  <div style="font-size:16px;font-weight:700;color:#e2e8f0;">Poly-Glot Dashboard</div>
-  <div style="font-size:13px;color:#64748b;">This dashboard is private.</div>
-  <div id="pg-auth-msg" style="font-size:13px;color:#f59e0b;min-height:18px;"></div>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:8px;width:300px;">
-    <input id="pg-email-input" type="email" placeholder="hwmoses2@icloud.com"
-      style="width:100%;padding:10px 14px;background:#12121e;border:1px solid #2a2a2a;
-             border-radius:8px;color:#e2e8f0;font-size:14px;outline:none;text-align:center;" />
-    <button onclick="pgSendMagicLink()"
-      style="width:100%;padding:10px 28px;
-             background:linear-gradient(135deg,#7c3aed,#6d28d9);
-             color:#fff;font-size:14px;font-weight:600;border-radius:8px;
-             border:none;cursor:pointer;letter-spacing:.02em;">
-      Send magic link →
-    </button>
-  </div>
-  <div style="font-size:11px;color:#334155;margin-top:4px;">Enter your email to receive a magic link. You'll be returned here after signing in.</div>
-  <script>
-  function pgSendMagicLink() {
-    var email = document.getElementById('pg-email-input').value.trim();
-    if (!email) return;
-    var msg = document.getElementById('pg-auth-msg');
-    msg.style.color = '#64748b';
-    msg.textContent = 'Sending magic link…';
-    fetch('https://poly-glot.ai/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, source: 'dashboard' })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok || d.sent) {
-        msg.style.color = '#22c55e';
-        msg.textContent = '✅ Magic link sent — check your inbox, then return here.';
-      } else {
-        msg.style.color = '#ef4444';
-        msg.textContent = '❌ ' + (d.error || 'Failed to send. Try again.');
-      }
-    })
-    .catch(function() {
-      msg.style.color = '#ef4444';
-      msg.textContent = '❌ Network error. Try again.';
-    });
-  }
-  </script>
-</div>
 
 <!-- Header -->
 <header class="hdr">
