@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260408-1410 -->
+<!-- build: 20260409-0726 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -7,6 +7,70 @@
 <title>Poly-Glot Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
 <meta name="robots" content="noindex,nofollow">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH GUARD — must run before anything is painted.
+     Hides the body immediately, validates the session token via
+     POST /api/auth/refresh, then either reveals the page or
+     redirects to login.
+     ═══════════════════════════════════════════════════════════════ -->
+<style id="pg-auth-hide">body { visibility: hidden; }</style>
+<script>
+(function () {
+  'use strict';
+
+  var LOGIN_URL      = 'https://poly-glot.ai/';
+  var REFRESH_URL    = 'https://poly-glot.ai/api/auth/refresh';
+  var LS_TOKEN_KEY   = 'pg_session_token';
+  var CALLBACK_PARAM = '?callbackUrl=/dashboard/';
+
+  /* Remove the visibility:hidden rule so the page (or auth screen) becomes visible. */
+  function revealPage() {
+    var el = document.getElementById('pg-auth-hide');
+    if (el) el.parentNode.removeChild(el);
+  }
+
+  /* Redirect to login, preserving the current URL as callbackUrl. */
+  function redirectToLogin() {
+    revealPage(); // avoids a blank tab while the redirect fires
+    window.location.replace(LOGIN_URL + CALLBACK_PARAM);
+  }
+
+  var token = localStorage.getItem(LS_TOKEN_KEY);
+
+  /* No token at all — bounce straight to login. */
+  if (!token) {
+    redirectToLogin();
+    return;
+  }
+
+  /* Token exists — verify it server-side before showing anything. */
+  fetch(REFRESH_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ token: token }),
+  })
+  .then(function (res) {
+    if (res.ok) {
+      /* Valid session — reveal the dashboard. */
+      revealPage();
+    } else {
+      /* 401 / expired — clear the stale token and go to login. */
+      localStorage.removeItem(LS_TOKEN_KEY);
+      redirectToLogin();
+    }
+  })
+  .catch(function () {
+    /*
+     * Network error (offline, worker down, etc.).
+     * Fail open so the dashboard is still usable with an existing
+     * token when infrastructure is flaky — the worst case is the
+     * dashboard loads but all API calls fail visibly.
+     */
+    revealPage();
+  });
+}());
+</script>
 <style>
   :root {
     --bg:      #0a0a12;
@@ -195,6 +259,53 @@
 </style>
 </head>
 <body>
+
+<!-- ── Auth loading splash — visible while the session check is in flight.
+     The auth guard script above removes pg-auth-hide (visibility:hidden),
+     then JS below removes this overlay once auth is confirmed.          ── -->
+<div id="pg-auth-splash" style="
+  position:fixed;inset:0;z-index:9999;
+  background:#0a0a12;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
+  <span style="font-size:48px;line-height:1;">🦜</span>
+  <div style="font-size:15px;font-weight:700;color:#e2e8f0;letter-spacing:.02em;">Poly-Glot Dashboard</div>
+  <div style="font-size:12px;color:#64748b;">Verifying session…</div>
+  <div style="
+    width:160px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px;">
+    <div style="
+      height:3px;border-radius:2px;
+      background:linear-gradient(90deg,#7c3aed,#06b6d4);
+      animation:pg-slide 1.4s ease-in-out infinite;">
+    </div>
+  </div>
+  <style>
+    @keyframes pg-slide {
+      0%   { width:0%;   margin-left:0;    }
+      50%  { width:70%;  margin-left:15%;  }
+      100% { width:0%;   margin-left:100%; }
+    }
+  </style>
+</div>
+<script>
+  /* Remove the splash once the auth guard has revealed the page. */
+  (function () {
+    function hideSplash() {
+      var s = document.getElementById('pg-auth-splash');
+      if (s) s.style.display = 'none';
+    }
+    /* pg-auth-hide is removed by the guard when auth passes.
+       Poll every 50 ms; give up after 8 s (network error path already reveals page). */
+    var attempts = 0;
+    var tid = setInterval(function () {
+      attempts++;
+      if (!document.getElementById('pg-auth-hide') || attempts > 160) {
+        hideSplash();
+        clearInterval(tid);
+      }
+    }, 50);
+  }());
+</script>
 
 <!-- Header -->
 <header class="hdr">
