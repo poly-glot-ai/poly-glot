@@ -2505,6 +2505,22 @@ function initializeAISettings() {
     
     // Generate AI comments button
     generateBtn.addEventListener('click', async () => {
+        // ── Auth gate — must be signed in before generating ──────────────────
+        if (!isAuthed()) {
+            showCgInlineError(
+                '<div style="padding:28px 24px;text-align:center;">' +
+                '  <div style="font-size:36px;margin-bottom:12px;">🔐</div>' +
+                '  <div style="font-size:16px;font-weight:700;color:#f4f4f6;margin-bottom:8px;">Free account required</div>' +
+                '  <div style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:20px;">Sign up free — takes 30 seconds, no credit card needed.</div>' +
+                '  <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'generate-gate\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" ' +
+                '     style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;font-size:14px;border-radius:10px;text-decoration:none;box-shadow:0 4px 18px rgba(124,58,237,0.4);">🚀 Create Free Account</a>' +
+                '  <div style="margin-top:14px;font-size:12px;color:#64748b;">Already have an account? <a href="#" onclick="if(window.PolyGlotAuth&&typeof window.PolyGlotAuth.openLoginModal===\'function\'){window.PolyGlotAuth.openLoginModal(\'generate-signin\');}else{var b=document.getElementById(\'headerSignInBtn\');if(b)b.click();} return false;" style="color:#a78bfa;text-decoration:none;">Sign in →</a></div>' +
+                '</div>'
+            );
+            if (typeof gtag !== 'undefined') gtag('event', 'cg_auth_gate_shown', { trigger: 'generate' });
+            return;
+        }
+
         if (!window.aiGenerator.isConfigured()) {
             alert('⚙️ Please configure your AI API key first.\n\nClick "AI Settings" to add your OpenAI, Anthropic, or Google AI key.');
             aiSettingsBtn.click();
