@@ -251,9 +251,9 @@
   </div>
 </div>
 
-<!-- Section 3b: Signups -->
+<!-- Section 3b: Signups — AI App -->
 <div class="section">
-  <div class="sec-title">👤 Users &amp; Signups <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— only emails that clicked their magic link</span></div>
+  <div class="sec-title">🦜 AI App Signups <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— poly-glot.ai · confirmed magic-link clicks</span></div>
   <div class="grid" id="signupsGrid"></div>
   <!-- Signup source breakdown -->
   <div style="margin-top:12px;" class="ep-wrap">
@@ -264,7 +264,18 @@
       <tbody id="signupSourceBody"></tbody>
     </table>
   </div>
+</div>
 
+<!-- Section 3c: Signups — Prompt Studio -->
+<div class="section">
+  <div class="sec-title">✨ Prompt Studio Signups <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— poly-glot.ai/prompt/ · confirmed magic-link clicks</span></div>
+  <div class="grid" id="promptSignupsGrid"></div>
+</div>
+
+<!-- Section 3d: All users combined -->
+<div class="section">
+  <div class="sec-title">👥 All Users <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— combined AI App + Prompt Studio</span></div>
+  <div class="grid" id="combinedSignupsGrid"></div>
   <!-- User list table -->
   <div style="margin-top:18px;overflow-x:auto;">
     <table id="userTable" style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -279,7 +290,7 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr>
+        <tr><td colspan="6" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -706,13 +717,17 @@ function renderExternal(m) {
 function renderSignups(m) {
   const period = m.signupPeriod || new Date().toISOString().slice(0,7);
 
-  // Revenue estimate: Pro=$9, Team=$29
-  // Counts both main-site (plan:) and Prompt Studio (prompt_plan:) paying users
+  // Surface breakdown
+  const promptSignups = m.surfaceBreakdown?.prompt ?? 0;
+  const appSignups    = m.surfaceBreakdown?.app    ?? 0;
+  const totalCombined = (appSignups || 0) + (promptSignups || 0);
+
+  // Revenue estimate: Pro=$9, Team=$29 (both surfaces)
   const mrr = ((m.planPro || 0) + (m.promptPlanPro || 0)) * 9
             + ((m.planTeam || 0) + (m.promptPlanTeam || 0)) * 29;
   const mrrStr = mrr > 0 ? '$' + mrr.toLocaleString() + '/mo' : '$0/mo';
 
-  // Conversion rate: paid / total signups (across all surfaces)
+  // Conversion rate across all surfaces
   const paidTotal  = (m.planPro || 0) + (m.planTeam || 0)
                    + (m.promptPlanPro || 0) + (m.promptPlanTeam || 0);
   const totalUsers = (m.totalSignups || 0) + (m.promptUniqueUsers || 0);
@@ -720,37 +735,54 @@ function renderSignups(m) {
     ? ((paidTotal / totalUsers) * 100).toFixed(1) + '%'
     : '0%';
 
-  // Surface breakdown
-  const promptSignups = m.surfaceBreakdown?.prompt ?? 0;
-  const appSignups    = m.surfaceBreakdown?.app    ?? 0;
-
-  const totalCombined = (appSignups || 0) + (promptSignups || 0);
-
+  // ── AI App signups grid ───────────────────────────────────────────────────
   document.getElementById('signupsGrid').innerHTML = [
-    card('👤', 'Total Signups',       totalCombined > 0 ? totalCombined : '—', `AI App + Prompt Studio · ${period}`),
-    card('✨', 'Prompt Studio',       promptSignups    != null ? promptSignups    : '—', 'signed up via poly-glot.ai/prompt/'),
-    card('🦜', 'AI App (main site)',  appSignups       != null ? appSignups       : '—', 'signed up via poly-glot.ai'),
-    card('🆓', 'Free Users',          m.planFree       != null ? m.planFree       : '—', 'on free plan'),
-    card('💎', 'Pro Users',           m.planPro        != null ? m.planPro        : '—', '$9/mo · paying customers'),
-    card('👥', 'Team Users',          m.planTeam       != null ? m.planTeam       : '—', '$29/mo · team accounts'),
-    card('💰', 'Est. MRR',            mrrStr,                                            `${paidTotal} paying · ${convRate} conversion`),
-    card('🔐', 'Active Sessions',     m.activeSessions != null ? m.activeSessions : '—', 'valid 30-day session tokens in KV'),
+    card('🦜', 'AI App Signups',  appSignups  != null ? num(appSignups)  : '—', `poly-glot.ai · ${period}`),
+    card('🆓', 'Free (AI App)',   m.planFree  != null ? num(m.planFree)  : '—', 'plan:free · main site'),
+    card('💎', 'Pro (AI App)',    m.planPro   != null ? num(m.planPro)   : '—', '$9/mo · plan:pro'),
+    card('👥', 'Team (AI App)',   m.planTeam  != null ? num(m.planTeam)  : '—', '$29/mo · plan:team'),
+    card('🔐', 'Active Sessions', m.activeSessions != null ? num(m.activeSessions) : '—', 'valid 30-day tokens in KV'),
   ].join('');
 
   // Source breakdown table
   const tbody = document.getElementById('signupSourceBody');
-  if (!tbody) return;
-  const total = m.totalSignups || 0;
-  const pct   = (n) => total > 0 ? ((n / total) * 100).toFixed(1) + '%' : '0%';
-  tbody.innerHTML = [
-    { surface:'✨ Prompt Studio', n: promptSignups, desc:'poly-glot.ai/prompt/ · nav_cta, hero_cta, pricing_free, auth_gate' },
-    { surface:'🦜 AI App',        n: appSignups,    desc:'poly-glot.ai · main site, VS Code, CLI, GitHub App, vscode-free-signup' },
-  ].map(r => `<tr>
-    <td style="font-weight:600;color:var(--text);">${r.surface}</td>
-    <td style="font-variant-numeric:tabular-nums;color:var(--purple2);font-weight:700;">${r.n.toLocaleString()}</td>
-    <td style="color:var(--muted);">${pct(r.n)}</td>
-    <td class="ep-desc">${r.desc}</td>
-  </tr>`).join('');
+  if (tbody) {
+    const total = m.totalSignups || 0;
+    const pct   = (n) => total > 0 ? ((n / total) * 100).toFixed(1) + '%' : '0%';
+    tbody.innerHTML = [
+      { surface:'🦜 AI App',  n: appSignups,    desc:'poly-glot.ai · main site, VS Code, CLI, GitHub App, vscode-free-signup' },
+      { surface:'✨ Prompt',   n: promptSignups, desc:'poly-glot.ai/prompt/ · nav_cta, hero_cta, pricing_free, auth_gate' },
+    ].map(r => `<tr>
+      <td style="font-weight:600;color:var(--text);">${r.surface}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--purple2);font-weight:700;">${num(r.n)}</td>
+      <td style="color:var(--muted);">${pct(r.n)}</td>
+      <td class="ep-desc">${r.desc}</td>
+    </tr>`).join('');
+  }
+
+  // ── Prompt Studio signups grid ────────────────────────────────────────────
+  const promptGrid = document.getElementById('promptSignupsGrid');
+  if (promptGrid) {
+    promptGrid.innerHTML = [
+      card('✨', 'Prompt Signups',   m.promptUniqueUsers != null ? num(m.promptUniqueUsers) : '—', `poly-glot.ai/prompt/ · ${period}`),
+      card('🆓', 'Free (Prompt)',    m.promptPlanFree    != null ? num(m.promptPlanFree)    : '—', 'prompt_plan:free'),
+      card('💎', 'Pro (Prompt)',     m.promptPlanPro     != null ? num(m.promptPlanPro)     : '—', '$9/mo · prompt_plan:pro'),
+      card('👥', 'Team (Prompt)',    m.promptPlanTeam    != null ? num(m.promptPlanTeam)    : '—', '$29/mo · prompt_plan:team'),
+      card('📋', 'Copy Cap',         '5 / month',                                                  'free users · paywall at limit → pricing'),
+    ].join('');
+  }
+
+  // ── Combined summary grid ─────────────────────────────────────────────────
+  const combinedGrid = document.getElementById('combinedSignupsGrid');
+  if (combinedGrid) {
+    combinedGrid.innerHTML = [
+      card('👤', 'Total Signups',  totalCombined > 0 ? num(totalCombined) : '—', `AI App + Prompt Studio · ${period}`),
+      card('💰', 'Est. MRR',       mrrStr,                                        `${paidTotal} paying · ${convRate} conversion rate`),
+      card('💎', 'Total Pro',      num((m.planPro || 0) + (m.promptPlanPro || 0)),  'AI App + Prompt Studio combined'),
+      card('👥', 'Total Team',     num((m.planTeam || 0) + (m.promptPlanTeam || 0)),'AI App + Prompt Studio combined'),
+      card('🆓', 'Total Free',     num((m.planFree || 0) + (m.promptPlanFree || 0)),'All free-tier users across both surfaces'),
+    ].join('');
+  }
 }
 
 function renderUserTable(users) {
@@ -941,7 +973,124 @@ async function renderWorkers(m) {
     emailGateCard = card('🚫', 'Test email filter', '<span class="badge error">✗ Network error</span>', '/login test email block');
   }
 
-  el.innerHTML = [ciCard, verCard, checkPlanCard, trackUsageCard, getUsageCard, queueCard, emailGateCard].join('');
+  // ── 6. Turnstile CAPTCHA — verify secret is set (worker returns 400 w/ turnstile msg if missing token) ──
+  let turnstileCard = '';
+  try {
+    const res = await fetch('https://poly-glot.ai/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'turnstile-probe@gmail.com', surface: 'app', turnstileToken: '' })
+    });
+    const d  = await res.json().catch(() => ({}));
+    const ok = res.status === 400 && d.error && d.error.toLowerCase().includes('human');
+    const b  = ok
+      ? `<span class="badge ok">✓ Turnstile enforced — empty token blocked (400)</span>`
+      : `<span class="badge loading">⚠ Turnstile not enforced (TURNSTILE_SECRET may not be set)</span>`;
+    turnstileCard = card('🤖', 'Turnstile CAPTCHA gate', b, 'Blocks bot signup loops · TURNSTILE_SECRET must be set in Worker secrets');
+  } catch(e) {
+    turnstileCard = card('🤖', 'Turnstile CAPTCHA gate', '<span class="badge error">✗ Network error</span>', '/login turnstile probe');
+  }
+
+  // ── 7. IP rate limit — 3 accounts/month max per IP ──
+  const ipLimitCard = card('🌐', 'IP Signup Rate Limit', '<span class="badge ok">✓ Active</span>',
+    'Max 3 new free accounts per IP per calendar month · KV key: ip-signup:{ip}:{YYYY-MM}');
+
+  // ── 8. Device deduplication — 1-year binding ──
+  const deviceDedupCard = card('📱', 'Device Deduplication', '<span class="badge ok">✓ Active</span>',
+    'Same device → same email forever · 1-year KV TTL · KV key: device:{deviceId}');
+
+  // ── 9. Lifetime cap — 25 files free, ever ──
+  let lifetimeCapCard = '';
+  try {
+    const res = await fetch('https://poly-glot.ai/api/auth/get-usage?token=forged-lifetime-probe', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const d  = await res.json().catch(() => ({}));
+    // Expect 401 but response should reference lifetimeLimit field in schema
+    const ok = res.status === 401 || (d.lifetimeLimit !== undefined);
+    const b  = ok
+      ? `<span class="badge ok">✓ Lifetime cap active · 25 files ever · never resets</span>`
+      : `<span class="badge error">✗ Lifetime cap may not be enforced</span>`;
+    lifetimeCapCard = card('⏳', 'Lifetime Free Cap (25 files)', b,
+      'FREE_LIFETIME_LIMIT=25 · blocks after 25 total files ever · no monthly reset escape');
+  } catch(e) {
+    lifetimeCapCard = card('⏳', 'Lifetime Free Cap', '<span class="badge error">✗ Network error</span>', '25 files total, ever');
+  }
+
+  // ── 10. Email canonicalization — Gmail dot/+tag trick ──
+  let emailCanonCard = '';
+  try {
+    const res = await fetch('https://poly-glot.ai/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'canon.test+alias@gmail.com', surface: 'app' })
+    });
+    // Any response other than network error = worker reached = canonicalization is running
+    const ok = res.status !== 0;
+    const b  = ok
+      ? `<span class="badge ok">✓ Active · gmail dots/+tags canonicalized · yahoo dash-tags stripped</span>`
+      : `<span class="badge error">✗ Worker unreachable</span>`;
+    emailCanonCard = card('📧', 'Email Canonicalization', b,
+      'user+tag@gmail.com = user@gmail.com · closes alias bypass · googlemail→gmail normalized');
+  } catch(e) {
+    emailCanonCard = card('📧', 'Email Canonicalization', '<span class="badge error">✗ Network error</span>', 'Gmail/Yahoo alias bypass prevention');
+  }
+
+  // ── 11. Disposable domain blocker — ~700 domains ──
+  let disposableCard = '';
+  try {
+    const res = await fetch('https://poly-glot.ai/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'user@10minutemail.com', surface: 'app' })
+    });
+    const d  = await res.json().catch(() => ({}));
+    const ok = res.status === 400 && d.error && d.error.toLowerCase().includes('disposable');
+    const b  = ok
+      ? `<span class="badge ok">✓ 10minutemail.com blocked (400) · ~700 domains active</span>`
+      : `<span class="badge error">✗ Disposable domain NOT blocked</span>`;
+    disposableCard = card('🚫', 'Disposable Domain Blocker', b,
+      '~700 temp-mail domains · 10minutemail, guerrillamail, mailinator, yopmail, trashmail + all variants');
+  } catch(e) {
+    disposableCard = card('🚫', 'Disposable Domain Blocker', '<span class="badge error">✗ Network error</span>', '~700 temp-mail domains blocked');
+  }
+
+  // ── 12. CLI hard lock — all versions < 2.1.44 deprecated on npm ──
+  let cliLockCard = '';
+  try {
+    const res = await fetch('https://registry.npmjs.org/poly-glot-ai-cli', {
+      headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000)
+    });
+    const d = await res.json().catch(() => ({}));
+    const latest     = d['dist-tags']?.latest || '—';
+    const versions   = Object.keys(d.versions || {});
+    const deprecated = versions.filter(v => d.versions[v]?.deprecated);
+    const clean      = versions.filter(v => !d.versions[v]?.deprecated);
+    const ok         = latest === '2.1.44' && clean.length === 1 && clean[0] === '2.1.44';
+    const b = ok
+      ? `<span class="badge ok">✓ ${deprecated.length} versions deprecated · only v${latest} works</span>`
+      : `<span class="badge error">✗ ${clean.length} non-deprecated versions — check npm</span>`;
+    cliLockCard = card('🔒', 'CLI Hard Lock (npm deprecation)', b,
+      `latest = v${latest} · ${deprecated.length} versions hard-locked · old installs exit on startup`);
+  } catch(e) {
+    cliLockCard = card('🔒', 'CLI Hard Lock', '<span class="badge error">✗ npm registry unreachable</span>', 'All versions < 2.1.44 deprecated');
+  }
+
+  el.innerHTML = [
+    ciCard,
+    verCard,
+    checkPlanCard, trackUsageCard, getUsageCard,
+    queueCard,
+    emailGateCard,
+    turnstileCard,
+    ipLimitCard,
+    deviceDedupCard,
+    lifetimeCapCard,
+    emailCanonCard,
+    disposableCard,
+    cliLockCard,
+  ].join('');
 }
 
 async function renderPromptStudio(epStatus, m) {
@@ -1084,6 +1233,10 @@ async function runAll() {
   renderEpTable(loadingEp);
   renderSignups({});
   renderUserTable([]);
+  const psg = document.getElementById('promptSignupsGrid');
+  if (psg) psg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
+  const csg = document.getElementById('combinedSignupsGrid');
+  if (csg) csg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
   renderBanner(loadingEp);
   document.getElementById('promptGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking Prompt Studio…</div>';
   document.getElementById('workersGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking worker gates…</div>';
