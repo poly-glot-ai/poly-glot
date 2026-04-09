@@ -1040,6 +1040,12 @@
   function handleUrlParams() {
     var params = new URLSearchParams(window.location.search);
 
+    // ── Strip stale ?callbackUrl= immediately on every page load ─────────────
+    if (params.get('callbackUrl')) {
+      cleanUrl();
+      params = new URLSearchParams(window.location.search);
+    }
+
     // ── ?checkout=success — user just paid via Stripe ─────────────────────
     // Stripe success URL: https://poly-glot.ai/?checkout=success&email={CUSTOMER_EMAIL}
     // We auto-trigger the magic-link login so they land signed in immediately.
@@ -1256,7 +1262,14 @@
   }
 
   function cleanUrl() {
-    var url = window.location.pathname + window.location.hash;
+    var params = new URLSearchParams(window.location.search);
+    params.delete('callbackUrl');
+    params.delete('token');
+    params.delete('email');
+    params.delete('plan');
+    params.delete('source');
+    var query = params.toString() ? '?' + params.toString() : '';
+    var url = window.location.pathname + query + window.location.hash;
     history.replaceState(null, '', url);
   }
 
