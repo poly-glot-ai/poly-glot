@@ -3569,17 +3569,25 @@
       }
 
       // Auto-start wave when section scrolls into view, pause when out
+      // _liveRecording = true while pgaStartVoice has an active session —
+      // prevents the observer from killing the waveform mid-recording.
+      window._liveRecording = false;
       const voiceSection = document.getElementById('pga-voice');
       if (voiceSection) {
         const voiceObs = new IntersectionObserver(entries => {
           if (entries[0].isIntersecting) {
-            recording = true;
-            if (rafId) cancelAnimationFrame(rafId);
-            drawWave();
+            if (!window._liveRecording) {
+              recording = true;
+              if (rafId) cancelAnimationFrame(rafId);
+              drawWave();
+            }
           } else {
-            recording = false;
-            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-            drawIdle();
+            // Only kill the demo waveform — never interrupt a live recording session
+            if (!window._liveRecording) {
+              recording = false;
+              if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+              drawIdle();
+            }
           }
         }, { threshold: 0.3 });
         voiceObs.observe(voiceSection);
@@ -3714,22 +3722,37 @@
           _errorFired = true;
           _recognizing = false;
           _resetVoiceUI();
-          const friendly = {
-            'not-allowed':   '🔒 Microphone access denied. Allow mic in your browser settings and try again.',
-            'no-speech':     '🤫 No speech detected — try speaking closer to the mic.',
-            'network':       '🌐 Network error — speech recognition needs an internet connection.',
-            'audio-capture': '🎤 No microphone found. Please connect a mic and try again.',
-            'aborted':       '⏹ Recording stopped.',
-          };
           liveOutput.style.display = 'block';
           if (event.error === 'aborted') {
             liveOutput.style.borderColor = 'rgba(16,185,129,.25)';
             liveOutput.style.background  = 'rgba(16,185,129,.06)';
+            liveStatus.innerHTML = '⏹ Recording stopped.';
+          } else if (event.error === 'not-allowed') {
+            liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+            liveOutput.style.background  = 'rgba(239,68,68,.06)';
+            liveStatus.innerHTML = '🔒 Microphone blocked by your browser.'
+              + '<br><strong style="color:var(--text);">To fix:</strong> click the 🔒 lock icon in the address bar → '
+              + '<em>Site settings</em> → <em>Microphone</em> → <strong>Allow</strong>, then try again.'
+              + '<br><a href="https://support.google.com/chrome/answer/2693767" target="_blank" rel="noopener" '
+              + 'style="color:var(--accent);font-size:11px;margin-top:4px;display:inline-block;">'
+              + 'Step-by-step guide →</a>';
+          } else if (event.error === 'no-speech') {
+            liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+            liveOutput.style.background  = 'rgba(239,68,68,.06)';
+            liveStatus.innerHTML = '🤫 No speech detected — try speaking closer to the mic, then click the button again.';
+          } else if (event.error === 'audio-capture') {
+            liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+            liveOutput.style.background  = 'rgba(239,68,68,.06)';
+            liveStatus.innerHTML = '🎤 No microphone found. Please connect a mic and try again.';
+          } else if (event.error === 'network') {
+            liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+            liveOutput.style.background  = 'rgba(239,68,68,.06)';
+            liveStatus.innerHTML = '🌐 Network error — speech recognition needs an internet connection.';
           } else {
             liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
             liveOutput.style.background  = 'rgba(239,68,68,.06)';
+            liveStatus.innerHTML = '⚠️ Error: ' + event.error + ' — please try again.';
           }
-          liveStatus.innerHTML = friendly[event.error] || ('⚠️ Error: ' + event.error + ' — please try again.');
         };
 
         _recognition.onend = function() {
