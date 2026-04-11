@@ -31,6 +31,24 @@
   <link rel="icon" type="image/png" sizes="32x32" href="parrot-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="parrot-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="parrot-180.png">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/prompt/manifest.json">
+
+  <!-- iOS PWA meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Prompt Studio">
+  <link rel="apple-touch-icon" sizes="152x152" href="/prompt/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/prompt/icons/icon-180x180.png">
+
+  <!-- Android / Chrome PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#7c3aed">
+
+  <!-- Windows tile -->
+  <meta name="msapplication-TileColor" content="#7c3aed">
+  <meta name="msapplication-TileImage" content="/prompt/icons/icon-144x144.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
@@ -3868,6 +3886,16 @@
 
   </script>
 
+  <!-- Service Worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/prompt/sw.js', { scope: '/prompt/' })
+          .then(function(reg) { console.log('[SW] Registered:', reg.scope); })
+          .catch(function(err) { console.warn('[SW] Registration failed:', err); });
+      });
+    }
+  </script>
 </body>
 </html>
 
