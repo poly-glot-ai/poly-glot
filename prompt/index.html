@@ -1305,7 +1305,7 @@
 
         <!-- Try it live CTA -->
         <div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <button class="btn-primary" id="voiceLiveMicBtn" style="font-size:14px;padding:12px 22px;display:flex;align-items:center;gap:8px;" onclick="pgaStartVoice()">
+          <button class="btn-primary" id="voiceLiveMicBtn" style="font-size:14px;padding:12px 22px;display:flex;align-items:center;gap:8px;touch-action:manipulation;" onclick="pgaStartVoice()">
             🎙️ Try it now — speak a prompt
           </button>
           <span style="font-size:12px;color:var(--text-dim);">No sign-up needed to test</span>
@@ -1338,7 +1338,7 @@
               <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
                 <div style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(167,139,250,.4);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);font-family:'Fira Code',monospace;min-height:40px;" id="voiceMockupText">senior software engineer<span class="cursor">|</span></div>
                 <!-- Mic button — animated recording state -->
-                <button id="voiceMicBtn" onclick="toggleVoiceMockup()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .2s;box-shadow:0 0 0 0 rgba(124,58,237,0);" aria-label="Toggle voice recording">🎙️</button>
+                <button id="voiceMicBtn" onclick="toggleVoiceMockup()" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .2s;box-shadow:0 0 0 0 rgba(124,58,237,0);touch-action:manipulation;" aria-label="Toggle voice recording">🎙️</button>
               </div>
             </div>
 
@@ -3620,6 +3620,22 @@
       // ── Real Web Speech API — wired to "Try it now" button in left panel ──
       let _recognition = null;
       let _recognizing = false;
+      let _errorFired  = false; // guard: onerror + onend both fire on some mobile browsers
+
+      // iOS Safari: continuous:true aborts immediately — must use single-shot mode
+      const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      function _resetVoiceUI() {
+        const liveBtn = document.getElementById('voiceLiveMicBtn');
+        if (liveBtn) {
+          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+          liveBtn.style.background = '';
+          liveBtn.disabled         = false;
+        }
+        recording = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        drawIdle();
+      }
 
       window.pgaStartVoice = function() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -3630,38 +3646,43 @@
 
         // Browser not supported
         if (!SR) {
-          liveOutput.style.display = 'block';
+          liveOutput.style.display     = 'block';
           liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
           liveOutput.style.background  = 'rgba(239,68,68,.06)';
-          liveText.textContent   = '';
-          liveStatus.innerHTML   = '⚠️ Your browser doesn\'t support the Web Speech API. '
+          liveText.textContent = '';
+          liveStatus.innerHTML = '⚠️ Your browser doesn\'t support the Web Speech API. '
             + 'Try <strong>Chrome</strong> or <strong>Edge</strong> for live voice input.';
           return;
         }
 
-        // Stop if already running
+        // Toggle off if already running
         if (_recognizing && _recognition) {
           _recognition.stop();
           return;
         }
 
+        // Fresh instance every call — avoids stale state on mobile
         _recognition = new SR();
-        _recognition.continuous      = true;   // keep listening until stop()
-        _recognition.interimResults  = true;   // show words as they come
+        _errorFired  = false;
+        liveText.dataset.final = '';
+
+        // iOS Safari crashes with continuous:true — simulate it via auto-restart in onresult
+        _recognition.continuous      = _isIOS ? false : true;
+        _recognition.interimResults  = true;
         _recognition.maxAlternatives = 1;
-        // Use browser language — falls back to en-US
-        _recognition.lang = navigator.language || 'en-US';
+        _recognition.lang            = navigator.language || 'en-US';
 
         _recognition.onstart = function() {
           _recognizing = true;
-          liveOutput.style.display      = 'block';
-          liveOutput.style.borderColor  = 'rgba(16,185,129,.25)';
-          liveOutput.style.background   = 'rgba(16,185,129,.06)';
-          liveText.textContent          = '';
-          liveStatus.innerHTML          = '<span style="color:#34d399;">● Recording</span> — speak now. Click the button again to stop.';
-          liveBtn.innerHTML             = '⏹ Stop recording';
-          liveBtn.style.background      = 'linear-gradient(135deg,#ef4444,#dc2626)';
-          // Also animate the mockup waveform in sync
+          liveOutput.style.display     = 'block';
+          liveOutput.style.borderColor = 'rgba(16,185,129,.25)';
+          liveOutput.style.background  = 'rgba(16,185,129,.06)';
+          liveText.textContent         = '';
+          liveStatus.innerHTML = _isIOS
+            ? '<span style="color:#34d399;">● Recording</span> — speak, then pause to transcribe.'
+            : '<span style="color:#34d399;">● Recording</span> — speak now. Click the button again to stop.';
+          liveBtn.innerHTML        = '⏹ Stop recording';
+          liveBtn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
           recording = true;
           if (rafId) cancelAnimationFrame(rafId);
           drawWave();
@@ -3674,42 +3695,51 @@
             if (event.results[i].isFinal) { final += t; }
             else { interim += t; }
           }
-          // Accumulate finals, show interim in lighter colour
           if (final) { liveText.dataset.final = (liveText.dataset.final || '') + final + ' '; }
           liveText.innerHTML = '<span style="color:var(--text);">'
             + (liveText.dataset.final || '')
             + '</span><span style="color:var(--text-muted);">' + interim + '</span>';
+          // iOS single-shot: restart after each result to simulate continuous
+          if (_isIOS && _recognizing && !_errorFired) {
+            try { _recognition.start(); } catch(e) { /* already starting */ }
+          }
         };
 
         _recognition.onerror = function(event) {
+          // 'no-speech' on iOS is non-fatal during continuous-simulation — restart quietly
+          if (_isIOS && event.error === 'no-speech' && _recognizing && !_errorFired) {
+            try { _recognition.start(); } catch(e) {}
+            return;
+          }
+          _errorFired = true;
+          _recognizing = false;
+          _resetVoiceUI();
           const friendly = {
-            'not-allowed':   '🔒 Microphone access denied. Allow mic access in your browser settings and try again.',
+            'not-allowed':   '🔒 Microphone access denied. Allow mic in your browser settings and try again.',
             'no-speech':     '🤫 No speech detected — try speaking closer to the mic.',
             'network':       '🌐 Network error — speech recognition needs an internet connection.',
             'audio-capture': '🎤 No microphone found. Please connect a mic and try again.',
+            'aborted':       '⏹ Recording stopped.',
           };
-          liveStatus.innerHTML = friendly[event.error]
-            || ('⚠️ Error: ' + event.error + ' — please try again.');
-          _recognizing = false;
-          recording = false;
-          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-          drawIdle();
-          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
-          liveBtn.style.background = '';
+          liveOutput.style.display = 'block';
+          if (event.error === 'aborted') {
+            liveOutput.style.borderColor = 'rgba(16,185,129,.25)';
+            liveOutput.style.background  = 'rgba(16,185,129,.06)';
+          } else {
+            liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+            liveOutput.style.background  = 'rgba(239,68,68,.06)';
+          }
+          liveStatus.innerHTML = friendly[event.error] || ('⚠️ Error: ' + event.error + ' — please try again.');
         };
 
         _recognition.onend = function() {
           _recognizing = false;
-          recording = false;
-          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-          drawIdle();
-          liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
-          liveBtn.style.background = '';
-          // Show final status
+          _resetVoiceUI();
+          // Don't overwrite a message already written by onerror
+          if (_errorFired) return;
           const finalText = (liveText.dataset.final || '').trim();
           if (finalText) {
             liveStatus.innerHTML = '✅ Done — transcript ready. Copy it into your prompt above.';
-            // Also populate the mockup's transcript panel
             const mockupTranscript = document.getElementById('voiceTranscript');
             if (mockupTranscript) mockupTranscript.textContent = finalText.slice(0, 80);
             const mockupText = document.getElementById('voiceMockupText');
@@ -3720,8 +3750,26 @@
           liveText.dataset.final = '';
         };
 
-        _recognition.start();
+        // MUST be synchronous within the user-gesture handler —
+        // any async gap breaks mic permission on iOS / Android WebView
+        try {
+          _recognition.start();
+        } catch(e) {
+          liveStatus.innerHTML = '⚠️ Could not start microphone — please try again.';
+          _resetVoiceUI();
+        }
       };
+
+      // Wire touchend on the live mic button for instant mobile response.
+      // Prevents the 300ms synthetic-click delay on older iOS/Android WebViews.
+      (function() {
+        const btn = document.getElementById('voiceLiveMicBtn');
+        if (!btn) return;
+        btn.addEventListener('touchend', function(e) {
+          e.preventDefault(); // suppress the follow-on click so pgaStartVoice runs once
+          pgaStartVoice();
+        }, { passive: false });
+      })();
 
       // Transcript typewriter when section visible
       const transcriptEl = document.getElementById('voiceTranscript');
