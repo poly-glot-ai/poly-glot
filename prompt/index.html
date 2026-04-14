@@ -3676,10 +3676,21 @@
           return;
         }
 
+        // Proactive mic permission check — bail early with clear message if already denied
+        // Wraps the rest of pgaStartVoice in a closure so the async check gates everything
+        function _doStart() {
+
         // Fresh instance every call — avoids stale state on mobile
         // FIX 3: wipe stale transcript from any previous session before starting
         liveText.dataset.final = '';
         liveText.textContent   = '';
+        // Show output box immediately so error messages are visible even if onstart never fires
+        liveOutput.style.display     = 'block';
+        liveOutput.style.borderColor = 'rgba(16,185,129,.25)';
+        liveOutput.style.background  = 'rgba(16,185,129,.06)';
+        liveStatus.innerHTML = '⏳ Requesting microphone access…';
+        liveBtn.innerHTML        = '⏹ Stop recording';
+        liveBtn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
         _recognition = new SR();
         _errorFired  = false;
 
@@ -3792,6 +3803,29 @@
         } catch(e) {
           liveStatus.innerHTML = '⚠️ Could not start microphone — please try again.';
           _resetVoiceUI();
+        }
+        } // end _doStart
+
+        // Gate on mic permission — show clear blocked message before starting
+        if (navigator.permissions) {
+          navigator.permissions.query({ name: 'microphone' }).then(function(perm) {
+            if (perm.state === 'denied') {
+              liveOutput.style.display     = 'block';
+              liveOutput.style.borderColor = 'rgba(239,68,68,.3)';
+              liveOutput.style.background  = 'rgba(239,68,68,.06)';
+              liveText.textContent = '';
+              liveStatus.innerHTML = '🔒 Microphone is blocked for this site.'
+                + '<br><strong style="color:var(--text);">Chrome / Edge:</strong> click the 🔒 icon in the address bar → <em>Site settings</em> → <em>Microphone</em> → <strong>Allow</strong>, then refresh.'
+                + '<br><strong style="color:var(--text);">Safari:</strong> <em>Settings → Safari → Microphone</em> → set poly-glot.ai to <strong>Allow</strong>.'
+                + '<br><a href="https://support.google.com/chrome/answer/2693767" target="_blank" rel="noopener" style="color:var(--accent);font-size:11px;margin-top:6px;display:inline-block;">Chrome guide →</a>';
+              liveBtn.innerHTML        = '🎙️ Try it now — speak a prompt';
+              liveBtn.style.background = '';
+            } else {
+              _doStart(); // 'granted' or 'prompt' — proceed
+            }
+          }).catch(function() { _doStart(); }); // API not supported — try anyway
+        } else {
+          _doStart(); // no permissions API — try anyway
         }
       };
 
