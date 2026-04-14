@@ -3677,9 +3677,11 @@
         }
 
         // Fresh instance every call — avoids stale state on mobile
+        // FIX 3: wipe stale transcript from any previous session before starting
+        liveText.dataset.final = '';
+        liveText.textContent   = '';
         _recognition = new SR();
         _errorFired  = false;
-        liveText.dataset.final = '';
 
         // iOS Safari crashes with continuous:true — simulate it via auto-restart in onresult
         _recognition.continuous      = _isIOS ? false : true;
@@ -3689,6 +3691,7 @@
 
         _recognition.onstart = function() {
           _recognizing = true;
+          window._liveRecording = true;            // FIX 1: guard waveform from scroll observer
           liveOutput.style.display     = 'block';
           liveOutput.style.borderColor = 'rgba(16,185,129,.25)';
           liveOutput.style.background  = 'rgba(16,185,129,.06)';
@@ -3728,6 +3731,7 @@
           }
           _errorFired = true;
           _recognizing = false;
+          window._liveRecording = false;           // FIX 1: release guard on error too
           _resetVoiceUI();
           liveOutput.style.display = 'block';
           if (event.error === 'aborted') {
@@ -3764,10 +3768,11 @@
 
         _recognition.onend = function() {
           _recognizing = false;
-          _resetVoiceUI();
-          // Don't overwrite a message already written by onerror
-          if (_errorFired) return;
+          window._liveRecording = false;           // FIX 1: release waveform guard
+          // FIX 2: check _errorFired BEFORE resetting UI so onerror message survives
+          if (_errorFired) { _resetVoiceUI(); return; }
           const finalText = (liveText.dataset.final || '').trim();
+          _resetVoiceUI();
           if (finalText) {
             liveStatus.innerHTML = '✅ Done — transcript ready. Copy it into your prompt above.';
             const mockupTranscript = document.getElementById('voiceTranscript');
@@ -3777,7 +3782,7 @@
           } else {
             liveStatus.innerHTML = 'Recording stopped.';
           }
-          liveText.dataset.final = '';
+          liveText.dataset.final = '';             // FIX 3: always clear after reading
         };
 
         // MUST be synchronous within the user-gesture handler —
