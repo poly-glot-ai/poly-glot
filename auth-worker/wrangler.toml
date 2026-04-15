@@ -39,6 +39,13 @@ binding    = "AUTH_KV"
 id         = "4686b5dd158944e5856f7a402c6c6d2f"
 preview_id = "70e1e3dcb22b476bb97b3900e861bed5"
 
+# ── Service binding to telemetry worker ──────────────────────────────────────
+# Allows auth-worker to call telemetry-worker directly (no HTTP, no 522).
+# The telemetry worker must be deployed first.
+[[services]]
+binding = "TELEMETRY_WORKER"
+service = "polyglot-telemetry"
+
 # ── Environment variables (non-secret) ───────────────────────
 [vars]
 BASE_URL = "https://poly-glot.ai"

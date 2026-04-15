@@ -2512,22 +2512,24 @@ async function handleTelProxy(request, env) {
   const telSecret = env.TEL_SECRET || env.TELEMETRY_SECRET || '';
 
   try {
-    // Prefer the public/stats endpoint (no secret in URL).
-    // Fall back to the authenticated endpoint if the public one isn't available yet.
-    const publicUrl = 'https://telemetry.poly-glot.ai/stats/public';
-    const authedUrl = `https://telemetry.poly-glot.ai/stats`;
+    let res;
 
-    let res = await fetch(publicUrl, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    // If public endpoint isn't deployed yet, try authenticated via header
-    if (!res.ok && telSecret) {
-      res = await fetch(authedUrl, {
-        headers: { Accept: 'application/json', 'X-Stats-Secret': telSecret },
+    // Prefer service binding (Worker-to-Worker, no HTTP, no 522 issue).
+    if (env.TELEMETRY_WORKER) {
+      res = await env.TELEMETRY_WORKER.fetch('https://telemetry.poly-glot.ai/stats/public');
+    } else {
+      // Fallback: direct HTTP to public endpoint (no secret in URL)
+      res = await fetch('https://telemetry.poly-glot.ai/stats/public', {
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(8000),
       });
+      // Last resort: authenticated endpoint via header
+      if (!res.ok && telSecret) {
+        res = await fetch('https://telemetry.poly-glot.ai/stats', {
+          headers: { Accept: 'application/json', 'X-Stats-Secret': telSecret },
+          signal: AbortSignal.timeout(8000),
+        });
+      }
     }
     if (!res.ok) return jsonResponse({ error: 'upstream_error', status: res.status, commands: null }, 200);
     const data = await res.json();
