@@ -2510,15 +2510,25 @@ async function handleTelProxy(request, env) {
   } catch {}
 
   const telSecret = env.TEL_SECRET || env.TELEMETRY_SECRET || '';
-  if (!telSecret) {
-    return jsonResponse({ error: 'unconfigured', commands: null }, 200);
-  }
 
   try {
-    const res = await fetch(
-      `https://telemetry.poly-glot.ai/stats?secret=${telSecret}`,
-      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) }
-    );
+    // Prefer the public/stats endpoint (no secret in URL).
+    // Fall back to the authenticated endpoint if the public one isn't available yet.
+    const publicUrl = 'https://telemetry.poly-glot.ai/stats/public';
+    const authedUrl = `https://telemetry.poly-glot.ai/stats`;
+
+    let res = await fetch(publicUrl, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    // If public endpoint isn't deployed yet, try authenticated via header
+    if (!res.ok && telSecret) {
+      res = await fetch(authedUrl, {
+        headers: { Accept: 'application/json', 'X-Stats-Secret': telSecret },
+        signal: AbortSignal.timeout(8000),
+      });
+    }
     if (!res.ok) return jsonResponse({ error: 'upstream_error', status: res.status, commands: null }, 200);
     const data = await res.json();
     // Cache in KV
@@ -2559,15 +2569,17 @@ async function handleHealthReport(request, env) {
   };
 
   // ── Secret presence checks (boolean only — never expose values) ──
+  // Only check secrets that this worker actually uses
   report.secrets = {
-    RESEND_API_KEY:   !!env.RESEND_API_KEY,
-    ADMIN_SECRET:     !!env.ADMIN_SECRET,
-    CWS_CLIENT_ID:    !!env.CWS_CLIENT_ID,
-    CWS_CLIENT_SECRET:!!env.CWS_CLIENT_SECRET,
-    CWS_REFRESH_TOKEN:!!env.CWS_REFRESH_TOKEN,
-    CWS_EXTENSION_ID: !!env.CWS_EXTENSION_ID,
-    GH_APP_SECRET:    !!(env.GH_APP_SECRET || env.GITHUB_APP_SECRET),
-    TEL_SECRET:       !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
+    RESEND_API_KEY:    !!env.RESEND_API_KEY,
+    ADMIN_SECRET:      !!env.ADMIN_SECRET,
+    CWS_CLIENT_ID:     !!env.CWS_CLIENT_ID,
+    CWS_CLIENT_SECRET: !!env.CWS_CLIENT_SECRET,
+    CWS_REFRESH_TOKEN: !!env.CWS_REFRESH_TOKEN,
+    CWS_EXTENSION_ID:  !!env.CWS_EXTENSION_ID,
+    TEL_SECRET:        !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
+    TURNSTILE_SECRET:  !!env.TURNSTILE_SECRET,
+    MAGIC_LINK_SECRET: !!env.MAGIC_LINK_SECRET,
   };
 
   // ── KV reachability ──────────────────────────────────────────

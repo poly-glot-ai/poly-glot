@@ -34,10 +34,14 @@ export default {
       return handleCliPing(request, env, ctx);
     }
 
-    // ── Stats endpoint (owner only) ───────────────────────────────────────────
+    // ── Stats endpoint — two auth modes ──────────────────────────────────────
+    // 1. ?secret=<STATS_SECRET>  — legacy, used by direct callers
+    // 2. X-Stats-Secret header   — preferred (secret never in URL/logs)
+    //    Used by the auth-worker's tel-proxy for server-to-server calls
     if (request.method === 'GET' && url.pathname === '/stats') {
-      const secret = url.searchParams.get('secret');
-      if (secret !== STATS_SECRET) {
+      const secret = request.headers.get('X-Stats-Secret') ?? url.searchParams.get('secret') ?? '';
+      const validSecret = env.STATS_SECRET || STATS_SECRET;
+      if (secret !== validSecret) {
         return corsResponse(401, { error: 'unauthorized' });
       }
       const totalCommands  = parseInt(await env.MILESTONES.get('total_commands') || '0', 10);
@@ -49,6 +53,18 @@ export default {
         next_milestone:  next,
         npm_downloads:   957,   // last known npm count (manual update)
         note:            'total_commands = real CLI runs by users who opted into telemetry'
+      });
+    }
+
+    // ── Public stats endpoint (no secret) — returns limited data ─────────────
+    // Used by the auth-worker tel-proxy which can't pass secrets via URL.
+    // Only exposes non-sensitive aggregate counts.
+    if (request.method === 'GET' && url.pathname === '/stats/public') {
+      const totalCommands = parseInt(await env.MILESTONES.get('total_commands') || '0', 10);
+      const next          = nextMilestone(totalCommands);
+      return corsResponse(200, {
+        total_commands: totalCommands,
+        next_milestone: next,
       });
     }
 
