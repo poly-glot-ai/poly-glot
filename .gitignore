@@ -1,35 +1,59 @@
-# Editor directories and files
-.vscode/
+# ── Node ─────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# ── Build outputs ─────────────────────────────────────────────
+dist/
+build/
+out/
+*.vsix
+*.tgz
+
+# ── Wrangler local dev & cache (NEVER commit these) ───────────
+.wrangler/
+**/.wrangler/
+.dev.vars
+**/.dev.vars
+wrangler.dev.toml
+
+# ── Secrets & environment files ───────────────────────────────
+.env
+.env.*
+*.env
+secrets.json
+secrets.toml
+*.secret
+
+# ── macOS ─────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ── Editor ────────────────────────────────────────────────────
+.vscode/settings.json
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
-.DS_Store
-Thumbs.db
+# ── Backup files (auto-generated) ────────────────────────────
+*.bak
+*.bak-*
 
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp
-
-# Node modules (if added later)
-node_modules/
-
-# Build outputs (if added later)
-dist/
-build/
-
-# VS Code extension build artifacts — distribute via Desktop, not git
-*.vsix
-
-# Demo video frames + outputs
-demo-video/
+# ── Internal scripts & sensitive data files ───────────────────
+# These contain live promo codes, discount IDs, or internal setup logic
+lemonsqueezy-ids.json
+setup-lemonsqueezy.js
 get-variant-ids.js
 
-# Wrangler cache
-.wrangler/
-telemetry-worker/.wrangler/
+# ── Test & temp ───────────────────────────────────────────────
+*.log
+coverage/
+.nyc_output/
+tmp/
+temp/

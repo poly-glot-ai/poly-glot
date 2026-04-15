@@ -11,9 +11,9 @@ compatibility_date = "2024-09-23"
 # Wrangler v3 defaults to modules; explicit here for clarity.
 
 # ── Account ──────────────────────────────────────────────────
-# Replace with your real Cloudflare account ID
-# (Dashboard → right-hand sidebar on any Workers page)
-account_id = "2cabfc7790be3c1b60b990b6dec400a3"
+# Set via CLOUDFLARE_ACCOUNT_ID environment variable in CI,
+# or run: wrangler deploy (uses your logged-in account automatically).
+# Never hardcode your account ID here in a public repo.
 
 # ── Routes ───────────────────────────────────────────────────
 # Serves the Worker for all /api/auth/* paths on poly-glot.ai.
@@ -36,8 +36,10 @@ routes = [
 # the placeholder IDs below with the values printed by that command.
 [[kv_namespaces]]
 binding    = "AUTH_KV"
-id         = "4686b5dd158944e5856f7a402c6c6d2f"
-preview_id = "70e1e3dcb22b476bb97b3900e861bed5"
+id         = "REDACTED_SET_VIA_WRANGLER"
+preview_id = "REDACTED_SET_VIA_WRANGLER"
+# Run: wrangler kv:namespace create "AUTH_KV" and paste the IDs above
+# Never commit real KV namespace IDs to a public repo
 
 # ── Service binding to telemetry worker ──────────────────────────────────────
 # Allows auth-worker to call telemetry-worker directly (no HTTP, no 522).

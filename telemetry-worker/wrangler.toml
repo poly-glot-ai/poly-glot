@@ -20,7 +20,9 @@ dataset  = "cli_telemetry"
 # Stores: total_commands, total_users (HLL), last_milestone_hit
 [[kv_namespaces]]
 binding = "MILESTONES"
-id      = "cd35631f42ba496480af95df4953c6cc"
+id      = "REDACTED_SET_VIA_WRANGLER"
+# Run: wrangler kv:namespace create "MILESTONES" and paste the ID above
+# Never commit real KV namespace IDs to a public repo
 
 # ── Optional: environment overrides ──────────────────────────────────────────
 [env.production]
