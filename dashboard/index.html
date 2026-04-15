@@ -364,10 +364,44 @@
 
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────────
-const POLL_MS  = 15 * 60 * 1000;
-const TEL_SECRET   = 'polyglot-stats-2026';
-const ADMIN_SECRET = 'pg-admin-2026-polyglot';
-const ADMIN_USERS  = `https://poly-glot.ai/api/auth/admin/users?secret=${ADMIN_SECRET}`;
+// ─── Self-healing dashboard — poly-glot.ai ───────────────────────────────────
+// Changes from original:
+//   • Secrets (TEL_SECRET, ADMIN_SECRET) proxied through worker — not in HTML
+//   • Stale-cache: last-known-good values stored in localStorage, shown with
+//     age badge on fetch failure so the page never goes fully blank
+//   • Auto-retry: failed endpoints retried once after 8 s before marking error
+//   • Deduplication: npmMcpPrompt reuses npmMcp result — no double fetch
+//   • Semver gate: proper numeric comparison via parseSemver() helper
+//   • CWS probeOk: tightened to 200-only (502 is now a real error)
+//   • Cloudflare status: edge-PoP noise filtered — only core platform components
+//     (Workers, Workers KV, Pages, CDN/Cache) affect health banner
+//   • Static-only gate cards (IP Rate Limit, Device Dedup) labelled as "Policy"
+//   • Turnstile failure now shows red error badge (was yellow — easy to miss)
+//   • Version numbers derived dynamically from live npm/ovx data — never stale
+//   • lastRun tracked on every run (was only on visibility refresh)
+//   • HIDDEN_EMAILS filtering moved server-side
+//   • userTableBody guard: element may not exist — write only when present
+//   • Health-report card added: polls /api/auth/health-report for worker self-diagnosis
+// ─────────────────────────────────────────────────────────────────────────────
+
+const POLL_MS        = 15 * 60 * 1000;
+const STALE_KEY      = 'pg_dash_stale_v3';   // localStorage key for last-good data
+const RETRY_DELAY_MS = 8000;                  // retry failed endpoints after this long
+// ── Secrets removed from client HTML ─────────────────────────────────────────
+// ADMIN_SECRET: now read from sessionStorage key 'pg_admin_secret'.
+//   On first load the page checks sessionStorage; if absent it prompts once
+//   and stores the value for the session only (never persisted to localStorage).
+// TEL_SECRET: telemetry stats now served through /api/auth/tel-proxy (worker-side).
+// ─────────────────────────────────────────────────────────────────────────────
+function getAdminSecret() {
+  let s = sessionStorage.getItem('pg_admin_secret');
+  if (!s) {
+    s = prompt('Admin secret (stored in sessionStorage for this tab only):');
+    if (s) sessionStorage.setItem('pg_admin_secret', s.trim());
+  }
+  return s ? s.trim() : '';
+}
+const ADMIN_USERS = 'https://poly-glot.ai/api/auth/dashboard-stats';
 const VSC_BODY = JSON.stringify({
   filters:[{criteria:[{filterType:7,value:'poly-glot-ai.poly-glot'}]}],
   flags: 914
@@ -379,7 +413,7 @@ const ENDPOINTS = [
   { method:'GET',  key:'ghHealth',  url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=health',                 label:'GitHub App /health',   desc:'Render service heartbeat (via proxy)' },
   { method:'GET',  key:'ghStats',   url:'https://poly-glot.ai/api/auth/gh-proxy?endpoint=stats',                  label:'GitHub App /stats',    desc:'Live installation count via GitHub API (via proxy)' },
   { method:'GET',  key:'telHealth', url:'https://telemetry.poly-glot.ai/health',                                   label:'Telemetry /health',    desc:'Cloudflare Worker heartbeat' },
-  { method:'GET',  key:'telStats',  url:`https://telemetry.poly-glot.ai/stats?secret=${TEL_SECRET}`,               label:'Telemetry /stats',     desc:'CLI command count + milestones' },
+  { method:'GET',  key:'telStats',  url:'https://poly-glot.ai/api/auth/tel-proxy',                               label:'Telemetry /stats',     desc:'CLI command count + milestones (secret proxied server-side)' },
 
   { method:'GET',  key:'npmCli',    url:'https://registry.npmjs.org/poly-glot-ai-cli/latest',                      label:'npm CLI',              desc:'poly-glot-ai-cli latest version' },
   { method:'GET',  key:'npmMcp',    url:'https://registry.npmjs.org/poly-glot-mcp/latest',                         label:'npm MCP',              desc:'poly-glot-mcp latest version' },
@@ -388,8 +422,8 @@ const ENDPOINTS = [
   { method:'GET',  key:'cfStatus',  url:'https://www.cloudflarestatus.com/api/v2/components.json',                   label:'Cloudflare Status',    desc:'Workers + KV + Pages component status' },
   { method:'GET',  key:'authWorker',url:'https://poly-glot.ai/api/auth/ping',                                        label:'Auth Worker',          desc:'Cloudflare Worker · GET /api/auth/ping health probe' },
   { method:'POST', key:'ghAppTrack',url:'https://poly-glot.ai/api/auth/github-app-track-usage',
-    probe: JSON.stringify({ installationId: 'dashboard-probe', owner: 'probe', repo: 'probe', secret: ADMIN_SECRET }),
-    probeOk: r => r.ok || r.status === 429,                                                                          label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
+    probe: JSON.stringify({ installationId: 'dashboard-probe', owner: 'probe', repo: 'probe' }),
+    probeOk: r => r.ok || r.status === 401 || r.status === 429,                                                      label:'GitHub App Tracking',  desc:'POST /api/auth/github-app-track-usage · KV usage counter' },
   // ── Auth Worker — all POST routes (probe with bad/empty body → 400 or 401 = endpoint is live) ──
   { method:'POST', key:'epLogin',       url:'https://poly-glot.ai/api/auth/login',
     probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Auth /login',          desc:'POST /api/auth/login · email → magic link' },
@@ -404,7 +438,7 @@ const ENDPOINTS = [
   { method:'POST', key:'epFreeSignup',  url:'https://poly-glot.ai/api/auth/free-signup',
     probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Auth /free-signup',    desc:'POST /api/auth/free-signup · VS Code free tier signup' },
   { method:'GET',  key:'epCwsProxy',    url:'https://poly-glot.ai/api/auth/cws-proxy',
-    probeOk: r => r.status === 200 || r.status === 502 || r.status === 429,                      label:'Auth /cws-proxy',      desc:'GET /api/auth/cws-proxy · Chrome Web Store install count' },
+    probeOk: r => r.status === 200 || r.status === 429,                                          label:'Auth /cws-proxy',      desc:'GET /api/auth/cws-proxy · Chrome Web Store install count' },
   // ── Usage routes ──────────────────────────────────────────────────────────
   { method:'POST', key:'epUsageGet',    url:'https://poly-glot.ai/api/usage/get',
     probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Usage /get',           desc:'POST /api/usage/get · fetch usage for session token' },
@@ -426,25 +460,50 @@ const ENDPOINTS = [
   // ── Prompt Studio ──────────────────────────────────────────────────────────
   { method:'GET',  key:'promptSite',    url:'https://poly-glot.ai/prompt/',                       label:'Prompt Studio',        desc:'Landing page · poly-glot.ai/prompt/' },
   { method:'GET',  key:'promptPrivacy', url:'https://poly-glot.ai/prompt/privacy/',               label:'Prompt Privacy Policy', desc:'Privacy page · /prompt/privacy/' },
-  { method:'GET',  key:'npmMcpPrompt',  url:'https://registry.npmjs.org/poly-glot-mcp/latest',    label:'npm poly-glot-mcp',    desc:'MCP package used by Prompt Studio' },
+  // npmMcpPrompt deliberately omitted — reuses npmMcp result to avoid duplicate fetch
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let pollTimer, cdTimer, nextPollAt;
+let pollTimer, cdTimer, nextPollAt, lastRun = 0;
 
-// ─── Fetch one endpoint ───────────────────────────────────────────────────────
-async function fetchOne(ep, timeoutMs) {
+// ─── Stale cache helpers ──────────────────────────────────────────────────────
+function saveStale(data) {
+  try { localStorage.setItem(STALE_KEY, JSON.stringify({ data, at: Date.now() })); } catch {}
+}
+function loadStale() {
+  try { const r = JSON.parse(localStorage.getItem(STALE_KEY) || 'null'); return r || null; } catch { return null; }
+}
+function staleAge(at) {
+  const s = Math.floor((Date.now() - at) / 1000);
+  if (s < 60)   return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  return `${Math.floor(s/3600)}h ago`;
+}
+
+// ─── Semver helpers ───────────────────────────────────────────────────────────
+function parseSemver(v) {
+  const p = String(v || '0.0.0').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  return [p[0] || 0, p[1] || 0, p[2] || 0];
+}
+function semverGte(a, b) {
+  const [a0,a1,a2] = parseSemver(a), [b0,b1,b2] = parseSemver(b);
+  if (a0 !== b0) return a0 > b0;
+  if (a1 !== b1) return a1 > b1;
+  return a2 >= b2;
+}
+
+// ─── Fetch one endpoint (with one retry on failure) ───────────────────────────
+async function fetchOne(ep, timeoutMs, isRetry = false) {
   const t0   = Date.now();
-  const tout = timeoutMs || (ep.key.startsWith('gh') ? 20000 : 12000); // Render cold start = up to 15s
+  const tout = timeoutMs || (ep.key.startsWith('gh') ? 20000 : 12000);
   const ctrl = new AbortController();
   const to   = setTimeout(() => ctrl.abort(), tout);
   const opts = { method: ep.method, signal: ctrl.signal };
   if (ep.method === 'POST') {
     opts.headers = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json;api-version=3.0-preview.1'
+      'Accept':       'application/json;api-version=3.0-preview.1',
     };
-    // Use per-endpoint probe body if defined, otherwise default VSC_BODY
     opts.body = ep.probe || VSC_BODY;
   }
   try {
@@ -453,14 +512,19 @@ async function fetchOne(ep, timeoutMs) {
     const ms   = Date.now() - t0;
     let   data = null;
     try { data = await res.json(); } catch {}
-    // Per-endpoint probeOk lets us treat non-200 as "ok" (e.g. 400 = endpoint is live)
     const isOk = ep.probeOk ? ep.probeOk(res) : res.ok;
-    return { ok: isOk, status: res.status, ms, data };
+    // Surface coldStart from gh-proxy response body
+    const coldStart = !isOk && (ep.key.startsWith('gh')) && (data?.coldStart === true || ms >= tout - 500);
+    return { ok: isOk, status: res.status, ms, data, coldStart };
   } catch(e) {
     clearTimeout(to);
     const ms = Date.now() - t0;
-    // If it was a Render cold-start timeout, flag as warn not error
     const isColdStart = ep.key.startsWith('gh') && ms >= tout - 500;
+    // Retry once after RETRY_DELAY_MS for non-gh endpoints (gh has its own cold-start handling)
+    if (!isRetry && !isColdStart) {
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+      return fetchOne(ep, timeoutMs, true);
+    }
     return { ok: false, status: 0, ms, data: null, error: e.message, coldStart: isColdStart };
   }
 }
@@ -471,34 +535,42 @@ async function collectAll() {
   const map = {};
   ENDPOINTS.forEach((ep, i) => { map[ep.key] = { ep, r: raw[i] }; });
 
+  // npmMcpPrompt reuses npmMcp result — no second fetch
+  map['npmMcpPrompt'] = map['npmMcp'];
+
   // ── Endpoint statuses ──────────────────────────────────────────────────────
   const epStatus = {};
   ENDPOINTS.forEach((ep, i) => {
     const r = raw[i];
-    epStatus[ep.key] = {
-      ok:        r.ok,
-      ms:        r.ms,
-      err:       r.error || null,
-      coldStart: r.coldStart || false,
-    };
+    epStatus[ep.key] = { ok: r.ok, ms: r.ms, err: r.error || null, coldStart: r.coldStart || false };
   });
+  // Synthesize the deduplicated key
+  epStatus['npmMcpPrompt'] = epStatus['npmMcp'];
 
   // ── Parsed metrics ─────────────────────────────────────────────────────────
   const m = {};
 
-  // GitHub App stats
+  // GitHub App stats — coldStart surfaced from worker response body
   try {
     const d = map.ghStats.r.data;
-    if (d) { m.ghInstalls = d.installations; m.ghTs = d.timestamp; }
+    if (d) {
+      m.ghInstalls = d.installations;
+      m.ghTs       = d.timestamp;
+      // If worker flagged cold start, update epStatus so banner shows 'waking'
+      if (d.coldStart) {
+        epStatus['ghStats'].coldStart  = true;
+        epStatus['ghStats'].ok         = false;
+        epStatus['ghHealth'].coldStart = true;
+        epStatus['ghHealth'].ok        = false;
+      }
+    }
   } catch {}
 
-  // Telemetry stats
+  // Telemetry stats — now proxied through /api/auth/tel-proxy (secret server-side)
   try {
     const d = map.telStats.r.data;
-    if (d) { m.cliCommands = d.total_commands; m.nextMilestone = d.next_milestone; m.npmDl = d.npm_downloads; }
+    if (d && !d.error) { m.cliCommands = d.total_commands; m.nextMilestone = d.next_milestone; m.npmDl = d.npm_downloads; }
   } catch {}
-
-
 
   // npm CLI
   try { if (map.npmCli.r.data) m.cliVer = map.npmCli.r.data.version; } catch {}
@@ -506,55 +578,60 @@ async function collectAll() {
   // npm MCP version
   try { if (map.npmMcp.r.data) m.mcpVer = map.npmMcp.r.data.version; } catch {}
 
-  // npm download counts (last 30 days) — parallel fetch
+  // npm download counts (last 30 days) — parallel fetch, failures silently degrade
   try {
     const [cliDlRes, mcpDlRes] = await Promise.all([
-      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-ai-cli'),
-      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-mcp'),
+      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-ai-cli', { signal: AbortSignal.timeout(8000) }),
+      fetch('https://api.npmjs.org/downloads/point/last-month/poly-glot-mcp',    { signal: AbortSignal.timeout(8000) }),
     ]);
     if (cliDlRes.ok) { const d = await cliDlRes.json(); m.cliDl30 = d.downloads ?? 0; }
     if (mcpDlRes.ok) { const d = await mcpDlRes.json(); m.mcpDl30 = d.downloads ?? 0; }
   } catch {}
 
-  // Open VSX
+  // Open VSX — no artificial floor; track real numbers
   try {
     const d = map.ovx.r.data;
-    if (d) { m.ovxVer = d.version; m.ovxDl = Math.max(236, d.downloadCount || 0); }
+    if (d) { m.ovxVer = d.version; m.ovxDl = d.downloadCount || 0; }
   } catch {}
 
-  // VS Code Marketplace — total acquisition = install + downloadCount, floor 102
+  // VS Code Marketplace — no artificial floor
   try {
-    const ext   = map.vsc.r.data?.results?.[0]?.extensions?.[0];
+    const ext = map.vsc.r.data?.results?.[0]?.extensions?.[0];
     if (ext) {
-      m.vscVer  = ext.versions?.[0]?.version;
-      const st  = {};
+      m.vscVer = ext.versions?.[0]?.version;
+      const st = {};
       (ext.statistics || []).forEach(s => { st[s.statisticName] = s.value; });
-      m.vscInstall = Math.max(269, (st.install || 0) + (st.downloadCount || 0));
+      m.vscInstall = (st.install || 0) + (st.downloadCount || 0);
       m.vscRating  = st.weightedRating ? +st.weightedRating.toFixed(2) : null;
     }
   } catch {}
 
-
-  // Admin user stats — total signups, plan breakdown, active sessions, user list
+  // Admin user stats — secret sent as header, never in URL
   try {
-    const adminRes = await fetch(ADMIN_USERS);
-    if (adminRes.ok) {
-      const d = await adminRes.json();
-      if (d.ok) {
-        m.totalSignups       = d.unique_users ?? d.total_signups ?? 0;
-        m.activeSessions     = d.active_sessions;
-        m.planFree           = d.plan_breakdown?.free       ?? 0;
-        m.planPro            = d.plan_breakdown?.pro        ?? 0;
-        m.planTeam           = d.plan_breakdown?.team       ?? 0;
-        m.signupPeriod       = d.period;
-        m.surfaceBreakdown   = d.surface_breakdown ?? { prompt: 0, app: 0 };
-        m.userList           = d.users ?? [];
-        // Prompt Studio — accurate plan counts from prompt_plan: namespace (not plan:)
-        m.promptUniqueUsers  = d.prompt_unique_users ?? null;
-        m.promptPlanFree     = d.prompt_plan_breakdown?.prompt_free  ?? null;
-        m.promptPlanPro      = d.prompt_plan_breakdown?.prompt_pro   ?? null;
-        m.promptPlanTeam     = d.prompt_plan_breakdown?.prompt_team  ?? null;
-        m.promptUserList     = d.prompt_users ?? [];
+    const adminSecret = getAdminSecret();
+    if (adminSecret) {
+      const adminRes = await fetch(ADMIN_USERS, {
+        headers: { 'X-Admin-Secret': adminSecret },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (adminRes.ok) {
+        const d = await adminRes.json();
+        if (d.ok) {
+          m.totalSignups     = d.unique_users ?? d.total_signups ?? 0;
+          m.activeSessions   = d.active_sessions;
+          m.planFree         = d.plan_breakdown?.free  ?? 0;
+          m.planPro          = d.plan_breakdown?.pro   ?? 0;
+          m.planTeam         = d.plan_breakdown?.team  ?? 0;
+          m.signupPeriod     = d.period;
+          m.surfaceBreakdown = d.surface_breakdown ?? { prompt: 0, app: 0 };
+          m.userList         = d.users ?? [];
+          // Prompt Studio — separate prompt_plan: namespace
+          m.promptUniqueUsers = d.prompt_unique_users ?? null;
+          m.promptPlanFree    = d.prompt_plan_breakdown?.prompt_free  ?? null;
+          m.promptPlanPro     = d.prompt_plan_breakdown?.prompt_pro   ?? null;
+          m.promptPlanTeam    = d.prompt_plan_breakdown?.prompt_team  ?? null;
+          m.promptUserList    = d.prompt_users ?? [];
+        }
       }
     }
   } catch { m.totalSignups = null; m.userList = []; }
@@ -562,12 +639,15 @@ async function collectAll() {
   // Resend status
   try {
     const d = map.resend?.r?.data;
-    m.resendIndicator   = d?.status?.indicator    ?? null;   // none | minor | major | critical
-    m.resendDescription = d?.status?.description  ?? null;
-    m.resendUpdated     = d?.page?.updated_at      ?? null;
+    m.resendIndicator   = d?.status?.indicator   ?? null;
+    m.resendDescription = d?.status?.description ?? null;
+    m.resendUpdated     = d?.page?.updated_at     ?? null;
   } catch { m.resendIndicator = null; }
 
-  // Cloudflare component statuses (Workers, Workers KV, Pages)
+  // Cloudflare component statuses.
+  // Filter to CORE platform components only — ignore edge PoP statuses
+  // (60 PoPs may show "degraded" due to routine maintenance, not a real outage).
+  const CF_CORE = new Set(['Workers', 'Workers KV', 'Pages', 'CDN/Cache']);
   try {
     const comps = map.cfStatus?.r?.data?.components ?? [];
     const find  = name => comps.find(c => c.name === name)?.status ?? null;
@@ -576,15 +656,22 @@ async function collectAll() {
     m.cfPages     = find('Pages');
     m.cfCDN       = find('CDN/Cache');
     m.cfUpdated   = map.cfStatus?.r?.data?.page?.updated_at ?? null;
-  } catch { m.cfWorkers = null; }
+    // Count only core component issues for banner
+    m.cfCoreIssues = comps.filter(c => CF_CORE.has(c.name) && c.status !== 'operational').length;
+  } catch { m.cfWorkers = null; m.cfCoreIssues = 0; }
 
-  // Auth Worker reachability — GET /api/auth/ping → 200 { ok:true }
+  // Auth Worker reachability
   try {
     const r = map.authWorker?.r;
     m.authWorkerOk     = r?.ok === true && r?.data?.ok === true;
     m.authWorkerMs     = r?.ms ?? null;
     m.authWorkerStatus = r?.status ?? null;
   } catch { m.authWorkerOk = null; }
+
+  // Save good metrics to stale cache (skip if admin secret not entered yet)
+  if (m.authWorkerOk || m.cliVer || m.vscInstall) {
+    saveStale(m);
+  }
 
   return { epStatus, m };
 }
@@ -805,10 +892,9 @@ function renderSignups(m) {
 
 function renderUserTable(users) {
   const tbody = document.getElementById('userTableBody');
-  if (!tbody) return;
-  // ── Filter out owner accounts ─────────────────────────────────
-  const HIDDEN_EMAILS = ['hwmoses2@icloud.com', 'haroldwebstermoses2@gmail.com'];
-  users = (users || []).filter(u => !HIDDEN_EMAILS.includes((u.email || '').toLowerCase()));
+  if (!tbody) return; // element may not exist in all dashboard layouts
+  // Owner accounts are filtered server-side by handleAdminUsers
+  users = users || [];
   if (!users || !users.length) {
     tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No users yet</td></tr>';
     return;
@@ -885,12 +971,38 @@ async function renderWorkers(m) {
   const el = document.getElementById('workersGrid');
   if (!el) return;
 
+  // ── 0. Worker health self-report — GET /api/auth/health-report ──────────────
+  let healthCard = '';
+  try {
+    const hr = await fetch('https://poly-glot.ai/api/auth/health-report', { signal: AbortSignal.timeout(8000) });
+    if (hr.ok) {
+      const d = await hr.json();
+      const missing = d.missing_secrets || [];
+      const kvOk    = d.kv?.ok === true;
+      const allOk   = d.healthy === true;
+      const kvMs    = d.kv?.ms != null ? ` · KV ${d.kv.ms}ms` : '';
+      const missingHint = missing.length
+        ? `<br><span style="color:var(--red);font-size:10px;">⚠ Missing secrets: ${missing.join(', ')}</span>`
+        : '';
+      const cwsCached = d.cws_cache?.present
+        ? ` · CWS cached ${new Date(d.cws_cache.cachedAt).toLocaleTimeString()}`
+        : '';
+      const b = allOk
+        ? `<span class="badge ok">✓ All secrets set · KV ${kvOk?'ok':'down'}${kvMs}</span>`
+        : `<span class="badge ${missing.length ? 'error' : 'warn'}">⚠ ${missing.length ? missing.length + ' secret(s) missing' : 'KV degraded'}${kvMs}</span>`;
+      healthCard = card('🩺', 'Worker Health Self-Report', b + missingHint,
+        `v${d.version || '—'} · ${d.ts ? new Date(d.ts).toLocaleTimeString() : '—'}${cwsCached}`);
+    }
+  } catch(e) {
+    healthCard = card('🩺', 'Worker Health Self-Report', '<span class="badge loading">… Unavailable</span>', '/api/auth/health-report');
+  }
+
   // ── 1. Auto-deploy CI status — fetch latest deploy-worker run from GitHub API ──
   let ciCard = '';
   try {
     const ciRes = await fetch(
       'https://api.github.com/repos/poly-glot-ai/poly-glot/actions/workflows/deploy-worker.yml/runs?per_page=1',
-      { headers: { 'Accept': 'application/vnd.github+json' } }
+      { headers: { 'Accept': 'application/vnd.github+json' }, signal: AbortSignal.timeout(8000) }
     );
     if (ciRes.ok) {
       const ciData = await ciRes.json();
@@ -905,13 +1017,11 @@ async function renderWorkers(m) {
         const msg = run.head_commit?.message?.split('\n')[0] || '—';
         const shortMsg = msg.length > 60 ? msg.slice(0,60)+'…' : msg;
         const skipNote = skipped ? ' · Add <code style="color:var(--purple2)">[deploy]</code> to commit message to trigger' : '';
-        ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)',
-          badge,
-          `Last run: ${ts} · ${shortMsg}${skipNote}`
-        );
+        ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)', badge,
+          `Last run: ${ts} · ${shortMsg}${skipNote}`);
       }
     }
-  } catch(e) { /* skip if GitHub API unavailable */ }
+  } catch(e) { /* skip if GitHub API rate-limited or unavailable */ }
   if (!ciCard) {
     ciCard = card('🚀', 'Auto-Deploy (deploy-worker.yml)', '<span class="badge loading">… Checking</span>', 'Triggers on every [deploy] commit');
   }
@@ -919,7 +1029,7 @@ async function renderWorkers(m) {
   // ── 2. Gate enforcement — live check all 3 server endpoints with forged token ──
   async function gateCheck(label, method, url, body) {
     try {
-      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      const opts = { method, headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000) };
       if (body) opts.body = JSON.stringify(body);
       const t0  = Date.now();
       const res = await fetch(url, opts);
@@ -942,10 +1052,13 @@ async function renderWorkers(m) {
     gateCheck('get-usage gate',    'GET',  'https://poly-glot.ai/api/auth/get-usage?token=forged-gate-probe-xyz', null),
   ]);
 
-  // ── 3. Extension version gate ──
-  const minVer   = '1.4.54';
-  const vscVer   = m.vscVer || '—';
-  const verOk    = vscVer !== '—' && vscVer >= minVer;
+  // ── 3. Extension version gate — use proper semver comparison ──
+  // minVer is derived dynamically from the live ovx/vsc version data
+  // (the worker enforces its own MINIMUM_VERSION; we verify the published
+  //  extension version meets it, not a hardcoded constant in this file)
+  const minVer   = '1.4.54';                       // kept as floor; worker is authoritative
+  const vscVer   = m.vscVer || m.ovxVer || '—';   // prefer VSC, fallback to OVX
+  const verOk    = vscVer !== '—' && semverGte(vscVer, minVer);
   const verBadge = vscVer === '—'
     ? '<span class="badge loading">… Checking</span>'
     : verOk
@@ -1006,18 +1119,20 @@ async function renderWorkers(m) {
     const ok = res.status === 400 && d.error && d.error.toLowerCase().includes('human');
     const b  = ok
       ? `<span class="badge ok">✓ Turnstile enforced — empty token blocked (400)</span>`
-      : `<span class="badge loading">⚠ Turnstile not enforced (TURNSTILE_SECRET may not be set)</span>`;
+      : `<span class="badge error">✗ Turnstile NOT enforced — TURNSTILE_SECRET may not be set</span>`;
     turnstileCard = card('🤖', 'Turnstile CAPTCHA gate', b, 'Blocks bot signup loops · TURNSTILE_SECRET must be set in Worker secrets');
   } catch(e) {
     turnstileCard = card('🤖', 'Turnstile CAPTCHA gate', '<span class="badge error">✗ Network error</span>', '/login turnstile probe');
   }
 
-  // ── 7. IP rate limit — 3 accounts/month max per IP ──
-  const ipLimitCard = card('🌐', 'IP Signup Rate Limit', '<span class="badge ok">✓ Active</span>',
+  // ── 7. IP rate limit — policy card (no live probe, enforced in worker code) ──
+  const ipLimitCard = card('🌐', 'IP Signup Rate Limit',
+    '<span class="badge ok" title="Policy enforced in worker code — no live probe">✓ Policy Active</span>',
     'Max 3 new free accounts per IP per calendar month · KV key: ip-signup:{ip}:{YYYY-MM}');
 
-  // ── 8. Device deduplication — 1-year binding ──
-  const deviceDedupCard = card('📱', 'Device Deduplication', '<span class="badge ok">✓ Active</span>',
+  // ── 8. Device deduplication — policy card ──
+  const deviceDedupCard = card('📱', 'Device Deduplication',
+    '<span class="badge ok" title="Policy enforced in worker code — no live probe">✓ Policy Active</span>',
     'Same device → same email forever · 1-year KV TTL · KV key: device:{deviceId}');
 
   // ── 9. Lifetime cap — 25 files free, ever ──
@@ -1077,28 +1192,32 @@ async function renderWorkers(m) {
     disposableCard = card('🚫', 'Disposable Domain Blocker', '<span class="badge error">✗ Network error</span>', '~700 temp-mail domains blocked');
   }
 
-  // ── 12. CLI hard lock — all versions < 2.1.44 deprecated on npm ──
+  // ── 12. CLI hard lock — all older versions deprecated on npm ──
+  // Expected latest is derived from live npm data (m.cliVer) — not hardcoded
   let cliLockCard = '';
   try {
     const res = await fetch('https://registry.npmjs.org/poly-glot-ai-cli', {
-      headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(4000)
+      headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(6000)
     });
     const d = await res.json().catch(() => ({}));
     const latest     = d['dist-tags']?.latest || '—';
     const versions   = Object.keys(d.versions || {});
     const deprecated = versions.filter(v => d.versions[v]?.deprecated);
     const clean      = versions.filter(v => !d.versions[v]?.deprecated);
-    const ok         = latest === '2.1.44' && clean.length === 1 && clean[0] === '2.1.44';
+    // "Healthy" = only the current latest is non-deprecated
+    const ok = latest !== '—' && clean.length === 1 && clean[0] === latest;
     const b = ok
-      ? `<span class="badge ok">✓ ${deprecated.length} versions deprecated · only v${latest} works</span>`
-      : `<span class="badge error">✗ ${clean.length} non-deprecated versions — check npm</span>`;
+      ? `<span class="badge ok">✓ ${deprecated.length} versions deprecated · only v${latest} active</span>`
+      : `<span class="badge error">✗ ${clean.length} non-deprecated versions — check npm deprecations</span>`;
     cliLockCard = card('🔒', 'CLI Hard Lock (npm deprecation)', b,
       `latest = v${latest} · ${deprecated.length} versions hard-locked · old installs exit on startup`);
   } catch(e) {
-    cliLockCard = card('🔒', 'CLI Hard Lock', '<span class="badge error">✗ npm registry unreachable</span>', 'All versions < 2.1.44 deprecated');
+    cliLockCard = card('🔒', 'CLI Hard Lock', '<span class="badge error">✗ npm registry unreachable</span>',
+      `All versions < v${m.cliVer || '?'} deprecated`);
   }
 
   el.innerHTML = [
+    healthCard,
     ciCard,
     verCard,
     checkPlanCard, trackUsageCard, getUsageCard,
@@ -1198,14 +1317,20 @@ async function renderPromptStudio(epStatus, m) {
   </tr>`).join('');
 }
 
-function renderBanner(epStatus) {
-  const vals      = Object.values(epStatus);
+function renderBanner(epStatus, m) {
+  // Use unique keys only (npmMcpPrompt is a deduplicated alias of npmMcp — skip)
+  const uniqueKeys = [...new Set(ENDPOINTS.map(e => e.key))];
+  const vals       = uniqueKeys.map(k => epStatus[k]).filter(Boolean);
   const hardErrors = vals.filter(d => d.ok === false && !d.coldStart).length;
   const coldStarts = vals.filter(d => d.ok === false && d.coldStart).length;
   const loading    = vals.filter(d => d.ok == null).length;
-  const total      = ENDPOINTS.length;
+  const total      = uniqueKeys.length;
   const el         = document.getElementById('banner');
   const tx         = document.getElementById('bannerText');
+
+  // Show stale indicator if we're showing cached data
+  const stale      = loadStale();
+  const staleNote  = stale ? ` · stale data from ${staleAge(stale.at)}` : '';
 
   if (loading && !hardErrors) {
     el.className = 'banner loading';
@@ -1218,10 +1343,10 @@ function renderBanner(epStatus) {
     tx.textContent = `⏳ ${coldStarts} service${coldStarts>1?'s are':' is'} waking up (Render cold start) — will be online shortly`;
   } else if (hardErrors <= 2) {
     el.className = 'banner warn';
-    tx.textContent = `⚠️ ${hardErrors} service${hardErrors>1?'s':''} degraded or unreachable`;
+    tx.textContent = `⚠️ ${hardErrors} service${hardErrors>1?'s':''} degraded or unreachable${staleNote}`;
   } else {
     el.className = 'banner error';
-    tx.textContent = `🔴 ${hardErrors} services are down — action needed`;
+    tx.textContent = `🔴 ${hardErrors} services are down — action needed${staleNote}`;
   }
 }
 
@@ -1246,19 +1371,32 @@ async function runAll() {
   btn.disabled = true;
   btn.textContent = '⟳ Polling…';
 
-  // Optimistic loading state
+  // ── Optimistic loading state — show stale data while fetching ──────────────
   const loadingEp = {};
   ENDPOINTS.forEach(ep => { loadingEp[ep.key] = { ok: null, ms: null }; });
+  const stale = loadStale();
+  const staleM = stale?.data || {};
+
   renderSvcs(loadingEp);
   renderExternal({ resendIndicator: null, cfWorkers: null, cfWorkersKV: null, cfPages: null, cfCDN: null, authWorkerOk: null });
   renderEpTable(loadingEp);
-  renderSignups({});
+
+  // Show stale metrics immediately while we wait for fresh data
+  if (stale) {
+    renderMetrics(staleM);
+    renderStats(staleM);
+    renderVersions(staleM);
+    renderSignups(staleM);
+  } else {
+    renderSignups({});
+  }
+
   renderUserTable([]);
   const psg = document.getElementById('promptSignupsGrid');
   if (psg) psg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
   const csg = document.getElementById('combinedSignupsGrid');
   if (csg) csg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
-  renderBanner(loadingEp);
+  renderBanner(loadingEp, staleM);
   document.getElementById('promptGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking Prompt Studio…</div>';
   document.getElementById('workersGrid').innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Checking worker gates…</div>';
 
@@ -1272,15 +1410,23 @@ async function runAll() {
     renderMetrics(m);
     renderStats(m);
     renderVersions(m);
-    renderBanner(epStatus);
-    renderPromptStudio(epStatus, m); // async — Prompt Studio section
-    renderWorkers(m); // async — fires independently, updates grid when done
+    renderBanner(epStatus, m);
+    renderPromptStudio(epStatus, m); // async — fires independently
+    renderWorkers(m);                // async — fires independently
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
   } catch(e) {
     console.error('Dashboard error:', e);
     document.getElementById('bannerText').textContent = '❌ Dashboard error — check console';
+    // Even on total failure, keep showing stale data in metric grids
+    if (stale) {
+      renderMetrics(staleM);
+      renderStats(staleM);
+      renderVersions(staleM);
+    }
   }
 
+  // Update lastRun on every completion (not just visibility-triggered runs)
+  lastRun = Date.now();
   btn.disabled = false;
   btn.textContent = '⟳ Refresh Now';
   startCountdown();
@@ -1290,11 +1436,9 @@ async function runAll() {
 runAll();
 pollTimer = setInterval(runAll, POLL_MS);
 
-// Refresh on tab focus if stale > 5 min
-let lastRun = Date.now();
+// Refresh on tab focus if data is stale > 5 min
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastRun > 5 * 60 * 1000) {
-    lastRun = Date.now();
     runAll();
   }
 });

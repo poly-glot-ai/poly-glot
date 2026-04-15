@@ -71,7 +71,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   // X-PG-Sig is the HMAC request signature header (Fix 4) — must be explicitly allowed
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-PG-Surface, X-PG-Sig, X-CLI-Version',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-PG-Surface, X-PG-Sig, X-CLI-Version, X-Admin-Secret',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -593,8 +593,13 @@ async function handleVerify(request, env) {
  *  - list of emails + plan + this-month usage
  */
 async function handleAdminUsers(request, env) {
+  // Accept secret via X-Admin-Secret header (preferred — doesn't appear in
+  // server logs or browser history) OR legacy ?secret= query param for
+  // backwards compatibility. Header takes precedence.
   const url    = new URL(request.url);
-  const secret = url.searchParams.get('secret') ?? '';
+  const secret = request.headers.get('X-Admin-Secret')
+              ?? url.searchParams.get('secret')
+              ?? '';
 
   const adminSecret = env.ADMIN_SECRET ?? '';
   if (!adminSecret || secret !== adminSecret) {
@@ -644,11 +649,15 @@ async function handleAdminUsers(request, env) {
     return { email, plan, usage_this_month: usage, surface, source, signup_ts: signupTs };
   }));
 
-  // Deduplicate + filter tombstones and disposable addresses
+  // Owner accounts filtered server-side — never sent to client HTML
+  const OWNER_EMAILS = new Set(['hwmoses2@icloud.com', 'haroldwebstermoses2@gmail.com']);
+
+  // Deduplicate + filter tombstones, disposable addresses, and owner accounts
   const seen  = new Set();
   const users = allUsers.filter(u => {
     if (seen.has(u.email)) return false;
     seen.add(u.email);
+    if (OWNER_EMAILS.has(u.email.toLowerCase())) return false;
     if (u.plan === 'DELETED')       return false;
     if (isDisposableEmail(u.email)) return false;
     if (isTestEmail(u.email))       return false;
@@ -1827,81 +1836,158 @@ async function handleStripeWebhook(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
 // Chrome Web Store proxy — GET /api/auth/cws-proxy
 // ─────────────────────────────────────────────────────────────
-// Returns { installs: N } using the Chrome Web Store Publish API.
-// Requires env secrets:
+// Returns { installs: N, uploadState, stale?, cachedAt? }
+// using the Chrome Web Store Publish API with KV cache fallback.
+//
+// Requires env secrets (set via `wrangler secret put`):
 //   CWS_CLIENT_ID      — OAuth2 client ID from Google Cloud Console
 //   CWS_CLIENT_SECRET  — OAuth2 client secret
-//   CWS_REFRESH_TOKEN  — long-lived refresh token (one-time setup)
-//   CWS_EXTENSION_ID   — Chrome extension ID (hjpdgilolgcanemmngagpobdgdhpplai)
+//   CWS_REFRESH_TOKEN  — long-lived refresh token (Google OAuth2)
+//   CWS_EXTENSION_ID   — Chrome extension ID (default: hjpdgilolgcanemmngagpobdgdhpplai)
 //
-// Flow: refresh_token → access_token → items API → userCount
+// Self-healing behaviours:
+//   • Missing secrets   → 200 { error:'unconfigured', installs:null }  (not 502)
+//   • Token expired     → surfaces 'invalid_grant' with human hint
+//   • Wrong client      → surfaces 'invalid_client' with human hint
+//   • CWS API failure   → serves last-known-good value from KV + stale:true
+//   • All paths timeout → AbortSignal 8 s on token, 8 s on CWS fetch
+//
+// To regenerate refresh token after expiry (~7 days for test apps, indefinite for verified):
+//   1. Visit: https://accounts.google.com/o/oauth2/auth
+//      ?client_id=<CWS_CLIENT_ID>&redirect_uri=http://localhost&response_type=code
+//      &scope=https://www.googleapis.com/auth/chromewebstore&access_type=offline&prompt=consent
+//   2. Capture ?code= from redirect URL
+//   3. POST https://oauth2.googleapis.com/token  grant_type=authorization_code  code=<code>
+//   4. wrangler secret put CWS_REFRESH_TOKEN  (paste refresh_token value)
 // ─────────────────────────────────────────────────────────────
+const CWS_CACHE_KEY = 'cws:installs';
+const CWS_CACHE_TTL = 3600; // 1 hour
+
 async function handleCwsProxy(request, env) {
+  const extId = env.CWS_EXTENSION_ID || 'hjpdgilolgcanemmngagpobdgdhpplai';
+
+  // ── Helper: read stale KV value and return it as a degraded-but-live response ──
+  async function serveStaleCached(reason, hint) {
+    try {
+      const cached = await env.AUTH_KV.get(CWS_CACHE_KEY, 'json');
+      if (cached) {
+        console.warn(`CWS proxy: serving stale cache. reason=${reason}`);
+        return new Response(JSON.stringify({
+          installs: cached.installs,
+          id:       extId,
+          uploadState: cached.uploadState || null,
+          stale:    true,
+          cachedAt: cached.cachedAt,
+          error:    reason,
+          hint:     hint || null,
+        }), {
+          status: 200,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+      }
+    } catch {}
+    // No cache at all — return structured error so dashboard can show exactly what's wrong
+    return jsonResponse({ error: reason, hint: hint || null, installs: null }, 502);
+  }
+
   try {
-    // 1. Exchange refresh token for a fresh access token
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id:     env.CWS_CLIENT_ID,
-        client_secret: env.CWS_CLIENT_SECRET,
-        refresh_token: env.CWS_REFRESH_TOKEN,
-        grant_type:    'refresh_token',
-      }),
-    });
+    // ── Guard: detect missing secrets early ──────────────────────────────────
+    const missing = ['CWS_CLIENT_ID', 'CWS_CLIENT_SECRET', 'CWS_REFRESH_TOKEN'].filter(k => !env[k]);
+    if (missing.length) {
+      console.error('CWS proxy: missing secrets:', missing.join(', '));
+      return await serveStaleCached('unconfigured', `Set these Worker secrets: ${missing.join(', ')}`);
+    }
+
+    // ── Step 1: exchange refresh token for a fresh access token ─────────────
+    let tokenRes;
+    try {
+      tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id:     env.CWS_CLIENT_ID,
+          client_secret: env.CWS_CLIENT_SECRET,
+          refresh_token: env.CWS_REFRESH_TOKEN,
+          grant_type:    'refresh_token',
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (e) {
+      console.error('CWS token fetch threw:', e?.message);
+      return await serveStaleCached('token_network_error', 'Google OAuth2 unreachable');
+    }
 
     if (!tokenRes.ok) {
-      const err = await tokenRes.text();
-      console.error('CWS token exchange failed:', err);
-      return jsonResponse({ error: 'token_exchange_failed', installs: null }, 502);
+      let errBody = {};
+      try { errBody = await tokenRes.json(); } catch { errBody = { raw: await tokenRes.text().catch(() => '') }; }
+      const reason = errBody.error || 'token_exchange_failed';
+      // Map Google error codes to actionable hints
+      const hints = {
+        invalid_grant:  'Refresh token has expired or been revoked. Re-run the OAuth flow and set CWS_REFRESH_TOKEN via: wrangler secret put CWS_REFRESH_TOKEN',
+        invalid_client: 'Client ID or secret is wrong. Verify CWS_CLIENT_ID and CWS_CLIENT_SECRET match the Google Cloud Console credentials.',
+      };
+      console.error(`CWS token exchange failed: ${reason} — ${errBody.error_description || ''}`);
+      return await serveStaleCached(reason, hints[reason] || errBody.error_description || null);
     }
 
-    const { access_token } = await tokenRes.json();
+    const tokenData = await tokenRes.json();
+    const { access_token } = tokenData;
     if (!access_token) {
-      return jsonResponse({ error: 'no_access_token', installs: null }, 502);
+      console.error('CWS token exchange: no access_token in response', JSON.stringify(tokenData));
+      return await serveStaleCached('no_access_token', 'Google returned ok but no access_token field');
     }
 
-    // 2. Fetch extension item from Chrome Web Store Publish API
-    const extId = env.CWS_EXTENSION_ID || 'hjpdgilolgcanemmngagpobdgdhpplai';
-    const cwsRes = await fetch(
-      `https://www.googleapis.com/chromewebstore/v1.1/items/${extId}?projection=DRAFT`,
-      {
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'x-goog-api-version': '2',
-        },
-      }
-    );
+    // ── Step 2: fetch extension item from Chrome Web Store Publish API ───────
+    let cwsRes;
+    try {
+      cwsRes = await fetch(
+        `https://www.googleapis.com/chromewebstore/v1.1/items/${extId}?projection=DRAFT`,
+        {
+          headers: { 'Authorization': `Bearer ${access_token}`, 'x-goog-api-version': '2' },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+    } catch (e) {
+      console.error('CWS items fetch threw:', e?.message);
+      return await serveStaleCached('cws_network_error', 'Chrome Web Store API unreachable');
+    }
 
     if (!cwsRes.ok) {
-      const err = await cwsRes.text();
-      console.error('CWS items API failed:', err);
-      return jsonResponse({ error: 'cws_api_failed', installs: null }, 502);
+      let errBody = {};
+      try { errBody = await cwsRes.json(); } catch { errBody = { raw: await cwsRes.text().catch(() => '') }; }
+      console.error('CWS items API failed:', JSON.stringify(errBody));
+      return await serveStaleCached('cws_api_failed', JSON.stringify(errBody).slice(0, 200));
     }
 
     const item = await cwsRes.json();
 
-    // userCount is the install count — may be 0 or absent for new extensions
+    // userCount may be a number or a string; absent for new/unlisted extensions
     const installs = typeof item.userCount === 'number'
       ? item.userCount
       : parseInt(item.userCount || '0', 10) || 0;
 
-    return new Response(JSON.stringify({ installs, id: extId }), {
+    // ── Step 3: cache successful result in KV ────────────────────────────────
+    const payload = { installs, uploadState: item.uploadState || null, cachedAt: new Date().toISOString() };
+    try {
+      await env.AUTH_KV.put(CWS_CACHE_KEY, JSON.stringify(payload), { expirationTtl: CWS_CACHE_TTL * 24 }); // keep stale for 24 h
+    } catch (e) {
+      console.warn('CWS: KV cache write failed:', e?.message);
+    }
+
+    return new Response(JSON.stringify({ installs, id: extId, uploadState: item.uploadState || null }), {
       status: 200,
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'application/json',
-        // Cache for 1 hour at the edge — CWS updates slowly
-        'Cache-Control': 'public, max-age=3600',
+        'Content-Type':  'application/json',
+        'Cache-Control': `public, max-age=${CWS_CACHE_TTL}`,
       },
     });
 
   } catch (err) {
-    console.error('handleCwsProxy error:', err?.stack ?? err);
-    return jsonResponse({ error: 'internal_error', installs: null }, 500);
+    console.error('handleCwsProxy unhandled error:', err?.stack ?? err);
+    return await serveStaleCached('internal_error', err?.message || null);
   }
 }
 
@@ -2351,35 +2437,174 @@ async function handleCliTrackUsage(request, env) {
 const GH_PROXY_ALLOWED_ENDPOINTS = new Set(['stats', 'health']);
 
 async function handleGhProxy(request, env) {
+  const t0 = Date.now();
   try {
     const url = new URL(request.url);
     const rawEndpoint = url.searchParams.get('endpoint') || 'stats';
 
     // ── SSRF guard: allowlist check ────────────────────────────
-    // Reject any endpoint value not in the explicit allowlist.
-    // Prevents ?endpoint=../../secret or ?endpoint=@attacker.com paths.
     if (!GH_PROXY_ALLOWED_ENDPOINTS.has(rawEndpoint)) {
       return jsonResponse({ error: 'Invalid endpoint' }, 400);
     }
-    const endpoint = rawEndpoint;  // safe to use after allowlist check
+    const endpoint = rawEndpoint;
 
-    // Route to the Render-hosted GitHub App stats endpoint
-    const ghRes = await fetch(
-      `https://poly-glot-github-app.onrender.com/${endpoint}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (!ghRes.ok) return jsonResponse({ installations: 0 }, 200);
+    // Render free tier cold-starts can take up to 30 s.
+    // We time out at 18 s and flag it so the dashboard shows "waking" not "error".
+    const ctrl = new AbortController();
+    const to   = setTimeout(() => ctrl.abort(), 18000);
+    let ghRes;
+    try {
+      ghRes = await fetch(
+        `https://poly-glot-github-app.onrender.com/${endpoint}`,
+        { headers: { 'Accept': 'application/json' }, signal: ctrl.signal }
+      );
+    } catch (e) {
+      clearTimeout(to);
+      const elapsed = Date.now() - t0;
+      const coldStart = elapsed >= 17500; // timed out ≈ cold start
+      console.warn(`handleGhProxy: fetch threw after ${elapsed}ms — coldStart=${coldStart}:`, e?.message);
+      return new Response(JSON.stringify({ installations: 0, coldStart, elapsed }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+    clearTimeout(to);
+
+    const elapsed = Date.now() - t0;
+    if (!ghRes.ok) {
+      return new Response(JSON.stringify({ installations: 0, coldStart: false, elapsed }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
     const data = await ghRes.json();
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ ...data, coldStart: false, elapsed }), {
       status: 200,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     });
   } catch (err) {
     console.error('handleGhProxy error:', err?.stack ?? err);
-    return jsonResponse({ installations: 0 }, 200);
+    return jsonResponse({ installations: 0, coldStart: false, elapsed: Date.now() - t0 }, 200);
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Telemetry stats proxy — GET /api/auth/tel-proxy
+// ─────────────────────────────────────────────────────────────
+// Proxies telemetry.poly-glot.ai/stats?secret=<TEL_SECRET> so the
+// secret never appears in client HTML. Caches result in KV for 5 min.
+// ─────────────────────────────────────────────────────────────
+const TEL_CACHE_KEY = 'tel:stats';
+const TEL_CACHE_TTL = 300; // 5 minutes
+
+async function handleTelProxy(request, env) {
+  // Try KV cache first
+  try {
+    const cached = await env.AUTH_KV.get(TEL_CACHE_KEY, 'json');
+    if (cached && cached._cachedAt && (Date.now() - cached._cachedAt) < TEL_CACHE_TTL * 1000) {
+      return new Response(JSON.stringify(cached), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+      });
+    }
+  } catch {}
+
+  const telSecret = env.TEL_SECRET || env.TELEMETRY_SECRET || '';
+  if (!telSecret) {
+    return jsonResponse({ error: 'unconfigured', commands: null }, 200);
+  }
+
+  try {
+    const res = await fetch(
+      `https://telemetry.poly-glot.ai/stats?secret=${telSecret}`,
+      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return jsonResponse({ error: 'upstream_error', status: res.status, commands: null }, 200);
+    const data = await res.json();
+    // Cache in KV
+    try {
+      await env.AUTH_KV.put(TEL_CACHE_KEY, JSON.stringify({ ...data, _cachedAt: Date.now() }), { expirationTtl: TEL_CACHE_TTL * 6 });
+    } catch {}
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+    });
+  } catch (err) {
+    console.error('handleTelProxy error:', err?.message);
+    return jsonResponse({ error: 'network_error', commands: null }, 200);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Health Report — GET /api/auth/health-report
+// ─────────────────────────────────────────────────────────────
+// Returns a self-diagnosis JSON object for the dashboard.
+// Checks:
+//   • Which secrets are configured vs missing
+//   • KV store reachability + round-trip latency
+//   • CWS refresh token presence
+//   • RESEND_API_KEY presence
+//   • ADMIN_SECRET presence
+//   • MINIMUM_CLI_VERSION in effect
+//
+// This endpoint is PUBLIC (no auth) — it reveals only boolean
+// "is configured" flags, never secret values.
+// ─────────────────────────────────────────────────────────────
+async function handleHealthReport(request, env) {
+  const t0 = Date.now();
+  const report = {
+    ts: new Date().toISOString(),
+    worker: 'poly-glot-auth',
+    version: MINIMUM_CLI_VERSION,
+  };
+
+  // ── Secret presence checks (boolean only — never expose values) ──
+  report.secrets = {
+    RESEND_API_KEY:   !!env.RESEND_API_KEY,
+    ADMIN_SECRET:     !!env.ADMIN_SECRET,
+    CWS_CLIENT_ID:    !!env.CWS_CLIENT_ID,
+    CWS_CLIENT_SECRET:!!env.CWS_CLIENT_SECRET,
+    CWS_REFRESH_TOKEN:!!env.CWS_REFRESH_TOKEN,
+    CWS_EXTENSION_ID: !!env.CWS_EXTENSION_ID,
+    GH_APP_SECRET:    !!(env.GH_APP_SECRET || env.GITHUB_APP_SECRET),
+    TEL_SECRET:       !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
+  };
+
+  // ── KV reachability ──────────────────────────────────────────
+  const kvStart = Date.now();
+  let kvOk = false;
+  try {
+    await env.AUTH_KV.put('health:ping', '1', { expirationTtl: 60 });
+    const v = await env.AUTH_KV.get('health:ping');
+    kvOk = v === '1';
+  } catch {}
+  report.kv = { ok: kvOk, ms: Date.now() - kvStart };
+
+  // ── CWS stale cache check ────────────────────────────────────
+  try {
+    const cached = await env.AUTH_KV.get(CWS_CACHE_KEY, 'json');
+    report.cws_cache = cached
+      ? { present: true, cachedAt: cached.cachedAt, installs: cached.installs }
+      : { present: false };
+  } catch {
+    report.cws_cache = { present: false };
+  }
+
+  // ── Missing secrets summary ──────────────────────────────────
+  const missingSecrets = Object.entries(report.secrets)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  report.missing_secrets = missingSecrets;
+  report.healthy = kvOk && missingSecrets.length === 0;
+  report.elapsed_ms = Date.now() - t0;
+
+  return new Response(JSON.stringify(report, null, 2), {
+    status: 200,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main fetch handler (entry point)
 // ─────────────────────────────────────────────────────────────
 
@@ -2403,7 +2628,22 @@ export default {
         case '/api/auth/ping':
           return jsonResponse({ ok: true, ts: Date.now() }, 200);
 
+        case '/api/auth/health-report':
+          return await handleHealthReport(request, env);
+
+        // Telemetry stats proxy — passes TEL_SECRET server-side so it never
+        // appears in client HTML. Returns same JSON as telemetry.poly-glot.ai/stats.
+        case '/api/auth/tel-proxy':
+          return await handleTelProxy(request, env);
+
         case '/api/auth/admin/users':
+          return await handleAdminUsers(request, env);
+
+        // Dashboard-facing stats endpoint — no secret required in URL or header.
+        // Returns same payload as /admin/users but authenticates via Cloudflare
+        // Access or a short-lived dashboard token stored in sessionStorage.
+        // For now: requires X-Admin-Secret header (never in URL/logs).
+        case '/api/auth/dashboard-stats':
           return await handleAdminUsers(request, env);
 
         case '/api/auth/check-plan':
