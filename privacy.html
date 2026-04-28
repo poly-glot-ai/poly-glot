@@ -210,7 +210,7 @@
     <div class="hero__badge">Privacy Policy</div>
     <h1>Your code stays <span>yours</span>.</h1>
     <p class="hero__sub">Poly-Glot AI is built on a simple principle: your code and your API keys never touch our servers.</p>
-    <p class="hero__date">Last updated: April 4, 2026</p>
+    <p class="hero__date">Last updated: April 28, 2026</p>
 
     <!-- TL;DR -->
     <div class="tldr">
@@ -301,6 +301,8 @@
             <tr><td>Lemon Squeezy</td><td>Pro subscription billing</td><td>Email + payment info (handled entirely by Lemon Squeezy)</td></tr>
             <tr><td>GitHub</td><td>GitHub App PR documentation</td><td>Changed PR file contents (read-only, never stored)</td></tr>
             <tr><td>Cloudflare Workers</td><td>Auth token proxy for free-tier usage</td><td>Request metadata only — no code, no keys</td></tr>
+            <tr><td>PostHog, Inc. (us.i.posthog.com, USA)</td><td>macOS app anonymous usage analytics</td><td>Random UUID + event names only (e.g. "app_opened") — requires explicit user consent on first launch; disabled if user chooses "Essential Only"</td></tr>
+            <tr><td>Apple Speech Recognition</td><td>macOS app Voice Input feature</td><td>Audio captured only while user presses "Start Recording" — processed on-device by default (macOS 13+); Apple may use a server fallback as disclosed in the macOS system permission prompt. No audio is ever sent to Poly-Glot servers.</td></tr>
           </tbody>
         </table>
       </div>
@@ -324,6 +326,35 @@
 
     <div class="section">
       <div class="section__num">07</div>
+      <h2>macOS App — Poly-Glot Prompt Studio</h2>
+      <p>The Poly-Glot Prompt Studio macOS app (App Store ID 6762222589) has the following data practices, separate from the web product:</p>
+
+      <h3 style="font-size:15px;font-weight:700;margin:18px 0 8px;">Anonymous Analytics (optional — requires explicit consent)</h3>
+      <ul class="prose">
+        <li><strong>What is collected:</strong> Anonymous usage events such as "app_opened", "template_viewed", "paywall_shown". A randomly generated UUID is stored on your device as a pseudonymous identifier. This UUID is not linked to your name, email address, or Apple ID.</li>
+        <li><strong>Who receives it:</strong> PostHog, Inc., operated at <code>us.i.posthog.com</code> (United States). PostHog is SOC 2 Type II certified and provides equivalent data protection standards.</li>
+        <li><strong>Your control:</strong> On first launch, the app displays a mandatory consent sheet disclosing exactly what data is sent and who receives it. You may choose <em>"Allow Anonymous Analytics"</em> or <em>"Essential Only — No Analytics"</em>. If you choose "Essential Only", no data is ever sent to PostHog. This choice is permanent and stored locally on your device.</li>
+        <li><strong>What is never collected:</strong> Your prompt text, template content, API keys, name, email, Apple ID, payment information, or location. All content you create in the app stays entirely on your Mac.</li>
+      </ul>
+
+      <h3 style="font-size:15px;font-weight:700;margin:18px 0 8px;">Voice Input (optional — requires macOS system permission)</h3>
+      <ul class="prose">
+        <li><strong>What is collected:</strong> Audio is captured only while you actively press "Start Recording" in the Voice Input screen.</li>
+        <li><strong>Who processes it:</strong> Apple, Inc., via the macOS Speech Recognition framework. On macOS 13 and later, an on-device neural model is used by default. In some cases, Apple may process a server-side fallback request, as disclosed in the macOS system permission prompt shown by the operating system.</li>
+        <li><strong>Poly-Glot never receives, stores, or transmits any audio or voice transcripts.</strong> The transcribed text appears locally in the app and is never sent to our servers.</li>
+        <li><strong>Your control:</strong> Voice Input requires an explicit macOS system permission (microphone + speech recognition). You can revoke these at any time in System Settings → Privacy &amp; Security.</li>
+      </ul>
+
+      <h3 style="font-size:15px;font-weight:700;margin:18px 0 8px;">In-App Purchases</h3>
+      <ul class="prose">
+        <li>Subscription billing is handled entirely by Apple via StoreKit 2. Poly-Glot never receives or stores your payment details. Purchases are managed through your Apple ID in System Settings → Apple ID → Subscriptions.</li>
+      </ul>
+    </div>
+
+    <hr class="divider">
+
+    <div class="section">
+      <div class="section__num">09</div>
       <h2>Data retention</h2>
       <p>Because we collect no personal data, there is nothing to retain or delete. Your locally stored settings and API key can be cleared at any time by clearing your browser's localStorage or removing the VS Code extension.</p>
       <p>If you have a Pro subscription, your email address is retained by our billing provider (Lemon Squeezy) for subscription management. You can request deletion by emailing <a href="mailto:hello@poly-glot.ai">hello@poly-glot.ai</a>.</p>
@@ -332,7 +363,7 @@
     <hr class="divider">
 
     <div class="section">
-      <div class="section__num">08</div>
+      <div class="section__num">10</div>
       <h2>Children's privacy</h2>
       <p>Poly-Glot AI is not directed at children under the age of 13. We do not knowingly collect any information from children under 13.</p>
     </div>
@@ -340,7 +371,7 @@
     <hr class="divider">
 
     <div class="section">
-      <div class="section__num">09</div>
+      <div class="section__num">11</div>
       <h2>Changes to this policy</h2>
       <p>We may update this privacy policy from time to time. When we do, we will update the "Last updated" date at the top of this page. Continued use of Poly-Glot AI after changes constitutes acceptance of the updated policy.</p>
     </div>
@@ -348,7 +379,7 @@
     <hr class="divider">
 
     <div class="section">
-      <div class="section__num">10</div>
+      <div class="section__num">12</div>
       <h2>Contact</h2>
       <p>Questions about this privacy policy? Email us at <a href="mailto:hello@poly-glot.ai">hello@poly-glot.ai</a>.</p>
     </div>
