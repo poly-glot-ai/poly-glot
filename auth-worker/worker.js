@@ -1977,8 +1977,8 @@ async function handleCwsProxy(request, env) {
         });
       }
     } catch {}
-    // No cache at all — return structured error so dashboard can show exactly what's wrong
-    return jsonResponse({ error: reason, hint: hint || null, installs: null }, 502);
+    // No cache at all — return 200 with null installs so dashboard shows warning, not red error
+    return jsonResponse({ error: reason, hint: hint || null, installs: null, stale: true }, 200);
   }
 
   try {

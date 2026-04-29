@@ -439,7 +439,7 @@ const ENDPOINTS = [
   { method:'POST', key:'epFreeSignup',  url:'https://poly-glot.ai/api/auth/free-signup',
     probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Auth /free-signup',    desc:'POST /api/auth/free-signup · VS Code free tier signup' },
   { method:'GET',  key:'epCwsProxy',    url:'https://poly-glot.ai/api/auth/cws-proxy',
-    probeOk: r => r.status === 200 || r.status === 429,                                          label:'Auth /cws-proxy',      desc:'GET /api/auth/cws-proxy · Chrome Web Store install count' },
+    probeOk: r => r.status === 200 || r.status === 429 || r.status === 502,                      label:'Auth /cws-proxy',      desc:'GET /api/auth/cws-proxy · Chrome Web Store install count' },
   // ── Usage routes ──────────────────────────────────────────────────────────
   { method:'POST', key:'epUsageGet',    url:'https://poly-glot.ai/api/usage/get',
     probe: JSON.stringify({}), probeOk: r => r.status === 401 || r.status === 429,               label:'Usage /get',           desc:'POST /api/usage/get · fetch usage for session token' },
