@@ -36,8 +36,8 @@ routes = [
 # the placeholder IDs below with the values printed by that command.
 [[kv_namespaces]]
 binding    = "AUTH_KV"
-id         = "REDACTED_SET_VIA_WRANGLER"
-preview_id = "REDACTED_SET_VIA_WRANGLER"
+id         = "4686b5dd158944e5856f7a402c6c6d2f"
+preview_id = "4686b5dd158944e5856f7a402c6c6d2f"
 # Run: wrangler kv:namespace create "AUTH_KV" and paste the IDs above
 # Never commit real KV namespace IDs to a public repo
 
