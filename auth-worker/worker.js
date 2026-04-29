@@ -2598,15 +2598,17 @@ async function handleHealthReport(request, env) {
   // ── Secret presence checks (boolean only — never expose values) ──
   // Only check secrets that this worker actually uses
   report.secrets = {
-    RESEND_API_KEY:    !!env.RESEND_API_KEY,
-    ADMIN_SECRET:      !!env.ADMIN_SECRET,
-    CWS_CLIENT_ID:     !!env.CWS_CLIENT_ID,
-    CWS_CLIENT_SECRET: !!env.CWS_CLIENT_SECRET,
-    CWS_REFRESH_TOKEN: !!env.CWS_REFRESH_TOKEN,
-    CWS_EXTENSION_ID:  !!env.CWS_EXTENSION_ID,
-    TEL_SECRET:        !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
-    TURNSTILE_SECRET:  !!env.TURNSTILE_SECRET,
-    MAGIC_LINK_SECRET: !!env.MAGIC_LINK_SECRET,
+    RESEND_API_KEY:        !!env.RESEND_API_KEY,
+    ADMIN_SECRET:          !!env.ADMIN_SECRET,
+    CWS_CLIENT_ID:         !!env.CWS_CLIENT_ID,
+    CWS_CLIENT_SECRET:     !!env.CWS_CLIENT_SECRET,
+    CWS_REFRESH_TOKEN:     !!env.CWS_REFRESH_TOKEN,
+    CWS_EXTENSION_ID:      !!env.CWS_EXTENSION_ID,
+    TEL_SECRET:            !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
+    TURNSTILE_SECRET:      !!env.TURNSTILE_SECRET,
+    MAGIC_LINK_SECRET:     !!env.MAGIC_LINK_SECRET,
+    STRIPE_SECRET_KEY:     !!env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: !!env.STRIPE_WEBHOOK_SECRET,
   };
 
   // ── KV reachability ──────────────────────────────────────────
