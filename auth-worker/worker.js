@@ -726,9 +726,15 @@ async function handleAdminUsers(request, env) {
   const YYYY_MM = new Date().toISOString().slice(0, 7);
 
   // ── Main-site users (signup: keys → plan: namespace) ──────
-  const allUsers = await Promise.all(signupKeys.map(async k => {
-    const email     = k.name.slice('signup:'.length);
-    const signupRaw = await env.AUTH_KV.get(k.name, 'json');
+  // Fall back to plan: keys if no signup: keys exist (legacy/migrated accounts
+  // that were created before the signup: key was written on magic-link click).
+  const planKeys = allKeys.filter(k => k.name.startsWith('plan:'));
+  const userSourceKeys = signupKeys.length > 0 ? signupKeys : planKeys;
+
+  const allUsers = await Promise.all(userSourceKeys.map(async k => {
+    const isSignupKey = k.name.startsWith('signup:');
+    const email     = isSignupKey ? k.name.slice('signup:'.length) : k.name.slice('plan:'.length);
+    const signupRaw = isSignupKey ? await env.AUTH_KV.get(k.name, 'json') : null;
     const surface   = signupRaw?.surface ?? 'app';
     const source    = signupRaw?.source  ?? 'unknown';
     const signupTs  = signupRaw?.ts      ?? null;
