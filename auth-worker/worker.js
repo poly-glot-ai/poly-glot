@@ -766,11 +766,12 @@ async function handleAdminUsers(request, env) {
     return { email, plan, source, signup_ts: signupTs };
   }));
 
-  // Deduplicate + filter test/disposable addresses from prompt users too
+  // Deduplicate + filter owner/test/disposable addresses from prompt users
   const promptSeen  = new Set();
   const promptUsers = allPromptUsers.filter(u => {
     if (promptSeen.has(u.email)) return false;
     promptSeen.add(u.email);
+    if (OWNER_EMAILS.has(u.email.toLowerCase())) return false;
     if (isDisposableEmail(u.email)) return false;
     if (isTestEmail(u.email))       return false;
     return true;
