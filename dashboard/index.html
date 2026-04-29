@@ -285,15 +285,33 @@
   <div class="grid" id="promptSignupsGrid"></div>
 </div>
 
+<!-- Section 3c2: Prompt Studio User Email List -->
+<div class="section">
+  <div class="sec-title">📋 Prompt Studio User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed prompt signups · owner accounts excluded</span></div>
+  <div style="margin-top:8px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Plan</th>
+          <th>Signed Up</th>
+        </tr>
+      </thead>
+      <tbody id="promptUserTableBody"><tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Section 3d: All users combined -->
 <div class="section">
   <div class="sec-title">👥 All Users <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— combined AI App + Prompt Studio</span></div>
   <div class="grid" id="combinedSignupsGrid"></div>
 </div>
 
-<!-- Section 3e: User Email List -->
+<!-- Section 3e: AI App User Email List -->
 <div class="section">
-  <div class="sec-title">📋 User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— all confirmed signups · owner accounts excluded</span></div>
+  <div class="sec-title">📋 AI App User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed app signups · owner accounts excluded</span></div>
   <div style="margin-top:8px;" class="ep-wrap">
     <table>
       <thead>
@@ -910,11 +928,36 @@ function renderSignups(m) {
   }
 }
 
+const OWNER_EMAILS_CLIENT = new Set(['hwmoses2@icloud.com','haroldwebstermoses2@gmail.com']);
+
+function renderPromptUserTable(users) {
+  const tbody = document.getElementById('promptUserTableBody');
+  if (!tbody) return;
+  users = (users || []).filter(u => !OWNER_EMAILS_CLIENT.has(u.email.toLowerCase()));
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No prompt users yet</td></tr>';
+    return;
+  }
+  const PLAN_COLORS = { prompt_pro:'#a78bfa', prompt_team:'#34d399', prompt_free:'#64748b' };
+  tbody.innerHTML = users.map((u, i) => {
+    const planColor = PLAN_COLORS[u.plan] || '#64748b';
+    const planLabel = (u.plan || 'prompt_free').replace('prompt_','').toUpperCase();
+    const signedUp  = u.signup_ts ? new Date(u.signup_ts).toLocaleDateString() : '—';
+    return `<tr style="border-bottom:1px solid var(--border);${i%2===0?'':'background:rgba(255,255,255,.02)'}">
+      <td style="padding:8px 12px;color:var(--muted);">${i+1}</td>
+      <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}</td>
+      <td style="padding:8px 12px;">
+        <span style="background:${planColor}22;color:${planColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">${planLabel}</span>
+      </td>
+      <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${signedUp}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderUserTable(users) {
   const tbody = document.getElementById('userTableBody');
-  if (!tbody) return; // element may not exist in all dashboard layouts
-  // Owner accounts are filtered server-side by handleAdminUsers
-  users = users || [];
+  if (!tbody) return;
+  users = (users || []).filter(u => !OWNER_EMAILS_CLIENT.has(u.email.toLowerCase()));
   if (!users || !users.length) {
     tbody.innerHTML = '<tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">No users yet</td></tr>';
     return;
@@ -1436,6 +1479,7 @@ async function runAll() {
   }
 
   renderUserTable([]);
+  renderPromptUserTable([]);
   const psg = document.getElementById('promptSignupsGrid');
   if (psg) psg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
   const csg = document.getElementById('combinedSignupsGrid');
@@ -1451,6 +1495,7 @@ async function runAll() {
     renderEpTable(epStatus);
     renderSignups(m);
     renderUserTable(m.userList || []);
+    renderPromptUserTable(m.promptUserList || []);
     renderMetrics(m);
     renderStats(m);
     renderVersions(m);
