@@ -1697,6 +1697,7 @@ const STRIPE_PRICE_TO_PLAN = {
   'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',          // Pro Yearly   $79/yr
   'price_1THTpsRQVeNj16c8IcauulXJ': 'team',         // Team Monthly $29/mo
   'price_1TI9q1RQVeNj16c8BDKYHS3y': 'team',         // Team Yearly  $249/yr
+  'price_1TGLFgRQVeNj16c8K0E97fWj': 'team',         // Team Monthly $29/mo (live)
   // Prompt Studio price IDs go here when billing is added:
   // 'price_PROMPT_PRO_MONTHLY': 'prompt_pro',
   // 'price_PROMPT_PRO_YEARLY':  'prompt_pro',
