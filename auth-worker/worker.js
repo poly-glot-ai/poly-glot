@@ -1928,28 +1928,8 @@ async function handleStripeWebhook(request, env) {
 // Chrome Web Store proxy — GET /api/auth/cws-proxy
 // ─────────────────────────────────────────────────────────────
 // Returns { installs: N, uploadState, stale?, cachedAt? }
-// using the Chrome Web Store Publish API with KV cache fallback.
-//
-// Requires env secrets (set via `wrangler secret put`):
-//   CWS_CLIENT_ID      — OAuth2 client ID from Google Cloud Console
-//   CWS_CLIENT_SECRET  — OAuth2 client secret
-//   CWS_REFRESH_TOKEN  — long-lived refresh token (Google OAuth2)
-//   CWS_EXTENSION_ID   — Chrome extension ID (default: hjpdgilolgcanemmngagpobdgdhpplai)
-//
-// Self-healing behaviours:
-//   • Missing secrets   → 200 { error:'unconfigured', installs:null }  (not 502)
-//   • Token expired     → surfaces 'invalid_grant' with human hint
-//   • Wrong client      → surfaces 'invalid_client' with human hint
-//   • CWS API failure   → serves last-known-good value from KV + stale:true
-//   • All paths timeout → AbortSignal 8 s on token, 8 s on CWS fetch
-//
-// To regenerate refresh token after expiry (~7 days for test apps, indefinite for verified):
-//   1. Visit: https://accounts.google.com/o/oauth2/auth
-//      ?client_id=<CWS_CLIENT_ID>&redirect_uri=http://localhost&response_type=code
-//      &scope=https://www.googleapis.com/auth/chromewebstore&access_type=offline&prompt=consent
-//   2. Capture ?code= from redirect URL
-//   3. POST https://oauth2.googleapis.com/token  grant_type=authorization_code  code=<code>
-//   4. wrangler secret put CWS_REFRESH_TOKEN  (paste refresh_token value)
+// Scrapes the public CWS detail page — no OAuth needed.
+// Falls back to KV stale cache if scrape fails.
 // ─────────────────────────────────────────────────────────────
 const CWS_CACHE_KEY = 'cws:installs';
 const CWS_CACHE_TTL = 3600; // 1 hour
@@ -1982,90 +1962,45 @@ async function handleCwsProxy(request, env) {
   }
 
   try {
-    // ── Guard: detect missing secrets early ──────────────────────────────────
-    const missing = ['CWS_CLIENT_ID', 'CWS_CLIENT_SECRET', 'CWS_REFRESH_TOKEN'].filter(k => !env[k]);
-    if (missing.length) {
-      console.error('CWS proxy: missing secrets:', missing.join(', '));
-      return await serveStaleCached('unconfigured', `Set these Worker secrets: ${missing.join(', ')}`);
-    }
-
-    // ── Step 1: exchange refresh token for a fresh access token ─────────────
-    let tokenRes;
-    try {
-      tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id:     env.CWS_CLIENT_ID,
-          client_secret: env.CWS_CLIENT_SECRET,
-          refresh_token: env.CWS_REFRESH_TOKEN,
-          grant_type:    'refresh_token',
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-    } catch (e) {
-      console.error('CWS token fetch threw:', e?.message);
-      return await serveStaleCached('token_network_error', 'Google OAuth2 unreachable');
-    }
-
-    if (!tokenRes.ok) {
-      let errBody = {};
-      try { errBody = await tokenRes.json(); } catch { errBody = { raw: await tokenRes.text().catch(() => '') }; }
-      const reason = errBody.error || 'token_exchange_failed';
-      // Map Google error codes to actionable hints
-      const hints = {
-        invalid_grant:  'Refresh token has expired or been revoked. Re-run the OAuth flow and set CWS_REFRESH_TOKEN via: wrangler secret put CWS_REFRESH_TOKEN',
-        invalid_client: 'Client ID or secret is wrong. Verify CWS_CLIENT_ID and CWS_CLIENT_SECRET match the Google Cloud Console credentials.',
-      };
-      console.error(`CWS token exchange failed: ${reason} — ${errBody.error_description || ''}`);
-      return await serveStaleCached(reason, hints[reason] || errBody.error_description || null);
-    }
-
-    const tokenData = await tokenRes.json();
-    const { access_token } = tokenData;
-    if (!access_token) {
-      console.error('CWS token exchange: no access_token in response', JSON.stringify(tokenData));
-      return await serveStaleCached('no_access_token', 'Google returned ok but no access_token field');
-    }
-
-    // ── Step 2: fetch extension item from Chrome Web Store Publish API ───────
+    // ── Scrape public CWS detail page — no OAuth needed ─────────────────────
     let cwsRes;
     try {
       cwsRes = await fetch(
-        `https://www.googleapis.com/chromewebstore/v1.1/items/${extId}?projection=DRAFT`,
+        `https://chromewebstore.google.com/detail/poly-glot-ai/${extId}`,
         {
-          headers: { 'Authorization': `Bearer ${access_token}`, 'x-goog-api-version': '2' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; poly-glot-cws-proxy/1.0)' },
           signal: AbortSignal.timeout(8000),
         }
       );
     } catch (e) {
-      console.error('CWS items fetch threw:', e?.message);
-      return await serveStaleCached('cws_network_error', 'Chrome Web Store API unreachable');
+      console.error('CWS scrape fetch threw:', e?.message);
+      return await serveStaleCached('cws_network_error', 'Chrome Web Store page unreachable');
     }
 
     if (!cwsRes.ok) {
-      let errBody = {};
-      try { errBody = await cwsRes.json(); } catch { errBody = { raw: await cwsRes.text().catch(() => '') }; }
-      console.error('CWS items API failed:', JSON.stringify(errBody));
-      return await serveStaleCached('cws_api_failed', JSON.stringify(errBody).slice(0, 200));
+      console.error('CWS scrape failed:', cwsRes.status);
+      return await serveStaleCached('cws_scrape_failed', `HTTP ${cwsRes.status}`);
     }
 
-    const item = await cwsRes.json();
+    const html = await cwsRes.text();
 
-    // userCount may be a number or a string; absent for new/unlisted extensions
-    const installs = typeof item.userCount === 'number'
-      ? item.userCount
-      : parseInt(item.userCount || '0', 10) || 0;
+    // Extract user count — CWS renders it as "N,NNN users" or "N users"
+    const userMatch = html.match(/([\d,]+)\s+users?/i);
+    const installs = userMatch ? parseInt(userMatch[1].replace(/,/g, ''), 10) : 0;
 
-    // ── Step 3: cache successful result in KV ────────────────────────────────
-    const payload = { installs, uploadState: item.uploadState || null, cachedAt: new Date().toISOString() };
+    // Extract rating if present
+    const ratingMatch = html.match(/(\d+\.\d+)\s+out of\s+5/i);
+    const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
+
+    // ── Cache successful result in KV ────────────────────────────────────────
+    const payload = { installs, rating, uploadState: 'ACTIVE', cachedAt: new Date().toISOString() };
     try {
-      await env.AUTH_KV.put(CWS_CACHE_KEY, JSON.stringify(payload), { expirationTtl: CWS_CACHE_TTL * 24 }); // keep stale for 24 h
+      await env.AUTH_KV.put(CWS_CACHE_KEY, JSON.stringify(payload), { expirationTtl: CWS_CACHE_TTL * 24 });
     } catch (e) {
       console.warn('CWS: KV cache write failed:', e?.message);
     }
 
-    return new Response(JSON.stringify({ installs, id: extId, uploadState: item.uploadState || null }), {
+    return new Response(JSON.stringify({ installs, rating, id: extId, uploadState: 'ACTIVE' }), {
       status: 200,
       headers: {
         ...CORS_HEADERS,
