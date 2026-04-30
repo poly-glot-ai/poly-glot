@@ -295,7 +295,7 @@ SELF_FILE       = "scripts/update-site.py"
 # VS Code: prefer the PAT-based true acquisition count over the public API combined.
 # The PAT endpoint returns the same number the publisher dashboard shows (~48hr lead).
 # Fall back to public combined if PAT is unavailable; always raise-only (never lower).
-_HARDCODED_VS_FLOOR = 333   # last manually verified value (2026-04-29)
+_HARDCODED_VS_FLOOR = 334   # last manually verified value (2026-04-30)
 if vscode_acquisition:
     # PAT returned a value — use it as the authoritative count
     vscode_combined = max(_HARDCODED_VS_FLOOR, vscode_acquisition)
