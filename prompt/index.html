@@ -2216,7 +2216,7 @@
           <li class="pga-plan-card__feat pga-plan-card__feat--pro">Unlimited version history</li>
           <li class="pga-plan-card__feat pga-plan-card__feat--no">Team workspace (Team plan)</li>
         </ul>
-        <a id="pgaProBtn" href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--pro">Upgrade to Pro →</a>
+        <a id="pgaProBtn" href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--pro pga-external-link">Upgrade to Pro →</a>
       </div>
 
       <!-- TEAM -->
@@ -2234,7 +2234,7 @@
           <li class="pga-plan-card__feat pga-plan-card__feat--team">Team version history</li>
           <li class="pga-plan-card__feat pga-plan-card__feat--yes">Priority support</li>
         </ul>
-        <a href="https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--team">Upgrade to Team →</a>
+        <a href="https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408" target="_blank" rel="noopener" class="pga-plan-card__btn pga-plan-card__btn--team pga-external-link">Upgrade to Team →</a>
       </div>
 
     </div>
@@ -2282,7 +2282,7 @@
         if (email) {
           var encoded = encodeURIComponent(email);
           var proBtn  = document.getElementById('pgaProBtn');
-          var teamBtn = document.querySelector('.pga-plan-card__btn--team[href*="buy.stripe"]');
+          var teamBtn = document.querySelector('.pga-plan-card__btn--team[href*="buy.stripe"]'); if(teamBtn) teamBtn.classList.add('pga-external-link');
           if (proBtn)  proBtn.href  += '?prefilled_email=' + encoded;
           if (teamBtn) teamBtn.href += '?prefilled_email=' + encoded;
         }
