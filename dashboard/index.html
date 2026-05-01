@@ -498,6 +498,19 @@ const ENDPOINTS = [
   // ── Prompt Studio ──────────────────────────────────────────────────────────
   { method:'GET',  key:'promptSite',    url:'https://poly-glot.ai/prompt/',                       label:'Prompt Studio',        desc:'Landing page · poly-glot.ai/prompt/' },
   { method:'GET',  key:'promptPrivacy', url:'https://poly-glot.ai/prompt/privacy/',               label:'Prompt Privacy Policy', desc:'Privacy page · /prompt/privacy/' },
+
+  // ── Stripe ─────────────────────────────────────────────────────────────────
+  { method:'POST', key:'stripeWebhook', url:'https://poly-glot.ai/api/stripe/webhook',
+    probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Stripe Webhook',       desc:'POST /api/stripe/webhook · subscription lifecycle events' },
+  { method:'GET',  key:'billingPortal', url:'https://poly-glot.ai/api/auth/billing-portal',
+    probeOk: r => r.status === 401 || r.status === 429,                                          label:'Billing Portal',       desc:'GET /api/auth/billing-portal · Stripe customer portal redirect' },
+
+  // ── Apple IAP ──────────────────────────────────────────────────────────────
+  { method:'POST', key:'appleWebhook',  url:'https://poly-glot.ai/api/apple/webhook',
+    probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 429,               label:'Apple IAP Webhook',    desc:'POST /api/apple/webhook · App Store Server Notifications V2' },
+  { method:'POST', key:'activateIAP',   url:'https://poly-glot.ai/api/auth/activate-iap',
+    probe: JSON.stringify({}), probeOk: r => r.status === 400 || r.status === 401 || r.status === 429, label:'Apple IAP Activate', desc:'POST /api/auth/activate-iap · link Apple purchase to account' },
+
   // npmMcpPrompt deliberately omitted — reuses npmMcp result to avoid duplicate fetch
 ];
 
