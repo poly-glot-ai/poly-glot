@@ -716,11 +716,22 @@ async function handleAdminUsers(request, env) {
   const sessionKeys       = allKeys.filter(k => k.name.startsWith('session:'));
   const promptSessionKeys = allKeys.filter(k => k.name.startsWith('prompt_session:'));
 
-  // Unique active users = distinct emails across both session namespaces
-  // (raw key count is inflated by multi-device / test sessions on same account)
+  // Unique active users = distinct emails with at least one live session token.
+  // BUG FIX: key suffix is the TOKEN (random hex), not the email.
+  // Must read each session payload and extract the email field.
+  // Capped at 200 reads to avoid excessive KV latency on large deployments.
+  const sessionKeysToRead = [...sessionKeys, ...promptSessionKeys].slice(0, 200);
+  const sessionPayloads   = await Promise.all(
+    sessionKeysToRead.map(k => env.AUTH_KV.get(k.name, 'text').catch(() => null))
+  );
   const sessionEmails = new Set();
-  sessionKeys.forEach(k => sessionEmails.add(k.name.slice('session:'.length)));
-  promptSessionKeys.forEach(k => sessionEmails.add(k.name.slice('prompt_session:'.length)));
+  for (const raw of sessionPayloads) {
+    if (!raw) continue;
+    try {
+      const data = JSON.parse(raw);
+      if (data?.email) sessionEmails.add(data.email.toLowerCase());
+    } catch {}
+  }
   const activeUniqueUsers = sessionEmails.size;
 
   const YYYY_MM = new Date().toISOString().slice(0, 7);
