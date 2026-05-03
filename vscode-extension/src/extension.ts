@@ -707,7 +707,7 @@ class PolyGlotUriHandler implements vscode.UriHandler {
         vscode.window.showInformationMessage(
             isPaid
                 ? `🎉 Poly-Glot ${plan.charAt(0).toUpperCase() + plan.slice(1)} activated! All features unlocked.`
-                : `✅ Poly-Glot: Signed in as ${email || 'free user'}. You have 50 files/month free.`,
+                : `✅ Poly-Glot: Signed in as ${email || 'free user'}. You have 1 file/month free — upgrade for unlimited.`,
             ...(isPaid ? [] : ['Upgrade to Pro']),
         ).then(async choice => {
             if (choice === 'Upgrade to Pro') {
