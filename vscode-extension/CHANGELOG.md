@@ -94,7 +94,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `/why` — add why-comments explaining intent & trade-offs _(Pro)_
 - `/both` — doc-comments + why-comments in one pass _(Pro)_
 - `/explain` — deep analysis: complexity, bugs, doc quality score
-- `/upgrade` — show Pro plan info + EARLYBIRD3 promo
+- `/upgrade` — show Pro plan info
 - Follow-up suggestions after every response
 - Plan gating: Pro features prompt upgrade inline in chat
 - API key check: guides user to configure if not set

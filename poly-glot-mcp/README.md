@@ -25,7 +25,7 @@ The MCP server is available on **Pro, Team, and Enterprise plans only**.
 | Plan | MCP calls/month | Price |
 |------|:--------------:|-------|
 | Free | 🔒 Not available | $0 |
-| **Pro** | **200** | **$9/mo** |
+| **Pro** | **200** | **$12/mo** |
 | **Team** | **1,000** | **$29/mo** |
 | **Enterprise** | **Unlimited** | Custom |
 
@@ -208,7 +208,7 @@ Use your saved **Poly-Glot Prompt Studio** templates as tools directly from Clau
 | Plan | MCP calls/month | Price |
 |------|:--------------:|-------|
 | Free | 🔒 Not available | $0 |
-| **Pro** | **200** | **$9/mo** |
+| **Pro** | **200** | **$12/mo** |
 | **Team** | **1,000** | **$29/mo** |
 | **Enterprise** | **Unlimited** | Custom |
 

@@ -712,14 +712,13 @@
             </div>
             <div class="pg-modal-plan pg-modal-plan--pro" id="pgModalPlanPro">
               <div class="pg-modal-plan__badge pg-modal-plan__badge--pro">⭐ Pro — Most Popular</div>
-              <div class="pg-modal-plan__price">$9<span>/mo</span></div>
+              <div class="pg-modal-plan__price">$12<span>/mo</span></div>
               <ul class="pg-modal-plan__features">
                 <li>✅ Unlimited files</li>
                 <li>✅ All 12 languages</li>
                 <li>✅ All comment styles</li>
                 <li>✅ Why Comments + Both modes</li>
                 <li>✅ CLI + VS Code + Chrome</li>
-                <li id="pgModalEarlybird" style="color:#f59e0b;">🏷 Code <strong>EARLYBIRD3</strong> — locks $9/mo forever <em>(expires May 1, 2026)</em></li>
               </ul>
               <a class="pg-modal-plan__cta pg-modal-plan__cta--pro" id="pgAuthModalUpgradePro"
                  href="https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_reference_id=website"
@@ -831,8 +830,7 @@
       try {
         var em   = localStorage.getItem(_LS_EMAIL) || '';
         var base = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405';
-        var earlybird = (new Date() < new Date('2026-05-01T00:00:00Z'));
-        var params = earlybird ? 'prefilled_promo_code=EARLYBIRD3&' : '';
+        var params = '';
         params += 'client_reference_id=website';
         if (em) params += '&prefilled_email=' + encodeURIComponent(em);
         upgradeLink.href = base + '?' + params;
@@ -2075,12 +2073,6 @@
   function init() {
     injectStyles();
     buildModal();
-
-    // Hide EARLYBIRD3 promo after May 1, 2026
-    if (new Date() >= new Date('2026-05-01T00:00:00Z')) {
-      var ebEl = document.getElementById('pgModalEarlybird');
-      if (ebEl) ebEl.style.display = 'none';
-    }
 
     // Auto-detect device — create/retrieve stable device ID
     var deviceId = getOrCreateDeviceId();

@@ -33,7 +33,7 @@ import { CommentMode } from './config';
 import { loadConfig, saveConfig, Config } from './config';
 import { DEMO_SAMPLES, getSampleLanguages } from './demo-samples';
 import { ping } from './telemetry';
-import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT, earlyBirdLine } from './usage';
+import { assertQuota, hasRemainingQuota, incrementUsage, FREE_MONTHLY_LIMIT } from './usage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ function handleUpgradeRequired(version: string): never {
         `  Then sign in or pick a plan:\n` +
         `  \x1b[36mpoly-glot login\x1b[0m\n\n` +
         `  Free accounts: ${getFreeLimit()} files/month\n` +
-        `  Pro ($9/mo):   unlimited · \x1b[36mhttps://poly-glot.ai\x1b[0m\n`
+        `  Pro ($12/mo):   unlimited · \x1b[36mhttps://poly-glot.ai\x1b[0m\n`
     );
     process.exit(1);
 }
@@ -252,7 +252,7 @@ ${COLORS.dim}  This notice won't appear again. Run 'poly-glot --help' anytime.${
 
   ${COLORS.cyan}Pro plan support${COLORS.reset} — unlock all 12 languages, why-comments, and both mode.
 
-  ${COLORS.bold}Free tier:${COLORS.reset}  Python · JavaScript · Java · doc-comments · 10 files/mo
+  ${COLORS.bold}Free tier:${COLORS.reset}  Python · JavaScript · Java · doc-comments · 1 file/mo
   ${COLORS.bold}Pro tier:${COLORS.reset}   All 12 languages · why-comments · both mode · unlimited files
 
   To activate your Pro license:
@@ -299,16 +299,15 @@ ${'─'.repeat(54)}
   ${COLORS.bold}${COLORS.cyan}What you get free, forever:${COLORS.reset}
   ✅  Python, JavaScript & Java
   ✅  JSDoc, PyDoc, Javadoc doc-comments
-  ✅  10 files / month — no credit card required
+  ✅  1 file / month — no credit card required
 
-  ${COLORS.bold}${COLORS.cyan}Upgrade to Pro — $9/mo:${COLORS.reset}
+  ${COLORS.bold}${COLORS.cyan}Upgrade to Pro — $12/mo:${COLORS.reset}
   🚀  All 12 languages (Go, Rust, Swift, Kotlin, C++, C#, Ruby, PHP + more)
   💬  Why-comments — explain intent, decisions & trade-offs
   📝  Both mode — doc + why in a single two-pass run
   🔑  Shared API key pool — no OpenAI/Anthropic key needed
   💻  VS Code extension included
 
-  ${earlyBirdLine() ?? ''}
   ${COLORS.cyan}→ Sign up at https://poly-glot.ai${COLORS.reset}
 
 ${'─'.repeat(54)}
@@ -330,11 +329,10 @@ ${'─'.repeat(54)}
   ${COLORS.bold}What's changed:${COLORS.reset}
   ✅  --changed flag: incremental --dir using git diff (free)
   ✅  Full --dir scan now requires Pro (prevents quota abuse)
-  ✅  Free plan: 10 files/month
-  ✅  EARLYBIRD3 — lock Pro at $9/mo forever before May 1
+  ✅  Free plan: 1 file/month
 
-  ${earlyBirdLine() ?? `${COLORS.dim}  Sign up free at https://poly-glot.ai${COLORS.reset}`}
-  ${COLORS.bold}  Pro $9/mo   → ${COLORS.cyan}https://poly-glot.ai/#pg-pricing-section${COLORS.reset}
+  ${COLORS.dim}  Sign up free at https://poly-glot.ai${COLORS.reset}
+  ${COLORS.bold}  Pro $12/mo   → ${COLORS.cyan}https://poly-glot.ai/#pg-pricing-section${COLORS.reset}
 
 ${'─'.repeat(54)}
 ${COLORS.dim}  This notice won't appear again.${COLORS.reset}
@@ -373,9 +371,8 @@ async function checkForUpdate(): Promise<void> {
             console.error(
                 `\n  \x1b[31m✗  poly-glot v${VERSION} is no longer supported\x1b[0m\n` +
                 `\n  \x1b[2mRun \x1b[0m\x1b[36mnpm install -g poly-glot-ai-cli\x1b[0m\x1b[2m to get the latest version (v${latest}).\x1b[0m` +
-                (earlyBirdLine() ? `\n  ${earlyBirdLine()}\n` : '') +
-                `\n  \x1b[1m  Pro $9/mo   → \x1b[36mhttps://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3\x1b[0m` +
-                `\n  \x1b[1m  Team $29/mo → \x1b[36mhttps://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3\x1b[0m\n`
+                `\n  \x1b[1m  Pro $12/mo   → \x1b[36mhttps://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_reference_id=cli\x1b[0m` +
+                `\n  \x1b[1m  Team $29/mo → \x1b[36mhttps://buy.stripe.com/aFa28teFm8by5s2eAc14409?client_reference_id=cli-team\x1b[0m\n`
             );
             process.exit(1);
         }
@@ -450,11 +447,10 @@ ${COLORS.bold}${COLORS.cyan}Welcome to Poly-Glot CLI v${VERSION}${COLORS.reset} 
 ${COLORS.dim}A free account is required to get started.${COLORS.reset}
 ${COLORS.dim}It takes 30 seconds — just your email, no password needed.${COLORS.reset}
 
-  • Free plan:  10 files/month · Python, JS, Java · doc-comments
-  • Pro (\$9/mo): All 12 languages · why-comments · both mode · unlimited files
+  • Free plan:  1 file/month · Python, JS, Java · doc-comments
+  • Pro (\$12/mo): All 12 languages · why-comments · both mode · unlimited files
   • Team (\$29/mo): 5 seats · team analytics
 
-${earlyBirdLine() ?? ''}
 `);
         // No escape hatch — account is required, no "n" exit path.
         console.log(`  A free account is required to continue. Starting sign-up now...\n`);
@@ -685,11 +681,9 @@ function printSignInSuccess(verifiedEmail: string, plan: string): void {
     console.log(`\n\n  ${COLORS.green}${COLORS.bold}✓ Signed in as ${verifiedEmail}${COLORS.reset}`);
     console.log(`  ${COLORS.dim}Plan:${COLORS.reset} ${planLabel}\n`);
     if (!PRO_PLANS.includes(plan)) {
-        console.log(`  ${COLORS.dim}Free plan: 10 files/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
-        const _eb = earlyBirdLine();
-        if (_eb) console.log(`  ${_eb}`);
-        console.log(`  ${COLORS.bold}  Pro $9/mo   → ${COLORS.cyan}https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3${COLORS.reset}`);
-        console.log(`  ${COLORS.bold}  Team $29/mo → ${COLORS.cyan}https://buy.stripe.com/aFa28teFm8by5s2eAc14409?prefilled_promo_code=EARLYBIRD3${COLORS.reset}\n`);
+        console.log(`  ${COLORS.dim}Free plan: 1 file/month · JS, TS, Python, Java · doc-comments${COLORS.reset}`);
+        console.log(`  ${COLORS.bold}  Pro $12/mo   → ${COLORS.cyan}https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_reference_id=cli${COLORS.reset}`);
+        console.log(`  ${COLORS.bold}  Team $29/mo → ${COLORS.cyan}https://buy.stripe.com/aFa28teFm8by5s2eAc14409?client_reference_id=cli-team${COLORS.reset}\n`);
     }
 }
 
@@ -986,13 +980,11 @@ async function runComment(args: string[]): Promise<void> {
 
         // ── Pro gate: full --dir (without --changed) requires Pro ─────────────
         if (!isPaidUser && !isDryRun && !isChanged) {
-            const eb = earlyBirdLine();
             console.log(
                 `\n  ${COLORS.yellow}⚠  Full directory scan requires Pro.${COLORS.reset}\n` +
                 `  ${COLORS.dim}Free plan: use --changed to only document new & modified files.${COLORS.reset}\n\n` +
                 `  ${COLORS.cyan}poly-glot both --dir ./src --changed${COLORS.reset}   ${COLORS.dim}← free tier (new/modified files only)${COLORS.reset}\n` +
-                `  ${COLORS.cyan}poly-glot both --dir ./src         ${COLORS.reset}   ${COLORS.dim}← Pro $9/mo (full directory)${COLORS.reset}\n` +
-                (eb ? `\n${eb}\n` : '') +
+                `  ${COLORS.cyan}poly-glot both --dir ./src         ${COLORS.reset}   ${COLORS.dim}← Pro $12/mo (full directory)${COLORS.reset}\n` +
                 `\n  ${COLORS.dim}Upgrade → https://poly-glot.ai/#pg-pricing-section${COLORS.reset}\n`
             );
             process.exit(0);
@@ -1083,13 +1075,11 @@ async function runComment(args: string[]): Promise<void> {
 
             // ── Post-run signup CTA (unsigned users only) ─────────────────
             if (!cfg.sessionToken && ok > 0 && !process.env.CI) {
-                const eb = earlyBirdLine();
                 console.log(
                     `${COLORS.dim}  ${'─'.repeat(52)}${COLORS.reset}\n` +
                     `  ${COLORS.bold}💡 Save your config & track usage → ${COLORS.cyan}poly-glot login${COLORS.reset}\n` +
-                    `  ${COLORS.dim}Free account · 10 files/mo · no credit card · 30 seconds${COLORS.reset}\n` +
-                    (eb ? `  ${eb}\n` : '') +
-                    `  ${COLORS.dim}  Pro $9/mo → https://poly-glot.ai/#pg-pricing-section${COLORS.reset}\n`
+                    `  ${COLORS.dim}Free account · 1 file/mo · no credit card · 30 seconds${COLORS.reset}\n` +
+                    `  ${COLORS.dim}  Pro $12/mo → https://poly-glot.ai/#pg-pricing-section${COLORS.reset}\n`
                 );
             }
         }
@@ -1154,13 +1144,11 @@ async function runComment(args: string[]): Promise<void> {
             success(`${path.basename(outPath)} commented [${effectiveMode}]${isBackup ? ' · backup saved as .orig' : ''}`);
             // ── Post-run signup CTA (unsigned users only) ─────────────────
             if (!cfg.sessionToken && !process.env.CI && process.stdout.isTTY) {
-                const eb = earlyBirdLine();
                 console.log(
                     `\n  ${COLORS.dim}${'─'.repeat(50)}${COLORS.reset}` +
                     `\n  ${COLORS.bold}💡 Free account → ${COLORS.cyan}poly-glot login${COLORS.reset}` +
-                    `\n  ${COLORS.dim}10 files/mo · no credit card · 30 seconds${COLORS.reset}` +
-                    (eb ? `\n  ${eb}` : '') +
-                    `\n  ${COLORS.dim}  Pro $9/mo → https://poly-glot.ai/#pg-pricing-section${COLORS.reset}\n`
+                    `\n  ${COLORS.dim}1 file/mo · no credit card · 30 seconds${COLORS.reset}` +
+                    `\n  ${COLORS.dim}  Pro $12/mo → https://poly-glot.ai/#pg-pricing-section${COLORS.reset}\n`
                 );
             }
         }

@@ -62,7 +62,7 @@ Powered by **OpenAI** (GPT-4.1, GPT-4o, o3), **Anthropic** (Claude Sonnet 4, Cla
 | Priority support | ❌ | ✅ | ✅ | ✅ |
 | SLA + private deployment | ❌ | ❌ | ❌ | ✅ |
 | **Seats** | **1** | **1** | **Up to 5** | **Contact us** |
-| **Price** | **$0** | **$9/mo** | **$29/mo** | **Custom** |
+| **Price** | **$0** | **$12/mo** | **$29/mo** | **Custom** |
 
 ### 💎 Upgrade
 
@@ -398,7 +398,7 @@ Yes — Poly-Glot uses whichever OpenAI, Anthropic, or Google key you configured
 The participant only registers if the extension is active and VS Code v1.95+ is installed. Try: Command Palette → `Developer: Reload Window`.
 
 **Can I use `/why` and `/both` without Pro?**
-No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) — use code **`EARLYBIRD3`** at checkout to lock Pro at **$9/mo forever** (expires May 1, 2026).
+No — WHY-comments and Both mode are Pro features. [Upgrade at poly-glot.ai](https://poly-glot.ai/#pg-pricing-section) to unlock all languages, why-comments, and unlimited files for $12/mo.
 
 **Does it work with VS Code Insiders?**
 Yes — any VS Code build ≥ 1.95 with Copilot Chat enabled works.
@@ -418,13 +418,12 @@ Your code and API keys are **100% private**:
 
 ---
 
-## 💎 Unlock Pro — Lock in $9/mo Forever with `EARLYBIRD3`
+## 💎 Unlock Pro — $12/mo
 
 If you've tried the Pro features and want to unlock them permanently:
 
 1. Visit **[poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)**
-2. Choose **Pro Monthly** and enter code **`EARLYBIRD3`** at checkout
-3. Lock Pro at **$9/mo forever** — even after Pro goes to $12/mo on May 1, 2026
+2. Choose **Pro Monthly** and complete checkout at $12/mo
 4. Copy your license token from your account dashboard
 5. In VS Code: Command Palette → `Poly-Glot: Configure License Token` → paste token → Pro activates instantly
 

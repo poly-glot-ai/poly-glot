@@ -60,7 +60,7 @@ const DEVICE_TTL      = 365 * 24 * 60 * 60; // 1 year — device→email binding
 const APIKEY_TTL      = 365 * 24 * 60 * 60; // 1 year — apiKeyHash→primaryEmail binding
 
 // ── Usage / quota constants ───────────────────────────────────────────────
-const FREE_MONTHLY_LIMIT    = 10;    // files per calendar month (UTC)
+const FREE_MONTHLY_LIMIT    = 1;     // files per calendar month (UTC)
 const FREE_LIFETIME_LIMIT   = 25;    // files total, ever (free tier hard cap)
 const USAGE_TTL             = 35 * 24 * 60 * 60; // 35 days — outlasts the month
 const IP_SIGNUP_TTL         = 35 * 24 * 60 * 60; // 35 days — IP signup counter
@@ -1737,8 +1737,8 @@ async function resolveToken(request, env, deleteAfter) {
  * Update these IDs if you create new prices in the Stripe dashboard.
  */
 const STRIPE_PRICE_TO_PLAN = {
-  'price_1THTUgRQVeNj16c8TvAVPfTJ': 'pro',          // Pro Monthly  $9/mo
-  'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',          // Pro Yearly   $79/yr
+  'price_1THTUgRQVeNj16c8TvAVPfTJ': 'pro',          // Pro Monthly  $12/mo
+  'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',          // Pro Yearly   $99/yr
   'price_1THTpsRQVeNj16c8IcauulXJ': 'team',         // Team Monthly $29/mo
   'price_1TI9q1RQVeNj16c8BDKYHS3y': 'team',         // Team Yearly  $249/yr
   'price_1TGLFgRQVeNj16c8K0E97fWj': 'team',         // Team Monthly $29/mo (live)
@@ -2351,7 +2351,7 @@ async function handleGithubAppTrackUsage(request, env) {
 // This means: spinning up email2, email3… with the same API key hits the
 // same monthly counter. Pro users are exempt (limit === null).
 // ─────────────────────────────────────────────────────────────
-const APIKEY_FREE_LIMIT = 10; // must match CLI FREE_MONTHLY_LIMIT
+const APIKEY_FREE_LIMIT = 1; // must match CLI FREE_MONTHLY_LIMIT
 
 async function getApiKeyUsage(hash, env) {
   const month = currentMonthKey();

@@ -18,8 +18,7 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
 }
 const FREE_LANGUAGES   = ['javascript', 'typescript', 'python', 'java'];
 const PRO_PLANS        = ['pro', 'team', 'enterprise'];
-// EARLYBIRD3 locks Pro at $9/mo forever — applies to Pro Monthly only (expires May 1, 2026)
-const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?prefilled_promo_code=EARLYBIRD3&client_reference_id=vscode';
+const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_reference_id=vscode';
 const UPGRADE_TEAM_URL = 'https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408?client_reference_id=vscode-team';
 const FREE_SIGNUP_URL  = 'https://poly-glot.ai/api/auth/free-signup';
 const PARTICIPANT_ID   = 'poly-glot.chat';
@@ -323,10 +322,10 @@ async function requireSignUp(source: string): Promise<void> {
 async function showLimitReached(used: number, limit: number): Promise<void> {
     const choice = await vscode.window.showErrorMessage(
         `🚫 Free plan limit reached — ${used}/${limit} files this month.`,
-        'Upgrade for $9/mo',
+        'Upgrade for $12/mo',
         'Enter Session Token',
     );
-    if (choice === 'Upgrade for $9/mo') {
+    if (choice === 'Upgrade for $12/mo') {
         vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
     } else if (choice === 'Enter Session Token') {
         await cmdConfigureLicenseToken();
@@ -350,17 +349,17 @@ async function showUsageNudge(used: number, remaining: number): Promise<void> {
     else if (used === Math.floor(FREE_LIMIT * 0.5)) {
         const choice = await vscode.window.showInformationMessage(
             `✅ Done — ${used} files used, ${remaining} remaining this month. Upgrade for unlimited.`,
-            'Upgrade for $9/mo',
+            'Upgrade for $12/mo',
             'Dismiss',
         );
-        if (choice === 'Upgrade for $9/mo') {
+        if (choice === 'Upgrade for $12/mo') {
             vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
         }
     }
     // 80% warning
     else if (used === Math.floor(FREE_LIMIT * 0.8)) {
         const choice = await vscode.window.showWarningMessage(
-            `⚡ ${remaining} free files remaining this month — use code EARLYBIRD3 to lock Pro at $9/mo forever (expires May 1, 2026).`,
+            `⚡ ${remaining} free file(s) remaining this month. Upgrade to Pro for unlimited files — $12/mo.`,
             'Upgrade Now',
             'Dismiss',
         );
@@ -372,10 +371,10 @@ async function showUsageNudge(used: number, remaining: number): Promise<void> {
     else if (used === FREE_LIMIT) {
         const choice = await vscode.window.showWarningMessage(
             `🔴 That was your last free file this month. Upgrade to keep going.`,
-            'Upgrade for $9/mo',
+            'Upgrade for $12/mo',
             'Enter Session Token',
         );
-        if (choice === 'Upgrade for $9/mo') {
+        if (choice === 'Upgrade for $12/mo') {
             vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
         } else if (choice === 'Enter Session Token') {
             await cmdConfigureLicenseToken();
@@ -459,11 +458,11 @@ async function showProGate(feature: string): Promise<boolean> {
     const message = `Poly-Glot: ${feature} requires a Pro plan.`;
     const actions = hasToken
         ? ['Already subscribed? Re-enter token', 'Get Pro']
-        : ['Get Pro — $9/mo Forever', 'Enter Session Token'];
+        : ['Get Pro — $12/mo', 'Enter Session Token'];
 
     const choice = await vscode.window.showErrorMessage(message, ...actions);
 
-    if (choice === 'Get Pro' || choice === 'Get Pro — $9/mo Forever') {
+    if (choice === 'Get Pro' || choice === 'Get Pro — $12/mo') {
         vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
         return true;
     }
@@ -885,9 +884,9 @@ async function handleChatRequest(
             '| Both mode (`/both`) | 🔒 | ✅ |',
             '| Files per month | 50 | Unlimited |',
             '',
-            '**Pro — $9/mo locked forever with code `EARLYBIRD3`** *(expires May 1, 2026 — after that Pro goes to $12/mo)*',
+            '**Pro — $12/mo**',
             '',
-            `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
+            `[**→ Upgrade to Pro — $12/mo**](${UPGRADE_URL})`,
             '',
             'After subscribing, sign in at poly-glot.ai, then run **Poly-Glot: Configure License Token** in the Command Palette.',
         ].join('\n'));
@@ -948,9 +947,9 @@ async function handleChatRequest(
             '',
             `**Why-comments** and **Both mode** require a Pro plan.`,
             '',
-            `[**→ Upgrade to Pro — $9/mo**](${UPGRADE_URL})`,
+            `[**→ Upgrade to Pro — $12/mo**](${UPGRADE_URL})`,
             '',
-            '🏷 Use code **`EARLYBIRD3`** to lock Pro at **$9/mo forever** *(expires May 1, 2026)*',
+            
         ].join('\n'));
         return { metadata: { command: cmd } };
     }
@@ -1018,7 +1017,7 @@ async function handleChatRequest(
         '| `@poly-glot /why` | Add why-comments explaining intent & trade-offs _(Pro)_ |',
         '| `@poly-glot /both` | Doc-comments + why-comments in one pass _(Pro)_ |',
         '| `@poly-glot /explain` | Deep analysis: complexity, bugs, doc quality |',
-        '| `@poly-glot /upgrade` | See Pro plan — lock in $9/mo forever with EARLYBIRD3 |',
+        '| `@poly-glot /upgrade` | See Pro plan |',
         '',
         '_Select some code first for best results._',
     ].join('\n'));

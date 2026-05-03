@@ -22,22 +22,10 @@
     team_yearly:  'https://buy.stripe.com/aFa28teFm8by5s2eAc14409',
   };
 
-  const PROMO = 'EARLYBIRD3';
-
   function checkoutUrl(key) {
     const base = CHECKOUT[key] || '#';
     if (!base || base === '#' || base.startsWith('STRIPE_LINK')) return '#';
-    // EARLYBIRD3 applies to Pro Monthly ONLY — locks $9/mo forever (expires May 1, 2026)
-    // Pro Yearly / Team Monthly / Team Yearly go direct — no promo code
-    var params = 'client_reference_id=website';
-    if (key === 'pro_monthly') {
-      params = 'prefilled_promo_code=' + PROMO + '&' + params;
-    }
-    // Pre-fill email if signed in — reduces friction
-    var storedEmail = '';
-    try { storedEmail = localStorage.getItem('pg_email') || ''; } catch(e) {}
-    if (storedEmail) params += '&prefilled_email=' + encodeURIComponent(storedEmail);
-    return base + '?' + params;
+    return base;
   }
 
   /* ── Pricing Data ──────────────────────────────────────── */
@@ -54,7 +42,7 @@
       ctaAction: 'signup',
       popular:   false,
       features: [
-        { text: '10 files / month',                  check: true  },
+        { text: '1 file / month',                    check: true  },
         { text: '4 languages (JS, TS, Python, Java)', check: true  },
         { text: 'Web UI',                            check: true  },
         { text: 'JSDoc, PyDoc, Javadoc',             check: true  },
@@ -70,8 +58,8 @@
       id:        'pro',
       tier:      'Most Popular',
       name:      'Pro',
-      monthly:   9,
-      yearly:    79,
+      monthly:   12,
+      yearly:    99,
       desc:      'For individual developers who ship fast. Cancel anytime.',
       cta:       'Get Pro →',
       ctaClass:  'pg-cta-pro',
@@ -246,16 +234,10 @@
           </span>
         </div>
 
-        <!-- Launch promo note -->
-        <div class="pg-early-access-note" id="pg-promo-banner">
-          <div class="pg-ea-left">
-            <span class="pg-ea-icon">⏳</span>
-            <div class="pg-ea-text">
-              <strong>Early bird pricing — Pro locked at $9/mo forever.</strong>
-              <span>Offer expires <strong id="pg-promo-deadline">May 1, 2026</strong> — after that, Pro goes to $12/mo. Use code <strong>EARLYBIRD3</strong> at checkout.</span>
-            </div>
-          </div>
-          <span class="pg-ea-cta" id="pg-ea-join-btn">Get Pro — $9/mo Forever</span>
+        <!-- Free plan limit banner -->
+        <div class="pg-free-limit-banner" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:14px 20px;margin:0 0 18px;display:flex;align-items:center;gap:12px;font-size:13px;color:#f87171;">
+          <span style="font-size:18px;">⚡</span>
+          <span><strong>Free plan now limited to 1 file/month.</strong> Upgrade to Pro for unlimited files — $12/mo.</span>
         </div>
 
         <!-- Cards -->
@@ -276,10 +258,6 @@
             <div class="pg-faq-item">
               <div class="pg-faq-q">Do I need my own API key?</div>
               <div class="pg-faq-a">Free plan is BYOK (bring your own key). <strong>Pro and above</strong> uses Poly-Glot's API key pool — no setup needed.</div>
-            </div>
-            <div class="pg-faq-item">
-              <div class="pg-faq-q">What is the EARLYBIRD3 offer?</div>
-              <div class="pg-faq-a">Use code <strong>EARLYBIRD3</strong> at checkout to lock Pro at <strong>$9/mo forever</strong> — even after Pro goes to $12/mo on May 1, 2026. Applies to Pro Monthly only. Cancel anytime.</div>
             </div>
             <div class="pg-faq-item">
               <div class="pg-faq-q">Can I switch plans?</div>
@@ -378,7 +356,7 @@
             .then(function(data) {
               if (data.ok) {
                 try { localStorage.setItem('pg_email', email); } catch(e) {}
-                alert('✅ Magic link sent to ' + email + '!\n\nCheck your inbox and click the link to sign in.\n\nFree plan: 10 files/month, no credit card required.');
+                alert('✅ Magic link sent to ' + email + '!\n\nCheck your inbox and click the link to sign in.\n\nFree plan: 1 file/month, no credit card required.');
                 if (typeof gtag === 'function') gtag('event', 'free_signup_success', { method: 'pricing_card' });
               } else {
                 alert('Something went wrong: ' + (data.error || 'Please try again.'));
@@ -435,13 +413,6 @@
         if (typeof gtag === 'function') gtag('event', 'enterprise_nudge_click');
       });
     }
-
-    /* Early access CTA — non-interactive display only */
-    const eaBtn = section.querySelector('#pg-ea-join-btn');
-    if (eaBtn) {
-      eaBtn.style.cursor = 'default';
-      eaBtn.style.pointerEvents = 'none';
-    }
   }
 
   /* ── Update functions ──────────────────────────────────── */
@@ -481,50 +452,9 @@
     if (yLabel) yLabel.classList.toggle('active',  isYearly);
   }
 
-  /* ── Deadline countdown ─────────────────────────────────── */
-  /* Replaces the old spot-counter with real deadline urgency.  */
-  /* Deadline: May 1, 2026 00:00:00 UTC                         */
-  var DEADLINE = new Date('2026-05-01T00:00:00Z');
-
-  function updateDeadlineCountdown() {
-    var el     = document.getElementById('pg-promo-deadline');
-    var banner = document.getElementById('pg-promo-banner');
-    if (!el) return;
-
-    var now  = new Date();
-    var diff = DEADLINE - now;
-
-    if (diff <= 0) {
-      // Offer expired — hide banner, update CTA copy
-      if (banner) banner.style.display = 'none';
-      return;
-    }
-
-    var days    = Math.floor(diff / (1000 * 60 * 60 * 24));
-    var hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    var mins    = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    var label;
-    if (days > 7) {
-      label = 'May 1, 2026';
-    } else if (days >= 1) {
-      label = days + 'd ' + hours + 'h left';
-      el.style.color = '#f59e0b';
-      el.style.fontWeight = '700';
-    } else {
-      label = hours + 'h ' + mins + 'm left';
-      el.style.color = '#ef4444';
-      el.style.fontWeight = '700';
-    }
-    el.textContent = label;
-  }
-
   /* ── Init ───────────────────────────────────────────────── */
   function init() {
     renderSection();
-    updateDeadlineCountdown();
-    // Refresh countdown every 60 seconds
-    setInterval(updateDeadlineCountdown, 60000);
   }
 
   if (document.readyState === 'loading') {

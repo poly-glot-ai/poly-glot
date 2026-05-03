@@ -126,11 +126,10 @@ Google: Gemini 2.5 Flash is very fast and affordable. Free tier available. Keys 
 All three providers: your key goes directly from your browser to the provider — Poly-Glot never sees it.
 
 == PRICING ==
-- Free: doc-comments, Explain Code, JS/TS/Python/Java, 50 files/month, 25 GitHub App PR reviews/month, no MCP
-- Pro: $9/month (or $79/yr) — WHY-comments, Both mode, all 12 languages, unlimited files, unlimited GitHub App PRs, 200 MCP calls/month, full VS Code extension
+- Free: doc-comments, Explain Code, JS/TS/Python/Java, 1 file/month, 25 GitHub App PR reviews/month, no MCP
+- Pro: $12/month (or $99/yr) — WHY-comments, Both mode, all 12 languages, unlimited files, unlimited GitHub App PRs, 200 MCP calls/month, full VS Code extension
 - Team: $29/month (or $249/yr) — everything Pro + 5 seats, 1,000 MCP calls/month, shared API key pool, team dashboard, priority support
 - Enterprise: custom — unlimited seats, unlimited MCP, SSO, private deployment, dedicated SLA
-- Promo code EARLYBIRD3 = 50% off first 3 months on Pro
 - Get Pro at poly-glot.ai/#pg-pricing-section
 
 == VS CODE EXTENSION ==
@@ -203,16 +202,6 @@ When a user pastes code or asks a code question:
     // ── UI NAVIGATION — most specific first, no overlapping patterns ───────────
 
     {
-      // PROMO CODE — must come before pricing AND before api-key rules
-      // matches: "where do I enter a promo code" / "where is the promo code field" / "earlybird"
-      patterns: [
-        /promo.?code|coupon|discount.?code|earlybird/i,
-        /where.{0,40}(enter|put|add|use|apply).{0,20}code/i,
-        /how.{0,20}(use|apply|redeem|enter).{0,20}(promo|coupon|discount|earlybird)/i,
-      ],
-      answer: `**Promo code field is on the checkout page:**\n\n1. Go to [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section)\n2. Click **Upgrade to Pro**\n3. On the checkout page, enter your promo code in the **"Promo code"** field\n4. Click **Apply** — the discount is applied instantly\n\n🎉 Current code: **EARLYBIRD3** — 50% off your first 3 months on Pro!`,
-    },
-    {
       // API KEY location — scoped tightly to "api key" or "ai settings", NOT just "key" or "enter"
       patterns: [
         /where.{0,30}api.?key/i,
@@ -240,7 +229,7 @@ When a user pastes code or asks a code question:
         /how.{0,20}(upgrade|get.?pro|buy.?pro|subscribe)/i,
         /where.{0,20}(pro.?plan|free.?plan|plans)/i,
       ],
-      answer: `**Pricing is at the bottom of the homepage:**\n\n- Scroll down to the **Pricing** section, or click any **"Upgrade to Pro"** link\n\n💎 **Pro is $9/month** — WHY-comments, Both mode, all 12 languages, unlimited files\n\n🎉 Use code **EARLYBIRD3** for **50% off your first 3 months** — enter it on the checkout page.\n\n[Jump to pricing →](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**Pricing is at the bottom of the homepage:**\n\n- Scroll down to the **Pricing** section, or click any **"Upgrade to Pro"** link\n\n💎 **Pro is $12/month** — WHY-comments, Both mode, all 12 languages, unlimited files\n\n[Jump to pricing →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // SIGN IN
@@ -283,7 +272,7 @@ When a user pastes code or asks a code question:
         /where.{0,30}download/i,
         /how.{0,20}(download|save|export).{0,20}(output|result|comment|file)/i,
       ],
-      answer: `**The Download button appears after generation:**\n\n1. Generate your comments\n2. In the **output panel** (right side), click **⬇️ Download**\n3. The documented file is saved to your machine\n\n⚠️ Download is a **Pro feature**. Upgrade at [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section) — use code **EARLYBIRD3** for 50% off your first 3 months.`,
+      answer: `**The Download button appears after generation:**\n\n1. Generate your comments\n2. In the **output panel** (right side), click **⬇️ Download**\n3. The documented file is saved to your machine\n\n⚠️ Download is a **Pro feature**. Upgrade at [poly-glot.ai/#pg-pricing-section](https://poly-glot.ai/#pg-pricing-section).`,
     },
 
     // ── FEATURES & HOW-TO ──────────────────────────────────────────────────────
@@ -312,12 +301,12 @@ When a user pastes code or asks a code question:
     {
       // WHY-comments — tightly scoped
       patterns: [/\bwhy.?comment|\bwhy.?mode\b|reasoning comment|intent comment|trade.?off comment|what.*why.*comment|why.*vs.*doc/i],
-      answer: `**WHY-comments** explain *why* code was written a certain way — not just what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample:\n\`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** Use code **EARLYBIRD3** for 50% off your first 3 months → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**WHY-comments** explain *why* code was written a certain way — not just what it does.\n\nThey cover:\n- Non-obvious trade-offs\n- Edge-case reasoning\n- Algorithm choices\n- Business constraints\n\nExample:\n\`// Using a Map here instead of nested loops — O(n) vs O(n²) at scale\`\n\n**WHY-comments are a Pro feature.** → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // Pricing — scoped to pricing/cost/pro/plan words, not "model" or "language"
-      patterns: [/\bpric(e|ing)\b|\bcost\b|\bpro\b.{0,20}(plan|feature|tier|month|\$)|\bfree.?tier\b|\bsubscri|\bearlybird\b|\bupgrade\b|\b\$9\b|\b\$29\b|how much|team.*plan|enterprise.*plan|mcp.*pric/i],
-      answer: `**Pricing:**\n\n🆓 **Free** — $0/mo · 50 files/mo · 4 languages · 25 GitHub App PR reviews/mo · no MCP\n💎 **Pro** — $9/mo (or $79/yr) · unlimited files · all 12 languages · unlimited GitHub App PRs · 200 MCP calls/mo · full VS Code\n👥 **Team** — $29/mo (or $249/yr) · everything Pro + 5 seats · 1,000 MCP calls/mo · shared key pool · team dashboard\n🏢 **Enterprise** — custom · unlimited MCP · SSO · private deployment · dedicated SLA\n\n🎉 Use code **EARLYBIRD3** for **50% off your first 3 months** on Pro!\n\n[See all plans →](https://poly-glot.ai/#pg-pricing-section)`,
+      patterns: [/\bpric(e|ing)\b|\bcost\b|\bpro\b.{0,20}(plan|feature|tier|month|\$)|\bfree.?tier\b|\bsubscri|\bupgrade\b|\b\$9\b|\b\$29\b|how much|team.*plan|enterprise.*plan|mcp.*pric/i],
+      answer: `**Pricing:**\n\n🆓 **Free** — $0/mo · 1 file/mo · 4 languages · 25 GitHub App PR reviews/mo · no MCP\n💎 **Pro** — $12/mo (or $99/yr) · unlimited files · all 12 languages · unlimited GitHub App PRs · 200 MCP calls/mo · full VS Code\n👥 **Team** — $29/mo (or $249/yr) · everything Pro + 5 seats · 1,000 MCP calls/mo · shared key pool · team dashboard\n🏢 **Enterprise** — custom · unlimited MCP · SSO · private deployment · dedicated SLA\n\n[See all plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // Supported languages — only when asking about languages/programming languages
@@ -785,7 +774,7 @@ coverage_threshold: 0.3
         /comment.{0,30}(this|my|the).{0,20}(code|function|class|method)/i,
         /document.{0,20}(this|my|the).{0,20}(code|function|class)/i,
       ],
-      answer: `**That's exactly what Poly-Glot is built for!** 🦜\n\nGenerating professional doc-comments is the core product — paste your code directly into the **generator** on this page and get:\n\n- 📝 **JSDoc** (JS/TS) · **PyDoc** (Python) · **Javadoc** (Java) — free\n- 🦀 **Rustdoc, GoDoc, KDoc, Doxygen, PHPDoc, Swift** — Pro\n- ✍️ **WHY-comments** — explains intent & trade-offs (Pro)\n- 📝 **Both** — doc + WHY in one pass (Pro)\n\n👆 **[Use the generator above ↑](https://poly-glot.ai#commentGenerator)** — paste your code, pick your language, click Generate.\n\nPro tip: use code **EARLYBIRD3** for 50% off your first 3 months on Pro → [See plans →](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**That's exactly what Poly-Glot is built for!** 🦜\n\nGenerating professional doc-comments is the core product — paste your code directly into the **generator** on this page and get:\n\n- 📝 **JSDoc** (JS/TS) · **PyDoc** (Python) · **Javadoc** (Java) — free\n- 🦀 **Rustdoc, GoDoc, KDoc, Doxygen, PHPDoc, Swift** — Pro\n- ✍️ **WHY-comments** — explains intent & trade-offs (Pro)\n- 📝 **Both** — doc + WHY in one pass (Pro)\n\n👆 **[Use the generator above ↑](https://poly-glot.ai#commentGenerator)** — paste your code, pick your language, click Generate.\n\n[See plans →](https://poly-glot.ai/#pg-pricing-section)`,
     },
     {
       // WHY comments
@@ -795,7 +784,7 @@ coverage_threshold: 0.3
         /explain.{0,30}why.{0,20}(this|the|my).{0,20}(code|decision|choice|approach)/i,
         /what.{0,20}(is|are).{0,30}why.{0,20}comment/i,
       ],
-      answer: `**WHY-comments explain intent, not just what the code does.**\n\nExample:\n\`\`\`js\n// Using a Map instead of an array — O(1) lookups at scale (10k+ records)\nconst lookup = new Map(items.map(i => [i.id, i]));\n\`\`\`\n\nPaste code and I'll add WHY-comments to every non-obvious decision.\n\n💡 **Poly-Glot's WHY mode** does this automatically for entire files — it's a **Pro feature**. Use code **EARLYBIRD3** for 50% off your first 3 months → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
+      answer: `**WHY-comments explain intent, not just what the code does.**\n\nExample:\n\`\`\`js\n// Using a Map instead of an array — O(1) lookups at scale (10k+ records)\nconst lookup = new Map(items.map(i => [i.id, i]));\n\`\`\`\n\nPaste code and I'll add WHY-comments to every non-obvious decision.\n\n💡 **Poly-Glot's WHY mode** does this automatically for entire files — it's a **Pro feature**. → [poly-glot.ai](https://poly-glot.ai/#pg-pricing-section)`,
     },
   ];
 
@@ -1044,7 +1033,7 @@ Poly-Glot Prompt Studio is a browser-based tool at poly-glot.ai/prompt/ for:
 - No AI model testing, no sharing, no voice, no MCP
 - No credit card required
 
-== PRO PLAN — $9/mo ==
+== PRO PLAN — $12/mo ==
 - Everything in Free
 - All 21 templates (8 Pro templates: legal, finance, medical, security, video, system design)
 - AI model testing (GPT-4o, Claude Sonnet, Gemini Flash)
@@ -1111,7 +1100,7 @@ The core philosophy of Prompt Studio: write a great prompt once, get the right a
 
 == PRICING PAGE ==
 Pricing is on poly-glot.ai/prompt/#pga-pricing
-Free $0 · Pro $9/mo or $79/yr · Team $29/mo
+Free $0 · Pro $12/mo or $99/yr · Team $29/mo
 
 == PRIVACY ==
 - Voice audio: processed in browser only, never stored, never sent to Poly-Glot
@@ -1150,7 +1139,7 @@ Free $0 · Pro $9/mo or $79/yr · Team $29/mo
       },
       {
         patterns: [/price|pricing|cost|how much|free|pro|team|plan|paid|\$9|\$29|upgrade/i],
-        answer: `**Prompt Studio pricing:**\n\n| Plan | Price | Key features |\n|------|-------|--------------|\n| **Free** | $0/mo | 1 template (you pick), editor, copy export |\n| **Pro** | $9/mo | All 21 templates, AI testing, voice, sharing, MCP |\n| **Team** | $29/mo | Pro + custom builder, team library, 1,000 MCP calls |\n\n✅ Free — no credit card required\n💡 Pro annual = $79/yr (save 27%)\n\n[See full pricing →](https://poly-glot.ai/prompt/#pga-pricing)`,
+        answer: `**Prompt Studio pricing:**\n\n| Plan | Price | Key features |\n|------|-------|--------------|\n| **Free** | $0/mo | 1 template (you pick), editor, copy export |\n| **Pro** | $12/mo | All 21 templates, AI testing, voice, sharing, MCP |\n| **Team** | $29/mo | Pro + custom builder, team library, 1,000 MCP calls |\n\n✅ Free — no credit card required\n💡 Pro annual = $99/yr (save 31%)\n\n[See full pricing →](https://poly-glot.ai/prompt/#pga-pricing)`,
       },
       {
         patterns: [/\bmcp\b|model.?context.?protocol|claude.?desktop|cursor|windsurf|mcp.?server|mcp.?tool/i],
