@@ -22,8 +22,8 @@ const UPGRADE_URL      = 'https://buy.stripe.com/fZu14pbtacrO9Ii77K14405?client_
 const UPGRADE_TEAM_URL = 'https://buy.stripe.com/bJebJ30Ow1Na6w6ajW14408?client_reference_id=vscode-team';
 const FREE_SIGNUP_URL  = 'https://poly-glot.ai/api/auth/free-signup';
 const PARTICIPANT_ID   = 'poly-glot.chat';
-const FREE_LIMIT       = 50;
-const FIRST_NUDGE_AT   = 10;
+const FREE_LIMIT       = 1;
+const FIRST_NUDGE_AT   = 1;
 // Minimum extension version — older installs are blocked from generating.
 // Bump this any time a security-critical auth change ships.
 // 1.4.49 — hard sign-up gate: anonymous device fallback removed, account required before first use.
@@ -164,6 +164,7 @@ async function checkAndIncrementUsage(): Promise<boolean> {
 
     if (await hasPro()) {
         updateStatusBarUsage(true);
+        await maybeShowTeamNudge();
         return true;
     }
 
@@ -318,66 +319,75 @@ async function requireSignUp(source: string): Promise<void> {
     }
 }
 
+/**
+ * Fire once per install when a Pro user hits 5 files processed.
+ * Nudges them to share the Team plan with colleagues.
+ */
+async function maybeShowTeamNudge(): Promise<void> {
+    const plan = extContext?.globalState.get<string>('pg.lastKnownPlan', '');
+    if (plan !== 'pro') return; // only solo Pro users, not team/enterprise
+    const nudgeDone = extContext.globalState.get<boolean>('pg.teamNudgeDone', false);
+    if (nudgeDone) return;
+    const count = getMonthlyCount();
+    if (count < 5) return; // wait until they've seen real value
+    await extContext.globalState.update('pg.teamNudgeDone', true);
+    const choice = await vscode.window.showInformationMessage(
+        `🚀 You've processed ${count} files with Poly-Glot! Using it with teammates? Team plan is $29/mo for 5 seats.`,
+        'See Team Plan',
+        'Dismiss',
+    );
+    if (choice === 'See Team Plan') {
+        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_TEAM_URL));
+    }
+}
+
 /** Show the hard-stop message and upgrade buttons */
 async function showLimitReached(used: number, limit: number): Promise<void> {
     const choice = await vscode.window.showErrorMessage(
-        `🚫 Free plan limit reached — ${used}/${limit} files this month.`,
-        'Upgrade for $12/mo',
-        'Enter Session Token',
+        `🚫 Free plan limit reached — ${used}/${limit} file this month. Upgrade to Pro for unlimited files.`,
+        'Upgrade Pro — $12/mo',
+        'Team Plan — $29/mo',
+        'Enter Token',
     );
-    if (choice === 'Upgrade for $12/mo') {
+    if (choice === 'Upgrade Pro — $12/mo') {
         vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-    } else if (choice === 'Enter Session Token') {
+    } else if (choice === 'Team Plan — $29/mo') {
+        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_TEAM_URL));
+    } else if (choice === 'Enter Token') {
         await cmdConfigureLicenseToken();
     }
 }
 
 /** Show nudges at the right thresholds */
 async function showUsageNudge(used: number, remaining: number): Promise<void> {
-    // First nudge — at file 10 (early, gentle)
-    if (used === FIRST_NUDGE_AT) {
-        const choice = await vscode.window.showInformationMessage(
-            `💡 Poly-Glot: ${remaining} free files left this month. Upgrade for unlimited.`,
-            'See Pro Plans',
-            'Dismiss',
-        );
-        if (choice === 'See Pro Plans') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        }
-    }
-    // Midpoint nudge — at file 25 (post-generation, user just saw value)
-    else if (used === Math.floor(FREE_LIMIT * 0.5)) {
-        const choice = await vscode.window.showInformationMessage(
-            `✅ Done — ${used} files used, ${remaining} remaining this month. Upgrade for unlimited.`,
-            'Upgrade for $12/mo',
-            'Dismiss',
-        );
-        if (choice === 'Upgrade for $12/mo') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        }
-    }
-    // 80% warning
-    else if (used === Math.floor(FREE_LIMIT * 0.8)) {
+    // FREE_LIMIT = 1: nudge fires immediately after the first (and only) free file
+    if (used >= FIRST_NUDGE_AT && remaining <= 0) {
+        // Hard limit hit — show strong upgrade prompt with both Pro and Team
         const choice = await vscode.window.showWarningMessage(
-            `⚡ ${remaining} free file(s) remaining this month. Upgrade to Pro for unlimited files — $12/mo.`,
-            'Upgrade Now',
-            'Dismiss',
+            `🔴 You've used your 1 free file this month. Upgrade to keep generating.`,
+            'Pro — $12/mo (unlimited)',
+            'Team — $29/mo (5 seats)',
+            'Enter Token',
         );
-        if (choice === 'Upgrade Now') {
+        if (choice === 'Pro — $12/mo (unlimited)') {
             vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        }
-    }
-    // Last file warning
-    else if (used === FREE_LIMIT) {
-        const choice = await vscode.window.showWarningMessage(
-            `🔴 That was your last free file this month. Upgrade to keep going.`,
-            'Upgrade for $12/mo',
-            'Enter Session Token',
-        );
-        if (choice === 'Upgrade for $12/mo') {
-            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
-        } else if (choice === 'Enter Session Token') {
+        } else if (choice === 'Team — $29/mo (5 seats)') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_TEAM_URL));
+        } else if (choice === 'Enter Token') {
             await cmdConfigureLicenseToken();
+        }
+    } else if (used >= FIRST_NUDGE_AT && remaining === 1) {
+        // 1 file left — warn before they hit the wall
+        const choice = await vscode.window.showWarningMessage(
+            `⚡ Last free file remaining this month. Pro is $12/mo for unlimited.`,
+            'Upgrade Pro — $12/mo',
+            'Team Plan — $29/mo',
+            'Dismiss',
+        );
+        if (choice === 'Upgrade Pro — $12/mo') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_URL));
+        } else if (choice === 'Team Plan — $29/mo') {
+            vscode.env.openExternal(vscode.Uri.parse(UPGRADE_TEAM_URL));
         }
     }
 }
@@ -547,7 +557,7 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
     if (hasSession || hasLicenseToken) return;
 
     // Bump version string to re-engage ALL legacy dismissed users
-    const ONBOARDING_VERSION = '1.4.54';
+    const ONBOARDING_VERSION = '1.4.56';
     const shownForVersion = extContext.globalState.get<string>('pg.onboardingShownVersion', '');
     if (shownForVersion >= ONBOARDING_VERSION) return;
 
@@ -563,7 +573,7 @@ async function maybeShowFirstRunOnboarding(): Promise<void> {
     // ── Step 1: ask for email inline ──────────────────────────────────────
     const email = await vscode.window.showInputBox({
         title:          '🦜 Poly-Glot — Free account required to generate',
-        prompt:         '50 files/month free · no credit card · magic link (no password)',
+        prompt:         '1 file/month free · Pro $12/mo unlimited · Team $29/mo (5 seats) · no credit card · magic link',
         placeHolder:    'you@example.com',
         ignoreFocusOut: true,
         validateInput:  (v) => (!v || !v.includes('@') || !v.includes('.')) ? 'Please enter a valid email address' : null,
@@ -1294,7 +1304,19 @@ async function cmdConfigureLicenseToken(): Promise<void> {
             const plan = await getVerifiedPlan();
             if (plan && PRO_PLANS.includes(plan)) {
                 const label = plan.charAt(0).toUpperCase() + plan.slice(1);
-                vscode.window.showInformationMessage(`✅ Poly-Glot: ${label} plan activated! All features unlocked.`);
+                // Show activation message + team upsell for solo Pro users
+                if (plan === 'pro') {
+                    const choice = await vscode.window.showInformationMessage(
+                        `✅ Poly-Glot Pro activated! All features unlocked. Using it with a team?`,
+                        'See Team Plan — $29/mo',
+                        'Dismiss',
+                    );
+                    if (choice === 'See Team Plan — $29/mo') {
+                        vscode.env.openExternal(vscode.Uri.parse(UPGRADE_TEAM_URL));
+                    }
+                } else {
+                    vscode.window.showInformationMessage(`✅ Poly-Glot: ${label} plan activated! All features unlocked.`);
+                }
                 flashStatusBar(`$(star) Poly-Glot ${label}`, 6000);
                 updateStatusBarUsage(true);
             } else {
