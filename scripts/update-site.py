@@ -260,6 +260,13 @@ html = re.sub(
     html
 )
 
+# 2i-0. Ensure GA4 script has data-cfasync="false" (prevents Cloudflare Rocket Loader interference)
+html = re.sub(
+    r'<script(?! data-cfasync)(?: async)? src="https://www\.googletagmanager\.com/gtag/js\?id=G-[^"]+"></script>',
+    lambda m: m.group(0).replace('<script', '<script data-cfasync="false"'),
+    html
+)
+
 # 2i. Ensure live-data.v12.js is referenced (upgrades any older version reference)
 if 'src="live-data.v12.js"' not in html:
     import re as _re
