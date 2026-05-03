@@ -11,10 +11,10 @@
 ---
 
 ## [2.1.38] — 2026-04-08
-- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
-- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
-- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
-- ✨ feat: v2.1.37 — post-run signup CTA, dynamic EARLYBIRD3 countdown, free limit 10/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, free limit 1/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, free limit 1/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, free limit 1/mo [deploy]
+- ✨ feat: v2.1.37 — post-run signup CTA, free limit 1/mo [deploy]
 - [feat] chat widget — Prompt Studio-specific knowledge base + rules
 
 ---
@@ -27,7 +27,7 @@
 ## [2.1.34] — 2026-04-06
 - 🐛 fix: close Copilot Chat gate + CLI escape hatch — v1.4.50 [deploy]
 - docs: update all READMEs — MCP Pro-only gate, plan tables, session token requirement, security notes
-- ✨ feat: email-first VS Code onboarding, improved CLI postinstall CTA, EARLYBIRD3 May 1 2026 everywhere, CLI v2.1.31, VS Code v1.4.41
+- ✨ feat: email-first VS Code onboarding, improved CLI postinstall CTA, CLI v2.1.31, VS Code v1.4.41
 
 ---
 
@@ -37,7 +37,7 @@
 ---
 
 ## [2.1.21] — 2026-04-05
-- pricing: purge all stale EARLYBIRD3/trial messaging — Pro locked $9/mo forever, expires May 1 2026
+- pricing: updated to $12/mo Pro, 1 file/month free
 
 ---
 
@@ -88,8 +88,8 @@
 - ✨ feat: hard exit if npm deprecated, await version check before commands
 - ✨ feat: startup version check + deprecate all versions <=1.8.0 on npm
 - ✨ feat: send X-CLI-Version header on all worker requests, handle 426 upgrade_required
-- cli: add pricing line to soft quota warning (10 files remaining)
-- cli: replace EARLYBIRD3 promo with current pricing (Free $0 · Pro $9/mo · Team $29/mo)
+- cli: add pricing line to soft quota warning (1 file remaining)
+- cli: current pricing (Free $0 · Pro $12/mo · Team $29/mo)
 - ✨ feat(cli): gate all commands behind login + full server-side usage sync
 - ✨ feat(cli): gate all commands behind login — require free account on first run
 - 🐛 fix: update enterprise contact to hwmoses2@icloud.com in cli/README.md

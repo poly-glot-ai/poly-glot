@@ -36,13 +36,13 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 
 ## 💰 Pricing
 
-| Feature | Free | 💎 Pro ($9/mo) | 👥 Team ($29/mo) | 🏢 Enterprise |
+| Feature | Free | 💎 Pro ($12/mo) | 👥 Team ($29/mo) | 🏢 Enterprise |
 |---------|:----:|:--------------:|:----------------:|:-------------:|
 | Web UI generator | ✅ | ✅ | ✅ | ✅ |
 | JS, TS, Python, Java | ✅ | ✅ | ✅ | ✅ |
 | All 12 languages | 🔒 | ✅ | ✅ | ✅ |
 | WHY-Comments & Both mode | 🔒 | ✅ | ✅ | ✅ |
-| CLI tool | ✅ 50 files/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
+| CLI tool | ✅ 1 file/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
 | VS Code Extension (full) | 🔒 | ✅ | ✅ | ✅ |
 | **MCP Server** | 🔒 | ✅ 200 calls/mo | ✅ 1,000 calls/mo | ✅ Unlimited |
 | **GitHub App PR reviews** | ✅ 25/mo | ✅ Unlimited | ✅ Unlimited | ✅ Unlimited |
@@ -52,7 +52,7 @@ Poly-Glot AI transforms undocumented code into professionally commented code —
 | SSO / private deployment | ❌ | ❌ | ❌ | ✅ |
 | Support | Community | Email | Priority | Dedicated SLA |
 
-> 🎁 Use code **`EARLYBIRD3`** at Pro checkout to lock $9/mo forever (expires May 1, 2026).
+
 
 ---
 

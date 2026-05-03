@@ -36,11 +36,11 @@ Every user must sign in. Limits are enforced server-side.
 | Plan | Files/month | Languages | Features | Price |
 |------|:-----------:|-----------|----------|-------|
 | **Free** | 50 | JS, TS, Python, Java | Doc-comments, Web UI, CLI | $0 |
-| **Pro** | Unlimited | All 12 | Why-comments, Both mode, MCP (200 calls/mo) | $9/mo |
+| **Pro** | Unlimited | All 12 | Why-comments, Both mode, MCP (200 calls/mo) | $12/mo |
 | **Team** | Unlimited | All 12 | Everything Pro + MCP (1,000 calls/mo), 5 seats | $29/mo |
 | **Enterprise** | Unlimited | All 12 | Custom seats, SSO, dedicated support | Custom |
 
-> 🎁 Use code **`EARLYBIRD3`** at Pro checkout to lock $9/mo forever (expires May 1, 2026).
+
 > [Upgrade at poly-glot.ai →](https://poly-glot.ai/#pg-pricing-section)
 
 ---
