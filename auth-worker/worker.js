@@ -744,8 +744,34 @@ async function handleAdminUsers(request, env) {
     return { email, plan, usage_this_month: usage, surface, source, signup_ts: signupTs };
   }));
 
-  // Owner accounts filtered server-side — never sent to client HTML
-  const OWNER_EMAILS = new Set(['hwmoses2@icloud.com', 'haroldwebstermoses2@gmail.com']);
+  // Owner + internal probe accounts — filtered server-side, never sent to client
+  const OWNER_EMAILS = new Set([
+    'hwmoses2@icloud.com',
+    'haroldwebstermoses2@gmail.com',
+    // Gate-check / probe addresses created during testing
+    'canon.test+alias@gmail.com',
+    'turnstile-probe@gmail.com',
+    'realuser@gmail.com',
+    'realuser-abc123@gmail.com',
+    'probe-harold@hey.com',
+    'probe-verify-2026@protonmail.com',
+    'live-check@test-domain.com',
+    'lockdowntest11775685840@protonmail.com',
+    'lockdowntest21775685842@protonmail.com',
+    'lockdowntest31775685844@protonmail.com',
+    'harold+probea@poly-glot.ai',
+    'harold+probeb@poly-glot.ai',
+    'harold+devicetest@poly-glot.ai',
+    'harold+devicetest2@poly-glot.ai',
+    'harold.probe.2026@gmail.com',
+    'harold.test.probe.2026@outlook.com',
+    'device-test-real@gmail.com',
+    'different-person-2026@protonmail.com',
+    'user@10minutemail.com',
+    'probe@10minutemail.com',
+    'test123@proton.me',
+    'harold+prompttest@poly-glot.ai',
+  ]);
 
   // Deduplicate + filter tombstones, disposable addresses, and owner accounts
   const seen  = new Set();
@@ -773,13 +799,14 @@ async function handleAdminUsers(request, env) {
   }));
 
   // Deduplicate + filter owner/test/disposable addresses from prompt users
+  // (reuses same OWNER_EMAILS set defined above)
   const promptSeen  = new Set();
   const promptUsers = allPromptUsers.filter(u => {
-    if (promptSeen.has(u.email)) return false;
+    if (promptSeen.has(u.email))            return false;
     promptSeen.add(u.email);
     if (OWNER_EMAILS.has(u.email.toLowerCase())) return false;
-    if (isDisposableEmail(u.email)) return false;
-    if (isTestEmail(u.email))       return false;
+    if (isDisposableEmail(u.email))         return false;
+    if (isTestEmail(u.email))               return false;
     return true;
   });
 
@@ -2653,6 +2680,173 @@ async function handleHealthReport(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// GET /api/auth/billing-portal
+// Authorization: Bearer {sessionToken}
+// Looks up user's Stripe customer, creates a portal session, redirects.
+// Returns 401 if unauthenticated, 404 if no Stripe customer found.
+// ─────────────────────────────────────────────────────────────
+async function handleBillingPortal(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const stripeKey = env.STRIPE_SECRET_KEY;
+  if (!stripeKey) return jsonResponse({ error: 'Billing not configured' }, 503);
+
+  try {
+    const searchRes = await fetch(
+      `https://api.stripe.com/v1/customers/search?query=email:'${encodeURIComponent(session.email)}'&limit=1`,
+      { headers: { 'Authorization': `Bearer ${stripeKey}` }, signal: AbortSignal.timeout(10000) }
+    );
+    if (!searchRes.ok) return jsonResponse({ error: 'Stripe error' }, 502);
+    const searchData = await searchRes.json();
+    const customerId = searchData?.data?.[0]?.id;
+    if (!customerId) return jsonResponse({ error: 'No billing account found' }, 404);
+
+    const baseUrl = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+    const portalRes = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${stripeKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ customer: customerId, return_url: `${baseUrl}/` }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!portalRes.ok) return jsonResponse({ error: 'Could not create portal session' }, 502);
+    const portal = await portalRes.json();
+    return Response.redirect(portal.url, 302);
+  } catch (err) {
+    console.error('handleBillingPortal error:', err?.stack ?? err);
+    return jsonResponse({ error: 'Internal error' }, 500);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/auth/activate-iap
+// Body: { token, transactionId, productId }
+// Links an Apple in-app purchase to an authenticated account.
+// ─────────────────────────────────────────────────────────────
+async function handleActivateIAP(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const token = (body?.token ?? '').trim();
+  if (!token) return jsonResponse({ error: 'token is required' }, 400);
+
+  // Resolve session
+  let email = null;
+  for (const prefix of ['session:', 'token:']) {
+    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
+    if (raw) {
+      try { email = JSON.parse(raw).email; break; } catch {}
+    }
+  }
+  if (!email) return jsonResponse({ error: 'Invalid or expired token' }, 401);
+
+  const { transactionId, productId } = body ?? {};
+  if (!transactionId) return jsonResponse({ error: 'transactionId is required' }, 400);
+
+  const IAP_PRODUCT_TO_PLAN = {
+    'ai.polyglot.promptstudio.pro.monthly':  'pro',
+    'ai.polyglot.promptstudio.pro.yearly':   'pro',
+    'ai.polyglot.promptstudio.team.monthly': 'team',
+    'ai.polyglot.promptstudio.team.yearly':  'team',
+  };
+  const plan = IAP_PRODUCT_TO_PLAN[productId] ?? 'pro';
+
+  // Prevent replay — check if transaction already activated
+  const txKey   = `iap:tx:${transactionId}`;
+  const existing = await env.AUTH_KV.get(txKey);
+  if (existing) return jsonResponse({ ok: true, plan, email, already_activated: true });
+
+  await Promise.all([
+    env.AUTH_KV.put(`plan:${email}`, plan),
+    env.AUTH_KV.put(txKey, email, { expirationTtl: 400 * 24 * 60 * 60 }),
+  ]);
+
+  console.log(`[iap] ✅ Activated ${plan} for ${email} (tx: ${transactionId})`);
+  return jsonResponse({ ok: true, plan, email });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/apple/webhook
+// Apple App Store Server Notifications V2 — JWS signed payload.
+// ─────────────────────────────────────────────────────────────
+async function handleAppleWebhook(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Invalid JSON' }, 400);
+  }
+
+  const signedPayload = body?.signedPayload;
+  if (!signedPayload) return jsonResponse({ error: 'Missing signedPayload' }, 400);
+
+  try {
+    const parts = signedPayload.split('.');
+    if (parts.length < 2) return jsonResponse({ error: 'Invalid JWS format' }, 400);
+
+    const payloadJson   = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const notifType     = payloadJson?.notificationType;
+    const txInfo        = payloadJson?.data?.signedTransactionInfo;
+
+    let txPayload = null;
+    if (txInfo) {
+      const txParts = txInfo.split('.');
+      if (txParts.length >= 2) {
+        try { txPayload = JSON.parse(atob(txParts[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch {}
+      }
+    }
+
+    const productId         = txPayload?.productId         ?? '';
+    const transactionId     = txPayload?.originalTransactionId ?? txPayload?.transactionId ?? '';
+    const appAccountToken   = txPayload?.appAccountToken   ?? '';
+
+    const IAP_PRODUCT_TO_PLAN = {
+      'ai.polyglot.promptstudio.pro.monthly':  'pro',
+      'ai.polyglot.promptstudio.pro.yearly':   'pro',
+      'ai.polyglot.promptstudio.team.monthly': 'team',
+      'ai.polyglot.promptstudio.team.yearly':  'team',
+    };
+    const plan = IAP_PRODUCT_TO_PLAN[productId] ?? 'pro';
+
+    console.log(`[apple] ${notifType} · product: ${productId} · tx: ${transactionId}`);
+
+    switch (notifType) {
+      case 'DID_RENEW':
+      case 'SUBSCRIBED': {
+        if (appAccountToken?.includes('@')) {
+          const email = appAccountToken.trim().toLowerCase();
+          await env.AUTH_KV.put(`plan:${email}`, plan);
+          if (transactionId) {
+            await env.AUTH_KV.put(`iap:tx:${transactionId}`, email, { expirationTtl: 400 * 24 * 60 * 60 });
+          }
+          console.log(`[apple] ✅ Activated ${plan} for ${email}`);
+        }
+        break;
+      }
+      case 'EXPIRED':
+      case 'DID_FAIL_TO_RENEW': {
+        if (appAccountToken?.includes('@')) {
+          const email = appAccountToken.trim().toLowerCase();
+          await env.AUTH_KV.put(`plan:${email}`, 'free');
+          console.log(`[apple] ⬇️ Downgraded to free for ${email} (${notifType})`);
+        }
+        break;
+      }
+      default:
+        console.log(`[apple] Unhandled: ${notifType}`);
+    }
+
+    return jsonResponse({ received: true });
+  } catch (err) {
+    console.error('[apple] Webhook error:', err?.stack ?? err);
+    return jsonResponse({ error: 'Internal error' }, 500);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main fetch handler (entry point)
 // ─────────────────────────────────────────────────────────────
 
@@ -2705,6 +2899,8 @@ export default {
         // CLI alias — GET /api/auth/get-usage?token=<sessionToken>
         case '/api/auth/get-usage':
           return await handleCliGetUsage(request, env);
+        case '/api/auth/billing-portal':
+          return await handleBillingPortal(request, env);
         default:
           return jsonResponse({ error: 'Not found' }, 404);
       }
@@ -2768,6 +2964,12 @@ export default {
         case '/api/stripe/webhook':
           // Stripe sends POST with raw body — must NOT require JSON content-type
           return await handleStripeWebhook(request, env);
+
+        case '/api/auth/activate-iap':
+          return await handleActivateIAP(request, env);
+
+        case '/api/apple/webhook':
+          return await handleAppleWebhook(request, env);
 
         default:
           return jsonResponse({ error: 'Not found' }, 404);

@@ -23,7 +23,8 @@ routes = [
   { pattern = "poly-glot.ai/api/auth/*",   zone_name = "poly-glot.ai" },
   { pattern = "poly-glot.ai/api/usage/*",  zone_name = "poly-glot.ai" },
   { pattern = "poly-glot.ai/api/stripe/*", zone_name = "poly-glot.ai" },
-  { pattern = "poly-glot.ai/api/prompt/*", zone_name = "poly-glot.ai" }
+  { pattern = "poly-glot.ai/api/prompt/*", zone_name = "poly-glot.ai" },
+  { pattern = "poly-glot.ai/api/apple/*",  zone_name = "poly-glot.ai" }
 ]
 
 # ── KV Namespaces ─────────────────────────────────────────────
