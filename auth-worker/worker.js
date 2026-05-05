@@ -2,7 +2,6 @@
  * ============================================================
  *  Poly-Glot AI — Auth + Usage Worker
  *  Cloudflare Worker — production-ready
- *  v3 — all 5 security fixes: session TTL, KV templates, per-email rate limits, HMAC signing
  * ============================================================
  *
  *  Endpoints
@@ -17,35 +16,19 @@
  *  POST /api/auth/track-usage        — CLI alias: increment usage (body: {token, count})
  *  POST /api/auth/free-signup        — "Start for Free" signup (email → magic link, plan=free)
  *  POST /api/stripe/webhook          — Stripe webhook: subscription lifecycle events
- *  POST /api/prompt/get-template     — server-gated: return tpl string after auth+plan check
- *  POST /api/prompt/sync-pick        — server-side: persist free user's picked template to KV
- *  POST /api/prompt/get-pick         — server-side: return the free user's persisted picked template
  *  OPTIONS *                         — CORS preflight → 204
  *
  *  KV bindings   : AUTH_KV
- *  Env secrets   : RESEND_API_KEY, BASE_URL, ADMIN_SECRET, HMAC_SECRET
- *
- *  Security model (all 5 fixes applied)
- *  -------------------------------------
- *  Fix 1: SESSION_TTL 7 days (was 30) — limits token leakage window
- *  Fix 2: PRO_TEMPLATE_NAMES in KV (config:pro_template_names) — not in source
- *  Fix 3: Per-email rate limit on template fetches — survives token rotation
- *  Fix 4: HMAC request signing (X-PG-Sig) with 60s replay window — always enforced
- *  Fix 5: Dual-layer rate limiting (token + email) — blocks rotation abuse
+ *  Env secrets   : RESEND_API_KEY, BASE_URL, ADMIN_SECRET
  *
  *  KV key schema
  *  -------------
- *  ratelimit:{email}               → "1"                (TTL = 60 s)
- *  token:{token}                   → JSON payload       (TTL = 900 s)
- *  session:{token}                 → JSON payload       (TTL = 7 days)
- *  plan:{email}                    → plan string        (no TTL — permanent)
- *  usage:{email}:{YYYY-MM}         → integer string     (TTL = 35 days)
- *  stripe:{customerId}             → email              (no TTL — permanent)
- *  prompt_picked:{email}           → template name      (no TTL — permanent)
- *  tpl:{name}                      → template string    (no TTL — managed via wrangler)
- *  config:pro_template_names       → JSON array         (no TTL — managed via wrangler)
- *  tpl_rate:{token}                → integer string     (TTL = 60 s)
- *  tpl_rate_email:{email}          → integer string     (TTL = 60 s)
+ *  ratelimit:{email}           → "1"                (TTL = 60 s)
+ *  token:{token}               → JSON payload       (TTL = 900 s)
+ *  session:{token}             → JSON payload       (TTL = 30 days)
+ *  plan:{email}                → plan string        (no TTL — permanent)
+ *  usage:{email}:{YYYY-MM}     → integer string     (TTL = 35 days)
+ *  stripe:{customerId}         → email              (no TTL — permanent)
  * ============================================================
  */
 
@@ -55,23 +38,17 @@
 
 const RATE_LIMIT_TTL  = 60;          // 1 request per email per 60 seconds
 const TOKEN_TTL       = 900;         // 15 minutes (magic link)
-const SESSION_TTL     = 7 * 24 * 60 * 60;  // 7 days (reduced from 30 — limits token leakage window)
-const DEVICE_TTL      = 365 * 24 * 60 * 60; // 1 year — device→email binding
-const APIKEY_TTL      = 365 * 24 * 60 * 60; // 1 year — apiKeyHash→primaryEmail binding
+const SESSION_TTL     = 30 * 24 * 60 * 60; // 30 days
 
 // ── Usage / quota constants ───────────────────────────────────────────────
-const FREE_MONTHLY_LIMIT    = 1;     // files per calendar month (UTC)
-const FREE_LIFETIME_LIMIT   = 25;    // files total, ever (free tier hard cap)
-const USAGE_TTL             = 35 * 24 * 60 * 60; // 35 days — outlasts the month
-const IP_SIGNUP_TTL         = 35 * 24 * 60 * 60; // 35 days — IP signup counter
-const IP_SIGNUP_LIMIT       = 3;     // max free accounts per IP per month
-const PRO_PLANS             = ['pro', 'team', 'enterprise'];
+const FREE_MONTHLY_LIMIT = 50;       // files per calendar month (UTC)
+const USAGE_TTL          = 35 * 24 * 60 * 60; // 35 days — outlasts the month
+const PRO_PLANS          = ['pro', 'team', 'enterprise'];
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  'https://poly-glot.ai',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  // X-PG-Sig is the HMAC request signature header (Fix 4) — must be explicitly allowed
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-PG-Surface, X-PG-Sig, X-CLI-Version, X-Admin-Secret',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -88,37 +65,6 @@ function withCors(response) {
 }
 
 /** Build a JSON Response with CORS headers already attached. */
-// ── CLI version gate ──────────────────────────────────────────────────────────
-// Any request carrying X-CLI-Version that is older than MINIMUM_CLI_VERSION
-// gets a hard 410 Gone with an upgrade message.  Requests with no
-// X-CLI-Version header (browser, VS Code extension, curl) pass through.
-const MINIMUM_CLI_VERSION = '2.1.36';
-
-function parseSemver(v) {
-  const parts = String(v || '').replace(/^v/, '').split('.').map(Number);
-  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
-}
-
-function cliVersionTooOld(request) {
-  const sent = request.headers.get('X-CLI-Version');
-  if (!sent) return false; // not a CLI request — let it through
-  const [ma, mi, pa] = parseSemver(sent);
-  const [ra, ri, rp] = parseSemver(MINIMUM_CLI_VERSION);
-  if (ma !== ra) return ma < ra;
-  if (mi !== ri) return mi < ri;
-  return pa < rp;
-}
-
-function cliOutdatedResponse(request) {
-  const sent = request.headers.get('X-CLI-Version') || 'unknown';
-  return jsonResponse({
-    error: `poly-glot v${sent} is no longer supported. ` +
-           `Run: npm install -g poly-glot-ai-cli   (minimum: v${MINIMUM_CLI_VERSION})`,
-    upgrade_url: 'https://www.npmjs.com/package/poly-glot-ai-cli',
-    minimum_version: MINIMUM_CLI_VERSION,
-  }, 410);
-}
-
 function jsonResponse(data, status = 200) {
   return withCors(
     new Response(JSON.stringify(data), {
@@ -146,6 +92,9 @@ function isValidEmail(email) {
 
 // ── Disposable / throwaway email domain blocklist ─────────────────────────────
 const DISPOSABLE_DOMAINS = new Set([
+  '10minutemail.com','10minutemail.net','10minutemail.org','10minutemail.de',
+  '10minutemail.nl','10minutemail.be','10minutemail.co.uk','10minutemail.info',
+  '10minutemail.us','10minemail.com','10mail.org','10minutemail.cf',
   'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
   'guerrillamail.biz','guerrillamail.de','guerrillamail.info',
   'tempmail.com','temp-mail.org','temp-mail.io','throwam.com',
@@ -182,64 +131,6 @@ const DISPOSABLE_DOMAINS = new Set([
   'zoemail.net','zoemail.org','zomg.info','zxcv.com',
   'zxcvbnm.com','zzz.com','test.com','example.com',
   'sample.com','fake.com','invalid.com','noreply.com',
-  // ── 10minutemail family ──────────────────────────────────────
-  '10minutemail.com','10minutemail.net','10minutemail.org','10minutemail.de',
-  '10minutemail.info','10minutemail.us','10minutemail.xyz','10minutemail.pro',
-  '10minemail.com','10mail.org','10minutesmails.org',
-  // ── Additional common temp-mail domains ─────────────────────
-  'tempinbox.com','tempr.email','tempe.email','tmpeml.com',
-  'mailtemp.info','minute-mail.com','minuteinbox.com','oneoffmail.com',
-  'getairmail.com','filzmail.de','owlpic.com','discardmail.com',
-  'binkmail.com','bobmail.info','chammy.info','devnullmail.com',
-  'dingbone.com','disposablemail.at','dispostable.com','dodgeit.com',
-  'drdrb.com','dump-email.info','fakedemail.com','filzmail.com',
-  'freemail.ms','garbagemail.org','get2mail.fr','ghosttexter.de',
-  'girlsundertheinfluence.com','gishpuppy.com','gustr.com',
-  'hatespam.org','herp.in','hidemail.de','hidzz.com',
-  'hmamail.com','hopemail.biz','imail.org','imails.net',
-  'inoutmail.com','inoutmail.de','inoutmail.eu','inoutmail.info',
-  'jnxjn.com','junk.burntmail.com','kasmail.com','klassmaster.com',
-  'klzlk.com','kurzepost.de','lol.com','lookugly.com',
-  'lortemail.dk','losemymail.com','lr78.com','lucky-l.com',
-  'mailbidon.com','maileater.com','mailexpire.com','mailfall.com',
-  'mailin8r.com','mailinater.com','mailinator.net','mailinator2.com',
-  'mailincubator.com','mailismagic.com','mailme.ir','mailme.lv',
-  'mailme24.com','mailmod.com','mailmoat.com','mailnew.com',
-  'mailnull.net','mailpe.net','mailpoof.com','mailseal.de',
-  'mailslite.com','mailsiphon.com','mailtemp.org','mailzilla.com',
-  'mailzilla.org','meltmail.com','messagebeamer.de','mfsa.ru',
-  'mierdamail.com','mintemail.com','moncourrier.fr.nf','moakt.com',
-  'motique.de','myspamless.com','mzuqifn.com','nada.email',
-  'nadaemail.com','netmails.net','netmails.com','noicd.com',
-  'nomailme.com','no-spam.ws','nomail.pw','notmailinator.com',
-  'nowhere.org','nowmymail.com','objectmail.com','obobbo.com',
-  'odnorazovoe.ru','onewaymail.com','online.ms','oopi.org',
-  'owlpic.com','pimpedupmyspace.com','pjjkp.com','politikerclub.de',
-  'pokemail.net','poofy.org','postalmail.biz','postpro.net',
-  'privacy.net','proxymail.eu','pwrby.com','rklips.com',
-  'rmqkr.net','rppkn.com','rstarmail.com','safetymail.info',
-  'sanfinder.com','safetypost.de','secure-mail.biz','selfdestructingmail.com',
-  'sendspamhere.com','sharedmailbox.org','shitmail.me','shortmail.net',
-  'shotmail.ru','skeefmail.com','slopsbox.com','slushmail.com',
-  'smellfear.com','sneakemail.com','snkmail.com','sofimail.com',
-  'soodonims.com','spam.la','spambox.us','spamcorpse.com',
-  'spamfree.eu','spaml.de','spamspot.com','spamstack.net',
-  'squizzy.de','srcbx.com','sst.gl','startpages.com',
-  'stuffinmailbox.com','suremail.info','svk.jp','sweetxxx.de',
-  'tafmail.com','tmail.ws','tmpmail.net','tmpmail.org',
-  'toiea.com','trbvn.com','trecex.com','trillianpro.com',
-  'turbo.city','turual.com','twinmail.de','tyldd.com',
-  'uggsrock.com','umail.net','uroid.com','us.af',
-  'venompen.com','veryrealemail.com','vidchart.com','vomoto.com',
-  'vpn.st','vsimcard.com','vubby.com','webemail.me',
-  'weg-werf-email.de','wegwerfadresse.de','wegwerfemail.com',
-  'wetrainbayarea.com','wh4f.org','whopy.com','wilemail.com',
-  'wMailer.com','wolfsmail.tk','writeme.us','wronghead.com',
-  'xagloo.com','xemaps.com','xents.com','xmaily.com',
-  'xoxy.net','xyzfree.net','yapped.net','yodx.ro',
-  'yuurok.com','z1p.biz','za.com','zehnminuten.de',
-  'zehnminutenmail.de','zetmail.com','zippymail.info','zoaxe.com',
-  'zoemail.net','zoemail.org',
 ]);
 
 function isDisposableEmail(email) {
@@ -251,11 +142,9 @@ function isDisposableEmail(email) {
 function isTestEmail(email) {
   const local = email.split('@')[0]?.toLowerCase() ?? '';
   return (
-    // Keyword alone, or followed by digits/separators/end — but NOT followed by letters
-    // Blocks: test@, test123@, test-foo@, test.foo@  — but NOT: tester@, testing@, testuser@
-    /^(test|smoke|demo|fake|dummy|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)(\d|[-._+]|$)/.test(local) ||
-    // Ends with -keyword or .keyword (e.g. my-test, audit.test2)
-    /[-._](test|smoke|demo|fake|audit|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)\d*$/.test(local)
+    /^(test|smoke|demo|fake|dummy|noreply|example|sample|temp|throwaway|disposable|spam|trash|junk|delete|remove|bounce|invalid)\b/.test(local) ||
+    /-(test|smoke|demo|fake|audit)\d*$/.test(local) ||
+    /\.(test|smoke|demo|fake|audit)\d*$/.test(local)
   );
 }
 
@@ -325,9 +214,7 @@ function buildEmailHtml(magicLink, toEmail) {
                 Your magic link is here&nbsp;✨
               </h1>
               <p style="margin:0 0 10px;font-size:15px;color:#9ca3af;line-height:1.65;">
-                Click the button below — if you have VS Code open,
-                <strong style="color:#e5e7eb;">you'll be signed in automatically</strong>
-                with no copy-paste needed.
+                Click the button below to sign in instantly — no password needed.
                 This link expires in <strong style="color:#e5e7eb;">15&nbsp;minutes</strong>
                 and is single-use.
               </p>
@@ -339,7 +226,7 @@ function buildEmailHtml(magicLink, toEmail) {
 
           <!-- CTA button -->
           <tr>
-            <td align="center" style="padding:40px 40px 20px;">
+            <td align="center" style="padding:40px 40px 36px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td style="border-radius:14px;
@@ -355,18 +242,6 @@ function buildEmailHtml(magicLink, toEmail) {
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
-
-          <!-- VS Code auto-signin note -->
-          <tr>
-            <td align="center" style="padding:0 40px 28px;">
-              <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;text-align:center;">
-                🖥 <strong style="color:#9ca3af;">VS Code user?</strong>
-                Keep VS Code open before clicking — it will sign you in automatically.
-                <br>🌐 <strong style="color:#9ca3af;">Web / CLI user?</strong>
-                You'll see your session token on the page to copy.
-              </p>
             </td>
           </tr>
 
@@ -468,7 +343,6 @@ async function sendMagicLinkEmail(env, toEmail, magicLink) {
  * 6. Return { ok: true } or appropriate error
  */
 async function handleLogin(request, env) {
-  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   // ── Parse body ──────────────────────────────────────────────
   let body;
   try {
@@ -489,87 +363,6 @@ async function handleLogin(request, env) {
     return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
   }
 
-
-  // ── Turnstile CAPTCHA verification ─────────────────────────
-  // Only enforced when TURNSTILE_SECRET is set in Worker secrets.
-  // Clients must pass a valid Cloudflare Turnstile token in body.turnstileToken.
-  // Empty / missing token is always rejected when the secret is present.
-  if (env.TURNSTILE_SECRET) {
-    const turnstileToken = (body?.turnstileToken ?? '').trim();
-    if (!turnstileToken) {
-      return jsonResponse({ error: 'Human verification required. Please complete the CAPTCHA.' }, 400);
-    }
-    const formData = new URLSearchParams();
-    formData.append('secret', env.TURNSTILE_SECRET);
-    formData.append('response', turnstileToken);
-    const cfIp = request.headers.get('CF-Connecting-IP');
-    if (cfIp) formData.append('remoteip', cfIp);
-    try {
-      const tsRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        body: formData,
-      });
-      const tsData = await tsRes.json().catch(() => ({}));
-      if (!tsData.success) {
-        return jsonResponse({ error: 'Human verification failed. Please try again.' }, 400);
-      }
-    } catch {
-      // If Turnstile API is unreachable, fail open to avoid locking out real users
-      console.warn('[login] Turnstile API unreachable — allowing request through');
-    }
-  }
-
-
-  // ── Device deduplication ────────────────────────────────────
-  // Prevent multiple accounts being created from the same device.
-  // device:{deviceId} stores the first email that signed up on this device.
-  // If a different email tries to sign up (not log in) from the same device, block it.
-  const rawDeviceId = (body?.deviceId ?? '').trim();
-  const deviceId    = /^[0-9a-f]{32}$/i.test(rawDeviceId) ? rawDeviceId : null;
-  if (deviceId) {
-    const deviceKey      = `device:${deviceId}`;
-    const boundEmail     = await env.AUTH_KV.get(deviceKey);
-    const isNewEmail     = !boundEmail;
-    const isDifferentEmail = boundEmail && boundEmail !== email;
-    // If this device is already bound to a different email and that email
-    // has a confirmed signup key — block the new signup attempt.
-    // Allow the original email to log in again from the same device freely.
-    if (isDifferentEmail) {
-      const existingSignup = await env.AUTH_KV.get(`signup:${email}`) ?? await env.AUTH_KV.get(`prompt_signup:${email}`);
-      if (!existingSignup) {
-        // New email on a device that already has an account — block it
-        return jsonResponse(
-          { error: 'An account already exists for this device. Please sign in with your original email.' },
-          409
-        );
-      }
-      // The new email already has a confirmed signup (returning user on a shared device) — allow login
-    }
-    // If device is unbound (isNewEmail), we bind it later in resolveToken after magic link click
-    // Store deviceId on body for use downstream in resolveToken via the token payload
-  }
-
-  // ── IP signup rate limiting ─────────────────────────────────
-  // Max IP_SIGNUP_LIMIT new free accounts per IP per month.
-  // Only applies to first-time signups (no existing plan key).
-  // Returning users (already have plan:{email}) skip this check.
-  const existingPlanForIpCheck = await env.AUTH_KV.get(`plan:${email}`) ?? await env.AUTH_KV.get(`prompt_plan:${email}`);
-  const isNewUser = !existingPlanForIpCheck;
-  if (isNewUser) {
-    const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Real-IP') || 'unknown';
-    if (clientIp !== 'unknown') {
-      const ipKey   = `ip-signup:${clientIp}:${currentMonthKey()}`;
-      const ipCount = parseInt(await env.AUTH_KV.get(ipKey) ?? '0', 10);
-      if (ipCount >= IP_SIGNUP_LIMIT) {
-        return jsonResponse(
-          { error: 'Too many accounts created from this network this month. Please use an existing account or try again next month.' },
-          429
-        );
-      }
-      await env.AUTH_KV.put(ipKey, String(ipCount + 1), { expirationTtl: IP_SIGNUP_TTL });
-    }
-  }
-
   // ── Rate limiting ───────────────────────────────────────────
   const rateLimitKey = `ratelimit:${email}`;
   const rateLimitHit = await env.AUTH_KV.get(rateLimitKey);
@@ -584,59 +377,32 @@ async function handleLogin(request, env) {
   // Reserve rate-limit slot immediately
   await env.AUTH_KV.put(rateLimitKey, '1', { expirationTtl: RATE_LIMIT_TTL });
 
-  // ── Detect surface (prompt vs main app) ─────────────────────
-  // Prompt Studio has its own isolated plan namespace so that a Pro
-  // subscription on poly-glot.ai never bleeds into /prompt/ and vice-versa.
-  const source      = body?.source ?? 'email';
-  const isPromptSurface = /prompt/i.test(source);
-
   // ── Plan lookup + new-user registration ─────────────────────
-  // Prompt Studio uses prompt_plan:{email} — entirely separate from plan:{email}.
-  // This prevents auth-bleed: signing in as Pro on the main site never
-  // makes you appear as Pro on Prompt Studio.
-  const planKvKey     = isPromptSurface ? `prompt_plan:${email}` : `plan:${email}`;
-  const defaultPlan   = isPromptSurface ? 'prompt_free' : 'free';
-  const existingPlan  = await env.AUTH_KV.get(planKvKey);
+  // If no plan: key exists, this is a first-time signup — write 'free' immediately.
+  // This ensures admin/users counts ALL signups, not just paid upgrades.
+  const existingPlan = await env.AUTH_KV.get(`plan:${email}`);
   if (!existingPlan) {
-    await env.AUTH_KV.put(planKvKey, defaultPlan);
+    await env.AUTH_KV.put(`plan:${email}`, 'free');
   }
-  const plan = existingPlan ?? defaultPlan;
+  const plan = existingPlan ?? 'free';
 
   // ── Token generation + storage ──────────────────────────────
-  // Prompt tokens use prompt_token: prefix so resolveToken can detect surface.
-  const tokenPrefix = isPromptSurface ? 'prompt_token:' : 'token:';
-  const token       = generateToken();
-  const tokenData   = JSON.stringify({ email, plan, source, surface: isPromptSurface ? 'prompt' : 'app', created: Date.now(), deviceId: deviceId ?? null });
-  await env.AUTH_KV.put(`${tokenPrefix}${token}`, tokenData, { expirationTtl: TOKEN_TTL });
+  const token     = generateToken();
+  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
+  await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   // ── Build magic link ────────────────────────────────────────
-  const rootBase  = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const baseUrl   = isPromptSurface ? `${rootBase}/prompt` : rootBase;
-  const rawCallback = body?.callbackUrl ?? '';
-
-  // Validate callbackUrl — only allow localhost/127.0.0.1 to prevent open redirect
-  let callbackParam = '';
-  if (rawCallback) {
-    try {
-      const cbUrl = new URL(rawCallback);
-      if (cbUrl.hostname === '127.0.0.1' || cbUrl.hostname === 'localhost') {
-        callbackParam = `&callbackUrl=${encodeURIComponent(rawCallback)}`;
-      }
-    } catch { /* invalid URL — ignore */ }
-  }
-
-  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=${encodeURIComponent(source)}${callbackParam}`;
+  const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
 
   // ── Send email ──────────────────────────────────────────────
   const result = await sendMagicLinkEmail(env, email, magicLink);
 
   if (!result.ok) {
     // Roll back rate-limit and token so the user can retry immediately
-    // Use the correct prefix — prompt surface tokens live under prompt_token:
-    const cleanupPrefix = isPromptSurface ? 'prompt_token:' : 'token:';
     await Promise.allSettled([
       env.AUTH_KV.delete(rateLimitKey),
-      env.AUTH_KV.delete(`${cleanupPrefix}${token}`),
+      env.AUTH_KV.delete(`token:${token}`),
     ]);
     return jsonResponse(
       { error: 'Failed to send magic link email. Please try again.' },
@@ -654,7 +420,6 @@ async function handleLogin(request, env) {
  * Returns: { email, plan }
  */
 async function handleVerify(request, env) {
-  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   return resolveToken(request, env, /* deleteAfter= */ true);
 }
 
@@ -673,28 +438,27 @@ async function handleVerify(request, env) {
  *  - Manual admin calls to fix/upgrade a user
  */
 /**
- * GET /api/auth/admin/users?secret=<ADMIN_SECRET>
- *
- * Returns all registered users from KV:
- *  - total signups (plan: keys)
- *  - per-plan breakdown (free / pro / team / enterprise)
- *  - active sessions count (session: keys)
- *  - list of emails + plan + this-month usage
+ * Shared admin auth check — accepts secret via:
+ *   1. X-Admin-Secret header  (preferred — used by dashboard-stats)
+ *   2. ?secret= query param   (legacy — used by admin/users)
  */
-async function handleAdminUsers(request, env) {
-  // Accept secret via X-Admin-Secret header (preferred — doesn't appear in
-  // server logs or browser history) OR legacy ?secret= query param for
-  // backwards compatibility. Header takes precedence.
-  const url    = new URL(request.url);
-  const secret = request.headers.get('X-Admin-Secret')
-              ?? url.searchParams.get('secret')
-              ?? '';
+function checkAdminAuth(request, env) {
+  const url          = new URL(request.url);
+  const headerSecret = request.headers.get('X-Admin-Secret') ?? '';
+  const querySecret  = url.searchParams.get('secret') ?? '';
+  const adminSecret  = env.ADMIN_SECRET ?? '';
+  return adminSecret && (headerSecret === adminSecret || querySecret === adminSecret);
+}
 
-  const adminSecret = env.ADMIN_SECRET ?? '';
-  if (!adminSecret || secret !== adminSecret) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
-
+/**
+ * Core dashboard data builder — shared by handleAdminUsers and handleDashboardStats.
+ *
+ * BUG FIX (2026-05): active_unique_users was previously set to sessionKeys.length
+ * (total raw session: token count). This was wrong — one user can have many sessions
+ * (each login creates a new 30-day token). Fixed to read each session payload, extract
+ * the email, and count unique emails with at least one active session.
+ */
+async function buildDashboardData(env) {
   // ── List all KV keys ──────────────────────────────────────
   const allKeys = [];
   let cursor;
@@ -706,60 +470,67 @@ async function handleAdminUsers(request, env) {
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
 
-  // ── Separate signup keys by surface ──────────────────────
-  // signup:        written when a main-site magic link is clicked (surface=app)
-  // prompt_signup: written when a Prompt Studio magic link is clicked (surface=prompt)
-  // Each reads its own plan namespace: plan: vs prompt_plan:
-  // This prevents cross-surface bleed in plan breakdowns.
-  const signupKeys        = allKeys.filter(k => k.name.startsWith('signup:'));
-  const promptSignupKeys  = allKeys.filter(k => k.name.startsWith('prompt_signup:'));
-  const sessionKeys       = allKeys.filter(k => k.name.startsWith('session:'));
-  const promptSessionKeys = allKeys.filter(k => k.name.startsWith('prompt_session:'));
+  const YYYY_MM = new Date().toISOString().slice(0, 7);
 
-  // Unique active users = distinct emails with at least one live session token.
-  // BUG FIX: key suffix is the TOKEN (random hex), not the email.
-  // Must read each session payload and extract the email field.
-  // Capped at 200 reads to avoid excessive KV latency on large deployments.
-  const sessionKeysToRead = [...sessionKeys, ...promptSessionKeys].slice(0, 200);
-  const sessionPayloads   = await Promise.all(
-    sessionKeysToRead.map(k => env.AUTH_KV.get(k.name, 'text').catch(() => null))
+  // ── Separate key types ────────────────────────────────────
+  const planKeys       = allKeys.filter(k => k.name.startsWith('plan:'));
+  const sessionKeys    = allKeys.filter(k => k.name.startsWith('session:'));
+  const signupKeys     = allKeys.filter(k => k.name.startsWith('signup:'));
+  const promptPlanKeys = allKeys.filter(k => k.name.startsWith('prompt_plan:'));
+  const promptSigKeys  = allKeys.filter(k => k.name.startsWith('prompt_signup:'));
+  const iapTxKeys      = allKeys.filter(k => k.name.startsWith('iap:tx:'));
+  const stripeTxKeys   = allKeys.filter(k => k.name.startsWith('stripe:sub:') || k.name.startsWith('stripe:cust:'));
+
+  // ── Build set of emails that came via Apple IAP ───────────
+  const iapEmailSet = new Set();
+  const iapTxValues = await Promise.all(iapTxKeys.map(k => env.AUTH_KV.get(k.name).catch(() => null)));
+  for (const val of iapTxValues) {
+    if (val && val.includes('@')) iapEmailSet.add(val.trim().toLowerCase());
+  }
+
+  // ── FIX: count unique emails with active sessions ─────────
+  // Read all session payloads in parallel, extract email, deduplicate.
+  const sessionPayloads = await Promise.all(
+    sessionKeys.map(k => env.AUTH_KV.get(k.name).catch(() => null))
   );
-  const sessionEmails = new Set();
+  const activeEmailSet = new Set();
   for (const raw of sessionPayloads) {
     if (!raw) continue;
     try {
       const data = JSON.parse(raw);
-      if (data?.email) sessionEmails.add(data.email.toLowerCase());
+      if (data?.email) activeEmailSet.add(data.email.toLowerCase());
     } catch {}
   }
-  const activeUniqueUsers = sessionEmails.size;
+  const activeUnique = activeEmailSet.size; // FIXED: was sessionKeys.length
 
-  const YYYY_MM = new Date().toISOString().slice(0, 7);
-
-  // ── Main-site users (signup: keys → plan: namespace) ──────
-  // Fall back to plan: keys if no signup: keys exist (legacy/migrated accounts
-  // that were created before the signup: key was written on magic-link click).
-  const planKeys = allKeys.filter(k => k.name.startsWith('plan:'));
-  const userSourceKeys = signupKeys.length > 0 ? signupKeys : planKeys;
-
-  const allUsers = await Promise.all(userSourceKeys.map(async k => {
-    const isSignupKey = k.name.startsWith('signup:');
-    const email     = isSignupKey ? k.name.slice('signup:'.length) : k.name.slice('plan:'.length);
-    const signupRaw = isSignupKey ? await env.AUTH_KV.get(k.name, 'json') : null;
-    const surface   = signupRaw?.surface ?? 'app';
-    const source    = signupRaw?.source  ?? 'unknown';
-    const signupTs  = signupRaw?.ts      ?? null;
-    const plan      = (await env.AUTH_KV.get(`plan:${email}`, 'text')) ?? 'free';
-    const usageVal  = await env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`, 'text');
-    const usage     = usageVal ? parseInt(usageVal, 10) : 0;
-    return { email, plan, usage_this_month: usage, surface, source, signup_ts: signupTs };
+  // ── AI App users (plan: keys) ─────────────────────────────
+  // Read plan + signup metadata in parallel
+  const allUsers = await Promise.all(planKeys.map(async k => {
+    const email = k.name.slice('plan:'.length);
+    const [plan, usageVal, signupRaw] = await Promise.all([
+      env.AUTH_KV.get(k.name),
+      env.AUTH_KV.get(`usage:${email}:${YYYY_MM}`),
+      env.AUTH_KV.get(`signup:${email}`),
+    ]);
+    let signupMeta = {};
+    try { signupMeta = signupRaw ? JSON.parse(signupRaw) : {}; } catch {}
+    return {
+      email,
+      plan:             plan ?? 'free',
+      usage_this_month: usageVal ? parseInt(usageVal, 10) : 0,
+      surface:          signupMeta.surface  ?? 'app',
+      source:           signupMeta.source   ?? 'website',
+      signup_ts:        signupMeta.ts       ?? k.expiration ? (Date.now() - 30 * 24 * 60 * 60 * 1000) : Date.now(),
+      iap_source:       iapEmailSet.has(email) ? 'apple' : null,
+    };
   }));
 
-  // Owner + internal probe accounts — filtered server-side, never sent to client
+  // Deduplicate + filter test/disposable/probe addresses
+  const seen  = new Set();
   const OWNER_EMAILS = new Set([
     'hwmoses2@icloud.com',
     'haroldwebstermoses2@gmail.com',
-    // Gate-check / probe addresses created during testing
+    // Internal probe / gate-check addresses created during testing
     'canon.test+alias@gmail.com',
     'turnstile-probe@gmail.com',
     'realuser@gmail.com',
@@ -778,73 +549,129 @@ async function handleAdminUsers(request, env) {
     'harold.test.probe.2026@outlook.com',
     'device-test-real@gmail.com',
     'different-person-2026@protonmail.com',
+    // Disposable domain probes (gate-check accounts, never real users)
     'user@10minutemail.com',
     'probe@10minutemail.com',
     'test123@proton.me',
+    // Prompt Studio internal test
     'harold+prompttest@poly-glot.ai',
   ]);
-
-  // Deduplicate + filter tombstones, disposable addresses, and owner accounts
-  const seen  = new Set();
   const users = allUsers.filter(u => {
-    if (seen.has(u.email)) return false;
+    if (seen.has(u.email))            return false;
     seen.add(u.email);
-    if (OWNER_EMAILS.has(u.email.toLowerCase())) return false;
-    if (u.plan === 'DELETED')       return false;
-    if (isDisposableEmail(u.email)) return false;
-    if (isTestEmail(u.email))       return false;
+    if (OWNER_EMAILS.has(u.email))    return false;
+    if (isDisposableEmail(u.email))   return false;
+    if (isTestEmail(u.email))         return false;
     return true;
   });
 
-  // ── Prompt Studio users (prompt_signup: keys → prompt_plan: namespace) ──
-  // Built entirely from prompt_plan: — never reads plan: (main site).
-  // This is the accurate source of truth for Prompt Studio plan counts.
-  const allPromptUsers = await Promise.all(promptSignupKeys.map(async k => {
-    const email         = k.name.slice('prompt_signup:'.length);
-    const signupRaw     = await env.AUTH_KV.get(k.name, 'json');
-    const source        = signupRaw?.source  ?? 'unknown';
-    const signupTs      = signupRaw?.ts      ?? null;
-    const promptPlanRaw = await env.AUTH_KV.get(`prompt_plan:${email}`, 'text');
-    const plan          = promptPlanRaw ?? 'prompt_free';
-    return { email, plan, source, signup_ts: signupTs };
+  // Plan breakdown (AI App — plan: namespace)
+  const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
+  users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
+
+  // Surface breakdown (app vs prompt signups on main AI App)
+  const surfaceBreakdown = { app: 0, prompt: 0 };
+  users.forEach(u => {
+    const s = u.surface === 'prompt' ? 'prompt' : 'app';
+    surfaceBreakdown[s]++;
+  });
+
+  // ── Prompt Studio users (prompt_plan: keys) ───────────────
+  const allPromptUsers = await Promise.all(promptPlanKeys.map(async k => {
+    const email = k.name.slice('prompt_plan:'.length);
+    const [plan, sigRaw] = await Promise.all([
+      env.AUTH_KV.get(k.name),
+      env.AUTH_KV.get(`prompt_signup:${email}`),
+    ]);
+    let sigMeta = {};
+    try { sigMeta = sigRaw ? JSON.parse(sigRaw) : {}; } catch {}
+    return {
+      email,
+      plan:      plan ?? 'prompt_free',
+      source:    sigMeta.source ?? 'prompt_page',
+      signup_ts: sigMeta.ts    ?? Date.now(),
+    };
   }));
 
-  // Deduplicate + filter owner/test/disposable addresses from prompt users
-  // (reuses same OWNER_EMAILS set defined above)
-  const promptSeen  = new Set();
+  const seenPrompt = new Set();
   const promptUsers = allPromptUsers.filter(u => {
-    if (promptSeen.has(u.email))            return false;
-    promptSeen.add(u.email);
-    if (OWNER_EMAILS.has(u.email.toLowerCase())) return false;
+    if (seenPrompt.has(u.email))            return false;
+    seenPrompt.add(u.email);
+    if (OWNER_EMAILS.has(u.email))          return false;
     if (isDisposableEmail(u.email))         return false;
     if (isTestEmail(u.email))               return false;
     return true;
   });
 
-  // ── Plan breakdown (main site) ────────────────────────────
-  const breakdown = { free: 0, pro: 0, team: 0, enterprise: 0 };
-  users.forEach(u => { breakdown[u.plan] = (breakdown[u.plan] ?? 0) + 1; });
-
-  // ── Prompt Studio plan breakdown (prompt_plan: namespace only) ──
   const promptBreakdown = { prompt_free: 0, prompt_pro: 0, prompt_team: 0 };
-  promptUsers.forEach(u => { promptBreakdown[u.plan] = (promptBreakdown[u.plan] ?? 0) + 1; });
+  promptUsers.forEach(u => {
+    const plan = u.plan || 'prompt_free';
+    promptBreakdown[plan] = (promptBreakdown[plan] ?? 0) + 1;
+  });
 
-  // ── Surface breakdown (prompt vs app) ─────────────────────
-  const surfaces = { prompt: promptUsers.length, app: users.length };
+  // ── Apple IAP subscription stats ─────────────────────────
+  // Count paying users whose plan was set via Apple IAP (iap:tx: keys)
+  const appleSubUsers = users.filter(u => u.iap_source === 'apple' && u.plan !== 'free');
+  const appleSubFree  = users.filter(u => u.iap_source === 'apple' && u.plan === 'free');
+  const appleBreakdown = { pro: 0, team: 0, free: 0 };
+  users.filter(u => u.iap_source === 'apple').forEach(u => {
+    appleBreakdown[u.plan] = (appleBreakdown[u.plan] ?? 0) + 1;
+  });
 
-  return jsonResponse({
+  // Active Apple IAP transactions (iap:tx: keys still in KV = within 400-day TTL)
+  const apple_active_txs   = iapTxKeys.length;
+  const apple_paying_users = appleSubUsers.length;
+  const apple_mrr_est      = (appleBreakdown.pro || 0) * 9.99 + (appleBreakdown.team || 0) * 29.99;
+
+  return {
     ok:                    true,
     unique_users:          users.length,
-    active_sessions:       sessionKeys.length + promptSessionKeys.length, // raw token count
-    active_unique_users:   activeUniqueUsers,                              // deduplicated by email
+    active_sessions:       sessionKeys.length,
+    active_unique_users:   activeUnique,
     plan_breakdown:        breakdown,
-    prompt_plan_breakdown: promptBreakdown,  // accurate Prompt Studio plan counts
+    surface_breakdown:     surfaceBreakdown,
     prompt_unique_users:   promptUsers.length,
-    surface_breakdown:     surfaces,
+    prompt_plan_breakdown: promptBreakdown,
+    // ── Apple IAP ──────────────────────────────────────────
+    apple_active_txs,
+    apple_paying_users,
+    apple_mrr_est,
+    apple_breakdown:       appleBreakdown,
+    // ── Stripe tx count (proxy indicator) ─────────────────
+    stripe_tx_keys:        stripeTxKeys.length,
     period:                YYYY_MM,
-    users:                 users.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
-    prompt_users:          promptUsers.sort((a, b) => (b.signup_ts ?? 0) - (a.signup_ts ?? 0)),
-  });
+    users:                 users.sort((a, b) => b.signup_ts - a.signup_ts),
+    prompt_users:          promptUsers.sort((a, b) => b.signup_ts - a.signup_ts),
+  };
+}
+
+/**
+ * GET /api/auth/dashboard-stats
+ * Header: X-Admin-Secret: <ADMIN_SECRET>
+ *
+ * Full dashboard metrics — used by poly-glot.ai/dashboard/.
+ * Returns all signups, sessions, plan breakdown, prompt studio stats.
+ */
+async function handleDashboardStats(request, env) {
+  if (!checkAdminAuth(request, env)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+  const data = await buildDashboardData(env);
+  return jsonResponse(data);
+}
+
+/**
+ * GET /api/auth/admin/users?secret=<ADMIN_SECRET>
+ *
+ * Legacy endpoint — kept for backward compatibility.
+ * Delegates to the same buildDashboardData() function.
+ */
+async function handleAdminUsers(request, env) {
+  if (!checkAdminAuth(request, env)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+  const data = await buildDashboardData(env);
+  return jsonResponse(data);
 }
 
 async function handleSetPlan(request, env) {
@@ -868,26 +695,18 @@ async function handleSetPlan(request, env) {
     return jsonResponse({ error: 'A valid email address is required' }, 400);
   }
 
-  // surface param optionally targets prompt namespace ('prompt') vs main-site (default)
-  const rawSurface   = (body?.surface ?? '').trim().toLowerCase();
-  const isPromptSurf = rawSurface === 'prompt';
-
-  const VALID_PLANS_MAIN   = ['free', 'pro', 'team', 'enterprise'];
-  const VALID_PLANS_PROMPT = ['prompt_free', 'prompt_pro', 'prompt_team'];
-  const validPlans = isPromptSurf ? VALID_PLANS_PROMPT : VALID_PLANS_MAIN;
-  const normalPlan = (plan || '').trim().toLowerCase();
-  if (!validPlans.includes(normalPlan)) {
-    return jsonResponse({ error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` }, 400);
+  const VALID_PLANS = ['free', 'pro', 'team', 'enterprise'];
+  const normalPlan  = (plan || '').trim().toLowerCase();
+  if (!VALID_PLANS.includes(normalPlan)) {
+    return jsonResponse({ error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` }, 400);
   }
 
-  // ── Write to the correct namespace ──────────────────────────
-  const kvKey = isPromptSurf
-    ? `prompt_plan:${email.trim().toLowerCase()}`
-    : `plan:${email.trim().toLowerCase()}`;
+  // ── Write to KV ─────────────────────────────────────────────
+  const kvKey = `plan:${email.trim().toLowerCase()}`;
   await env.AUTH_KV.put(kvKey, normalPlan);  // no TTL — permanent until changed
 
-  console.log(`[set-plan] ${email} → ${normalPlan} (surface: ${isPromptSurf ? 'prompt' : 'main'})`);
-  return jsonResponse({ ok: true, email: email.trim().toLowerCase(), plan: normalPlan, surface: isPromptSurf ? 'prompt' : 'main' });
+  console.log(`[set-plan] ${email} → ${normalPlan}`);
+  return jsonResponse({ ok: true, email: email.trim().toLowerCase(), plan: normalPlan });
 }
 
 /**
@@ -898,466 +717,6 @@ async function handleSetPlan(request, env) {
  */
 async function handleRefresh(request, env) {
   return resolveToken(request, env, /* deleteAfter= */ false);
-}
-
-// ─────────────────────────────────────────────────────────────
-// Template content — stored exclusively in Cloudflare KV.
-// Keys: tpl:{name}  e.g. "tpl:💻 Code Review Assistant"
-// Never stored in source code — repo is public, KV is private.
-// To add/update a template: npx wrangler kv key put --namespace-id
-//   4686b5dd158944e5856f7a402c6c6d2f "tpl:Name" "content"
-// ─────────────────────────────────────────────────────────────
-
-/** Fetch template tpl string from KV. Returns null if not found. */
-async function getTemplateContent(name, env) {
-  return await env.AUTH_KV.get(`tpl:${name}`);
-}
-
-/** Check if a template name exists in KV (used for validation). */
-async function templateExists(name, env) {
-  const val = await env.AUTH_KV.get(`tpl:${name}`);
-  return val !== null;
-}
-
-// Plan membership — controls which templates require Pro
-// PRO_TEMPLATE_NAMES is stored in KV under key "config:pro_template_names"
-// as a JSON array — never hardcoded in source so names aren't enumerable
-// from the public repo. Use isProTemplate(name, env) for all checks.
-// To update: npx wrangler kv key put --namespace-id 4686b5dd158944e5856f7a402c6c6d2f \
-//   "config:pro_template_names" '["⚖️ Legal Contract Reviewer",...]'
-
-// In-memory cache per Worker isolate — avoids KV read on every request
-let _proNamesCache = null;
-let _proNamesCacheTs = 0;
-const PRO_NAMES_CACHE_TTL = 60 * 1000; // 60 seconds
-
-async function isProTemplate(name, env) {
-  const now = Date.now();
-  if (!_proNamesCache || (now - _proNamesCacheTs) > PRO_NAMES_CACHE_TTL) {
-    try {
-      const raw = await env.AUTH_KV.get('config:pro_template_names');
-      _proNamesCache = new Set(raw ? JSON.parse(raw) : []);
-      _proNamesCacheTs = now;
-    } catch {
-      _proNamesCache = new Set();
-    }
-  }
-  return _proNamesCache.has(name);
-}
-
-// ─────────────────────────────────────────────────────────────
-// POST /api/prompt/get-template
-//
-// Resolves session token → verifies plan → returns tpl string.
-// Pro templates require a pro/team/enterprise plan.
-// Free templates require only a valid session (any plan).
-// Free users are also limited to their one persisted pick.
-//
-// Body:    { token: string, name: string }
-// Returns: { tpl: string } or 401/403
-// ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// Fix 4: HMAC request signing for /api/prompt/* endpoints
-//
-// Client must send header:
-//   X-PG-Sig: t={unixSeconds}.{hmac}
-//
-// Two modes (auto-selected by presence of HMAC_SECRET):
-//   Mode A — HMAC_SECRET set:
-//     key = HMAC_SECRET, payload = "{timestamp}.{token}.{name}"
-//   Mode B — no HMAC_SECRET (default/recommended):
-//     key = session token, payload = "{timestamp}.{token}.{name}"
-//     → Zero embedded secrets. Only the authenticated token holder can sign.
-//     → Including token in payload ensures sigs are unique per user+name+time,
-//       preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
-//
-// Rules:
-//   - Timestamp must be within ±60 seconds of server time (replay protection)
-//   - Missing/invalid/expired sig → 401 before any KV reads occur
-//   - Always enforced in production (no bypass mode)
-//
-// KV key schema (no new keys needed — pure header check)
-// ─────────────────────────────────────────────────────────────
-const HMAC_SIG_WINDOW_SECS = 60;
-
-/**
- * Verify X-PG-Sig header.
- * Returns true if valid (or if HMAC_SECRET not set — dev mode).
- * Returns false if signature is wrong, expired, or malformed.
- */
-async function verifyPromptSig(request, token, name, env) {
-  // Fix 4: HMAC request signing — always active.
-  // Two modes:
-  //   a) HMAC_SECRET configured → use env secret as key, payload = `${ts}.${token}.${name}`
-  //      (legacy: set via `wrangler secret put HMAC_SECRET`)
-  //   b) No HMAC_SECRET → use SESSION TOKEN as key, payload = `${ts}.${name}`
-  //      (default: zero embedded secrets — only the authenticated token holder can sign)
-  const sigHeader = (request.headers.get('X-PG-Sig') ?? '').trim();
-  if (!sigHeader) return false;
-
-  // Expected format: "t={timestamp}.{hmac}"
-  const match = sigHeader.match(/^t=(\d+)\.([0-9a-f]{64})$/i);
-  if (!match) return false;
-
-  const timestamp = parseInt(match[1], 10);
-  const clientSig = match[2].toLowerCase();
-
-  // Replay window check (±60s)
-  const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
-  if (age > HMAC_SIG_WINDOW_SECS) return false;
-
-  // Recompute expected HMAC
-  const enc     = new TextEncoder();
-  const envSecret = env.HMAC_SECRET ?? '';
-  const keyBytes  = enc.encode(envSecret || token);  // token-as-key when no HMAC_SECRET
-  // Both modes use identical payload: timestamp.token.name
-  // Mode (a): key=HMAC_SECRET  — server-only secret
-  // Mode (b): key=token        — user's own session token as key
-  // Including token in mode (b) payload ensures sigs are unique per user+name+time,
-  // preventing interchangeable sigs when name='' (e.g. get-pick endpoint).
-  const payload = `${timestamp}.${token}.${name}`;
-
-  const keyMat  = await crypto.subtle.importKey(
-    'raw', keyBytes,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false, ['sign']
-  );
-  const mac    = await crypto.subtle.sign('HMAC', keyMat, enc.encode(payload));
-  const hexMac = Array.from(new Uint8Array(mac))
-                      .map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // Constant-time string compare (prevent timing attacks)
-  return timingSafeEqual(hexMac, clientSig);
-}
-
-/** Constant-time string comparison — same length required. */
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Rate limit helpers for template fetches.
-// Two layers:
-//   1. Per-token  — 20 fetches / 60s  (blocks single-session abuse)
-//   2. Per-email  — 60 fetches / 60s  (blocks token rotation abuse)
-// Both must pass. Limits only consume quota on legitimate requests
-// (after auth/plan/pick checks pass).
-// ─────────────────────────────────────────────────────────────
-const TEMPLATE_RATE_LIMIT        = 20;   // per token per 60s
-const TEMPLATE_EMAIL_RATE_LIMIT  = 60;   // per email per 60s
-const TEMPLATE_RATE_LIMIT_TTL    = 60;
-
-async function checkTemplateRateLimit(token, email, env) {
-  // KV has no native atomic increment. We use a "write-then-verify" pattern
-  // to close the read-modify-write race window:
-  //
-  //   1. Read both counters in parallel (fast path reject)
-  //   2. If either is already at limit → reject immediately (no write)
-  //   3. Increment both counters in parallel (optimistic write)
-  //   4. Read both back immediately in parallel (race detection)
-  //   5. If either read-back exceeds limit → clamp to limit + deny
-  //      (this concurrent request lost the race — self-corrects for next request)
-  //
-  // Worst case: (N concurrent requests all pass step 2 simultaneously) →
-  // counter overshoots by N-1, all N are clamped and denied at step 5,
-  // counter is left at exactly the limit. No template is served over-limit.
-
-  const tokenKey = `tpl_rate:${token}`;
-  const emailKey = `tpl_rate_email:${email}`;
-
-  // ── Step 1: Read both counters in parallel ──────────────────
-  const [tokenRaw, emailRaw] = await Promise.all([
-    env.AUTH_KV.get(tokenKey),
-    env.AUTH_KV.get(emailKey),
-  ]);
-  const tokenCount = tokenRaw ? parseInt(tokenRaw, 10) : 0;
-  const emailCount = emailRaw ? parseInt(emailRaw, 10) : 0;
-
-  // ── Step 2: Fast-path reject if already at limit ────────────
-  if (tokenCount >= TEMPLATE_RATE_LIMIT)       return false;
-  if (emailCount >= TEMPLATE_EMAIL_RATE_LIMIT) return false;
-
-  // ── Step 3: Optimistic increment (both in parallel) ─────────
-  const newToken = tokenCount + 1;
-  const newEmail = emailCount + 1;
-  await Promise.all([
-    env.AUTH_KV.put(tokenKey, String(newToken), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
-    env.AUTH_KV.put(emailKey, String(newEmail), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL }),
-  ]);
-
-  // ── Step 4: Read back to detect concurrent over-limit ───────
-  const [tokenVerifyRaw, emailVerifyRaw] = await Promise.all([
-    env.AUTH_KV.get(tokenKey),
-    env.AUTH_KV.get(emailKey),
-  ]);
-  const tokenVerify = tokenVerifyRaw ? parseInt(tokenVerifyRaw, 10) : newToken;
-  const emailVerify = emailVerifyRaw ? parseInt(emailVerifyRaw, 10) : newEmail;
-
-  // ── Step 5: Clamp and deny if race overshot the limit ───────
-  if (tokenVerify > TEMPLATE_RATE_LIMIT || emailVerify > TEMPLATE_EMAIL_RATE_LIMIT) {
-    // Clamp both back to their limit so next request sees the correct ceiling
-    await Promise.all([
-      tokenVerify > TEMPLATE_RATE_LIMIT
-        ? env.AUTH_KV.put(tokenKey, String(TEMPLATE_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
-        : Promise.resolve(),
-      emailVerify > TEMPLATE_EMAIL_RATE_LIMIT
-        ? env.AUTH_KV.put(emailKey, String(TEMPLATE_EMAIL_RATE_LIMIT), { expirationTtl: TEMPLATE_RATE_LIMIT_TTL })
-        : Promise.resolve(),
-    ]);
-    return false;  // deny — concurrent request exceeded limit
-  }
-
-  return true;
-}
-
-async function handleGetTemplate(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Invalid request body' }, 400);
-  }
-
-  const token = (body?.token ?? '').trim();
-  const name  = (body?.name  ?? '').trim();
-
-  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
-  if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
-
-  // ── 0. HMAC request signature (Fix 4) ──────────────────────
-  // Verified before any KV reads — invalid/expired/missing sig
-  // is rejected immediately with zero information leakage.
-  const sigOk = await verifyPromptSig(request, token, name, env);
-  if (!sigOk) {
-    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
-  }
-
-  // ── 1. Resolve session ──────────────────────────────────────
-  // Check prompt-namespaced keys first, then legacy session/token
-  // prefixes so all existing users continue to work seamlessly.
-  let email = null;
-  let plan  = 'prompt_free';
-
-  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
-    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        email = data.email ?? null;
-        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
-        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
-        // Two completely separate auth flows, two separate KV namespaces.
-        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
-      } catch { email = null; }
-      break;
-    }
-  }
-
-  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
-
-  // ── 2. Pro gate ─────────────────────────────────────────────
-  const isPro = await isProTemplate(name, env);
-  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
-  if (isPro && !userHasPro) {
-    return jsonResponse({ error: 'Pro plan required', upgrade: true }, 403);
-  }
-
-  // ── 3. Free-pick gate (BEFORE rate limiter) ─────────────────
-  // Free users are hard-locked to exactly one template stored in KV.
-  // Enumeration attempts are rejected here at the data layer —
-  // no rate limit quota is consumed on denied requests, so even
-  // hammering the endpoint with different names wastes nothing
-  // and reveals nothing. The rate limiter below is a backstop only.
-  if (!isPro && !userHasPro) {
-    const pickKey = `prompt_picked:${email}`;
-    const existingRaw = await env.AUTH_KV.getWithMetadata(pickKey);
-    const existing = existingRaw?.value ?? null;
-
-    if (existing && existing !== name) {
-      // Locked to a different template — hard deny, zero info leak
-      return jsonResponse({
-        error: 'Free plan allows 1 template. Upgrade for all templates.',
-        currentPick: existing,
-        upgrade: true,
-      }, 403);
-    }
-
-    if (!existing) {
-      // First access — claim atomically with claimId to win any race
-      const claimId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await env.AUTH_KV.put(pickKey, name, {
-        metadata: { claimId, email, setAt: Date.now() },
-      });
-      // Read back — if another parallel request won, reject this one
-      const verify = await env.AUTH_KV.getWithMetadata(pickKey);
-      if (verify?.value !== name || verify?.metadata?.claimId !== claimId) {
-        return jsonResponse({
-          error: 'Free plan allows 1 template. Upgrade for all templates.',
-          currentPick: verify?.value ?? name,
-          upgrade: true,
-        }, 403);
-      }
-    }
-    // existing === name → already their pick, fall through
-  }
-
-  // ── 4. Rate limiter (backstop — only reached by legitimate requests) ──
-  // At this point auth, plan, and pick are all verified. Rate limiting
-  // prevents high-volume programmatic extraction of served content.
-  // Free users effectively never hit this (locked to 1 template anyway).
-  // Pro users: 20 fetches per token per 60s — generous for normal use.
-  const allowed = await checkTemplateRateLimit(token, email, env);
-  if (!allowed) {
-    return jsonResponse({ error: 'Too many requests. Please slow down.' }, 429);
-  }
-
-  // ── 5. Fetch and serve template content from KV ─────────────
-  const tpl = await getTemplateContent(name, env);
-  if (!tpl) return jsonResponse({ error: 'Template not found' }, 404);
-
-  return jsonResponse({ tpl });
-}
-
-// ─────────────────────────────────────────────────────────────
-// POST /api/prompt/sync-pick
-//
-// Persists a free user's template pick to KV server-side.
-// Idempotent — if a pick already exists it is returned unchanged
-// (first pick wins). Pro users always get { ok: true, pro: true }.
-//
-// Body:    { token: string, name: string }
-// Returns: { ok: true, pick: string } or 401/403
-// ─────────────────────────────────────────────────────────────
-async function handleSyncPick(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Invalid request body' }, 400);
-  }
-
-  const token = (body?.token ?? '').trim();
-  const name  = (body?.name  ?? '').trim();
-
-  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
-  if (!name)  return jsonResponse({ error: 'Template name required' }, 400);
-
-  // ── HMAC request signature (Fix 4) ─────────────────────────
-  const sigOk = await verifyPromptSig(request, token, name, env);
-  if (!sigOk) {
-    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
-  }
-
-  // Resolve session
-  let email = null;
-  let plan  = 'prompt_free';
-
-  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
-    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        email = data.email ?? null;
-        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
-        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
-        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
-      } catch { email = null; }
-      break;
-    }
-  }
-
-  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
-
-  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
-  if (userHasPro) return jsonResponse({ ok: true, pro: true, pick: name });
-
-  // Reject Pro template names — free users cannot claim a Pro template as their pick
-  if (await isProTemplate(name, env)) {
-    return jsonResponse({ error: 'Pro plan required to use this template', upgrade: true }, 403);
-  }
-
-  // Validate template exists in KV
-  if (!await templateExists(name, env)) return jsonResponse({ error: 'Template not found' }, 404);
-
-  // Check existing pick — first pick wins, never overwrite
-  const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
-  if (existing) {
-    return jsonResponse({ ok: true, pick: existing, alreadySet: true });
-  }
-
-  // Persist the pick with metadata for auditability
-  await env.AUTH_KV.put(`prompt_picked:${email}`, name, {
-    metadata: { source: 'sync_pick', email, setAt: Date.now() },
-  });
-  return jsonResponse({ ok: true, pick: name });
-}
-
-// ─────────────────────────────────────────────────────────────
-// POST /api/prompt/get-pick
-//
-// Returns the server-persisted free template pick for this user.
-// Used on page load to sync UI with KV truth (covers legacy users
-// who had localStorage picks before server-side sync existed).
-//
-// Body:    { token: string }
-// Returns: { pick: string|null, pro: bool }
-// ─────────────────────────────────────────────────────────────
-async function handleGetPick(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Invalid request body' }, 400);
-  }
-
-  const token = (body?.token ?? '').trim();
-  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
-
-  // ── HMAC request signature (Fix 4) ─────────────────────────
-  // get-pick has no template name — client signs with name='' (empty string)
-  const sigOk = await verifyPromptSig(request, token, '', env);
-  if (!sigOk) {
-    return jsonResponse({ error: 'Invalid or expired request signature' }, 401);
-  }
-
-  let email = null;
-  let plan  = 'prompt_free';
-
-  for (const prefix of ['prompt_session:', 'prompt_token:']) { // ONLY prompt-namespaced sessions — main-site tokens rejected
-    const raw = await env.AUTH_KV.get(`${prefix}${token}`);
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        email = data.email ?? null;
-        // Prompt Studio reads ONLY prompt_plan: — never falls back to plan: (main site).
-        // A main-site Pro subscription does NOT grant Prompt Studio Pro access.
-        plan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) || 'prompt_free';
-      } catch { email = null; }
-      break;
-    }
-  }
-
-  if (!email) return jsonResponse({ error: 'Unauthorized' }, 401);
-
-  const userHasPro = ['prompt_pro', 'prompt_team'].includes(plan.toLowerCase()); // ONLY prompt_plan: values — main-site plans never grant Prompt Studio Pro
-  if (userHasPro) return jsonResponse({ pick: null, pro: true, plan });
-
-  // Legacy migration: if no KV pick exists but a localStorage pick was sent,
-  // persist it to KV so old users keep their selection seamlessly.
-  // Security: only FREE template names are accepted — Pro names are rejected
-  // so a user can't claim a Pro template as their free pick via this path.
-  const existing = await env.AUTH_KV.get(`prompt_picked:${email}`);
-  if (!existing && body?.legacyPick) {
-    const legacy = String(body.legacyPick).trim();
-    const isValidFreePick = await templateExists(legacy, env) && !(await isProTemplate(legacy, env));
-    if (isValidFreePick) {
-      await env.AUTH_KV.put(`prompt_picked:${email}`, legacy, {
-        metadata: { source: 'legacy_migration', email, setAt: Date.now() },
-      });
-      return jsonResponse({ pick: legacy, pro: false, plan, migrated: true });
-    }
-  }
-
-  return jsonResponse({ pick: existing || null, pro: false, plan });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1372,13 +731,17 @@ async function handleGetPick(request, env) {
 // Never deletes the token — safe to call on every command.
 // ─────────────────────────────────────────────────────────────
 async function handleCheckPlan(request, env) {
-  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
-  let body;
-  try { body = await request.json(); } catch {
-    return jsonResponse({ valid: false, error: 'token is required' }, 401);
+  // Support both GET (?token=...) and POST ({ token: ... })
+  let token = '';
+  if (request.method === 'GET') {
+    token = new URL(request.url).searchParams.get('token') ?? '';
+  } else {
+    let body;
+    try { body = await request.json(); } catch {
+      return jsonResponse({ valid: false, error: 'token is required' }, 401);
+    }
+    token = (body?.token ?? '').trim();
   }
-
-  const token = (body?.token ?? '').trim();
   if (!token) return jsonResponse({ valid: false, error: 'token is required' }, 401);
 
   // Check session: prefix first (long-lived 30-day tokens from login flow)
@@ -1410,28 +773,15 @@ async function resolveSession(request, env) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   if (!token) return null;
 
-  // Detect surface from header — prompt page sends X-PG-Surface: prompt
-  const surface = (request.headers.get('X-PG-Surface') || '').toLowerCase();
-  const isPromptSurface = surface === 'prompt';
-
-  // Strict surface isolation — no cross-namespace fallback.
-  // Prompt Studio tokens ONLY resolve against prompt_session:/prompt_token:.
-  // Main-site tokens ONLY resolve against session:/token:.
-  // A main-site session can never be used on /prompt/ and vice-versa.
-  const prefixes = isPromptSurface
-    ? ['prompt_session:', 'prompt_token:']   // NO fallback to session:/token:
-    : ['session:', 'token:'];                 // NO fallback to prompt_session:
-
-  for (const prefix of prefixes) {
+  // Accept both session: keys (30-day) and legacy token: keys
+  for (const prefix of ['session:', 'token:']) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
     if (raw) {
       try {
         const data = JSON.parse(raw);
-        // Each surface reads its own plan namespace exclusively
-        const planKvKey   = isPromptSurface ? `prompt_plan:${data.email}` : `plan:${data.email}`;
-        const defaultPlan = isPromptSurface ? 'prompt_free' : 'free';
-        const planRaw     = await env.AUTH_KV.get(planKvKey);
-        return { email: data.email, plan: planRaw || defaultPlan, surface: isPromptSurface ? 'prompt' : 'app' };
+        // Look up current plan (may have changed since token was issued)
+        const planRaw = await env.AUTH_KV.get(`plan:${data.email}`);
+        return { email: data.email, plan: planRaw || data.plan || 'free' };
       } catch { return null; }
     }
   }
@@ -1464,44 +814,6 @@ async function incrementUsageCount(email, n, env) {
   return next;
 }
 
-/** Get lifetime usage for an email (never resets). Returns integer. */
-async function getLifetimeUsage(email, env) {
-  const raw = await env.AUTH_KV.get(`usage-lifetime:${email}`);
-  return raw ? parseInt(raw, 10) : 0;
-}
-
-/** Increment lifetime usage for an email by n. Returns new lifetime count. */
-async function incrementLifetimeUsage(email, n, env) {
-  const current = await getLifetimeUsage(email, env);
-  const next    = current + n;
-  // No TTL — lifetime counter never expires
-  await env.AUTH_KV.put(`usage-lifetime:${email}`, String(next));
-  return next;
-}
-
-/**
- * Full quota check for free users: monthly AND lifetime.
- * Returns { blocked: true, reason, used, limit } or { blocked: false }.
- * Pro users always pass (limit === null).
- */
-async function checkAllQuotas(email, plan, count, env) {
-  if (PRO_PLANS.includes(plan)) return { blocked: false };
-
-  // ── Lifetime cap ─────────────────────────────────────────────
-  const lifetimeUsed = await getLifetimeUsage(email, env);
-  if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
-    return { blocked: true, reason: 'lifetime_limit', used: lifetimeUsed, limit: FREE_LIFETIME_LIMIT };
-  }
-
-  // ── Monthly cap ──────────────────────────────────────────────
-  const monthlyUsed = await getUsageCount(email, env);
-  if (monthlyUsed >= FREE_MONTHLY_LIMIT) {
-    return { blocked: true, reason: 'monthly_limit', used: monthlyUsed, limit: FREE_MONTHLY_LIMIT };
-  }
-
-  return { blocked: false, monthlyUsed, lifetimeUsed };
-}
-
 /** Returns monthly limit for a given plan */
 function planLimit(plan) {
   return PRO_PLANS.includes(plan) ? null : FREE_MONTHLY_LIMIT; // null = unlimited
@@ -1517,37 +829,16 @@ async function handleUsageGet(request, env) {
   if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   const { email, plan } = session;
-  const isPro           = PRO_PLANS.includes(plan);
   const used            = await getUsageCount(email, env);
   const limit           = planLimit(plan);
   const remaining       = limit === null ? null : Math.max(0, limit - used);
-  const lifetimeUsed    = isPro ? null : await getLifetimeUsage(email, env);
-  const lifetimeLimit   = isPro ? null : FREE_LIFETIME_LIMIT;
-  const lifetimeRemaining = isPro ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0));
-  const lifetimeLimitHit  = !isPro && (lifetimeUsed ?? 0) >= FREE_LIFETIME_LIMIT;
-
-  // If lifetime limit is hit, signal it as 429 so the client gates immediately
-  if (lifetimeLimitHit) {
-    return jsonResponse({
-      email, plan,
-      used, limit, remaining: 0,
-      lifetimeUsed, lifetimeLimit, lifetimeRemaining: 0,
-      lifetimeLimitHit: true,
-      month: currentMonthKey(),
-      reset: null,  // monthly reset doesn't help — lifetime cap
-    }, 429);
-  }
 
   return jsonResponse({
     email,
     plan,
     used,
-    limit,
-    remaining,
-    lifetimeUsed,
-    lifetimeLimit,
-    lifetimeRemaining,
-    lifetimeLimitHit: false,
+    limit,        // null = unlimited (pro/team/enterprise)
+    remaining,    // null = unlimited
     month: currentMonthKey(),
     reset: (() => {
       const d = new Date();
@@ -1575,24 +866,8 @@ async function handleUsageIncrement(request, env) {
   const { email, plan } = session;
   const limit           = planLimit(plan);
 
-  // ── Pre-check: monthly AND lifetime quotas ───────────────────
+  // ── Pre-check: would this increment exceed the limit? ────────
   if (limit !== null) {
-    // Lifetime cap
-    const lifetimeUsed = await getLifetimeUsage(email, env);
-    if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
-      return jsonResponse({
-        error:            'Lifetime free limit reached',
-        used:             await getUsageCount(email, env),
-        limit,
-        remaining:        0,
-        lifetimeUsed,
-        lifetimeLimit:    FREE_LIFETIME_LIMIT,
-        lifetimeLimitHit: true,
-        allowed:          false,
-        month:            currentMonthKey(),
-      }, 429);
-    }
-    // Monthly cap
     const current = await getUsageCount(email, env);
     if (current >= limit) {
       return jsonResponse({
@@ -1606,22 +881,18 @@ async function handleUsageIncrement(request, env) {
     }
   }
 
-  // ── Increment both monthly and lifetime ──────────────────────
-  const used         = await incrementUsageCount(email, files, env);
-  const lifetimeUsed = PRO_PLANS.includes(plan) ? null : await incrementLifetimeUsage(email, files, env);
-  const remaining    = limit === null ? null : Math.max(0, limit - used);
+  // ── Increment ─────────────────────────────────────────────────
+  const used      = await incrementUsageCount(email, files, env);
+  const remaining = limit === null ? null : Math.max(0, limit - used);
 
-  console.log(`[usage] ${email} → monthly:${used}/${limit ?? '∞'} lifetime:${lifetimeUsed ?? '∞'}/${FREE_LIFETIME_LIMIT} (${currentMonthKey()})`);
+  console.log(`[usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
 
   return jsonResponse({
     used,
     limit,
     remaining,
-    lifetimeUsed,
-    lifetimeLimit:    PRO_PLANS.includes(plan) ? null : FREE_LIFETIME_LIMIT,
-    lifetimeRemaining: PRO_PLANS.includes(plan) ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0)),
-    allowed:          true,
-    month:            currentMonthKey(),
+    allowed: true,
+    month:   currentMonthKey(),
   });
 }
 
@@ -1634,36 +905,18 @@ async function resolveToken(request, env, deleteAfter) {
   try {
     body = await request.json();
   } catch {
-    return jsonResponse({ error: 'token is required' }, 401);
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
   const { token } = body ?? {};
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    return jsonResponse({ error: 'token is required' }, 401);
+    return jsonResponse({ error: 'token is required' }, 400);
   }
 
-  // ── KV lookup — try prompt_token: first, then token: ────────
-  // prompt_token: prefix means this is a Prompt Studio magic link.
-  // token: prefix means this is a main-site (VS Code / CLI) magic link.
-  let kvKey  = null;
-  let raw    = null;
-  let isPromptToken = false;
+  const kvKey = `token:${token.trim()}`;
 
-  const promptKvKey = `prompt_token:${token.trim()}`;
-  const appKvKey    = `token:${token.trim()}`;
-
-  const promptRaw = await env.AUTH_KV.get(promptKvKey);
-  if (promptRaw !== null) {
-    kvKey = promptKvKey;
-    raw   = promptRaw;
-    isPromptToken = true;
-  } else {
-    const appRaw = await env.AUTH_KV.get(appKvKey);
-    if (appRaw !== null) {
-      kvKey = appKvKey;
-      raw   = appRaw;
-    }
-  }
+  // ── KV lookup ───────────────────────────────────────────────
+  const raw = await env.AUTH_KV.get(kvKey);
 
   if (raw === null) {
     return jsonResponse({ error: 'Invalid or expired token' }, 401);
@@ -1674,58 +927,17 @@ async function resolveToken(request, env, deleteAfter) {
   try {
     data = JSON.parse(raw);
   } catch {
+    // Corrupted entry — clean up and reject
     await env.AUTH_KV.delete(kvKey).catch(() => {});
     return jsonResponse({ error: 'Invalid or expired token' }, 401);
   }
 
-  // ── Consume one-time token + create long-lived session ───────
+  // ── Consume or retain token ─────────────────────────────────
   if (deleteAfter) {
     await env.AUTH_KV.delete(kvKey);
-
-    // Session key also namespaced by surface to prevent cross-bleed
-    const sessionPrefix = isPromptToken ? 'prompt_session:' : 'session:';
-    // SESSION_TTL is the global constant (7 days) — no local re-declaration
-    await env.AUTH_KV.put(
-      `${sessionPrefix}${token.trim()}`,
-      JSON.stringify({ email: data.email, plan: data.plan, surface: data.surface ?? (isPromptToken ? 'prompt' : 'app'), created: Date.now() }),
-      { expirationTtl: SESSION_TTL },
-    );
-
-    // ── Record confirmed signup ───────────────────────────────
-    const rawSource = data.source ?? '';
-    const surface   = isPromptToken ? 'prompt' : 'app';
-    // Use surface-specific signup key so prompt and app signups are tracked separately
-    const signupKey = isPromptToken ? `prompt_signup:${data.email}` : `signup:${data.email}`;
-    const existing  = await env.AUTH_KV.get(signupKey, 'json');
-    if (!existing) {
-      await env.AUTH_KV.put(signupKey, JSON.stringify({
-        email:   data.email,
-        source:  rawSource || 'unknown',
-        surface: surface,
-        ts:      Date.now(),
-      }));
-    }
-
-    // ── Bind device → email on first confirmed signup ─────────
-    // Written here (not at /login) so we only bind after the user
-    // actually clicks the magic link — prevents binding from abandoned signups.
-    const confirmedDeviceId = data.deviceId ?? null;
-    if (confirmedDeviceId && /^[0-9a-f]{32}$/i.test(confirmedDeviceId)) {
-      const deviceKey    = `device:${confirmedDeviceId}`;
-      const alreadyBound = await env.AUTH_KV.get(deviceKey);
-      if (!alreadyBound) {
-        await env.AUTH_KV.put(deviceKey, data.email, { expirationTtl: DEVICE_TTL });
-      }
-    }
   }
 
-  // ── Read live plan from surface-specific KV key ──────────────
-  // Prompt Studio: prompt_plan:{email}  — never bleeds into main site
-  // Main site:     plan:{email}         — never bleeds into /prompt/
-  const planKvKey = isPromptToken ? `prompt_plan:${data.email}` : `plan:${data.email}`;
-  const livePlan  = (await env.AUTH_KV.get(planKvKey)) || data.plan || (isPromptToken ? 'prompt_free' : 'free');
-
-  return jsonResponse({ email: data.email, plan: livePlan, surface: isPromptToken ? 'prompt' : 'app' });
+  return jsonResponse({ email: data.email, plan: data.plan });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1737,26 +949,11 @@ async function resolveToken(request, env, deleteAfter) {
  * Update these IDs if you create new prices in the Stripe dashboard.
  */
 const STRIPE_PRICE_TO_PLAN = {
-  'price_1THTUgRQVeNj16c8TvAVPfTJ': 'pro',          // Pro Monthly  $12/mo
-  'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',          // Pro Yearly   $99/yr
-  'price_1THTpsRQVeNj16c8IcauulXJ': 'team',         // Team Monthly $29/mo
-  'price_1TI9q1RQVeNj16c8BDKYHS3y': 'team',         // Team Yearly  $249/yr
-  'price_1TGLFgRQVeNj16c8K0E97fWj': 'team',         // Team Monthly $29/mo (live)
-  // Prompt Studio price IDs go here when billing is added:
-  // 'price_PROMPT_PRO_MONTHLY': 'prompt_pro',
-  // 'price_PROMPT_PRO_YEARLY':  'prompt_pro',
-  // 'price_PROMPT_TEAM_MONTHLY':'prompt_team',
+  'price_1THTUgRQVeNj16c8TvAVPfTJ': 'pro',   // Pro Monthly  $9/mo
+  'price_1TGL4gRQVeNj16c8K085nwl2': 'pro',   // Pro Yearly   $79/yr
+  'price_1THTpsRQVeNj16c8IcauulXJ': 'team',  // Team Monthly $29/mo
+  'price_1TI9q1RQVeNj16c8BDKYHS3y': 'team',  // Team Yearly  $249/yr
 };
-
-/**
- * Determine the correct KV plan key namespace from a resolved plan string.
- * prompt_pro / prompt_team → prompt_plan:{email}
- * Everything else          → plan:{email}
- */
-function planKvKeyForEmail(plan, email) {
-  const isPromptPlan = plan.startsWith('prompt_');
-  return isPromptPlan ? `prompt_plan:${email}` : `plan:${email}`;
-}
 
 /**
  * Resolve plan from a Stripe subscription object.
@@ -1806,8 +1003,7 @@ async function verifyStripeSignature(payload, sigHeader, secret) {
     const mac    = await crypto.subtle.sign('HMAC', key, enc.encode(signedPayload));
     const hexMac = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Timing-safe compare — prevents HMAC oracle via response timing
-    return timingSafeEqual(hexMac, signature);
+    return hexMac === signature;
   } catch {
     return false;
   }
@@ -1887,11 +1083,10 @@ async function handleStripeWebhook(request, env) {
         // Also check session metadata for an explicit plan hint from Stripe
         if (session?.metadata?.plan) plan = session.metadata.plan.toLowerCase();
 
-        // Route to correct namespace: prompt_plan: for prompt plans, plan: for main-site
-        const kvKey = planKvKeyForEmail(plan, email.trim().toLowerCase());
+        const kvKey = `plan:${email.trim().toLowerCase()}`;
         await env.AUTH_KV.put(kvKey, plan);
 
-        console.log(`[stripe] ✅ Activated ${plan} for ${email} (customer: ${customerId}, key: ${kvKey})`);
+        console.log(`[stripe] ✅ Activated ${plan} for ${email} (customer: ${customerId})`);
         break;
       }
 
@@ -1912,9 +1107,9 @@ async function handleStripeWebhook(request, env) {
         // Only activate on active/trialing — not past_due/canceled
         if (status === 'active' || status === 'trialing') {
           const plan  = resolvePlanFromSubscription(subscription);
-          const kvKey = planKvKeyForEmail(plan, email);
+          const kvKey = `plan:${email}`;
           await env.AUTH_KV.put(kvKey, plan);
-          console.log(`[stripe] ✅ Updated plan → ${plan} for ${email} (status: ${status}, key: ${kvKey})`);
+          console.log(`[stripe] ✅ Updated plan → ${plan} for ${email} (status: ${status})`);
         } else {
           console.log(`[stripe] ⚠️ Subscription status ${status} for ${email} — no plan change`);
         }
@@ -1933,18 +1128,9 @@ async function handleStripeWebhook(request, env) {
           break;
         }
 
-        // Downgrade to free — check which namespace this customer is in.
-        // If they had a prompt plan, downgrade prompt_plan: to prompt_free.
-        // Otherwise downgrade plan: to free.
-        const currentPlan = (await env.AUTH_KV.get(`prompt_plan:${email}`)) ?? '';
-        const isPromptSub = currentPlan.startsWith('prompt_');
-        if (isPromptSub) {
-          await env.AUTH_KV.put(`prompt_plan:${email}`, 'prompt_free');
-          console.log(`[stripe] ⬇️ Downgraded to prompt_free for ${email} (subscription cancelled)`);
-        } else {
-          await env.AUTH_KV.put(`plan:${email}`, 'free');
-          console.log(`[stripe] ⬇️ Downgraded to free for ${email} (subscription cancelled)`);
-        }
+        // Downgrade to free
+        await env.AUTH_KV.put(`plan:${email}`, 'free');
+        console.log(`[stripe] ⬇️ Downgraded to free for ${email} (subscription cancelled)`);
         break;
       }
 
@@ -1971,93 +1157,81 @@ async function handleStripeWebhook(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Chrome Web Store proxy — GET /api/auth/cws-proxy
 // ─────────────────────────────────────────────────────────────
-// Returns { installs: N, uploadState, stale?, cachedAt? }
-// Scrapes the public CWS detail page — no OAuth needed.
-// Falls back to KV stale cache if scrape fails.
+// Returns { installs: N } using the Chrome Web Store Publish API.
+// Requires env secrets:
+//   CWS_CLIENT_ID      — OAuth2 client ID from Google Cloud Console
+//   CWS_CLIENT_SECRET  — OAuth2 client secret
+//   CWS_REFRESH_TOKEN  — long-lived refresh token (one-time setup)
+//   CWS_EXTENSION_ID   — Chrome extension ID (hjpdgilolgcanemmngagpobdgdhpplai)
+//
+// Flow: refresh_token → access_token → items API → userCount
 // ─────────────────────────────────────────────────────────────
-const CWS_CACHE_KEY = 'cws:installs';
-const CWS_CACHE_TTL = 3600; // 1 hour
-
 async function handleCwsProxy(request, env) {
-  const extId = env.CWS_EXTENSION_ID || 'hjpdgilolgcanemmngagpobdgdhpplai';
-
-  // ── Helper: read stale KV value and return it as a degraded-but-live response ──
-  async function serveStaleCached(reason, hint) {
-    try {
-      const cached = await env.AUTH_KV.get(CWS_CACHE_KEY, 'json');
-      if (cached) {
-        console.warn(`CWS proxy: serving stale cache. reason=${reason}`);
-        return new Response(JSON.stringify({
-          installs: cached.installs,
-          id:       extId,
-          uploadState: cached.uploadState || null,
-          stale:    true,
-          cachedAt: cached.cachedAt,
-          error:    reason,
-          hint:     hint || null,
-        }), {
-          status: 200,
-          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        });
-      }
-    } catch {}
-    // No cache at all — return 200 with null installs so dashboard shows warning, not red error
-    return jsonResponse({ error: reason, hint: hint || null, installs: null, stale: true }, 200);
-  }
-
   try {
-    // ── Scrape public CWS detail page — no OAuth needed ─────────────────────
-    let cwsRes;
-    try {
-      cwsRes = await fetch(
-        `https://chromewebstore.google.com/detail/poly-glot-ai/${extId}`,
-        {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; poly-glot-cws-proxy/1.0)' },
-          signal: AbortSignal.timeout(8000),
-        }
-      );
-    } catch (e) {
-      console.error('CWS scrape fetch threw:', e?.message);
-      return await serveStaleCached('cws_network_error', 'Chrome Web Store page unreachable');
+    // 1. Exchange refresh token for a fresh access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     env.CWS_CLIENT_ID,
+        client_secret: env.CWS_CLIENT_SECRET,
+        refresh_token: env.CWS_REFRESH_TOKEN,
+        grant_type:    'refresh_token',
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      const err = await tokenRes.text();
+      console.error('CWS token exchange failed:', err);
+      return jsonResponse({ error: 'token_exchange_failed', installs: null }, 502);
     }
+
+    const { access_token } = await tokenRes.json();
+    if (!access_token) {
+      return jsonResponse({ error: 'no_access_token', installs: null }, 502);
+    }
+
+    // 2. Fetch extension item from Chrome Web Store Publish API
+    const extId = env.CWS_EXTENSION_ID || 'hjpdgilolgcanemmngagpobdgdhpplai';
+    const cwsRes = await fetch(
+      `https://www.googleapis.com/chromewebstore/v1.1/items/${extId}?projection=DRAFT`,
+      {
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'x-goog-api-version': '2',
+        },
+      }
+    );
 
     if (!cwsRes.ok) {
-      console.error('CWS scrape failed:', cwsRes.status);
-      return await serveStaleCached('cws_scrape_failed', `HTTP ${cwsRes.status}`);
+      const err = await cwsRes.text();
+      console.error('CWS items API failed:', err);
+      return jsonResponse({ error: 'cws_api_failed', installs: null }, 502);
     }
 
-    const html = await cwsRes.text();
+    const item = await cwsRes.json();
 
-    // Extract user count — CWS renders it as "N,NNN users" or "N users"
-    const userMatch = html.match(/([\d,]+)\s+users?/i);
-    const installs = userMatch ? parseInt(userMatch[1].replace(/,/g, ''), 10) : 0;
+    // userCount is the install count — may be 0 or absent for new extensions
+    const installs = typeof item.userCount === 'number'
+      ? item.userCount
+      : parseInt(item.userCount || '0', 10) || 0;
 
-    // Extract rating if present
-    const ratingMatch = html.match(/(\d+\.\d+)\s+out of\s+5/i);
-    const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
-
-    // ── Cache successful result in KV ────────────────────────────────────────
-    const payload = { installs, rating, uploadState: 'ACTIVE', cachedAt: new Date().toISOString() };
-    try {
-      await env.AUTH_KV.put(CWS_CACHE_KEY, JSON.stringify(payload), { expirationTtl: CWS_CACHE_TTL * 24 });
-    } catch (e) {
-      console.warn('CWS: KV cache write failed:', e?.message);
-    }
-
-    return new Response(JSON.stringify({ installs, rating, id: extId, uploadState: 'ACTIVE' }), {
+    return new Response(JSON.stringify({ installs, id: extId }), {
       status: 200,
       headers: {
         ...CORS_HEADERS,
-        'Content-Type':  'application/json',
-        'Cache-Control': `public, max-age=${CWS_CACHE_TTL}`,
+        'Content-Type': 'application/json',
+        // Cache for 1 hour at the edge — CWS updates slowly
+        'Cache-Control': 'public, max-age=3600',
       },
     });
 
   } catch (err) {
-    console.error('handleCwsProxy unhandled error:', err?.stack ?? err);
-    return await serveStaleCached('internal_error', err?.message || null);
+    console.error('handleCwsProxy error:', err?.stack ?? err);
+    return jsonResponse({ error: 'internal_error', installs: null }, 500);
   }
 }
 
@@ -2099,7 +1273,6 @@ async function handleVscProxy(request, env) {
 // ─────────────────────────────────────────────────────────────
 async function handleFreeSignup(request, env) {
   let email;
-  let freeSignupDeviceId = null;
   if (request.method === 'GET') {
     email = new URL(request.url).searchParams.get('email') ?? '';
   } else {
@@ -2108,8 +1281,6 @@ async function handleFreeSignup(request, env) {
       return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
     }
     email = (body?.email ?? '').trim().toLowerCase();
-    const rawDid = (body?.deviceId ?? '').trim();
-    freeSignupDeviceId = /^[0-9a-f]{32}$/i.test(rawDid) ? rawDid : null;
   }
 
   if (!email || !isValidEmail(email)) {
@@ -2119,21 +1290,6 @@ async function handleFreeSignup(request, env) {
   // ── Disposable / test email block ──────────────────────────
   if (isDisposableEmail(email) || isTestEmail(email)) {
     return jsonResponse({ error: 'Disposable or test email addresses are not allowed. Please use a real email.' }, 400);
-  }
-
-  // ── Device deduplication ────────────────────────────────────
-  if (freeSignupDeviceId) {
-    const deviceKey    = `device:${freeSignupDeviceId}`;
-    const boundEmail   = await env.AUTH_KV.get(deviceKey);
-    if (boundEmail && boundEmail !== email) {
-      const existingSignup = await env.AUTH_KV.get(`signup:${email}`);
-      if (!existingSignup) {
-        return jsonResponse(
-          { error: 'An account already exists for this device. Please sign in with your original email.' },
-          409
-        );
-      }
-    }
   }
 
   // Rate-limit (shared with /api/auth/login — same 60 s window)
@@ -2155,11 +1311,11 @@ async function handleFreeSignup(request, env) {
   // Generate magic-link token
   const token     = generateToken();
   const plan      = existingPlan ?? 'free';
-  const tokenData = JSON.stringify({ email, plan, source: 'vscode-free-signup', created: Date.now(), deviceId: freeSignupDeviceId ?? null });
+  const tokenData = JSON.stringify({ email, plan, created: Date.now() });
   await env.AUTH_KV.put(`token:${token}`, tokenData, { expirationTtl: TOKEN_TTL });
 
   const baseUrl   = (env.BASE_URL ?? 'https://poly-glot.ai').replace(/\/$/, '');
-  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}&source=vscode-free-signup`;
+  const magicLink = `${baseUrl}/?token=${token}&plan=${encodeURIComponent(plan)}&email=${encodeURIComponent(email)}`;
 
   const result = await sendMagicLinkEmail(env, email, magicLink);
 
@@ -2179,98 +1335,38 @@ async function handleFreeSignup(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// GET  /api/auth/get-usage?token=<sessionToken>
-// POST /api/auth/get-usage  { token: "<sessionToken>" }
-// Returns 401 (not 404) for invalid/missing tokens.
+// GET /api/auth/get-usage  (CLI alias for /api/usage/get)
+// Query: ?token=<sessionToken>
 // ─────────────────────────────────────────────────────────────
 async function handleCliGetUsage(request, env) {
-  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
-  let token = new URL(request.url).searchParams.get('token') ?? '';
-  if (!token && request.method === 'POST') {
-    try {
-      const body = await request.json();
-      token = body?.token ?? '';
-    } catch { /* malformed body — fall through to 401 */ }
-  }
-  if (!token) return jsonResponse({ error: 'Invalid or expired token' }, 401);
+  const token = new URL(request.url).searchParams.get('token') ?? '';
+  if (!token) return jsonResponse({ error: 'token query param required' }, 400);
 
   // Resolve session from token (reuse resolveSession logic directly)
   for (const prefix of ['session:', 'token:']) {
     const raw = await env.AUTH_KV.get(`${prefix}${token.trim()}`);
     if (raw) {
       try {
-        const data    = JSON.parse(raw);
-        const email   = data.email;
+        const data  = JSON.parse(raw);
+        const email = data.email;
         const planRaw = await env.AUTH_KV.get(`plan:${email}`);
         const plan    = planRaw || data.plan || 'free';
-        const isPro   = PRO_PLANS.includes(plan);
         const used    = await getUsageCount(email, env);
         const limit   = planLimit(plan);
-        const remaining      = limit === null ? null : Math.max(0, limit - used);
-        const lifetimeUsed   = isPro ? null : await getLifetimeUsage(email, env);
-        const lifetimeLimit  = isPro ? null : FREE_LIFETIME_LIMIT;
-        const lifetimeRemaining = isPro ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeUsed ?? 0));
-        const lifetimeLimitHit  = !isPro && (lifetimeUsed ?? 0) >= FREE_LIFETIME_LIMIT;
-
-        // Signal lifetime hit as 429 so app.v233 gates immediately
-        const status = lifetimeLimitHit ? 429 : 200;
+        const remaining = limit === null ? null : Math.max(0, limit - used);
         return jsonResponse({
-          ok: !lifetimeLimitHit,
+          ok: true,
           email,
           plan,
           used,
           limit,
-          remaining:          lifetimeLimitHit ? 0 : remaining,
-          lifetimeUsed,
-          lifetimeLimit,
-          lifetimeRemaining,
-          lifetimeLimitHit,
-          month:              currentMonthKey(),
-        }, status);
+          remaining,
+          month: currentMonthKey(),
+        });
       } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
     }
   }
   return jsonResponse({ error: 'Invalid or expired token' }, 401);
-}
-
-// ─────────────────────────────────────────────────────────────
-// POST /api/auth/admin/delete-user
-// Hard-deletes all KV keys for a given email (plan:, session:, token:, usage:, ratelimit:)
-// Body: { email, secret }
-// ─────────────────────────────────────────────────────────────
-async function handleAdminDeleteUser(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
-  }
-  const { email, secret } = body ?? {};
-  const adminSecret = env.ADMIN_SECRET ?? '';
-  if (!adminSecret || secret !== adminSecret) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
-  if (!email || !isValidEmail(email)) {
-    return jsonResponse({ error: 'Valid email required' }, 400);
-  }
-  const YYYY_MM = new Date().toISOString().slice(0, 7);
-  const keysToDelete = [
-    // Main-site namespace
-    `plan:${email}`,
-    `ratelimit:${email}`,
-    `usage:${email}:${YYYY_MM}`,
-    // Prompt Studio namespace — must also be cleared on full account delete
-    `prompt_plan:${email}`,
-    `prompt_signup:${email}`,
-    `prompt_picked:${email}`,
-  ];
-  // Write tombstone FIRST so handleAdminUsers filters this user out immediately,
-  // even before KV edge cache propagates the delete (eventual consistency workaround).
-  await env.AUTH_KV.put(`plan:${email}`, 'DELETED', { expirationTtl: 3600 }); // auto-expires in 1hr
-
-  // Now delete all keys (best-effort — tombstone above is the immediate filter)
-  const results = await Promise.allSettled(
-    keysToDelete.map(k => env.AUTH_KV.delete(k))
-  );
-  return jsonResponse({ ok: true, email, deleted: keysToDelete, results: results.map(r => r.status) });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2290,15 +1386,7 @@ async function handleGithubAppTrackUsage(request, env) {
     return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
-  // ── Auth: require ADMIN_SECRET ─────────────────────────────
-  // Only the poly-glot GitHub App backend (which knows ADMIN_SECRET)
-  // may call this endpoint. Prevents arbitrary installationId inflation.
-  const { installationId, month, secret } = body ?? {};
-  const adminSecret = env.ADMIN_SECRET ?? '';
-  if (!adminSecret || secret !== adminSecret) {
-    return jsonResponse({ error: 'Unauthorized' }, 401);
-  }
-
+  const { installationId, month } = body ?? {};
   if (!installationId) {
     return jsonResponse({ error: 'installationId is required' }, 400);
   }
@@ -2335,78 +1423,15 @@ async function handleGithubAppTrackUsage(request, env) {
 // POST /api/auth/track-usage  (CLI alias for /api/usage/increment)
 // Body: { token, count }
 // ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// API-key level quota enforcement
-//
-// KV schema:
-//   apikey:{hash}        → primaryEmail (string, first email that used this key)
-//   apikey-usage:{hash}:{YYYY-MM} → count (string, shared counter across all emails)
-//
-// Logic:
-//   1. On every track-usage call that includes apiKeyHash:
-//      - Bind hash → primaryEmail if not already bound
-//      - Increment apikey-usage:{hash}:{month} counter
-//      - If that counter exceeds FREE_LIMIT and account is free → block regardless of email
-//
-// This means: spinning up email2, email3… with the same API key hits the
-// same monthly counter. Pro users are exempt (limit === null).
-// ─────────────────────────────────────────────────────────────
-const APIKEY_FREE_LIMIT = 1; // must match CLI FREE_MONTHLY_LIMIT
-
-async function getApiKeyUsage(hash, env) {
-  const month = currentMonthKey();
-  const raw   = await env.AUTH_KV.get(`apikey-usage:${hash}:${month}`);
-  return raw ? parseInt(raw, 10) : 0;
-}
-
-async function incrementApiKeyUsage(hash, count, env) {
-  const month  = currentMonthKey();
-  const kvKey  = `apikey-usage:${hash}:${month}`;
-  const raw    = await env.AUTH_KV.get(kvKey);
-  const current = raw ? parseInt(raw, 10) : 0;
-  const next    = current + count;
-  // TTL: expire at end of month + 7 days buffer
-  await env.AUTH_KV.put(kvKey, String(next), { expirationTtl: 38 * 24 * 60 * 60 });
-  return next;
-}
-
-// Validates API key hash and enforces cross-account quota for free tier.
-// Returns { blocked: true, used, limit } if the key pool is exhausted.
-// Returns { blocked: false } if ok to proceed (or no hash supplied / Pro user).
-async function checkApiKeyQuota(apiKeyHash, plan, count, env) {
-  if (!apiKeyHash || typeof apiKeyHash !== 'string' || !/^[0-9a-f]{32}$/i.test(apiKeyHash)) {
-    return { blocked: false }; // no hash sent — legacy CLI, let email quota handle it
-  }
-  const limit = planLimit(plan);
-  if (limit === null) return { blocked: false }; // Pro/Team/Enterprise — unlimited
-
-  const kvKey      = `apikey:${apiKeyHash}`;
-  const existing   = await env.AUTH_KV.get(kvKey);
-  // Bind hash → primaryEmail on first use (informational — for admin visibility)
-  // Already bound = just read; not bound = bind lazily on first increment
-  const keyUsed    = await getApiKeyUsage(apiKeyHash, env);
-  const remaining  = Math.max(0, APIKEY_FREE_LIMIT - keyUsed);
-
-  if (remaining <= 0) {
-    return { blocked: true, used: keyUsed, limit: APIKEY_FREE_LIMIT, remaining: 0 };
-  }
-  if (count > remaining) {
-    return { blocked: true, used: keyUsed, limit: APIKEY_FREE_LIMIT, remaining, batchTooLarge: true };
-  }
-  return { blocked: false, keyUsed, remaining };
-}
-
 async function handleCliTrackUsage(request, env) {
-  if (cliVersionTooOld(request)) return cliOutdatedResponse(request);
   let body;
   try { body = await request.json(); } catch {
-    return jsonResponse({ error: 'token is required' }, 401);
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
   }
 
-  const token      = (body?.token ?? '').trim();
-  const count      = Math.max(1, parseInt(body?.count ?? 1, 10));
-  const apiKeyHash = (body?.apiKeyHash ?? '').trim() || null;
-  if (!token) return jsonResponse({ error: 'token is required' }, 401);
+  const token = (body?.token ?? '').trim();
+  const count = Math.max(1, parseInt(body?.count ?? 1, 10));
+  if (!token) return jsonResponse({ error: 'token is required' }, 400);
 
   for (const prefix of ['session:', 'token:']) {
     const raw = await env.AUTH_KV.get(`${prefix}${token}`);
@@ -2418,59 +1443,13 @@ async function handleCliTrackUsage(request, env) {
         const plan    = planRaw || data.plan || 'free';
         const limit   = planLimit(plan);
 
-        // ── API key quota check (cross-account enforcement) ──────────────
-        if (apiKeyHash) {
-          const keyCheck = await checkApiKeyQuota(apiKeyHash, plan, count, env);
-          if (keyCheck.blocked) {
-            const used = keyCheck.used ?? 0;
-            const lim  = keyCheck.limit ?? APIKEY_FREE_LIMIT;
-            console.log(`[track-usage] BLOCKED by apiKeyHash ${apiKeyHash.slice(0,8)}… ${email} → ${used}/${lim}`);
+        // Pre-check quota
+        if (limit !== null) {
+          const current = await getUsageCount(email, env);
+          if (current >= limit) {
             return jsonResponse({
               ok:        false,
               error:     'Monthly limit reached',
-              used,
-              limit:     lim,
-              remaining: 0,
-              allowed:   false,
-              month:     currentMonthKey(),
-            }, 429);
-          }
-          // Bind hash → primaryEmail on first use
-          const kvKey = `apikey:${apiKeyHash}`;
-          const bound = await env.AUTH_KV.get(kvKey);
-          if (!bound) {
-            await env.AUTH_KV.put(kvKey, email, { expirationTtl: APIKEY_TTL });
-          }
-          // Increment key-level counter
-          await incrementApiKeyUsage(apiKeyHash, count, env);
-        }
-
-        // ── Lifetime + monthly quota check ───────────────────────────────
-        if (limit !== null) {
-          // Lifetime cap — never resets, blocks month-cycling abuse
-          const lifetimeUsed = await getLifetimeUsage(email, env);
-          if (lifetimeUsed >= FREE_LIFETIME_LIMIT) {
-            console.log(`[track-usage] BLOCKED lifetime ${email} → ${lifetimeUsed}/${FREE_LIFETIME_LIMIT}`);
-            return jsonResponse({
-              ok:               false,
-              error:            'Lifetime free limit reached. Upgrade to Pro for unlimited usage.',
-              used:             await getUsageCount(email, env),
-              limit,
-              remaining:        0,
-              lifetimeUsed,
-              lifetimeLimit:    FREE_LIFETIME_LIMIT,
-              lifetimeLimitHit: true,
-              allowed:          false,
-              month:            currentMonthKey(),
-            }, 429);
-          }
-          // Monthly cap
-          const current = await getUsageCount(email, env);
-          if (current >= limit) {
-            console.log(`[track-usage] BLOCKED monthly ${email} → ${current}/${limit}`);
-            return jsonResponse({
-              ok:        false,
-              error:     'Monthly limit reached. Resets next month, or upgrade to Pro for unlimited usage.',
               used:      current,
               limit,
               remaining: 0,
@@ -2480,18 +1459,10 @@ async function handleCliTrackUsage(request, env) {
           }
         }
 
-        // ── Increment monthly + lifetime ─────────────────────────────────
-        const used         = await incrementUsageCount(email, count, env);
-        const lifetimeNew  = PRO_PLANS.includes(plan) ? null : await incrementLifetimeUsage(email, count, env);
-        const remaining    = limit === null ? null : Math.max(0, limit - used);
-        console.log(`[track-usage] ${email} → monthly:${used}/${limit ?? '∞'} lifetime:${lifetimeNew ?? '∞'}/${FREE_LIFETIME_LIMIT} key:${apiKeyHash ? apiKeyHash.slice(0,8)+'…' : 'none'} (${currentMonthKey()})`);
-        return jsonResponse({
-          ok: true, used, limit, remaining,
-          lifetimeUsed:      lifetimeNew,
-          lifetimeLimit:     PRO_PLANS.includes(plan) ? null : FREE_LIFETIME_LIMIT,
-          lifetimeRemaining: PRO_PLANS.includes(plan) ? null : Math.max(0, FREE_LIFETIME_LIMIT - (lifetimeNew ?? 0)),
-          allowed: true, month: currentMonthKey(),
-        });
+        const used      = await incrementUsageCount(email, count, env);
+        const remaining = limit === null ? null : Math.max(0, limit - used);
+        console.log(`[track-usage] ${email} → ${used}/${limit ?? '∞'} (${currentMonthKey()})`);
+        return jsonResponse({ ok: true, used, limit, remaining, allowed: true, month: currentMonthKey() });
       } catch { return jsonResponse({ error: 'Invalid token data' }, 401); }
     }
   }
@@ -2499,202 +1470,10 @@ async function handleCliTrackUsage(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// GitHub App stats proxy — GET /api/auth/gh-proxy
-// Returns { installations: N } from the GitHub App
-// ─────────────────────────────────────────────────────────────
-// Allowlisted endpoint paths for the GitHub App proxy.
-// ONLY these values may be forwarded — prevents open SSRF via ?endpoint=
-const GH_PROXY_ALLOWED_ENDPOINTS = new Set(['stats', 'health']);
-
-async function handleGhProxy(request, env) {
-  const t0 = Date.now();
-  try {
-    const url = new URL(request.url);
-    const rawEndpoint = url.searchParams.get('endpoint') || 'stats';
-
-    // ── SSRF guard: allowlist check ────────────────────────────
-    if (!GH_PROXY_ALLOWED_ENDPOINTS.has(rawEndpoint)) {
-      return jsonResponse({ error: 'Invalid endpoint' }, 400);
-    }
-    const endpoint = rawEndpoint;
-
-    // Render free tier cold-starts can take up to 30 s.
-    // We time out at 18 s and flag it so the dashboard shows "waking" not "error".
-    const ctrl = new AbortController();
-    const to   = setTimeout(() => ctrl.abort(), 18000);
-    let ghRes;
-    try {
-      ghRes = await fetch(
-        `https://poly-glot-github-app.onrender.com/${endpoint}`,
-        { headers: { 'Accept': 'application/json' }, signal: ctrl.signal }
-      );
-    } catch (e) {
-      clearTimeout(to);
-      const elapsed = Date.now() - t0;
-      const coldStart = elapsed >= 17500; // timed out ≈ cold start
-      console.warn(`handleGhProxy: fetch threw after ${elapsed}ms — coldStart=${coldStart}:`, e?.message);
-      return new Response(JSON.stringify({ installations: 0, coldStart, elapsed }), {
-        status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      });
-    }
-    clearTimeout(to);
-
-    const elapsed = Date.now() - t0;
-    if (!ghRes.ok) {
-      return new Response(JSON.stringify({ installations: 0, coldStart: false, elapsed }), {
-        status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      });
-    }
-    const data = await ghRes.json();
-    return new Response(JSON.stringify({ ...data, coldStart: false, elapsed }), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    console.error('handleGhProxy error:', err?.stack ?? err);
-    return jsonResponse({ installations: 0, coldStart: false, elapsed: Date.now() - t0 }, 200);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Telemetry stats proxy — GET /api/auth/tel-proxy
-// ─────────────────────────────────────────────────────────────
-// Proxies telemetry.poly-glot.ai/stats?secret=<TEL_SECRET> so the
-// secret never appears in client HTML. Caches result in KV for 5 min.
-// ─────────────────────────────────────────────────────────────
-const TEL_CACHE_KEY = 'tel:stats';
-const TEL_CACHE_TTL = 300; // 5 minutes
-
-async function handleTelProxy(request, env) {
-  // Try KV cache first
-  try {
-    const cached = await env.AUTH_KV.get(TEL_CACHE_KEY, 'json');
-    if (cached && cached._cachedAt && (Date.now() - cached._cachedAt) < TEL_CACHE_TTL * 1000) {
-      return new Response(JSON.stringify(cached), {
-        status: 200,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
-      });
-    }
-  } catch {}
-
-  const telSecret = env.TEL_SECRET || env.TELEMETRY_SECRET || '';
-
-  try {
-    let res;
-
-    // Prefer service binding (Worker-to-Worker, no HTTP, no 522 issue).
-    if (env.TELEMETRY_WORKER) {
-      res = await env.TELEMETRY_WORKER.fetch('https://telemetry.poly-glot.ai/stats/public');
-    } else {
-      // Fallback: direct HTTP to public endpoint (no secret in URL)
-      res = await fetch('https://telemetry.poly-glot.ai/stats/public', {
-        headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(8000),
-      });
-      // Last resort: authenticated endpoint via header
-      if (!res.ok && telSecret) {
-        res = await fetch('https://telemetry.poly-glot.ai/stats', {
-          headers: { Accept: 'application/json', 'X-Stats-Secret': telSecret },
-          signal: AbortSignal.timeout(8000),
-        });
-      }
-    }
-    if (!res.ok) return jsonResponse({ error: 'upstream_error', status: res.status, commands: null }, 200);
-    const data = await res.json();
-    // Cache in KV
-    try {
-      await env.AUTH_KV.put(TEL_CACHE_KEY, JSON.stringify({ ...data, _cachedAt: Date.now() }), { expirationTtl: TEL_CACHE_TTL * 6 });
-    } catch {}
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
-    });
-  } catch (err) {
-    console.error('handleTelProxy error:', err?.message);
-    return jsonResponse({ error: 'network_error', commands: null }, 200);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Health Report — GET /api/auth/health-report
-// ─────────────────────────────────────────────────────────────
-// Returns a self-diagnosis JSON object for the dashboard.
-// Checks:
-//   • Which secrets are configured vs missing
-//   • KV store reachability + round-trip latency
-//   • CWS refresh token presence
-//   • RESEND_API_KEY presence
-//   • ADMIN_SECRET presence
-//   • MINIMUM_CLI_VERSION in effect
-//
-// This endpoint is PUBLIC (no auth) — it reveals only boolean
-// "is configured" flags, never secret values.
-// ─────────────────────────────────────────────────────────────
-async function handleHealthReport(request, env) {
-  const t0 = Date.now();
-  const report = {
-    ts: new Date().toISOString(),
-    worker: 'poly-glot-auth',
-    version: MINIMUM_CLI_VERSION,
-  };
-
-  // ── Secret presence checks (boolean only — never expose values) ──
-  // Only check secrets that this worker actually uses
-  report.secrets = {
-    RESEND_API_KEY:        !!env.RESEND_API_KEY,
-    ADMIN_SECRET:          !!env.ADMIN_SECRET,
-    CWS_CLIENT_ID:         !!env.CWS_CLIENT_ID,
-    CWS_CLIENT_SECRET:     !!env.CWS_CLIENT_SECRET,
-    CWS_REFRESH_TOKEN:     !!env.CWS_REFRESH_TOKEN,
-    CWS_EXTENSION_ID:      !!env.CWS_EXTENSION_ID,
-    TEL_SECRET:            !!(env.TEL_SECRET || env.TELEMETRY_SECRET),
-    TURNSTILE_SECRET:      !!env.TURNSTILE_SECRET,
-    MAGIC_LINK_SECRET:     !!env.MAGIC_LINK_SECRET,
-    STRIPE_SECRET_KEY:     !!env.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET: !!env.STRIPE_WEBHOOK_SECRET,
-  };
-
-  // ── KV reachability ──────────────────────────────────────────
-  const kvStart = Date.now();
-  let kvOk = false;
-  try {
-    await env.AUTH_KV.put('health:ping', '1', { expirationTtl: 60 });
-    const v = await env.AUTH_KV.get('health:ping');
-    kvOk = v === '1';
-  } catch {}
-  report.kv = { ok: kvOk, ms: Date.now() - kvStart };
-
-  // ── CWS stale cache check ────────────────────────────────────
-  try {
-    const cached = await env.AUTH_KV.get(CWS_CACHE_KEY, 'json');
-    report.cws_cache = cached
-      ? { present: true, cachedAt: cached.cachedAt, installs: cached.installs }
-      : { present: false };
-  } catch {
-    report.cws_cache = { present: false };
-  }
-
-  // ── Missing secrets summary ──────────────────────────────────
-  const missingSecrets = Object.entries(report.secrets)
-    .filter(([, v]) => !v)
-    .map(([k]) => k);
-  report.missing_secrets = missingSecrets;
-  report.healthy = kvOk && missingSecrets.length === 0;
-  report.elapsed_ms = Date.now() - t0;
-
-  return new Response(JSON.stringify(report, null, 2), {
-    status: 200,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
-}
-
-// ─────────────────────────────────────────────────────────────
 // GET /api/auth/billing-portal
-// Authorization: Bearer {sessionToken}
-// Looks up user's Stripe customer, creates a portal session, redirects.
-// Returns 401 if unauthenticated, 404 if no Stripe customer found.
+// Headers: Authorization: Bearer {sessionToken}
+// Redirects authenticated user to their Stripe customer portal.
+// Returns 401 if no valid session, 404 if no Stripe customer found.
 // ─────────────────────────────────────────────────────────────
 async function handleBillingPortal(request, env) {
   const session = await resolveSession(request, env);
@@ -2703,10 +1482,13 @@ async function handleBillingPortal(request, env) {
   const stripeKey = env.STRIPE_SECRET_KEY;
   if (!stripeKey) return jsonResponse({ error: 'Billing not configured' }, 503);
 
+  // Find Stripe customer ID for this email
+  // We store stripe:{customerId} → email, so we need to search by email
+  // Use Stripe API to find customer by email
   try {
     const searchRes = await fetch(
       `https://api.stripe.com/v1/customers/search?query=email:'${encodeURIComponent(session.email)}'&limit=1`,
-      { headers: { 'Authorization': `Bearer ${stripeKey}` }, signal: AbortSignal.timeout(10000) }
+      { headers: { 'Authorization': `Bearer ${stripeKey}` } }
     );
     if (!searchRes.ok) return jsonResponse({ error: 'Stripe error' }, 502);
     const searchData = await searchRes.json();
@@ -2720,8 +1502,10 @@ async function handleBillingPortal(request, env) {
         'Authorization': `Bearer ${stripeKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({ customer: customerId, return_url: `${baseUrl}/` }),
-      signal: AbortSignal.timeout(10000),
+      body: new URLSearchParams({
+        customer:   customerId,
+        return_url: `${baseUrl}/`,
+      }),
     });
     if (!portalRes.ok) return jsonResponse({ error: 'Could not create portal session' }, 502);
     const portal = await portalRes.json();
@@ -2733,8 +1517,71 @@ async function handleBillingPortal(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// GET /api/auth/tel-proxy
+// Proxies telemetry stats from telemetry.poly-glot.ai/stats
+// using the TEL_SECRET env var server-side (never exposed to browser).
+// ─────────────────────────────────────────────────────────────
+async function handleTelProxy(request, env) {
+  const telSecret = env.TEL_SECRET;
+  if (!telSecret) return jsonResponse({ error: 'Telemetry not configured', total_commands: 0 }, 200);
+  try {
+    const res = await fetch('https://telemetry.poly-glot.ai/stats', {
+      headers: { 'X-Secret': telSecret },
+    });
+    if (!res.ok) return jsonResponse({ error: 'Telemetry error', total_commands: 0 }, 200);
+    const data = await res.json();
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('handleTelProxy error:', err?.stack ?? err);
+    return jsonResponse({ error: 'Telemetry unavailable', total_commands: 0 }, 200);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GET /api/auth/health-report
+// Returns worker self-diagnostic: KV reachability, secrets present, version.
+// ─────────────────────────────────────────────────────────────
+async function handleHealthReport(request, env) {
+  const t0 = Date.now();
+  let kvOk = false;
+  try {
+    await env.AUTH_KV.get('__health_probe__');
+    kvOk = true;
+  } catch {}
+  const kvMs = Date.now() - t0;
+
+  const missingSecrets = [];
+  if (!env.RESEND_API_KEY)        missingSecrets.push('RESEND_API_KEY');
+  if (!env.ADMIN_SECRET)          missingSecrets.push('ADMIN_SECRET');
+  if (!env.STRIPE_WEBHOOK_SECRET) missingSecrets.push('STRIPE_WEBHOOK_SECRET');
+  if (!env.STRIPE_SECRET_KEY)     missingSecrets.push('STRIPE_SECRET_KEY');
+
+  // CWS cache probe
+  let cwsCache = { present: false };
+  try {
+    const cached = await env.AUTH_KV.get('cws:cached');
+    if (cached) {
+      const d = JSON.parse(cached);
+      cwsCache = { present: true, cachedAt: d.cachedAt };
+    }
+  } catch {}
+
+  return jsonResponse({
+    healthy: kvOk && missingSecrets.length === 0,
+    version: '4',
+    ts: Date.now(),
+    kv: { ok: kvOk, ms: kvMs },
+    missing_secrets: missingSecrets,
+    cws_cache: cwsCache,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // POST /api/auth/activate-iap
-// Body: { token, transactionId, productId }
+// Body: { token, receiptData, transactionId }
 // Links an Apple in-app purchase to an authenticated account.
 // ─────────────────────────────────────────────────────────────
 async function handleActivateIAP(request, env) {
@@ -2759,6 +1606,7 @@ async function handleActivateIAP(request, env) {
   const { transactionId, productId } = body ?? {};
   if (!transactionId) return jsonResponse({ error: 'transactionId is required' }, 400);
 
+  // Determine plan from productId
   const IAP_PRODUCT_TO_PLAN = {
     'ai.polyglot.promptstudio.pro.monthly':  'pro',
     'ai.polyglot.promptstudio.pro.yearly':   'pro',
@@ -2767,14 +1615,15 @@ async function handleActivateIAP(request, env) {
   };
   const plan = IAP_PRODUCT_TO_PLAN[productId] ?? 'pro';
 
-  // Prevent replay — check if transaction already activated
-  const txKey   = `iap:tx:${transactionId}`;
+  // Prevent replay: check if transaction already activated
+  const txKey = `iap:tx:${transactionId}`;
   const existing = await env.AUTH_KV.get(txKey);
   if (existing) return jsonResponse({ ok: true, plan, email, already_activated: true });
 
+  // Activate plan + record transaction
   await Promise.all([
     env.AUTH_KV.put(`plan:${email}`, plan),
-    env.AUTH_KV.put(txKey, email, { expirationTtl: 400 * 24 * 60 * 60 }),
+    env.AUTH_KV.put(txKey, email, { expirationTtl: 400 * 24 * 60 * 60 }), // ~13 months
   ]);
 
   console.log(`[iap] ✅ Activated ${plan} for ${email} (tx: ${transactionId})`);
@@ -2783,7 +1632,8 @@ async function handleActivateIAP(request, env) {
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/apple/webhook
-// Apple App Store Server Notifications V2 — JWS signed payload.
+// Apple App Store Server Notifications V2
+// Verifies JWS payload and handles subscription events.
 // ─────────────────────────────────────────────────────────────
 async function handleAppleWebhook(request, env) {
   let body;
@@ -2794,25 +1644,29 @@ async function handleAppleWebhook(request, env) {
   const signedPayload = body?.signedPayload;
   if (!signedPayload) return jsonResponse({ error: 'Missing signedPayload' }, 400);
 
+  // Decode JWS payload (header.payload.signature — base64url encoded)
   try {
     const parts = signedPayload.split('.');
     if (parts.length < 2) return jsonResponse({ error: 'Invalid JWS format' }, 400);
 
-    const payloadJson   = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const notifType     = payloadJson?.notificationType;
-    const txInfo        = payloadJson?.data?.signedTransactionInfo;
+    const payloadJson = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const notifType   = payloadJson?.notificationType;
+    const subtype     = payloadJson?.subtype;
+    const txInfo      = payloadJson?.data?.signedTransactionInfo;
 
     let txPayload = null;
     if (txInfo) {
       const txParts = txInfo.split('.');
       if (txParts.length >= 2) {
-        try { txPayload = JSON.parse(atob(txParts[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch {}
+        try {
+          txPayload = JSON.parse(atob(txParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        } catch {}
       }
     }
 
-    const productId         = txPayload?.productId         ?? '';
-    const transactionId     = txPayload?.originalTransactionId ?? txPayload?.transactionId ?? '';
-    const appAccountToken   = txPayload?.appAccountToken   ?? '';
+    const productId     = txPayload?.productId ?? '';
+    const transactionId = txPayload?.originalTransactionId ?? txPayload?.transactionId ?? '';
+    const appAccountToken = txPayload?.appAccountToken ?? ''; // email stored here if set at purchase
 
     const IAP_PRODUCT_TO_PLAN = {
       'ai.polyglot.promptstudio.pro.monthly':  'pro',
@@ -2822,12 +1676,12 @@ async function handleAppleWebhook(request, env) {
     };
     const plan = IAP_PRODUCT_TO_PLAN[productId] ?? 'pro';
 
-    console.log(`[apple] ${notifType} · product: ${productId} · tx: ${transactionId}`);
+    console.log(`[apple] Event: ${notifType}/${subtype} · product: ${productId} · tx: ${transactionId}`);
 
     switch (notifType) {
       case 'DID_RENEW':
       case 'SUBSCRIBED': {
-        if (appAccountToken?.includes('@')) {
+        if (appAccountToken && appAccountToken.includes('@')) {
           const email = appAccountToken.trim().toLowerCase();
           await env.AUTH_KV.put(`plan:${email}`, plan);
           if (transactionId) {
@@ -2839,7 +1693,7 @@ async function handleAppleWebhook(request, env) {
       }
       case 'EXPIRED':
       case 'DID_FAIL_TO_RENEW': {
-        if (appAccountToken?.includes('@')) {
+        if (appAccountToken && appAccountToken.includes('@')) {
           const email = appAccountToken.trim().toLowerCase();
           await env.AUTH_KV.put(`plan:${email}`, 'free');
           console.log(`[apple] ⬇️ Downgraded to free for ${email} (${notifType})`);
@@ -2847,7 +1701,7 @@ async function handleAppleWebhook(request, env) {
         break;
       }
       default:
-        console.log(`[apple] Unhandled: ${notifType}`);
+        console.log(`[apple] Unhandled notification type: ${notifType}`);
     }
 
     return jsonResponse({ received: true });
@@ -2858,6 +1712,171 @@ async function handleAppleWebhook(request, env) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// POST /api/auth/admin/delete-user
+// Header: X-Admin-Secret or body.secret
+// Body: { email, secret? }
+// Purges ALL KV keys for a given email (plan, sessions, usage, signup).
+// ─────────────────────────────────────────────────────────────
+async function handleDeleteUser(request, env) {
+  if (!checkAdminAuth(request, env)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const email = (body?.email ?? '').trim().toLowerCase();
+  if (!email || !isValidEmail(email)) {
+    return jsonResponse({ error: 'A valid email is required' }, 400);
+  }
+
+  // List all keys and delete those belonging to this email
+  const allKeys = [];
+  let cursor;
+  do {
+    const opts = { limit: 1000 };
+    if (cursor) opts.cursor = cursor;
+    const page = await env.AUTH_KV.list(opts);
+    allKeys.push(...page.keys);
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+
+  // Keys that directly reference this email
+  const directPrefixes = [
+    `plan:${email}`,
+    `signup:${email}`,
+    `prompt_plan:${email}`,
+    `prompt_signup:${email}`,
+    `ratelimit:${email}`,
+  ];
+  // Usage keys: usage:{email}:{YYYY-MM}
+  const usageKeys = allKeys
+    .filter(k => k.name.startsWith(`usage:${email}:`))
+    .map(k => k.name);
+
+  // Session keys: need to read payload to match email
+  const sessionKeys = allKeys.filter(k =>
+    k.name.startsWith('session:') || k.name.startsWith('token:')
+  );
+  const sessionPayloads = await Promise.all(
+    sessionKeys.map(k => env.AUTH_KV.get(k.name).catch(() => null))
+  );
+  const matchedSessionKeys = sessionKeys
+    .filter((k, i) => {
+      try { return JSON.parse(sessionPayloads[i])?.email === email; } catch { return false; }
+    })
+    .map(k => k.name);
+
+  const toDelete = [...new Set([...directPrefixes, ...usageKeys, ...matchedSessionKeys])];
+
+  await Promise.allSettled(toDelete.map(k => env.AUTH_KV.delete(k)));
+
+  console.log(`[delete-user] Purged ${toDelete.length} KV keys for ${email}`);
+  return jsonResponse({ ok: true, email, deleted_keys: toDelete.length });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/get-template
+// Headers: Authorization: Bearer {sessionToken}
+// Body: { name: string }
+// Fetches a saved prompt template from KV for the authenticated user.
+// ─────────────────────────────────────────────────────────────
+async function handleGetTemplate(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const name = (body?.name ?? '').trim();
+  if (!name) return jsonResponse({ error: 'name is required' }, 400);
+
+  const key = `prompt_template:${session.email}:${name}`;
+  const raw = await env.AUTH_KV.get(key);
+  if (!raw) return jsonResponse({ error: 'Template not found' }, 404);
+
+  try {
+    const template = JSON.parse(raw);
+    return jsonResponse({ ok: true, template });
+  } catch {
+    return jsonResponse({ error: 'Corrupt template data' }, 500);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/sync-pick
+// Headers: Authorization: Bearer {sessionToken}
+// Body: { templateId: string }
+// Saves the user's favourite template pick to KV.
+// ─────────────────────────────────────────────────────────────
+async function handleSyncPick(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  let body;
+  try { body = await request.json(); } catch {
+    return jsonResponse({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const templateId = (body?.templateId ?? '').trim();
+  if (!templateId) return jsonResponse({ error: 'templateId is required' }, 400);
+
+  const key = `prompt_pick:${session.email}`;
+  await env.AUTH_KV.put(key, JSON.stringify({ templateId, updatedAt: Date.now() }));
+
+  return jsonResponse({ ok: true, templateId });
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/prompt/get-pick
+// Headers: Authorization: Bearer {sessionToken}
+// Retrieves the user's saved favourite template pick from KV.
+// ─────────────────────────────────────────────────────────────
+async function handleGetPick(request, env) {
+  const session = await resolveSession(request, env);
+  if (!session) return jsonResponse({ error: 'Unauthorized' }, 401);
+
+  const key = `prompt_pick:${session.email}`;
+  const raw = await env.AUTH_KV.get(key);
+  if (!raw) return jsonResponse({ ok: true, templateId: null });
+
+  try {
+    const data = JSON.parse(raw);
+    return jsonResponse({ ok: true, templateId: data.templateId, updatedAt: data.updatedAt });
+  } catch {
+    return jsonResponse({ ok: true, templateId: null });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// GitHub App stats proxy — GET /api/auth/gh-proxy
+// Returns { installations: N } from the GitHub App
+// ─────────────────────────────────────────────────────────────
+async function handleGhProxy(request, env) {
+  try {
+    const url = new URL(request.url);
+    const endpoint = url.searchParams.get('endpoint') || 'stats';
+    // Route to the Render-hosted GitHub App stats endpoint
+    const ghRes = await fetch(
+      `https://poly-glot-github-app.onrender.com/${endpoint}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!ghRes.ok) return jsonResponse({ installations: 0 }, 200);
+    const data = await ghRes.json();
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('handleGhProxy error:', err?.stack ?? err);
+    return jsonResponse({ installations: 0 }, 200);
+  }
+}
+
 // Main fetch handler (entry point)
 // ─────────────────────────────────────────────────────────────
 
@@ -2881,23 +1900,11 @@ export default {
         case '/api/auth/ping':
           return jsonResponse({ ok: true, ts: Date.now() }, 200);
 
-        case '/api/auth/health-report':
-          return await handleHealthReport(request, env);
-
-        // Telemetry stats proxy — passes TEL_SECRET server-side so it never
-        // appears in client HTML. Returns same JSON as telemetry.poly-glot.ai/stats.
-        case '/api/auth/tel-proxy':
-          return await handleTelProxy(request, env);
-
         case '/api/auth/admin/users':
           return await handleAdminUsers(request, env);
 
-        // Dashboard-facing stats endpoint — no secret required in URL or header.
-        // Returns same payload as /admin/users but authenticates via Cloudflare
-        // Access or a short-lived dashboard token stored in sessionStorage.
-        // For now: requires X-Admin-Secret header (never in URL/logs).
         case '/api/auth/dashboard-stats':
-          return await handleAdminUsers(request, env);
+          return await handleDashboardStats(request, env);
 
         case '/api/auth/check-plan':
           // CLI + VS Code extension use this to verify token and get live plan from KV
@@ -2912,6 +1919,10 @@ export default {
           return await handleCliGetUsage(request, env);
         case '/api/auth/billing-portal':
           return await handleBillingPortal(request, env);
+        case '/api/auth/tel-proxy':
+          return await handleTelProxy(request, env);
+        case '/api/auth/health-report':
+          return await handleHealthReport(request, env);
         default:
           return jsonResponse({ error: 'Not found' }, 404);
       }
@@ -2925,12 +1936,6 @@ export default {
     // ── POST route dispatch ───────────────────────────────────
     try {
       switch (pathname) {
-        case '/api/prompt/get-template':
-          return await handleGetTemplate(request, env);
-        case '/api/prompt/sync-pick':
-          return await handleSyncPick(request, env);
-        case '/api/prompt/get-pick':
-          return await handleGetPick(request, env);
         case '/api/auth/check-plan':
           return await handleCheckPlan(request, env);
 
@@ -2957,17 +1962,11 @@ export default {
           return await handleUsageIncrement(request, env);
 
         // CLI aliases — keep old paths working
-        case '/api/auth/get-usage':
-          return await handleCliGetUsage(request, env);
-
         case '/api/auth/track-usage':
           return await handleCliTrackUsage(request, env);
 
         case '/api/auth/github-app-track-usage':
           return await handleGithubAppTrackUsage(request, env);
-
-        case '/api/auth/admin/delete-user':
-          return await handleAdminDeleteUser(request, env);
 
         case '/api/auth/vsc-proxy':
           return await handleVscProxy(request, env);
@@ -2981,6 +1980,18 @@ export default {
 
         case '/api/apple/webhook':
           return await handleAppleWebhook(request, env);
+
+        case '/api/auth/admin/delete-user':
+          return await handleDeleteUser(request, env);
+
+        case '/api/prompt/get-template':
+          return await handleGetTemplate(request, env);
+
+        case '/api/prompt/sync-pick':
+          return await handleSyncPick(request, env);
+
+        case '/api/prompt/get-pick':
+          return await handleGetPick(request, env);
 
         default:
           return jsonResponse({ error: 'Not found' }, 404);
