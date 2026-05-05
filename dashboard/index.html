@@ -1292,26 +1292,20 @@ async function renderWorkers(m) {
     emailGateCard = card('🚫', 'Test email filter', '<span class="badge error">✗ Network error</span>', '/login test email block');
   }
 
-  // ── 6. Turnstile CAPTCHA — verify secret is set (worker returns 400 w/ 'human' or 'captcha' msg if enforced) ──
+  // ── 6. Turnstile CAPTCHA — send probe header; worker returns {turnstile_enforced:true} if secret set ──
   let turnstileCard = '';
   try {
     const res = await fetch('https://poly-glot.ai/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       headers: { 'Content-Type': 'application/json', 'X-Dashboard-Probe': 'turnstile' },
-      body: JSON.stringify({ email: 'turnstile-probe@gmail.com', surface: 'app', turnstileToken: '' })
+      body: JSON.stringify({ email: 'turnstile-probe@gmail.com', surface: 'app', turnstileToken: 'probe-fake-token' })
     });
     const d  = await res.json().catch(() => ({}));
-    const errMsg = (d.error || '').toLowerCase();
-    // Worker enforced: returns 400 with 'human', 'captcha', 'verification', or 'turnstile' in error
-    const ok = res.status === 400 && (
-      errMsg.includes('human') ||
-      errMsg.includes('captcha') ||
-      errMsg.includes('verification') ||
-      errMsg.includes('turnstile')
-    );
+    // Worker returns {ok:true, probe:true, turnstile_enforced:true} when TURNSTILE_SECRET is set
+    // and the fake token fails Cloudflare verification (expected behaviour)
+    const ok = d.turnstile_enforced === true;
     const b  = ok
-      ? `<span class="badge ok">✓ Turnstile enforced — empty token blocked (400)</span>`
+      ? `<span class="badge ok">✓ Turnstile enforced — TURNSTILE_SECRET active · fake token rejected</span>`
       : `<span class="badge error">✗ Turnstile NOT enforced — TURNSTILE_SECRET must be set in Cloudflare Worker secrets</span>`;
     turnstileCard = card('🤖', 'Turnstile CAPTCHA gate', b, 'Blocks bot signup loops · TURNSTILE_SECRET must be set in Worker secrets');
   } catch(e) {
