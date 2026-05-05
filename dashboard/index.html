@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260505-turnstile-testemail-clilock-fixes -->
+<!-- build: 20260505-collapsible-tables-resend-maintenance -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -193,6 +193,23 @@
     table { font-size:11px; }
     th,td { padding:6px 8px; }
   }
+
+  /* ── Collapsible table sections ── */
+  .collapsible-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; padding: 4px 0;
+    border-radius: 6px;
+  }
+  .collapsible-hdr:hover .collapse-btn { color: var(--purple2); }
+  .collapse-btn {
+    font-size: 11px; color: var(--muted); font-weight: 600;
+    padding: 3px 8px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--bg3);
+    transition: background .15s, color .15s; white-space: nowrap;
+    margin-left: 12px; flex-shrink: 0;
+  }
+  .collapsible-body { overflow: hidden; }
+  .collapsible-body.collapsed { display: none; }
 </style>
 </head>
 <body>
@@ -292,26 +309,6 @@
 </div>
 
 <!-- Section 3f: App Store Subscriptions (Apple IAP) -->
-<div class="section">
-  <div class="sec-title">🍎 App Store Subscriptions <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— macOS &amp; iOS · Apple IAP via RevenueCat/StoreKit2</span></div>
-  <div class="grid" id="appleSubGrid"></div>
-  <!-- Apple IAP user table -->
-  <div style="margin-top:12px;" class="ep-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Email</th>
-          <th>Plan</th>
-          <th>Platform</th>
-          <th>Signed Up</th>
-        </tr>
-      </thead>
-      <tbody id="appleSubTableBody"><tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
 <!-- Section 3f: Apple App Store Subscriptions -->
 <div style="margin:28px 0 0;padding:14px 24px;background:linear-gradient(90deg,rgba(250,139,98,.15),rgba(239,68,68,.06));border-left:4px solid #f97316;border-radius:0 10px 10px 0;display:flex;align-items:center;gap:14px;">
   <span style="font-size:28px;line-height:1;">🍎</span>
@@ -322,42 +319,52 @@
   <a href="https://appstoreconnect.apple.com" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:#fb923c;text-decoration:none;font-weight:600;white-space:nowrap;">App Store Connect ↗</a>
 </div>
 <div class="section">
-  <div class="sec-title">🍎 Apple App Store Subscriptions <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— macOS + iOS · In-App Purchase · via KV iap:tx: keys</span></div>
-  <div class="grid" id="appleSubGrid"></div>
-  <div style="margin-top:12px;" class="ep-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Email</th>
-          <th>Plan</th>
-          <th>Source</th>
-          <th>Signed Up</th>
-        </tr>
-      </thead>
-      <tbody id="appleSubTableBody"><tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
-    </table>
+  <div class="sec-title collapsible-hdr" onclick="toggleSection('appleSubBody','appleSubToggle')">
+    <span>🍎 Apple App Store Subscriptions <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— macOS + iOS · In-App Purchase · via KV iap:tx: keys</span></span>
+    <span class="collapse-btn" id="appleSubToggle">▲ Collapse</span>
+  </div>
+  <div class="collapsible-body" id="appleSubBody">
+    <div class="grid" id="appleSubGrid" style="margin-top:12px;"></div>
+    <div style="margin-top:12px;" class="ep-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Platform</th>
+            <th>Signed Up</th>
+          </tr>
+        </thead>
+        <tbody id="appleSubTableBody"><tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <!-- Section 3e: AI App User Email List -->
 <div class="section">
-  <div class="sec-title">📋 AI App User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed app signups · owner accounts excluded</span></div>
-  <div style="margin-top:8px;" class="ep-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Email</th>
-          <th>Plan</th>
-          <th>Surface</th>
-          <th>Source</th>
-          <th>Signed Up</th>
-          <th style="text-align:right;">Usage (mo)</th>
-        </tr>
-      </thead>
-      <tbody id="userTableBody"><tr><td colspan="6" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
-    </table>
+  <div class="sec-title collapsible-hdr" onclick="toggleSection('aiUserBody','aiUserToggle')">
+    <span>📋 AI App User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed app signups · owner accounts excluded</span></span>
+    <span class="collapse-btn" id="aiUserToggle">▲ Collapse</span>
+  </div>
+  <div class="collapsible-body" id="aiUserBody">
+    <div style="margin-top:8px;" class="ep-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Surface</th>
+            <th>Source</th>
+            <th>Signed Up</th>
+            <th style="text-align:right;">Usage (mo)</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"><tr><td colspan="7" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -417,19 +424,24 @@
 
 <!-- Section 7b: Prompt Studio User Email List -->
 <div class="section">
-  <div class="sec-title">📋 Prompt Studio User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed prompt signups · owner accounts excluded</span></div>
-  <div style="margin-top:8px;" class="ep-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Email</th>
-          <th>Plan</th>
-          <th>Signed Up</th>
-        </tr>
-      </thead>
-      <tbody id="promptUserTableBody"><tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
-    </table>
+  <div class="sec-title collapsible-hdr" onclick="toggleSection('promptUserBody','promptUserToggle')">
+    <span>📋 Prompt Studio User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed prompt signups · owner accounts excluded</span></span>
+    <span class="collapse-btn" id="promptUserToggle">▲ Collapse</span>
+  </div>
+  <div class="collapsible-body" id="promptUserBody">
+    <div style="margin-top:8px;" class="ep-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Signed Up</th>
+          </tr>
+        </thead>
+        <tbody id="promptUserTableBody"><tr><td colspan="4" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -451,6 +463,16 @@
 </div>
 
 <script>
+// ── Collapsible section toggle ────────────────────────────────────────────────
+function toggleSection(bodyId, btnId) {
+  const body = document.getElementById(bodyId);
+  const btn  = document.getElementById(btnId);
+  if (!body || !btn) return;
+  const collapsed = body.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '▼ Expand' : '▲ Collapse';
+}
+
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 // ─── Self-healing dashboard — poly-glot.ai ───────────────────────────────────
 // Changes from original:
@@ -862,6 +884,7 @@ function resendDot(indicator) {
   if (indicator === 'minor') return '<span class="badge warn">⚠ Minor Incident</span>';
   if (indicator === 'major') return '<span class="badge warn">⚠ Major Incident</span>';
   if (indicator === 'critical') return '<span class="badge warn">⚠ Critical Incident — check resend-status.com</span>';
+  if (indicator === 'maintenance') return '<span class="badge loading">⚙ Scheduled Maintenance — email delivery unaffected</span>';
   return '<span class="badge warn">⚠ ' + indicator + '</span>';
 }
 
