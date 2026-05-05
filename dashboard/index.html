@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260409-fixes-turnstile-disposable-layout -->
+<!-- build: 20260505-apple-iap-resend-clilock-fixes -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -291,6 +291,55 @@
   <div class="grid" id="combinedSignupsGrid"></div>
 </div>
 
+<!-- Section 3f: App Store Subscriptions (Apple IAP) -->
+<div class="section">
+  <div class="sec-title">🍎 App Store Subscriptions <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— macOS &amp; iOS · Apple IAP via RevenueCat/StoreKit2</span></div>
+  <div class="grid" id="appleSubGrid"></div>
+  <!-- Apple IAP user table -->
+  <div style="margin-top:12px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Plan</th>
+          <th>Platform</th>
+          <th>Signed Up</th>
+        </tr>
+      </thead>
+      <tbody id="appleSubTableBody"><tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section 3f: Apple App Store Subscriptions -->
+<div style="margin:28px 0 0;padding:14px 24px;background:linear-gradient(90deg,rgba(250,139,98,.15),rgba(239,68,68,.06));border-left:4px solid #f97316;border-radius:0 10px 10px 0;display:flex;align-items:center;gap:14px;">
+  <span style="font-size:28px;line-height:1;">🍎</span>
+  <div>
+    <div style="font-size:16px;font-weight:800;color:#f1f5f9;letter-spacing:.02em;">App Store Subscriptions</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:2px;">macOS (6762222589) · iOS (6762054909) · Apple IAP via App Store Server Notifications</div>
+  </div>
+  <a href="https://appstoreconnect.apple.com" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:#fb923c;text-decoration:none;font-weight:600;white-space:nowrap;">App Store Connect ↗</a>
+</div>
+<div class="section">
+  <div class="sec-title">🍎 Apple App Store Subscriptions <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— macOS + iOS · In-App Purchase · via KV iap:tx: keys</span></div>
+  <div class="grid" id="appleSubGrid"></div>
+  <div style="margin-top:12px;" class="ep-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Plan</th>
+          <th>Source</th>
+          <th>Signed Up</th>
+        </tr>
+      </thead>
+      <tbody id="appleSubTableBody"><tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Section 3e: AI App User Email List -->
 <div class="section">
   <div class="sec-title">📋 AI App User List <span style="font-size:9px;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— confirmed app signups · owner accounts excluded</span></div>
@@ -302,6 +351,7 @@
           <th>Email</th>
           <th>Plan</th>
           <th>Surface</th>
+          <th>Source</th>
           <th>Signed Up</th>
           <th style="text-align:right;">Usage (mo)</th>
         </tr>
@@ -682,6 +732,12 @@ async function collectAll() {
           m.promptPlanPro     = d.prompt_plan_breakdown?.prompt_pro   ?? null;
           m.promptPlanTeam    = d.prompt_plan_breakdown?.prompt_team  ?? null;
           m.promptUserList    = d.prompt_users ?? [];
+          // Apple IAP
+          m.apple_paying_users = d.apple_paying_users ?? 0;
+          m.apple_mrr_est      = d.apple_mrr_est      ?? 0;
+          m.apple_active_txs   = d.apple_active_txs   ?? 0;
+          m.apple_breakdown    = d.apple_breakdown     ?? { pro:0, team:0, free:0 };
+          m.stripe_tx_keys     = d.stripe_tx_keys     ?? 0;
         }
       }
     }
@@ -805,7 +861,8 @@ function resendDot(indicator) {
   if (indicator === 'none') return '<span class="badge ok">✓ All Systems Operational</span>';
   if (indicator === 'minor') return '<span class="badge warn">⚠ Minor Incident</span>';
   if (indicator === 'major') return '<span class="badge warn">⚠ Major Incident</span>';
-  return '<span class="badge error">✗ Critical Incident</span>';
+  if (indicator === 'critical') return '<span class="badge warn">⚠ Critical Incident — check resend-status.com</span>';
+  return '<span class="badge warn">⚠ ' + indicator + '</span>';
 }
 
 function extCard(icon, name, statusHtml, meta, link) {
@@ -982,15 +1039,67 @@ function renderUserTable(users) {
     const planLabel    = (u.plan || 'free').toUpperCase();
     const surfaceLabel = SURFACE_LABELS[u.surface] || '🦜 App';
     const signedUp     = u.signup_ts ? new Date(u.signup_ts).toLocaleDateString() : '—';
+    const iapBadge     = u.iap_source === 'apple'
+      ? '<span style="background:#f9731622;color:#fb923c;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px;">🍎 IAP</span>'
+      : '';
     return `<tr style="border-bottom:1px solid var(--border);${i % 2 === 0 ? '' : 'background:rgba(255,255,255,.02)'}">
       <td style="padding:8px 12px;color:var(--muted);">${i + 1}</td>
-      <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}</td>
+      <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}${iapBadge}</td>
       <td style="padding:8px 12px;">
         <span style="background:${planColor}22;color:${planColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">${planLabel}</span>
       </td>
       <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${surfaceLabel}</td>
       <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${signedUp}</td>
       <td style="padding:8px 12px;text-align:right;color:var(--text);">${u.usage_this_month != null ? u.usage_this_month.toLocaleString() : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAppleSubscriptions(m) {
+  // Metrics grid
+  const grid = document.getElementById('appleSubGrid');
+  if (grid) {
+    const apPro  = m.apple_breakdown?.pro  ?? 0;
+    const apTeam = m.apple_breakdown?.team ?? 0;
+    const apFree = m.apple_breakdown?.free ?? 0;
+    const apMRR  = m.apple_mrr_est != null ? '$' + Number(m.apple_mrr_est).toFixed(2) + '/mo' : '—';
+    const apTx   = m.apple_active_txs ?? 0;
+    const apPay  = m.apple_paying_users ?? 0;
+    grid.innerHTML = [
+      card('🍎', 'Apple IAP Subscribers', apPay > 0 ? num(apPay) : '0', 'Users upgraded via App Store (macOS + iOS)'),
+      card('💎', 'Pro (Apple IAP)',        num(apPro),  '$9.99/mo · ai.polyglot.promptstudio.pro.*'),
+      card('👥', 'Team (Apple IAP)',       num(apTeam), '$29.99/mo · ai.polyglot.promptstudio.team.*'),
+      card('🆓', 'Lapsed (Apple IAP)',     num(apFree), 'Expired or cancelled — downgraded to free'),
+      card('💰', 'Est. Apple MRR',         apMRR,       'Pro × $9.99 + Team × $29.99'),
+      card('🔑', 'Active IAP Tx Keys',     num(apTx),   'iap:tx: keys in KV · 400-day TTL · one per purchase'),
+    ].join('');
+  }
+
+  // User table — only IAP users
+  const tbody = document.getElementById('appleSubTableBody');
+  if (!tbody) return;
+  const iapUsers = (m.userList || []).filter(u =>
+    u.iap_source === 'apple' && !OWNER_EMAILS_CLIENT.has(u.email.toLowerCase())
+  );
+  if (!iapUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:16px 12px;color:var(--muted);text-align:center;">No Apple IAP subscribers yet — purchases will appear here after App Store Server Notification is received</td></tr>';
+    return;
+  }
+  const PLAN_COLORS = { pro: '#a78bfa', team: '#34d399', free: '#64748b' };
+  tbody.innerHTML = iapUsers.map((u, i) => {
+    const planColor = PLAN_COLORS[u.plan] || '#64748b';
+    const planLabel = (u.plan || 'free').toUpperCase();
+    const signedUp  = u.signup_ts ? new Date(u.signup_ts).toLocaleDateString() : '—';
+    return `<tr style="border-bottom:1px solid var(--border);${i%2===0?'':'background:rgba(255,255,255,.02)'}">
+      <td style="padding:8px 12px;color:var(--muted);">${i+1}</td>
+      <td style="padding:8px 12px;color:var(--text);font-family:monospace;">${u.email}</td>
+      <td style="padding:8px 12px;">
+        <span style="background:${planColor}22;color:${planColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">${planLabel}</span>
+      </td>
+      <td style="padding:8px 12px;font-size:12px;">
+        <span style="background:#f9731622;color:#fb923c;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">🍎 Apple IAP</span>
+      </td>
+      <td style="padding:8px 12px;font-size:12px;color:var(--muted);">${signedUp}</td>
     </tr>`;
   }).join('');
 }
@@ -1304,11 +1413,12 @@ async function renderWorkers(m) {
     const versions   = Object.keys(d.versions || {});
     const deprecated = versions.filter(v => d.versions[v]?.deprecated);
     const clean      = versions.filter(v => !d.versions[v]?.deprecated);
-    // "Healthy" = only the current latest is non-deprecated
-    const ok = latest !== '—' && clean.length === 1 && clean[0] === latest;
+    // "Healthy" = latest version is NOT deprecated (clean includes latest at minimum)
+    const latestIsClean = clean.includes(latest);
+    const ok = latest !== '—' && latestIsClean;
     const b = ok
-      ? `<span class="badge ok">✓ ${deprecated.length} versions deprecated · only v${latest} active</span>`
-      : `<span class="badge error">✗ ${clean.length} non-deprecated versions — check npm deprecations</span>`;
+      ? `<span class="badge ok">✓ v${latest} active · ${deprecated.length} older versions deprecated</span>`
+      : `<span class="badge error">✗ v${latest} is deprecated or missing — check npm</span>`;
     cliLockCard = card('🔒', 'CLI Hard Lock (npm deprecation)', b,
       `latest = v${latest} · ${deprecated.length} versions hard-locked · old installs exit on startup`);
   } catch(e) {
@@ -1493,6 +1603,7 @@ async function runAll() {
 
   renderUserTable([]);
   renderPromptUserTable([]);
+  renderAppleSubscriptions({});
   const psg = document.getElementById('promptSignupsGrid');
   if (psg) psg.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading…</div>';
   const csg = document.getElementById('combinedSignupsGrid');
@@ -1509,6 +1620,7 @@ async function runAll() {
     renderSignups(m);
     renderUserTable(m.userList || []);
     renderPromptUserTable(m.promptUserList || []);
+    renderAppleSubscriptions(m);
     renderMetrics(m);
     renderStats(m);
     renderVersions(m);
