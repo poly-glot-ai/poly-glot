@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- build: 20260505-apple-iap-resend-clilock-fixes -->
+<!-- build: 20260505-turnstile-testemail-clilock-fixes -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1298,6 +1298,7 @@ async function renderWorkers(m) {
     const res = await fetch('https://poly-glot.ai/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Dashboard-Probe': 'turnstile' },
       body: JSON.stringify({ email: 'turnstile-probe@gmail.com', surface: 'app', turnstileToken: '' })
     });
     const d  = await res.json().catch(() => ({}));
